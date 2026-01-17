@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Whalio - Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="home.css">
+</head>
+
+<body>
+
+    <header>
+        <div class="nav-left">
+            <a href="#" class="nav-logo" onclick="showDashboard()">
+                <img src="./img/logo.png" alt="Logo Whalio">
+            </a>
+            <div class="nav-search">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input type="text" placeholder="Tìm kiếm">
+            </div>
+        </div>
+
+        <nav class="nav-center">
+            <a href="#" id="nav-home" class="nav-item active" data-tooltip="Trang chủ" onclick="showDashboard()">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
+                    </path>
+                </svg>
+            </a>
+            <a href="#" class="nav-item" data-tooltip="Khóa học">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
+                </svg>
+            </a>
+            <a href="#" id="nav-docs" class="nav-item" data-tooltip="Tài liệu" onclick="PageManager.showLibraryPage(this)">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                    </path>
+                </svg>
+            </a>
+            <a href="#" class="nav-item" data-tooltip="Cộng đồng">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
+                    </path>
+                </svg>
+            </a>
+            <a href="#" class="nav-item" data-tooltip="Giải trí">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </a>
+        </nav>
+        <div class="nav-right">
+
+            <div id="guest-actions">
+                <button class="btn-login-nav" onclick="openLoginModal()">
+                    Đăng nhập
+                </button>
+            </div>
+
+            <div id="user-actions" style="display: none; align-items: center; gap: 20px;">
+
+                <button class="btn-quick-upload" onclick="openUploadDocModal()">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    <span>Tải lên</span>
+                </button>
+                <input type="file" id="file-input" style="display: none;">
+
+                <div class="nav-divider"></div>
+
+                <button class="nav-icon-btn" title="Thông báo" style="position: relative;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
+                        </path>
+                    </svg>
+                    <span class="noti-dot"></span>
+                </button>
+
+                <div class="user-menu-container">
+                    <div class="nav-avatar" onclick="toggleUserMenu()" style="cursor: pointer;">H</div>
+
+                    <div class="dropdown-menu" id="userDropdown">
+                        <div class="dropdown-info"
+                            style="padding: 8px 16px; border-bottom: 1px solid #eee; margin-bottom: 5px;">
+                            <span id="menuUserName"
+                                style="font-weight: bold; font-size: 14px; color: #374151;">User</span>
+                        </div>
+
+                        <a href="#" class="dropdown-item" onclick="showProfilePage()">Hồ sơ cá nhân</a>
+                        <a href="#" class="dropdown-item">Cài đặt</a>
+
+                        <a href="#" onclick="handleLogout()" class="dropdown-item item-logout">Đăng xuất</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <aside class="sidebar-left">
+            <div class="user-mini-profile">
+                <div class="avatar">H</div>
+                <div class="user-name">Trịnh Quang<br>Huy</div>
+            </div>
+            <nav class="nav-menu">
+                <!-- Menu đầu tiên: Dashboard/Trang chủ -->
+                <a href="#" onclick="showDashboard()" class="active">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                    Trang chủ
+                </a>
+
+                <!-- Menu Kho tài liệu -->
+                <a href="#" onclick="showDocumentsPage(this)">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path
+                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                        </path>
+                    </svg>
+                    Kho tài liệu
+                </a>
+
+                <!-- Menu Tài liệu đã lưu -->
+                <a href="#" onclick="showSavedDocumentsPage(this)">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                    </svg>
+                    Tài liệu đã lưu
+                </a>
+                <a href="#" onclick="ExamCreator.switchToExamsTab()">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
+                        </path>
+                    </svg>
+                    Thi online
+                </a>
+                <a href="#" onclick="showStudyTimePage(this)">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Studytime
+                </a>
+            </nav>
+            <div class="social-links">
+                <a href="#" class="social-link">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg"
+                        alt="fb">
+                    Facebook Quang Bình
+                </a>
+                <a href="#" class="social-link">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg"
+                        alt="yt">
+                    Chết vì Toán
+                </a>
+            </div>
+        </aside>
+
+        <main id="main-dashboard">
+            <section class="welcome-card">
+                <div class="welcome-info">
+                    <h1>Xin chào, Trịnh Quang Huy!</h1>
+                    <p>Hôm nay là Thứ Năm, ngày 15/01/2026</p>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item stat-streak">
+                        <span class="stat-label">Streak</span>
+                        <span class="stat-num">0N</span>
+                    </div>
+
+                    <div class="stat-item stat-study">
+                        <span class="stat-label">Giờ học</span>
+                        <span class="stat-num">0H</span>
+                    </div>
+
+                    <div class="stat-item stat-relax">
+                        <span class="stat-label">Giải trí</span>
+                        <span class="stat-num">0H</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section-box">
+                <div class="section-header">
+                    <div class="section-title">
+                        <span>🎓</span> TÀI LIỆU CÁC MÔN
+                    </div>
+                    <a href="#" class="view-all">Xem tất cả</a>
+                </div>
+                <div class="carousel-wrapper">
+                    <button class="btn-scroll btn-left" onclick="scrollDocs('left')">❮</button>
+
+                    <div class="teachers-scroll" id="docScrollContainer">
+                        <div class="teacher-card">
+                            <img src="./img/pldc-pic.png" class="teacher-img" alt="Pháp luật">
+                            <div class="teacher-info">
+                                <h3 class="teacher-name">PHÁP LUẬT ĐẠI CƯƠNG</h3>
+                            </div>
+                        </div>
+                        <div class="teacher-card">
+                            <img src="./img/tlhdc-pic.png" class="teacher-img" alt="Tâm lý">
+                            <div class="teacher-info">
+                                <h3 class="teacher-name">TÂM LÝ HỌC ĐẠI CƯƠNG</h3>
+                            </div>
+                        </div>
+                        <div class="teacher-card">
+                            <img src="./img/cst-pic.png" class="teacher-img" alt="Cơ sở toán">
+                            <div class="teacher-info">
+                                <h3 class="teacher-name">CƠ SỞ TOÁN TRONG CNTT</h3>
+                            </div>
+                        </div>
+                        <div class="teacher-card">
+                            <img src="./img/trr-pic.png" class="teacher-img" alt="Toán rời rạc">
+                            <div class="teacher-info">
+                                <h3 class="teacher-name">TOÁN RỜI RẠC</h3>
+                            </div>
+                        </div>
+                        <div class="teacher-card">
+                            <img src="./img/triethoc-pic.png" class="teacher-img" alt="Triết học">
+                            <div class="teacher-info">
+                                <h3 class="teacher-name">TRIẾT HỌC MÁC - LÊNIN</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-scroll btn-right" onclick="scrollDocs('right')">❯</button>
+                </div>
+
+            </section>
+
+            <section class="section-box">
+                <div class="section-header">
+                    <div class="section-title">
+                        <span>🔥</span> ĐỀ THI
+                    </div>
+                </div>
+                <div class="courses-grid">
+                    <div class="course-card">
+                        <img src="./img/pldc-pic.png" class="course-thumb" alt="Course">
+                        <div class="course-content">
+                            <h3 class="course-title">PHÁP LUẬT ĐẠI CƯƠNG</h3>
+                            <div class="course-meta">
+                                <svg width="14" height="14" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                        d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                                </svg>
+                                Trường Đại học Sư phạm Thành phố Hồ Chí Minh
+                            </div>
+                        </div>
+                    </div>
+                    <div class="course-card">
+                        <img src="./img/tlhdc-pic.png" class="course-thumb" alt="Course">
+                        <div class="course-content">
+                            <h3 class="course-title">TÂM LÝ HỌC ĐẠI CƯƠNG</h3>
+                            <div class="course-meta">
+                                <svg width="14" height="14" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                        d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                                </svg>
+                                Trường Đại học Sư phạm Thành phố Hồ Chí Minh
+                            </div>
+                        </div>
+                    </div>
+                    <div class="course-card">
+                        <img src="./img/trr-pic.png" class="course-thumb" alt="Course">
+                        <div class="course-content">
+                            <h3 class="course-title">TOÁN RỜI RẠC</h3>
+                            <div class="course-meta">
+                                <svg width="14" height="14" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                        d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                                </svg>
+                                Trường Đại học Sư phạm Thành phố Hồ Chí Minh
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="section-box">
+                <div class="section-header">
+                    <div class="section-title">
+                        <span>🎴</span> BỘ THẺ FLASHCARD
+                    </div>
+                    <a href="#" class="view-all">Xem tất cả</a>
+                </div>
+
+                <div class="flashcard-grid">
+                    <div class="set-card color-1">
+                        <div class="set-icon">⚖️</div>
+                        <div class="set-info">
+                            <h4>Thuật ngữ Luật</h4>
+                            <span>25 thẻ • Đã học 40%</span>
+                        </div>
+                        <button class="btn-play">▶</button>
+                    </div>
+
+                    <div class="set-card color-2">
+                        <div class="set-icon">∑</div>
+                        <div class="set-info">
+                            <h4>Công thức Toán</h4>
+                            <span>12 thẻ • Chưa học</span>
+                        </div>
+                        <button class="btn-play">▶</button>
+                    </div>
+
+                    <div class="set-card color-3">
+                        <div class="set-icon">🧠</div>
+                        <div class="set-info">
+                            <h4>Tâm lý học ĐC</h4>
+                            <span>50 thẻ • Đã học 90%</span>
+                        </div>
+                        <button class="btn-play">▶</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <section id="profile-section" style="display: none; width: 100%;">
+            <div class="profile-grid">
+                <div class="profile-sidebar-card">
+                    <div class="profile-header-s">
+                        <div class="large-avatar">H</div>
+                        <h2 id="p-fullname-1">Trịnh Quang Huy</h2>
+                        <p id="p-email-1">trinhquanghuy@gmail.com</p>
+                    </div>
+
+                    <div class="profile-menu">
+                        <a href="#" id="menu-info" class="p-menu-item active"
+                            onclick="ProfileManager.switchTab('info')">
+                            <span>🆔</span> Thông tin cá nhân
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                                </path>
+                            </svg>
+                        </a>
+                        <a href="#" id="menu-my-docs" class="p-menu-item" onclick="ProfileManager.switchTab('my-docs')">
+                            <span>🎓</span> Tài liệu của tôi
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                                </path>
+                            </svg>
+                        </a>
+                        <a href="#" id="menu-saved" class="p-menu-item" onclick="ProfileManager.switchTab('saved')">
+                            <span>💾</span> Tài liệu đã lưu
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                                </path>
+                            </svg>
+                        </a>
+                        <a href="#" class="p-menu-item">
+                            <span>🎁</span> Kho vật phẩm
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                                </path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="profile-content-card">
+                    <div id="tab-info" class="profile-tab-content">
+                        <div class="profile-top-header">
+                            <h3>Thông tin cá nhân</h3>
+                            <div class="profile-actions">
+                                <button class="btn-edit" onclick="openEditProfileModal()">Chỉnh sửa thông tin</button>
+                                <button class="btn-change-pass" onclick="openChangePassModal()">Thay đổi mật
+                                    khẩu</button>
+                            </div>
+                        </div>
+
+                        <div class="profile-details-list">
+                            <div class="detail-row">
+                                <span class="d-label">Họ và tên</span>
+                                <span class="d-value" id="p-fullname-2">Trịnh Quang Huy</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="d-label">Tài khoản</span>
+                                <span class="d-value" id="p-username">admin</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="d-label">Email</span>
+                                <span class="d-value" id="p-email-2">trinhquanghuy@gmail.com</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="d-label">Số điện thoại</span>
+                                <span class="d-value" id="p-phone">0393 xxx xxx</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="d-label">Giới tính</span>
+                                <span class="d-value" id="p-gender">Nam</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="d-label">Năm sinh</span>
+                                <span class="d-value" id="p-birth">2007</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="d-label">Link Facebook</span>
+                                <a href="#" class="d-value link" id="p-facebook">facebook.com/huy</a>
+                            </div>
+                            <div class="detail-row">
+                                <span class="d-label">Tỉnh thành</span>
+                                <span class="d-value" id="p-city">Hồ Chí Minh</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="d-label">Trường học</span>
+                                <span class="d-value" id="p-school">THPT Tây Thạnh</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-my-docs" class="profile-tab-content" style="display: none;">
+                        <div class="profile-top-header">
+                            <h3>Tài liệu tôi đã tải lên</h3>
+                            <button class="btn-edit" onclick="openUploadDocModal()">+ Tải mới</button>
+                        </div>
+                        <div id="profile-my-docs-list" class="documents-grid" style="grid-template-columns: 1fr 1fr;">
+                        </div>
+                    </div>
+
+                    <div id="tab-saved" class="profile-tab-content" style="display: none;">
+                        <div class="profile-top-header">
+                            <h3>Tài liệu đã lưu</h3>
+                        </div>
+                        <div id="profile-saved-list" class="documents-grid" style="grid-template-columns: 1fr 1fr;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Thêm vào sau section profile-section -->
+        <section id="documents-section" style="display: none; width: 100%;">
+            <div class="documents-page">
+                <!-- Header của trang tài liệu -->
+                <div class="page-header">
+                    <div class="page-title">
+                        <h1>📂 Kho Tài Liệu Chung</h1>
+                        <p>Tổng hợp tài liệu học tập từ các thành viên</p>
+                    </div>
+                    <button onclick="openUploadDocModal()" class="btn-upload-header">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                        </svg>
+                        Tải tài liệu lên
+                    </button>
+                </div>
+
+                <!-- Bộ lọc và tìm kiếm -->
+                <div class="docs-filter">
+                    <div class="search-box">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        <input type="text" id="docs-search" placeholder="Tìm kiếm tài liệu..."
+                            oninput="searchDocuments(this.value)">
+                    </div>
+
+                    <div class="filter-options">
+                        <select id="doc-type-filter" onchange="filterByType(this.value)">
+                            <option value="">Tất cả loại file</option>
+                            <option value="pdf">PDF</option>
+                            <option value="word">Word</option>
+                            <option value="excel">Excel</option>
+                            <option value="ppt">PowerPoint</option>
+                            <option value="image">Hình ảnh</option>
+                            <option value="other">Khác</option>
+                        </select>
+
+                        <button class="btn-refresh" onclick="loadDocuments()">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                </path>
+                            </svg>
+                            Làm mới
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Course Filter for Documents -->
+                <div class="course-filters-section">
+                    <span class="filter-label">Lọc theo môn:</span>
+                    <div class="course-filter-buttons">
+                        <button class="course-filter-btn active" onclick="DocumentManager.filterDocsByCourse('all')">Tất cả</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(1)">GT1</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(2)">DSTD</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(3)">VL1</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(4)">HH</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(5)">TA</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(6)">LP</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(7)">CSDL</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(8)">WEB</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(9)">TMML</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(10)">PLDC</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(11)">TLDC</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse('other')">Khác</button>
+                    </div>
+                </div>
+
+                <!-- Stats summary -->
+                <div class="docs-stats">
+                    <div class="stat-card">
+                        <span class="stat-number" id="total-docs">0</span>
+                        <span class="stat-label">Tài liệu</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="saved-docs">0</span>
+                        <span class="stat-label">Đã lưu</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="recent-docs">0</span>
+                        <span class="stat-label">Mới nhất 7 ngày</span>
+                    </div>
+                </div>
+
+                <!-- Container cho danh sách tài liệu -->
+                <div id="documents-list-container" class="documents-grid">
+                    <!-- Tài liệu sẽ được render ở đây -->
+                </div>
+            </div>
+        </section>
+
+        <section id="exams-section" style="display: none; width: 100%;">
+            <div class="documents-page">
+                <div class="page-header">
+                    <div class="page-title">
+                        <h1>📝 Thư Viện Đề Thi</h1>
+                        <p>Luyện tập với ngân hàng câu hỏi trắc nghiệm phong phú</p>
+                    </div>
+                    <button class="btn-upload-header" onclick="ExamCreator.open()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4">
+                            </path>
+                        </svg>
+                        Tạo đề thi mới
+                    </button>
+                </div>
+
+                <div class="docs-filter">
+                    <div class="search-box">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        <input type="text" id="exam-search" placeholder="Tìm kiếm đề thi..."
+                            oninput="ExamManager.searchExams(this.value)">
+                    </div>
+
+                    <div class="filter-options">
+                        <select id="exam-filter" onchange="ExamManager.filterBySubject(this.value)">
+                            <option value="">Tất cả môn học</option>
+                            <option value="Pháp luật">Pháp luật đại cương</option>
+                            <option value="Triết học">Triết học Mác - Lênin</option>
+                            <option value="Toán">Toán cao cấp / Rời rạc</option>
+                            <option value="Tin học">Tin học đại cương</option>
+                            <option value="Tâm lý">Tâm lý học</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="exams-list-container" class="exams-grid">
+                </div>
+            </div>
+        </section>
+
+        <section id="library-section" style="display: none;">
+            <div class="doc-page-container">
+
+                <div class="doc-page-header">
+                    <h2 class="doc-page-title">THƯ VIỆN TÀI LIỆU SỐ</h2>
+
+                    <!-- Search Instructions -->
+                    <div class="search-instructions">
+                        <div class="instructions-icon">ℹ️</div>
+                        <div class="instructions-text">
+                            <strong>Hướng dẫn tìm kiếm:</strong> Dùng các tag môn học bên dưới để lọc tài liệu theo môn, hoặc gõ tên tài liệu vào ô tìm kiếm để tìm nhanh
+                        </div>
+                    </div>
+
+                    <!-- Course Filter Tags -->
+                    <div class="doc-course-filters">
+                        <span class="filter-label">Lọc theo môn:</span>
+                        <button class="course-filter-btn active" onclick="DocumentManager.filterByCourse('all')">Tất cả</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(1)">GT1</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(2)">DSTD</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(3)">VL1</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(4)">HH</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(5)">TA</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(6)">LP</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(7)">CSDL</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(8)">WEB</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(9)">TMML</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(10)">PLDC</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(11)">TLDC</button>
+                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse('other')">Khác</button>
+                    </div>
+
+                    <div class="doc-level-tags">
+                        <button class="level-tag active">Tất cả</button>
+                        <button class="level-tag">Đại học</button>
+                        <button class="level-tag">Lớp 12</button>
+                        <button class="level-tag">Lớp 11</button>
+                        <button class="level-tag">Ôn thi ĐGNL</button>
+                    </div>
+
+                    <div class="doc-toolbar">
+                        <div class="doc-type-filters">
+                            <button class="type-filter-btn active" onclick="DocumentManager.filterLibrary('all')">Tất
+                                cả</button>
+                            <button class="type-filter-btn" onclick="DocumentManager.filterLibrary('pdf')">PDF</button>
+                            <button class="type-filter-btn"
+                                onclick="DocumentManager.filterLibrary('word')">Word</button>
+                            <button class="type-filter-btn"
+                                onclick="DocumentManager.filterLibrary('ppt')">Slide</button>
+                        </div>
+
+                        <div class="doc-search-big">
+                            <input type="text" placeholder="Tìm kiếm tài liệu..."
+                                oninput="DocumentManager.searchLibrary(this.value)">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="library-grid-container" class="doc-library-grid">
+                </div>
+
+                <div id="library-pagination" class="pagination-container"></div>
+
+                <button onclick="PageManager.showDashboard()"
+                    style="position: fixed; bottom: 20px; right: 20px; padding: 10px 20px; background: #374151; color: white; border-radius: 30px; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1000;">
+                    ↩ Quay về Dashboard
+                </button>
+            </div>
+        </section>
+
+
+
+        <aside class="sidebar-right">
+
+            <div class="widget-box group-storage">
+                <div class="widget-header">
+                    <h3>☁️ Kho Tài Liệu Chung</h3>
+                </div>
+
+                <div class="storage-status">
+                    <div class="storage-info">
+                        <span>Đã dùng</span>
+                        <span class="storage-number" id="storage-usage">0 MB / 10 GB</span>
+                    </div>
+
+                    <div class="progress-track" style="display: flex; overflow: hidden;">
+                        <div id="storage-bar-file" class="progress-bar-segment bar-file" style="width: 0%"></div>
+
+                        <div id="storage-bar-image" class="progress-bar-segment bar-image" style="width: 0%"></div>
+                    </div>
+
+                    <div class="storage-detail" style="display: flex; justify-content: space-between; margin-top: 8px;">
+                        <span id="storage-file-size" style="color: #4b5563; font-weight: 500;">
+                            📁 Files: 0 MB
+                        </span>
+                        <span id="storage-image-size" style="color: #4b5563; font-weight: 500;">
+                            🖼️ Ảnh: 0 MB
+                        </span>
+                    </div>
+                </div>
+
+                <button class="btn-upload-large" onclick="openUploadDocModal()">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
+                        </path>
+                    </svg>
+                    Tải tài liệu mới
+                </button>
+            </div>
+
+            <div class="widget-box recent-activity">
+                <div class="widget-header">
+                    <h3>⚡ Hoạt động mới</h3>
+                    <span class="badge-count">3</span>
+                </div>
+                <ul class="activity-list">
+                    <li>
+                        <div class="avatar-small">H</div>
+                        <div class="activity-info">
+                            <p><strong>Quang Huy</strong> vừa tải lên</p>
+                            <a href="#" class="file-link">De-thi-giua-ky-Toan.pdf</a>
+                            <span class="time-ago">5 phút trước</span>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="avatar-small bg-green">B</div>
+                        <div class="activity-info">
+                            <p><strong>Bình Gold</strong> đã bình luận</p>
+                            <a href="#" class="file-link">Trong "Giải tích 1"</a>
+                            <span class="time-ago">1 giờ trước</span>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="avatar-small bg-purple">T</div>
+                        <div class="activity-info">
+                            <p><strong>Thảo Nhi</strong> vừa tải lên</p>
+                            <a href="#" class="file-link">Slide-Tam-ly-hoc.pptx</a>
+                            <span class="time-ago">2 giờ trước</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="widget-box upcoming-event">
+                <div class="widget-header">
+                    <h3>📅 Sự kiện sắp tới</h3>
+                </div>
+                <div class="event-card">
+                    <div class="event-date">
+                        <span class="day">20</span>
+                        <span class="month">Th1</span>
+                    </div>
+                    <div class="event-details">
+                        <span class="event-title">Thi cuối kỳ Giải Tích</span>
+                        <span class="event-countdown">Còn 5 ngày</span>
+                    </div>
+                </div>
+                <div class="event-card">
+                    <div class="event-date orange">
+                        <span class="day">15</span>
+                        <span class="month">Th2</span>
+                    </div>
+                    <div class="event-details">
+                        <span class="event-title">Nộp BTL Web</span>
+                        <span class="event-countdown">Còn 30 ngày</span>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+    </div>
+
+    <footer>
+        <div class="footer-container">
+            <div class="footer-grid">
+
+                <div class="footer-col">
+                    <div class="footer-brand">
+                        <span class="brand-logo">M</span>
+                        <span class="brand-name">Whalio Study</span>
+                    </div>
+                    <p class="footer-motto">
+                        "Học không chơi đánh rơi tuổi trẻ,<br>
+                        Chơi không học bán rẻ tương lai."
+                    </p>
+                    <div class="dev-credit">
+                        Phát triển bởi <strong>Quang Bình</strong>
+                    </div>
+                </div>
+
+                <div class="footer-col">
+                    <h4>Lối tắt</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">📂 Kho tài liệu chung</a></li>
+                        <li><a href="#">📅 Lịch thi / Deadline</a></li>
+                        <li><a href="#">📝 Thảo luận nhóm</a></li>
+                        <li><a href="#">⚡ Upload nhanh</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-col">
+                    <h4>Công cụ hỗ trợ</h4>
+                    <ul class="footer-links">
+                        <li>
+                            <a href="https://hcmue.edu.vn" target="_blank">
+                                🏫 Portal HCMUE
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://chatgpt.com" target="_blank">
+                                🤖 ChatGPT
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.desmos.com" target="_blank">
+                                📈 Vẽ đồ thị (Desmos)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.wolframalpha.com" target="_blank">
+                                🧮 WolframAlpha
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="footer-col">
+                    <h4>Cần giúp đỡ?</h4>
+                    <p style="opacity: 0.8; margin-bottom: 12px; font-size: 13px;">
+                        Web lỗi hay không tải được file? Nhắn ngay cho Admin nhé.
+                    </p>
+                    <a href="#" class="btn-contact-admin">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+                            viewBox="0 0 24 24">
+                            <path
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
+                            </path>
+                        </svg>
+                        Nhắn tin cho Bình
+                    </a>
+                </div>
+
+            </div>
+
+            <div class="copyright">
+                © 2026 Lưu hành nội bộ nhóm • Chúc anh em qua môn A+
+            </div>
+        </div>
+    </footer>
+
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal-box">
+            <button class="btn-close-modal" onclick="closeLoginModal()">✕</button>
+
+            <div class="modal-header">
+                <h2>Chào mừng trở lại!</h2>
+                <p>Đăng nhập để truy cập kho tài liệu nhóm</p>
+            </div>
+
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">Tên đăng nhập</label>
+                    <input type="text" class="auth-input" placeholder="Ví dụ: admin" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Mật khẩu</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="passwordInput" class="auth-input" placeholder="Nhập mật khẩu"
+                            required>
+                        <span class="toggle-pass" onclick="togglePassword()" title="Hiện/Ẩn mật khẩu">
+                            <svg id="eye-icon" width="20" height="20" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                </path>
+                            </svg>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="form-options">
+                    <label style="font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                        <input type="checkbox" checked> Ghi nhớ tôi
+                    </label>
+                    <a href="#" class="forgot-link" onclick="openForgotPasswordModal()">Quên mật khẩu?</a>
+                </div>
+
+                <button type="submit" class="btn-submit-login">Đăng nhập</button>
+            </form>
+
+            <div class="modal-footer">
+                Chưa có tài khoản? <a href="#" onclick="switchToRegister()">Đăng ký</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="registerModal">
+        <div class="modal-box">
+            <button class="btn-close-modal" onclick="closeRegisterModal()">✕</button>
+
+            <div class="modal-header">
+                <h2>Tạo tài khoản mới 🚀</h2>
+                <p>Tham gia cộng đồng Whalio ngay hôm nay</p>
+            </div>
+
+            <form id="registerForm" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label class="form-label">Họ và tên</label>
+                    <input type="text" id="regFullname" class="auth-input" placeholder="Ví dụ: Nguyễn Văn A" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="regEmail" class="auth-input" placeholder="Để lấy lại mật khẩu khi quên"
+                        required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tên đăng nhập</label>
+                    <input type="text" id="regUsername" class="auth-input" placeholder="Viết liền không dấu" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Mật khẩu</label>
+                    <input type="password" id="regPassword" class="auth-input" placeholder="Nhập mật khẩu" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Nhập lại mật khẩu</label>
+                    <input type="password" id="regConfirmPassword" class="auth-input" placeholder="Nhập lại mật khẩu"
+                        required>
+                </div>
+
+                <button type="submit" class="btn-submit-login">Đăng ký ngay</button>
+            </form>
+
+            <div class="modal-footer">
+                Đã có tài khoản? <a href="#" onclick="switchToLogin()">Đăng nhập</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="customAlert" style="z-index: 3000;">
+        <div class="modal-box" style="max-width: 320px; text-align: center; padding: 24px;">
+            <div id="alertIcon" style="font-size: 48px; margin-bottom: 12px;">✅</div>
+
+            <h3 id="alertTitle" style="font-size: 18px; margin-bottom: 8px; color: #1f2937;">Thông báo</h3>
+            <p id="alertMessage" style="color: #6b7280; font-size: 14px; margin-bottom: 24px; line-height: 1.5;">
+                Nội dung thông báo ở đây
+            </p>
+
+            <button onclick="closeCustomAlert()" class="btn-primary-block" style="padding: 10px; border-radius: 8px;">
+                Đóng
+            </button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="logoutModal" style="z-index: 5000;">
+        <div class="modal-box" style="max-width: 380px; text-align: center; padding: 30px 25px;">
+
+            <div style="font-size: 50px; margin-bottom: 15px;">🥺</div>
+
+            <h3 style="font-size: 20px; color: #1f2937; margin-bottom: 10px;">Bạn muốn rời đi sao?</h3>
+
+            <p style="color: #6b7280; font-size: 15px; margin-bottom: 25px; line-height: 1.6;">
+                Nếu đăng xuất, bạn sẽ không thể tải tài liệu hay bình luận được nữa đâu.
+            </p>
+
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button onclick="closeLogoutModal()"
+                    style="padding: 10px 20px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; color: #374151; font-weight: 500; cursor: pointer; flex: 1;">
+                    Ở lại
+                </button>
+
+                <button onclick="confirmLogoutAction()"
+                    style="padding: 10px 20px; border-radius: 8px; background: #ef4444; color: white; border: none; font-weight: 600; cursor: pointer; flex: 1; box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);">
+                    Đăng xuất
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="editProfileModal">
+        <div class="modal-box" style="max-width: 600px;"> <button class="btn-close-modal"
+                onclick="closeEditProfileModal()">✕</button>
+            <div class="modal-header">
+                <h2>Cập nhật hồ sơ ✏️</h2>
+            </div>
+
+            <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
+                <div id="preview-avatar"
+                    style="width: 80px; height: 80px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 10px; border: 2px solid var(--primary-color);">
+                    <span id="preview-text" style="font-size: 30px; font-weight: bold; color: #6b7280;">H</span>
+                    <img id="preview-img" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                </div>
+                <input type="file" id="avatar-input" accept="image/*" style="display: none;"
+                    onchange="handleAvatarPreview()">
+                <button type="button" onclick="document.getElementById('avatar-input').click()"
+                    style="font-size: 13px; color: var(--primary-color); background: none; border: 1px dashed var(--primary-color); padding: 6px 12px; border-radius: 6px; cursor: pointer;">
+                    📸 Đổi ảnh đại diện
+                </button>
+            </div>
+
+            <form onsubmit="handleUpdateProfile(event)">
+                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Tên đăng nhập (Không đổi được)</label>
+                        <input type="text" id="edit-username" class="auth-input" disabled
+                            style="background: #f3f4f6; color: #9ca3af;">
+                    </div>
+                    <div class="form-group" style="flex: 1.5;">
+                        <label class="form-label">Họ và tên</label>
+                        <input type="text" id="edit-fullname" class="auth-input" required>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="edit-email" class="auth-input">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Số điện thoại</label>
+                        <input type="text" id="edit-phone" class="auth-input">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Giới tính</label>
+                        <select id="edit-gender" class="auth-input">
+                            <option value="Nam">Nam</option>
+                            <option value="Nữ">Nữ</option>
+                            <option value="Khác">Khác</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Năm sinh</label>
+                        <input type="number" id="edit-birth" class="auth-input">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Trường học</label>
+                        <input type="text" id="edit-school" class="auth-input">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Tỉnh / Thành phố</label>
+                        <input type="text" id="edit-city" class="auth-input">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Link Facebook</label>
+                    <input type="text" id="edit-facebook" class="auth-input" placeholder="https://facebook.com/...">
+                </div>
+
+                <button type="submit" class="btn-submit-login">Lưu thay đổi</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="changePassModal">
+        <div class="modal-box">
+            <button class="btn-close-modal" onclick="closeChangePassModal()">✕</button>
+            <div class="modal-header">
+                <h2>Đổi mật khẩu 🔐</h2>
+            </div>
+            <form onsubmit="handleChangePassword(event)">
+                <div class="form-group">
+                    <label class="form-label">Mật khẩu hiện tại</label>
+                    <input type="password" id="old-pass" class="auth-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mật khẩu mới</label>
+                    <input type="password" id="new-pass" class="auth-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nhập lại mật khẩu mới</label>
+                    <input type="password" id="confirm-new-pass" class="auth-input" required>
+                </div>
+                <button type="submit" class="btn-submit-login">Xác nhận đổi</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="forgotPassModal">
+        <div class="modal-box">
+            <button class="btn-close-modal" onclick="closeForgotPasswordModal()">✕</button>
+            <div class="modal-header">
+                <h2>Khôi phục tài khoản 🆘</h2>
+                <p>Nhập thông tin để xác minh danh tính</p>
+            </div>
+            <form onsubmit="handleResetPassword(event)">
+                <div class="form-group">
+                    <label class="form-label">Tên đăng nhập</label>
+                    <input type="text" id="fp-username" class="auth-input" placeholder="Ví dụ: admin" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email đăng ký</label>
+                    <input type="email" id="fp-email" class="auth-input" placeholder="Email của tài khoản" required>
+                </div>
+
+                <div style="border-top: 1px dashed #e5e7eb; margin: 15px 0;"></div>
+
+                <div class="form-group">
+                    <label class="form-label">Mật khẩu mới</label>
+                    <input type="password" id="fp-newpass" class="auth-input" placeholder="Đặt mật khẩu mới" required>
+                </div>
+
+                <button type="submit" class="btn-submit-login">Đặt lại mật khẩu</button>
+            </form>
+            <div class="modal-footer">
+                Nhớ ra rồi? <a href="#" onclick="switchToLoginFromForgot()">Đăng nhập lại</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="uploadDocModal">
+        <div class="modal-box">
+            <button class="btn-close-modal" onclick="closeUploadDocModal()">✕</button>
+            <div class="modal-header">
+                <h2>Tải lên tài liệu 📂</h2>
+            </div>
+            <form onsubmit="handleUploadDocument(event)">
+                <div class="form-group">
+                    <label class="form-label">Tên tài liệu</label>
+                    <input type="text" id="docName" class="auth-input" placeholder="VD: Giải tích 1 - Chương 2"
+                        required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Chọn file</label>
+                    <input type="file" id="docFile" class="auth-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Loại file</label>
+                    <select id="docType" class="auth-input">
+                        <option value="pdf">PDF</option>
+                        <option value="word">Word</option>
+                        <option value="ppt">PowerPoint</option>
+                        <option value="excel">Excel</option>
+                        <option value="image">Ảnh</option>
+                        <option value="other">Khác</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Chọn môn học</label>
+                    <select id="docCourse" class="auth-input">
+                        <option value="">-- Chọn môn --</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-submit-login">Tải lên ngay</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Document Modal -->
+    <div class="modal-overlay" id="editDocModal">
+        <div class="modal-box">
+            <button class="btn-close-modal" onclick="DocumentManager.closeEditModal()">✕</button>
+            <div class="modal-header">
+                <h2>Sửa thông tin tài liệu 📝</h2>
+            </div>
+            <form onsubmit="DocumentManager.handleEditDocument(event)">
+                <div class="form-group">
+                    <label class="form-label">Tên tài liệu</label>
+                    <input type="text" id="editDocName" class="auth-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Chọn môn học</label>
+                    <select id="editDocCourse" class="auth-input">
+                        <option value="">-- Chọn môn --</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-submit-login">Cập nhật</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="study-focus-overlay" class="focus-overlay" style="display: none;">
+        <button class="btn-exit-focus" onclick="StudyTimer.exit()">✕</button>
+
+        <div class="flip-clock-container">
+            <div class="flip-clock">
+                <div class="flip-unit">
+                    <div class="flip-card" id="f-hours" data-next="00">
+                        <div class="top">00</div>
+                        <div class="bottom">00</div>
+                    </div>
+                    <div class="unit-label">HOURS</div>
+                </div>
+                <div class="flip-separator">:</div>
+                <div class="flip-clock">
+                    <div class="flip-unit">
+                        <div class="flip-card" id="f-minutes" data-next="25">
+                            <div class="top">25</div>
+                            <div class="bottom">25</div>
+                        </div>
+                        <div class="unit-label">MINUTES</div>
+                    </div>
+                    <div class="flip-separator">:</div>
+                    <div class="flip-unit">
+                        <div class="flip-card" id="f-seconds" data-next="00">
+                            <div class="top">00</div>
+                            <div class="bottom">00</div>
+                        </div>
+                        <div class="unit-label">SECONDS</div>
+                    </div>
+                </div>
+
+                <div class="focus-controls">
+                    <button class="f-btn-main" id="f-btn-toggle" onclick="StudyTimer.toggle()">BẮT ĐẦU</button>
+                    <button class="f-btn-small" onclick="StudyTimer.reset()">↺</button>
+                    <button class="f-btn-small" onclick="StudyTimer.openSettings()">⚙️</button>
+                </div>
+
+                <div class="focus-presets">
+                    <button onclick="StudyTimer.setTime(25)">25p</button>
+                    <button onclick="StudyTimer.setTime(45)">45p</button>
+                    <button onclick="StudyTimer.setTime(60)">60p</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="timePickerModal">
+            <div class="modal-box" style="max-width: 380px;">
+                <button class="btn-close-modal" onclick="closeTimePickerModal()">✕</button>
+                <div class="modal-header">
+                    <h2>⏱️ Chọn Thời Gian Tập Trung</h2>
+                    <p>Đặt thời gian học tập hiệu quả của bạn</p>
+                </div>
+                <div class="time-picker-body">
+                    <div class="time-display">
+                        <span id="time-value">25</span>
+                        <span class="time-unit">phút</span>
+                    </div>
+                    <input type="range" id="time-slider" class="time-slider" min="5" max="120" value="25" step="5"
+                        oninput="updateTimeDisplay(this.value)">
+                    <div class="quick-presets">
+                        <button class="preset-btn" onclick="setTimeFromModal(15)">15p</button>
+                        <button class="preset-btn active" onclick="setTimeFromModal(25)">25p</button>
+                        <button class="preset-btn" onclick="setTimeFromModal(45)">45p</button>
+                        <button class="preset-btn" onclick="setTimeFromModal(60)">60p</button>
+                        <button class="preset-btn" onclick="setTimeFromModal(90)">90p</button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                    <button onclick="closeTimePickerModal()" class="btn-cancel-modal">Hủy</button>
+                    <button onclick="applyCustomTime()" class="btn-submit-login">✓ Xác nhận</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <div class="modal-overlay" id="examModeModal">
+        <div class="modal-box" style="max-width: 500px; text-align: center;">
+            <button class="btn-close-modal" onclick="ExamRunner.closeModeModal()">✕</button>
+            <div class="modal-header">
+                <h2>🎯 Chọn Chế Độ Thi</h2>
+                <p>Bạn muốn luyện tập hay thi thử?</p>
+            </div>
+
+            <div class="exam-modes-grid"
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
+                <div class="mode-card" onclick="ExamRunner.startExam('practice')"
+                    style="cursor: pointer; border: 2px solid #e5e7eb; border-radius: 12px; padding: 20px; transition: all 0.2s;">
+                    <div style="font-size: 40px; margin-bottom: 10px;">🏋️‍♂️</div>
+                    <h3 style="color: var(--primary-color); margin-bottom: 5px;">Luyện Tập</h3>
+                    <p style="font-size: 13px; color: #6b7280;">Biết ngay đáp án đúng sai. Xem giải thích chi tiết sau
+                        mỗi câu.</p>
+                </div>
+
+                <div class="mode-card" onclick="ExamRunner.startExam('real')"
+                    style="cursor: pointer; border: 2px solid #e5e7eb; border-radius: 12px; padding: 20px; transition: all 0.2s;">
+                    <div style="font-size: 40px; margin-bottom: 10px;">⏱️</div>
+                    <h3 style="color: #ef4444; margin-bottom: 5px;">Thi Thật</h3>
+                    <p style="font-size: 13px; color: #6b7280;">Áp lực thời gian. Phải làm hết mới được nộp. Có điểm số
+                        cuối cùng.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <template id="exam-interface-template">
+        <div class="exam-container">
+            <div class="exam-main-content">
+                <div class="exam-sticky-header">
+                    <div class="exam-info-left">
+                        <button class="btn-back-exam" onclick="ExamRunner.exitExam()">← Thoát</button>
+                        <span class="exam-timer" id="exam-timer">00:00</span>
+                    </div>
+
+                    <div class="exam-middle-bar">
+                        <div class="progress-track-main">
+                            <div id="main-progress-bar" class="progress-fill-main" style="width: 0%"></div>
+                        </div>
+                        <span id="progress-percent-text">0%</span>
+                    </div>
+
+                    <div class="exam-progress-text">
+                        Đã làm: <b id="progress-text">0/0</b>
+                    </div>
+                </div>
+
+                <div id="questions-container" class="questions-list"></div>
+                <div class="exam-footer-action">
+                    <button class="btn-submit-exam big" onclick="ExamRunner.submitExam()">NỘP BÀI THI</button>
+                </div>
+            </div>
+
+            <div class="exam-sidebar-right">
+                <div class="map-box">
+                    <div class="map-header">
+                        <h3>Danh sách câu hỏi</h3>
+                        <span class="map-guide">
+                            <span class="dot done"></span> Đã làm
+                            <span class="dot pending"></span> Chưa làm
+                        </span>
+                    </div>
+                    <div id="question-map-grid" class="question-map-grid"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <div class="modal-overlay" id="examResultModal">
+        <div class="modal-box" style="max-width: 450px; text-align: center;">
+            <div class="result-icon" style="font-size: 60px; margin-bottom: 10px;">🏆</div>
+            <h2 style="color: var(--primary-color); margin-bottom: 5px;">Kết Quả Bài Thi</h2>
+            <p id="result-message" style="color: #6b7280; margin-bottom: 20px;">Chúc mừng bạn đã hoàn thành!</p>
+
+            <div class="result-score-box"
+                style="background: #f3f4f6; padding: 20px; border-radius: 16px; margin-bottom: 24px;">
+                <div style="font-size: 14px; color: #6b7280;">Điểm số của bạn</div>
+                <div id="result-score" style="font-size: 48px; font-weight: 800; color: var(--primary-color);">0/10
+                </div>
+                <div id="result-percent" style="font-size: 14px; font-weight: 600; color: #10b981;">0%</div>
+            </div>
+
+            <div style="display: flex; gap: 12px;">
+                <button onclick="ExamRunner.reviewExam()" class="btn-secondary-block"
+                    style="flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #d1d5db; background: white; font-weight: 600;">
+                    🔍 Xem lại bài
+                </button>
+                <button onclick="ExamRunner.retryExam()" class="btn-primary-block" style="flex: 1; margin: 0;">
+                    🔄 Thi lại
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="exitConfirmModal" style="z-index: 1100;">
+        <div class="modal-box" style="max-width: 380px; text-align: center; padding: 30px;">
+            <div style="font-size: 48px; margin-bottom: 15px;">⚠️</div>
+            <h3 style="color: #1f2937; margin-bottom: 10px; font-size: 20px; font-weight: 700;">Bạn muốn thoát bài thi?
+            </h3>
+            <p style="color: #6b7280; margin-bottom: 24px; font-size: 15px; line-height: 1.5;">
+                Nếu thoát bây giờ, quá trình làm bài hiện tại của bạn sẽ <b>không được lưu lại</b>.
+            </p>
+            <div style="display: flex; gap: 12px;">
+                <button onclick="ExamRunner.closeConfirmModal('exitConfirmModal')"
+                    style="flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #d1d5db; background: white; font-weight: 600; color: #374151; cursor: pointer; transition: all 0.2s;">
+                    Quay lại
+                </button>
+                <button onclick="ExamRunner.confirmExit()"
+                    style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #ef4444; font-weight: 600; color: white; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);">
+                    Thoát ngay
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="submitConfirmModal" style="z-index: 1100;">
+        <div class="modal-box" style="max-width: 380px; text-align: center; padding: 30px;">
+            <div style="font-size: 48px; margin-bottom: 15px;">📤</div>
+            <h3 style="color: #1f2937; margin-bottom: 10px; font-size: 20px; font-weight: 700;">Xác nhận nộp bài?</h3>
+            <p style="color: #6b7280; margin-bottom: 24px; font-size: 15px; line-height: 1.5;">
+                Bạn đã chắc chắn muốn kết thúc bài thi và xem kết quả chưa?
+            </p>
+            <div style="display: flex; gap: 12px;">
+                <button onclick="ExamRunner.closeConfirmModal('submitConfirmModal')"
+                    style="flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #d1d5db; background: white; font-weight: 600; color: #374151; cursor: pointer; transition: all 0.2s;">
+                    Để xem lại
+                </button>
+                <button onclick="ExamRunner.confirmSubmit()"
+                    style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: var(--primary-color); font-weight: 600; color: white; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(19, 70, 145, 0.2);">
+                    Nộp bài ngay
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="deleteDocConfirmModal" style="z-index: 9999;">
+        <div class="modal-box" style="max-width: 400px; text-align: center; padding: 30px;">
+            <div
+                style="width: 80px; height: 80px; background: #fee2e2; color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto 20px;">
+                🗑️
+            </div>
+
+            <h3 style="color: #1f2937; margin-bottom: 10px; font-size: 22px; font-weight: 700;">Xóa tài liệu này?</h3>
+
+            <p style="color: #6b7280; margin-bottom: 24px; font-size: 15px; line-height: 1.6;">
+                Hành động này <b>không thể hoàn tác</b>. Tài liệu sẽ bị xóa vĩnh viễn khỏi
+                hệ thống.
+            </p>
+
+            <div style="display: flex; gap: 12px; pointer-events: auto;">
+                <button onclick="DocumentManager.closeDeleteModal()"
+                    style="flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #d1d5db; background: white; font-weight: 600; color: #374151; cursor: pointer; transition: 0.2s; pointer-events: auto;">
+                    Hủy bỏ
+                </button>
+                <button onclick="DocumentManager.confirmDeleteAction()"
+                    style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #ef4444; font-weight: 600; color: white; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25); pointer-events: auto;">
+                    Xóa ngay
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="createExamModal" style="z-index: 2000;">
+        <div class="modal-box" style="max-width: 700px; max-height: 90vh; display: flex; flex-direction: column;">
+            <button class="btn-close-modal" onclick="ExamCreator.close()">✕</button>
+
+            <div class="modal-header" style="flex-shrink: 0;">
+                <h2>📝 Tạo Đề Từ File</h2>
+                <p>Hỗ trợ file Word (.docx)</p>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 4px;">
+
+                <div id="step-upload">
+                    <div class="upload-area" onclick="document.getElementById('exam-file-upload').click()"
+                        style="border: 2px dashed #d1d5db; padding: 40px; text-align: center; border-radius: 12px; cursor: pointer; transition: 0.2s; background: #f9fafb;">
+                        <div style="font-size: 40px; margin-bottom: 10px;">📂</div>
+                        <p style="font-weight: 600; color: #4b5563;">Nhấn để chọn file Word (.docx)</p>
+                        <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                            Hệ thống tự động chọn đáp án đúng nếu thấy:<br>
+                            <b>In đậm</b>, <i>In nghiêng</i>, <u>Gạch chân</u>, <span style="color:red">Màu đỏ</span>
+                            hoặc <span style="background: yellow; color: black; padding: 0 4px;">Highlight</span>
+                        </p>
+                        <input type="file" id="exam-file-upload" accept=".docx" style="display: none;"
+                            onchange="ExamCreator.handleFile(event)">
+                    </div>
+                </div>
+
+                <div id="step-review" style="display: none; flex-direction: column; gap: 15px;">
+                    <div
+                        style="background: #eef2ff; border: 1px solid #c7d2fe; padding: 12px; border-radius: 8px; font-size: 13px; color: #3730a3;">
+                        ℹ️ <b>Kiểm tra kỹ:</b> Bạn có thể sửa nội dung câu hỏi, chọn lại đáp án đúng hoặc xóa câu hỏi
+                        rác trước khi tạo đề.
+                    </div>
+
+                    <div id="review-list" style="display: flex; flex-direction: column; gap: 15px;"></div>
+                </div>
+
+                <div id="step-config" style="display: none; padding-top: 10px;">
+                    <div class="form-group">
+                        <label class="form-label">Tên đề thi</label>
+                        <input type="text" id="new-exam-title" class="auth-input"
+                            placeholder="VD: Kiểm tra 1 tiết Toán">
+                    </div>
+
+                    <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">Thời gian (phút)</label>
+                            <input type="number" id="new-exam-time" class="auth-input" value="45">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">Môn học</label>
+                            <select id="new-exam-subject" class="auth-input">
+                                <option value="Tự do">Tự do</option>
+                                <option value="Toán">Toán</option>
+                                <option value="Văn">Văn</option>
+                                <option value="Anh">Anh</option>
+                                <option value="Pháp luật">Pháp luật</option>
+                                <option value="Triết học">Triết học</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div
+                        style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 16px; border-radius: 12px; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                            <span style="font-size: 20px;">✅</span>
+                            <span style="color: #065f46; font-weight: 600;">Hệ thống đã sẵn sàng!</span>
+                        </div>
+                        <ul style="padding-left: 20px; color: #047857; font-size: 13px; line-height: 1.6;">
+                            <li>Tổng số câu hỏi tìm thấy: <b id="found-questions">0</b></li>
+                            <li>Số câu sẽ lấy vào đề:
+                                <input type="number" id="new-exam-limit"
+                                    style="width: 60px; padding: 4px; border-radius: 4px; border: 1px solid #10b981; font-weight: bold; text-align: center;">
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer-actions"
+                style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; flex-shrink: 0;">
+                <button id="btn-back-step" onclick="ExamCreator.backStep()" class="btn-cancel-modal"
+                    style="display: none;">Quay lại</button>
+
+                <button id="btn-main-action" onclick="ExamCreator.nextStep()" class="btn-submit-login">Tiếp tục
+                    ➔</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="study.js"></script>
+    <script src="exam.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+</body>
+
+</html>

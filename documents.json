@@ -1,0 +1,75 @@
+[
+  {
+    "id": 1768558157764,
+    "name": "orca",
+    "uploader": "Nguyễn Quang Bình",
+    "date": "16/1/2026",
+    "time": "17:09",
+    "type": "image",
+    "path": "/uploads/orca.png",
+    "size": 12107,
+    "downloadCount": 0,
+    "createdAt": "2026-01-16T10:09:17.807Z",
+    "course": "11"
+  },
+  {
+    "id": 1768554616095,
+    "name": "sách",
+    "uploader": "Nguyễn Quang Bình",
+    "date": "16/1/2026",
+    "time": "16:10",
+    "type": "pdf",
+    "path": "/uploads/giao-tranh-1.pdf",
+    "size": 2568095,
+    "downloadCount": 0,
+    "createdAt": "2026-01-16T09:10:16.096Z"
+  },
+  {
+    "id": 1768554244126,
+    "name": "thừa kế",
+    "uploader": "Nguyễn Quang Bình",
+    "date": "16/1/2026",
+    "time": "16:04",
+    "type": "word",
+    "path": "/uploads/thaa-ka-1.pdf",
+    "size": 764058,
+    "downloadCount": 0,
+    "createdAt": "2026-01-16T09:04:04.127Z"
+  },
+  {
+    "id": 1768553965180,
+    "name": "file test",
+    "uploader": "Nguyễn Quang Bình",
+    "date": "16/1/2026",
+    "time": "15:59",
+    "type": "pdf",
+    "path": "/uploads/phapluatdaicuongtracnghiem.docx",
+    "size": 36886,
+    "downloadCount": 0,
+    "createdAt": "2026-01-16T08:59:25.181Z"
+  },
+  {
+    "id": 1768542137976,
+    "name": "pldc vle",
+    "uploader": "Nguyễn Quang Bình",
+    "date": "16/1/2026",
+    "time": "12:42",
+    "type": "word",
+    "path": "/uploads/phapluatdaicuongtracnghiem.docx",
+    "size": 36886,
+    "downloadCount": 0,
+    "createdAt": "2026-01-16T05:42:17.976Z"
+  },
+  {
+    "id": 1768504159251,
+    "name": "giáo trình",
+    "uploader": "Nguyễn Quang Bình",
+    "date": "16/1/2026",
+    "time": "02:09",
+    "type": "pdf",
+    "path": "/uploads/giao-tranh.pdf",
+    "size": 2568095,
+    "downloadCount": 0,
+    "createdAt": "2026-01-15T19:09:19.276Z"
+  }
+]

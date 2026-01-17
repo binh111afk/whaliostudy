@@ -1,0 +1,27 @@
+[
+  {
+    "id": 1768586863951,
+    "title": "nice",
+    "subject": "Tự do",
+    "questions": 20,
+    "time": "45 phút",
+    "image": "./img/snvvnghen.png",
+    "createdAt": "2026-01-16T18:07:44.031Z"
+  },
+  {
+    "id": 1,
+    "title": "Đề ôn tập Pháp Luật Đại Cương - Chương 1",
+    "subject": "Pháp luật",
+    "questions": 40,
+    "time": "60 phút",
+    "image": "./img/pldc-pic.png"
+  },
+  {
+    "id": 2,
+    "title": "Trắc nghiệm Tâm Lý Học",
+    "subject": "Tâm lý",
+    "questions": 25,
+    "time": "30 phút",
+    "image": "./img/tlhdc-pic.png"
+  }
+]

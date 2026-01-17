@@ -1,0 +1,50 @@
+[
+  {
+    "username": "admin",
+    "password": "123456789",
+    "fullName": "Trịnh Quang Huy",
+    "avatar": "/uploads/1768493112672-Screenshot 2026-01-15 214058.png",
+    "role": "admin",
+    "email": "huyhayho@gmail.com",
+    "phone": "0393 xxx xxx",
+    "gender": "Nam",
+    "birthYear": "2008",
+    "facebook": "fb.com/trinhquanghuy",
+    "city": "Hồ Chí Minh",
+    "school": "Trường Đại học Bách Khoa - Đại học Quốc gia TPHCM",
+    "savedDocs": [],
+    "updatedAt": "2026-01-15T18:50:06.193Z"
+  },
+  {
+    "username": "binhgold",
+    "password": "123",
+    "fullName": "Nguyễn Quang Bình",
+    "avatar": "B",
+    "role": "member",
+    "email": "binhgold@gmail.com",
+    "phone": "0909 xxx xxx",
+    "gender": "Nam",
+    "birthYear": "2007",
+    "facebook": "fb.com/binhgold",
+    "city": "Hà Nội",
+    "school": "Trường Đại học Sư phạm TPHCM",
+    "savedDocs": [
+      1768584989184,
+      1768558157764,
+      1768554616095
+    ]
+  },
+  {
+    "id": 1768503116286,
+    "username": "binhdzvl",
+    "password": "123456",
+    "fullName": "Nguyễn Quang Bình",
+    "email": "afkbinh1412007@gmail.com",
+    "avatar": "N",
+    "role": "admin",
+    "savedDocs": [
+      1768584989184
+    ],
+    "createdAt": "2026-01-15T18:51:56.286Z"
+  }
+]

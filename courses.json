@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "name": "Giải tích 1",
+    "icon": "📐"
+  },
+  {
+    "id": 2,
+    "name": "Đại số tuyến tính",
+    "icon": "📊"
+  },
+  {
+    "id": 3,
+    "name": "Vật lý 1",
+    "icon": "⚛️"
+  },
+  {
+    "id": 4,
+    "name": "Hóa học",
+    "icon": "🧪"
+  },
+  {
+    "id": 5,
+    "name": "Tiếng Anh",
+    "icon": "🌍"
+  },
+  {
+    "id": 6,
+    "name": "Lập trình C++",
+    "icon": "💻"
+  },
+  {
+    "id": 7,
+    "name": "Cơ sở dữ liệu",
+    "icon": "🗄️"
+  },
+  {
+    "id": 8,
+    "name": "Web Development",
+    "icon": "🌐"
+  }
+]
