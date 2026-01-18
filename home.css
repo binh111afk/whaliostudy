@@ -1067,9 +1067,9 @@ footer {
     /* Nổi lên trên */
 }
 
-/* Màu cho ẢNH: Tím (Giống icon Ảnh) */
+/* Màu cho ẢNH: Cam (Giống yêu cầu) */
 .bar-image {
-    background: linear-gradient(90deg, #a855f7, #d946ef);
+    background: linear-gradient(90deg, #f97316, #ea580c);
     z-index: 1;
 }
 

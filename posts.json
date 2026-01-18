@@ -1,5 +1,181 @@
 [
   {
+    "id": 1768741603125,
+    "author": "admin",
+    "authorFullName": "Trịnh Quang Huy",
+    "authorAvatar": "/uploads/1768493112672-Screenshot 2026-01-15 214058.png",
+    "content": "omg chưa",
+    "images": [],
+    "files": [],
+    "likes": 0,
+    "likedBy": [],
+    "comments": [
+      {
+        "id": 1768741652389,
+        "author": "admin",
+        "authorFullName": "Trịnh Quang Huy",
+        "authorAvatar": "/uploads/1768493112672-Screenshot 2026-01-15 214058.png",
+        "content": "tài liệu nè bạn",
+        "images": [],
+        "files": [
+          {
+            "originalName": "phapluatdaicuongtracnghiem (4).docx",
+            "name": "phapluatdaicuongtracnghiem (4).docx",
+            "path": "/uploads/phapluatdaicuongtracnghiem-(4)-1768741652367.docx",
+            "size": 36886,
+            "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          }
+        ],
+        "reactions": {},
+        "replies": [],
+        "createdAt": "2026-01-18T13:07:32.389Z"
+      },
+      {
+        "id": 1768748099304,
+        "author": "binhdzvl",
+        "authorFullName": "Nguyễn Quang Bình",
+        "authorAvatar": "N",
+        "content": "vậy hả",
+        "images": [],
+        "files": [],
+        "reactions": {},
+        "replies": [],
+        "createdAt": "2026-01-18T14:54:59.304Z"
+      },
+      {
+        "id": 1768749079174,
+        "author": "binhdzvl",
+        "authorFullName": "Nguyễn Quang Bình",
+        "authorAvatar": "N",
+        "content": "hay ta",
+        "images": [],
+        "files": [],
+        "reactions": {},
+        "replies": [],
+        "createdAt": "2026-01-18T15:11:19.174Z"
+      },
+      {
+        "id": 1768749535136,
+        "author": "binhdzvl",
+        "authorFullName": "Nguyễn Quang Bình",
+        "authorAvatar": "N",
+        "content": "không",
+        "images": [],
+        "files": [],
+        "reactions": {},
+        "replies": [],
+        "createdAt": "2026-01-18T15:18:55.136Z"
+      }
+    ],
+    "savedBy": [],
+    "createdAt": "2026-01-18T13:06:43.125Z",
+    "deleted": false
+  },
+  {
+    "id": 1768741322236,
+    "author": "admin",
+    "authorFullName": "Trịnh Quang Huy",
+    "content": "chào các em",
+    "images": [],
+    "files": [],
+    "likes": 0,
+    "likedBy": [],
+    "comments": [],
+    "savedBy": [],
+    "createdAt": "2026-01-18T13:02:02.236Z",
+    "deleted": false
+  },
+  {
+    "id": 1768741294428,
+    "authorId": 1768503116286,
+    "author": "binhdzvl",
+    "authorFullName": "Nguyễn Quang Bình",
+    "content": "nice",
+    "images": [],
+    "files": [],
+    "likes": 0,
+    "likedBy": [],
+    "comments": [],
+    "savedBy": [],
+    "createdAt": "2026-01-18T13:01:34.429Z",
+    "deleted": false
+  },
+  {
+    "id": 1768740257106,
+    "author": "admin",
+    "content": "nè",
+    "images": [],
+    "files": [
+      {
+        "originalName": "giấy chứng nhận sinh viên.pdf",
+        "name": "giấy chứng nhận sinh viên.pdf",
+        "path": "/uploads/giấy-chứng-nhận-sinh-viên-1768740257093.pdf",
+        "size": 568986,
+        "mimeType": "application/pdf"
+      }
+    ],
+    "likes": 0,
+    "likedBy": [],
+    "comments": [],
+    "savedBy": [],
+    "createdAt": "2026-01-18T12:44:17.106Z",
+    "deleted": true
+  },
+  {
+    "id": 1768739891853,
+    "authorId": 1768503116286,
+    "author": "binhdzvl",
+    "content": "vip chưa",
+    "images": [],
+    "files": [
+      {
+        "originalName": "giáº¥y chá»©ng nháº­n sinh viÃªn.pdf",
+        "name": "giáº¥y chá»©ng nháº­n sinh viÃªn.pdf",
+        "path": "/uploads/giáº¥y-chá»©ng-nháº­n-sinh-viÃªn-1768739891811.pdf",
+        "size": 568986,
+        "mimeType": "application/pdf"
+      }
+    ],
+    "likes": 0,
+    "likedBy": [],
+    "comments": [
+      {
+        "id": 1768740743915,
+        "author": "admin",
+        "content": "ok",
+        "images": [],
+        "files": [],
+        "reactions": {},
+        "replies": [],
+        "createdAt": "2026-01-18T12:52:23.915Z"
+      }
+    ],
+    "savedBy": [],
+    "createdAt": "2026-01-18T12:38:11.853Z",
+    "deleted": true
+  },
+  {
+    "id": 1768709624713,
+    "author": "binhgold",
+    "content": "ok",
+    "images": [],
+    "files": [
+      {
+        "originalName": "giáº¥y chá»©ng nháº­n sinh viÃªn.pdf",
+        "name": "giáº¥y chá»©ng nháº­n sinh viÃªn.pdf",
+        "path": "/uploads/giay-chang-nhan-sinh-vian.pdf",
+        "size": 568986,
+        "mimeType": "application/pdf"
+      }
+    ],
+    "likes": 0,
+    "likedBy": [],
+    "comments": [],
+    "savedBy": [],
+    "createdAt": "2026-01-18T04:13:44.713Z",
+    "deleted": true
+  },
+  {
     "id": 1768708958502,
     "author": "binhgold",
     "content": "nice",
@@ -15,7 +191,39 @@
     ],
     "likes": 0,
     "likedBy": [],
-    "comments": [],
+    "comments": [
+      {
+        "id": 1768709606198,
+        "author": "binhgold",
+        "content": "nice",
+        "createdAt": "2026-01-18T04:13:26.198Z"
+      },
+      {
+        "id": 1768739784606,
+        "author": "binhgold",
+        "content": "nice",
+        "images": [
+          "/uploads/z7440480386882_dcdc4ead1908508618f501704213917c-1768739784594.jpg"
+        ],
+        "files": [],
+        "reactions": {
+          "😀": {
+            "count": 1,
+            "users": [
+              "admin"
+            ]
+          },
+          "😡": {
+            "count": 1,
+            "users": [
+              "admin"
+            ]
+          }
+        },
+        "replies": [],
+        "createdAt": "2026-01-18T12:36:24.606Z"
+      }
+    ],
     "savedBy": [],
     "createdAt": "2026-01-18T04:02:38.502Z",
     "deleted": false

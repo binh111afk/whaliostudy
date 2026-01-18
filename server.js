@@ -24,58 +24,54 @@ app.use((req, res, next) => {
     next();
 });
 
-// Sửa lại hàm normalizeFileName để xử lý encoding tốt hơn
+// Hàm decode tên file đúng cách từ multer
+function decodeFileName(filename) {
+    try {
+        // Multer có thể gửi filename với encoding sai, cần decode đúng cách
+        // Nếu filename đã là UTF-8 thì giữ nguyên
+        if (!filename) return filename;
+        
+        // Kiểm tra xem có phải là Latin1 encoding không (encoding mặc định của HTTP headers)
+        // Nếu có ký tự lạ thì decode từ Latin1 sang UTF-8
+        if (/[\xC0-\xFF]/.test(filename)) {
+            // Convert từ Latin1 (ISO-8859-1) sang UTF-8
+            const buffer = Buffer.from(filename, 'latin1');
+            return buffer.toString('utf8');
+        }
+        
+        return filename;
+    } catch (err) {
+        console.error('Error decoding filename:', err);
+        return filename; // Fallback to original
+    }
+}
+
+// Sửa lại hàm normalizeFileName để xử lý encoding tốt hơn và giữ lại tên file có dấu
 function normalizeFileName(str) {
     if (!str) return Date.now() + '-file';
 
     try {
-        // Chuyển về Unicode chuẩn
-        str = str.normalize('NFC');
-
-        // Lấy phần mở rộng
         const ext = path.extname(str);
         let nameWithoutExt = path.basename(str, ext);
 
-        // Chuẩn hóa tiếng Việt và ký tự đặc biệt
-        // Bảng chuyển đổi tiếng Việt
-        const vietnameseMap = {
-            'à': 'a', 'á': 'a', 'ạ': 'a', 'ả': 'a', 'ã': 'a', 'â': 'a', 'ầ': 'a', 'ấ': 'a', 'ậ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ă': 'a', 'ằ': 'a', 'ắ': 'a', 'ặ': 'a', 'ẳ': 'a', 'ẵ': 'a',
-            'è': 'e', 'é': 'e', 'ẹ': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ê': 'e', 'ề': 'e', 'ế': 'e', 'ệ': 'e', 'ể': 'e', 'ễ': 'e',
-            'ì': 'i', 'í': 'i', 'ị': 'i', 'ỉ': 'i', 'ĩ': 'i',
-            'ò': 'o', 'ó': 'o', 'ọ': 'o', 'ỏ': 'o', 'õ': 'o', 'ô': 'o', 'ồ': 'o', 'ố': 'o', 'ộ': 'o', 'ổ': 'o', 'ỗ': 'o', 'ơ': 'o', 'ờ': 'o', 'ớ': 'o', 'ợ': 'o', 'ở': 'o', 'ỡ': 'o',
-            'ù': 'u', 'ú': 'u', 'ụ': 'u', 'ủ': 'u', 'ũ': 'u', 'ư': 'u', 'ừ': 'u', 'ứ': 'u', 'ự': 'u', 'ử': 'u', 'ữ': 'u',
-            'ỳ': 'y', 'ý': 'y', 'ỵ': 'y', 'ỷ': 'y', 'ỹ': 'y',
-            'đ': 'd',
-            'À': 'A', 'Á': 'A', 'Ạ': 'A', 'Ả': 'A', 'Ã': 'A', 'Â': 'A', 'Ầ': 'A', 'Ấ': 'A', 'Ậ': 'A', 'Ẩ': 'A', 'Ẫ': 'A', 'Ă': 'A', 'Ằ': 'A', 'Ắ': 'A', 'Ặ': 'A', 'Ẳ': 'A', 'Ẵ': 'A',
-            'È': 'E', 'É': 'E', 'Ẹ': 'E', 'Ẻ': 'E', 'Ẽ': 'E', 'Ê': 'E', 'Ề': 'E', 'Ế': 'E', 'Ệ': 'E', 'Ể': 'E', 'Ễ': 'E',
-            'Ì': 'I', 'Í': 'I', 'Ị': 'I', 'Ỉ': 'I', 'Ĩ': 'I',
-            'Ò': 'O', 'Ó': 'O', 'Ọ': 'O', 'Ỏ': 'O', 'Õ': 'O', 'Ô': 'O', 'Ồ': 'O', 'Ố': 'O', 'Ộ': 'O', 'Ổ': 'O', 'Ỗ': 'O', 'Ơ': 'O', 'Ờ': 'O', 'Ớ': 'O', 'Ợ': 'O', 'Ở': 'O', 'Ỡ': 'O',
-            'Ù': 'U', 'Ú': 'U', 'Ụ': 'U', 'Ủ': 'U', 'Ũ': 'U', 'Ư': 'U', 'Ừ': 'U', 'Ứ': 'U', 'Ự': 'U', 'Ử': 'U', 'Ữ': 'U',
-            'Ỳ': 'Y', 'Ý': 'Y', 'Ỵ': 'Y', 'Ỷ': 'Y', 'Ỹ': 'Y',
-            'Đ': 'D'
-        };
-
-        // Thay thế các ký tự tiếng Việt
-        nameWithoutExt = nameWithoutExt.split('').map(char => vietnameseMap[char] || char).join('');
-
-        // Xóa các ký tự đặc biệt, chỉ giữ lại chữ cái, số, dấu gạch ngang và underscore
+        // Chỉ xóa các ký tự không an toàn cho filesystem, giữ lại dấu tiếng Việt
         let safeName = nameWithoutExt
-            .replace(/[^a-zA-Z0-9\s\-_]/g, '')  // Xóa ký tự đặc biệt
-            .replace(/\s+/g, '-')                 // Thay khoảng trắng bằng dấu gạch ngang
-            .replace(/-+/g, '-')                   // Thay nhiều dấu gạch ngang liên tiếp bằng một
-            .replace(/^[-_]+|[-_]+$/g, '')        // Xóa dấu gạch ngang/underscore ở đầu và cuối
-            .toLowerCase()
-            .slice(0, 50);                        // Giới hạn độ dài
+            .replace(/[<>:"/\\|?*\x00-\x1f]/g, '')  // Xóa ký tự không hợp lệ cho filesystem
+            .replace(/\s+/g, '-')                    // Thay khoảng trắng bằng dấu gạch ngang
+            .replace(/-+/g, '-')                     // Thay nhiều dấu gạch ngang liên tiếp bằng một
+            .replace(/^[-_]+|[-_]+$/g, '')          // Xóa dấu gạch ngang/underscore ở đầu và cuối
+            .slice(0, 100);                         // Giới hạn độ dài tên
 
         // Nếu tên quá ngắn hoặc rỗng sau khi xử lý, thêm timestamp
-        if (safeName.length < 3) {
-            safeName = Date.now() + '-file';
+        if (safeName.length < 1) {
+            safeName = 'file-' + Date.now();
         }
 
-        return safeName + ext;
+        const timestamp = Date.now();
+        return safeName + '-' + timestamp + ext;
     } catch (err) {
         console.error('Error normalizing filename:', err);
-        return Date.now() + '-file' + (str ? path.extname(str) : '');
+        return 'file-' + Date.now() + (str ? path.extname(str) : '');
     }
 }
 
@@ -91,7 +87,13 @@ const storage = multer.diskStorage({
         }
     },
     filename: (req, file, cb) => {
-        const safeName = normalizeFileName(file.originalname);
+        // Decode tên file đúng cách trước
+        const decodedName = decodeFileName(file.originalname);
+        const safeName = normalizeFileName(decodedName);
+        
+        // Lưu tên gốc đã decode vào metadata
+        file.decodedOriginalName = decodedName;
+        
         cb(null, safeName);
     }
 });
@@ -276,17 +278,21 @@ app.get('/api/documents', async (req, res) => {
 
 app.post('/api/upload-document', upload.single('file'), async (req, res) => {
     try {
-        const { name, type, uploader, course } = req.body;
+        const { name, type, uploader, course, username } = req.body;
         const file = req.file;
 
         if (!file) {
             return res.status(400).json({ success: false, message: "Chưa chọn file!" });
         }
 
+        // Decode tên file gốc
+        const decodedOriginalName = file.decodedOriginalName || decodeFileName(file.originalname);
+
         const newDoc = {
             id: Date.now(),
-            name: name || file.originalname.replace(/\.[^/.]+$/, ""),
+            name: name || decodedOriginalName.replace(/\.[^/.]+$/, ""),
             uploader: uploader || "Ẩn danh",
+            uploaderUsername: username || null, // Thêm username
             date: new Date().toLocaleDateString('vi-VN'),
             time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
             type: type || "other",
@@ -599,6 +605,64 @@ app.post('/api/create-exam', async (req, res) => {
 // File paths
 const POSTS_FILE = 'posts.json';
 
+// API: Lấy hoạt động gần đây (upload file, bình luận)
+app.get('/api/recent-activities', async (req, res) => {
+    try {
+        const docs = await readJSON(DOCS_FILE);
+        const posts = await readJSON(POSTS_FILE);
+        const users = await readJSON(USERS_FILE);
+        
+        const activities = [];
+        
+        // Lấy 5 tài liệu mới nhất
+        docs.slice(0, 5).forEach(doc => {
+            const user = users.find(u => u.fullName === doc.uploader);
+            activities.push({
+                type: 'upload',
+                user: doc.uploader,
+                username: user?.username || '',
+                avatar: doc.uploader.charAt(0).toUpperCase(),
+                userAvatar: user?.avatar || null,
+                action: 'vừa tải lên',
+                target: doc.name,
+                link: doc.path,
+                time: doc.createdAt,
+                timestamp: new Date(doc.createdAt).getTime()
+            });
+        });
+        
+        // Lấy 5 bình luận mới nhất từ cộng đồng
+        posts.slice(0, 10).forEach(post => {
+            if (post.comments && post.comments.length > 0) {
+                post.comments.slice(-3).forEach(comment => {
+                    const user = users.find(u => u.username === comment.author);
+                    activities.push({
+                        type: 'comment',
+                        user: user?.fullName || comment.author,
+                        username: comment.author,
+                        avatar: (user?.fullName || comment.author).charAt(0).toUpperCase(),
+                        userAvatar: user?.avatar || null,
+                        action: 'đã bình luận',
+                        target: comment.content.substring(0, 30) + '...',
+                        link: '#',
+                        time: comment.createdAt,
+                        timestamp: new Date(comment.createdAt).getTime()
+                    });
+                });
+            }
+        });
+        
+        // Sắp xếp theo thời gian mới nhất và lấy 10 hoạt động
+        activities.sort((a, b) => b.timestamp - a.timestamp);
+        const recentActivities = activities.slice(0, 10);
+        
+        res.json({ success: true, activities: recentActivities, count: recentActivities.length });
+    } catch (err) {
+        console.error('Get recent activities error:', err);
+        res.json({ success: true, activities: [], count: 0 });
+    }
+});
+
 // Lấy danh sách bài viết
 app.get('/api/posts', async (req, res) => {
     try {
@@ -640,8 +704,8 @@ app.post('/api/create-post', upload.fields([
             ? req.files.files
                 .filter(f => !f.mimetype.startsWith('video/'))
                 .map(f => ({ 
-                    originalName: f.originalname,
-                    name: f.originalname,
+                    originalName: f.decodedOriginalName || decodeFileName(f.originalname),
+                    name: f.decodedOriginalName || decodeFileName(f.originalname),
                     path: `/uploads/${f.filename}`,
                     size: f.size,
                     mimeType: f.mimetype
@@ -665,6 +729,8 @@ app.post('/api/create-post', upload.fields([
             id: Date.now(),
             authorId: user.id,
             author: user.username,
+            authorFullName: user.fullName || user.username,
+            authorAvatar: user.avatar || null,
             content: content,
             images: images,
             files: files,
@@ -718,20 +784,47 @@ app.post('/api/like-post', async (req, res) => {
 });
 
 // Bình luận bài viết
-app.post('/api/comment-post', async (req, res) => {
+app.post('/api/comment-post', upload.fields([
+    { name: 'images', maxCount: 5 },
+    { name: 'files', maxCount: 10 }
+]), async (req, res) => {
     try {
         const { postId, content, username } = req.body;
+        const users = await readJSON(USERS_FILE);
+        const user = users.find(u => u.username === username);
         const posts = await readJSON(POSTS_FILE);
-        const post = posts.find(p => p.id === postId);
+        const post = posts.find(p => p.id == postId);  // Dùng == để so sánh loose
 
         if (!post) {
             return res.status(404).json({ success: false, message: "Bài viết không tồn tại!" });
         }
 
+        // Xử lý images
+        const images = req.files?.images 
+            ? req.files.images.map(f => `/uploads/${f.filename}`)
+            : [];
+
+        // Xử lý files
+        const files = req.files?.files 
+            ? req.files.files.map(f => ({ 
+                originalName: f.decodedOriginalName || decodeFileName(f.originalname),
+                name: f.decodedOriginalName || decodeFileName(f.originalname),
+                path: `/uploads/${f.filename}`,
+                size: f.size,
+                mimeType: f.mimetype
+            }))
+            : [];
+
         const comment = {
             id: Date.now(),
             author: username,
+            authorFullName: user?.fullName || username,
+            authorAvatar: user?.avatar || null,
             content: content,
+            images: images,
+            files: files,
+            reactions: {},
+            replies: [],
             createdAt: new Date().toISOString()
         };
 
@@ -855,10 +948,10 @@ app.post('/api/edit-post', async (req, res) => {
             return res.status(404).json({ success: false, message: "Bài viết không tồn tại!" });
         }
 
-        const isAdmin = user && user.role === 'admin';
+        // CHỈ người đăng mới được sửa bài viết của mình
         const isAuthor = post.author === username;
 
-        if (!isAdmin && !isAuthor) {
+        if (!isAuthor) {
             return res.status(403).json({ success: false, message: "Bạn không có quyền chỉnh sửa bài viết này!" });
         }
 
@@ -897,10 +990,10 @@ app.post('/api/edit-comment', async (req, res) => {
             return res.status(404).json({ success: false, message: "Bình luận không tồn tại!" });
         }
 
-        const isAdmin = user && user.role === 'admin';
+        // CHỈ người đăng mới được sửa bình luẫn của mình
         const isCommentAuthor = comment.author === username;
 
-        if (!isAdmin && !isCommentAuthor) {
+        if (!isCommentAuthor) {
             return res.status(403).json({ success: false, message: "Bạn không có quyền chỉnh sửa bình luận này!" });
         }
 
@@ -922,25 +1015,51 @@ app.post('/api/edit-comment', async (req, res) => {
 });
 
 // Trả lời bình luận (nested comment/reply)
-app.post('/api/reply-comment', async (req, res) => {
+app.post('/api/reply-comment', upload.fields([
+    { name: 'images', maxCount: 5 },
+    { name: 'files', maxCount: 10 }
+]), async (req, res) => {
     try {
         const { postId, parentCommentId, content, username } = req.body;
+        const users = await readJSON(USERS_FILE);
+        const user = users.find(u => u.username === username);
         const posts = await readJSON(POSTS_FILE);
-        const post = posts.find(p => p.id === postId);
+        const post = posts.find(p => p.id == postId);  // Dùng == để so sánh loose
 
         if (!post) {
             return res.status(404).json({ success: false, message: "Bài viết không tồn tại!" });
         }
 
-        const parentComment = post.comments?.find(c => c.id === parentCommentId);
+        const parentComment = post.comments?.find(c => c.id == parentCommentId);  // Dùng == để so sánh loose
         if (!parentComment) {
             return res.status(404).json({ success: false, message: "Bình luận gốc không tồn tại!" });
         }
 
+        // Xử lý images
+        const images = req.files?.images 
+            ? req.files.images.map(f => `/uploads/${f.filename}`)
+            : [];
+
+        // Xử lý files
+        const files = req.files?.files 
+            ? req.files.files.map(f => ({ 
+                originalName: f.decodedOriginalName || decodeFileName(f.originalname),
+                name: f.decodedOriginalName || decodeFileName(f.originalname),
+                path: `/uploads/${f.filename}`,
+                size: f.size,
+                mimeType: f.mimetype
+            }))
+            : [];
+
         const reply = {
             id: Date.now(),
             author: username,
+            authorFullName: user?.fullName || username,
+            authorAvatar: user?.avatar || null,
             content: content,
+            images: images,
+            files: files,
+            reactions: {},
             createdAt: new Date().toISOString(),
             replyTo: parentCommentId
         };
@@ -1031,10 +1150,10 @@ app.post('/api/edit-reply', async (req, res) => {
             return res.status(404).json({ success: false, message: "Trả lời không tồn tại!" });
         }
 
-        const isAdmin = user && user.role === 'admin';
+        // CHỈ người đăng mới được sửa trả lời của mình
         const isReplyAuthor = reply.author === username;
 
-        if (!isAdmin && !isReplyAuthor) {
+        if (!isReplyAuthor) {
             return res.status(403).json({ success: false, message: "Bạn không có quyền chỉnh sửa trả lời này!" });
         }
 

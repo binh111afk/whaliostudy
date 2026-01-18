@@ -326,23 +326,17 @@ const UI = {
         const avatarElements = document.querySelectorAll('.nav-avatar, .user-mini-profile .avatar, .large-avatar, .avatar-small');
 
         avatarElements.forEach(el => {
-            el.textContent = ''; // Xóa chữ cũ
-            
             if (avatarValue && avatarValue.includes('/uploads/')) {
-                // Trường hợp 1: Người dùng ĐÃ tải lên Avatar (URL chứa /uploads/)
+                el.textContent = '';
                 el.style.backgroundImage = "url('" + avatarValue + "')";
                 el.style.backgroundSize = 'cover';
                 el.style.backgroundPosition = 'center';
+                el.style.color = 'transparent';
             } else {
-                // Trường hợp 2: Người dùng CHƯA tải avatar (dữ liệu là chữ cái hoặc rỗng)
-                // -> Sử dụng ảnh mặc định img/avt.png
-                el.style.backgroundImage = "url('img/avt.png')";
-                el.style.backgroundSize = 'cover';
-                el.style.backgroundPosition = 'center';
+                el.textContent = avatarValue || 'U';
+                el.style.backgroundImage = 'none';
+                el.style.color = '';
             }
-            
-            // Luôn ẩn màu chữ vì giờ ta dùng ảnh (dù là ảnh upload hay ảnh mặc định)
-            el.style.color = 'transparent'; 
         });
     },
 
@@ -946,26 +940,14 @@ const DocumentManager = {
         }
 
         // Update progress bar width
-        // Logic: Thanh hiển thị tỷ lệ giữa File và Ảnh trên tổng dung lượng ĐÃ DÙNG (luôn full 100% nếu có dữ liệu)
-        let filePercent = 0;
-        let imagePercent = 0;
-
-        if (totalSize > 0) {
-            filePercent = (fileSize / totalSize) * 100;
-            imagePercent = (imageSize / totalSize) * 100;
-        }
+        const filePercent = (fileSizeMB / totalQuotaMB) * 100;
+        const imagePercent = (imageSizeMB / totalQuotaMB) * 100;
 
         const barFile = document.getElementById('storage-bar-file');
-        const barImage = document.getElementById('storage-bar-image');
+        const barImage = document.ginnerHTML = `<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>orage-bar-image');
         
-        // Sửa icon cho đúng loại
-        if (barImage) {
-             // Set icon ảnh
-            barImage.innerHTML = `<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`;
-        }
-        
-        if (barFile) barFile.style.width = filePercent + '%';
-        if (barImage) barImage.style.width = imagePercent + '%';
+        if (barFile) barFile.style.width = Math.min(filePercent, 100) + '%';
+        if (barImage) barImage.style.width = Math.min(imagePercent, 100) + '%';
 
         // Update storage details
         const fileSizeEl = document.getElementById('storage-file-size');
@@ -1224,18 +1206,13 @@ const PageManager = {
     // Fill profile data
     fillProfileData(user) {
         const largeAvatar = document.querySelector('.large-avatar');
-        if (largeAvatar) {
-            largeAvatar.textContent = ''; // Xóa chữ
-            
-            if (user.avatar && user.avatar.includes('/uploads/')) {
-                largeAvatar.style.backgroundImage = "url('" + user.avatar + "')";
-            } else {
-                largeAvatar.style.backgroundImage = "url('img/avt.png')";
-            }
-            
+        if (user.avatar && user.avatar.includes('/uploads/')) {
+            largeAvatar.textContent = '';
+            largeAvatar.style.backgroundImage = "url('" + user.avatar + "')";
             largeAvatar.style.backgroundSize = 'cover';
-            largeAvatar.style.backgroundPosition = 'center';
-            largeAvatar.style.color = 'transparent';
+        } else {
+            largeAvatar.textContent = user.avatar || 'U';
+            largeAvatar.style.backgroundImage = 'none';
         }
 
         // Update profile fields
@@ -1509,7 +1486,6 @@ const EventHandlers = {
         formData.append('course', selectedCourse);
 
         formData.append('uploader', AppState.currentUser.fullName);
-        formData.append('username', AppState.currentUser.username); // Thêm username để xác thực chính chủ
 
         Utils.setButtonLoading(btn, true);
 
@@ -1746,13 +1722,10 @@ const RecentActivity = {
         container.innerHTML = activities.map(activity => {
             const bgColor = this.getAvatarColor(activity.type);
             const timeAgo = this.getTimeAgo(activity.time);
-
-            // Sửa lại logic: Chỉ hiển thị ảnh khi là URL uploads, còn lại dùng ảnh mặc định
-            const hasCustomAvatar = activity.userAvatar && activity.userAvatar.includes('/uploads/');
             
-            const avatarHtml = hasCustomAvatar 
+            const avatarHtml = activity.userAvatar 
                 ? '<img src="' + activity.userAvatar + '" class="avatar-small" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" alt="avatar">'
-                : '<img src="img/avt.png" class="avatar-small ' + bgColor + '" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" alt="avatar">';
+                : '<div class="avatar-small ' + bgColor + '">' + activity.avatar + '</div>';
             
             return '<li>' + avatarHtml + '<div class="activity-info"><p><strong>' + activity.user + '</strong> ' + activity.action + '</p><a href="' + activity.link + '" class="file-link">' + activity.target + '</a><span class="time-ago">' + timeAgo + '</span></div></li>';
         }).join('');
@@ -1997,14 +1970,14 @@ function fillEditProfileForm() {
     const previewText = document.getElementById('preview-text');
 
     if (previewImg && previewText) {
-        previewText.style.display = 'none'; // Ẩn text chữ cái
-        previewImg.style.display = 'block'; // Luôn hiện thẻ img
-        
         if (user.avatar && user.avatar.includes('/uploads/')) {
             previewImg.src = user.avatar;
+            previewImg.style.display = 'block';
+            previewText.style.display = 'none';
         } else {
-            // Dùng ảnh mặc định nếu chưa upload
-            previewImg.src = 'img/avt.png';
+            previewImg.style.display = 'none';
+            previewText.style.display = 'block';
+            previewText.textContent = user.fullName ? user.fullName.charAt(0).toUpperCase() : 'U';
         }
     }
 }
@@ -2310,109 +2283,65 @@ DocumentManager.deleteDocument = async function (docId) {
     }
 }
 
-
+// ==================== FOCUS MODE LOGIC (FLIP CLOCK EDITION) ====================
 
 const StudyTimer = {
-    // 1. Khai báo các biến trạng thái mặc định
-    totalSeconds: 25 * 60, // Mặc định 25 phút
+    interval: null,
+    totalSeconds: 25 * 60,
     remainingSeconds: 25 * 60,
     isRunning: false,
-    interval: null,
-    elements: {}, // Chứa các element DOM
+    elements: {},
 
-    // 2. Hàm khởi tạo (init) để gán các element
     init() {
         this.elements = {
-            overlay: document.getElementById('study-focus-overlay'), // ID dự đoán dựa trên hàm open()
-            // Các phần tử hiển thị giờ (dựa trên hàm updateDisplay)
-            fHours: document.getElementById('f-hours'),
-            fMinutes: document.getElementById('f-minutes'),
-            fSeconds: document.getElementById('f-seconds'),
-            
-            // Phần code của bạn bắt đầu từ đây
-            minTop: document.querySelector('#f-minutes .top'),
-            minBottom: document.querySelector('#f-minutes .bottom'),
-            secTop: document.querySelector('#f-seconds .top'),
-            secBottom: document.querySelector('#f-seconds .bottom'),
-            btnMain: document.getElementById('f-btn-toggle')
+            overlay: document.getElementById('study-focus-overlay'),
+            hourTop: document.querySelector('#f-hours .top'),
+            hourBottom: document.querySelector('#f-hours .bottom'),
+            minuteTop: document.querySelector('#f-minutes .top'),
+            minuteBottom: document.querySelector('#f-minutes .bottom'),
+            secondTop: document.querySelector('#f-seconds .top'),
+            secondBottom: document.querySelector('#f-seconds .bottom'),
+            startBtn: document.getElementById('btn-start-focus'),
+            pauseBtn: document.getElementById('btn-pause-focus'),
+            resetBtn: document.getElementById('btn-reset-focus'),
+            closeBtn: document.getElementById('btn-close-focus')
         };
-
-        // Chỉ update display nếu overlay tồn tại
-        if (this.elements.overlay) {
-            this.updateDisplay();
-        }
     },
 
-    open() {
-        if (!this.elements.overlay) {
-            console.error("⚠️ Không tìm thấy study-focus-overlay trong HTML!");
-            return;
-        }
-
-        // Hiển thị overlay
-        this.elements.overlay.style.display = 'flex';
-
-        // ✅ Khóa cuộn trang
-        document.body.style.overflow = 'hidden';
-
-        // Cập nhật hiển thị đồng hồ
-        this.updateDisplay();
-
-        // ✅ CẬP NHẬT TITLE NGAY KHI VÀO STUDYTIME
+    updateDisplay() {
         const hours = Math.floor(this.remainingSeconds / 3600);
-        const mins = Math.floor((this.remainingSeconds % 3600) / 60);
-        const secs = this.remainingSeconds % 60;
+        const minutes = Math.floor((this.remainingSeconds % 3600) / 60);
+        const seconds = this.remainingSeconds % 60;
 
-        const hourStr = hours < 10 ? '0' + hours : hours.toString();
-        const minStr = mins < 10 ? '0' + mins : mins.toString();
-        const secStr = secs < 10 ? '0' + secs : secs.toString();
-
-        document.title = '(' + hourStr + ':' + minStr + ':' + secStr + ') Whalio Focus';
-    },
-
-    exit() {
-        this.pause();
-
-        if (this.elements.overlay) {
-            this.elements.overlay.style.display = 'none';
-        }
-
-        // ✅ Mở khóa cuộn trang
-        document.body.style.overflow = 'auto';
-
-        // ✅ QUAN TRỌNG: ĐẶT LẠI TITLE VỀ DASHBOARD
-        document.title = 'Whalio - Dashboard';
-
-        // Quay lại Dashboard
-        if (typeof PageManager !== 'undefined' && PageManager.showDashboard) {
-            PageManager.showDashboard();
-        }
-    },
-
-    toggle() {
-        if (this.isRunning) this.pause();
-        else this.start();
+        if (this.elements.hourTop) this.elements.hourTop.textContent = String(hours).padStart(2, '0');
+        if (this.elements.hourBottom) this.elements.hourBottom.textContent = String(hours).padStart(2, '0');
+        if (this.elements.minuteTop) this.elements.minuteTop.textContent = String(minutes).padStart(2, '0');
+        if (this.elements.minuteBottom) this.elements.minuteBottom.textContent = String(minutes).padStart(2, '0');
+        if (this.elements.secondTop) this.elements.secondTop.textContent = String(seconds).padStart(2, '0');
+        if (this.elements.secondBottom) this.elements.secondBottom.textContent = String(seconds).padStart(2, '0');
     },
 
     start() {
         if (this.isRunning) return;
         this.isRunning = true;
-        this.updateBtnState();
-
+        
         this.interval = setInterval(() => {
             if (this.remainingSeconds > 0) {
                 this.remainingSeconds--;
                 this.updateDisplay();
             } else {
-                this.finish();
+                this.pause();
+                alert('⏰ Hết giờ! Bạn đã hoàn thành phiên học tập.');
             }
         }, 1000);
     },
 
     pause() {
         this.isRunning = false;
-        clearInterval(this.interval);
-        this.updateBtnState();
+        if (this.interval) {
+            clearInterval(this.interval);
+            this.interval = null;
+        }
     },
 
     reset() {
@@ -2421,81 +2350,15 @@ const StudyTimer = {
         this.updateDisplay();
     },
 
-    finish() {
+    close() {
         this.pause();
-        if (typeof Utils !== 'undefined') {
-             Utils.showAlert("🎉 Hoàn thành!", "Bạn đã hoàn thành phiên học tập tập trung!", true);
-        } else {
-             alert("🎉 Hoàn thành! Bạn đã hoàn thành phiên học tập tập trung!");
-        }
-    },
-
-    setTime(minutes) {
-        this.pause();
-        this.totalSeconds = minutes * 60;
-        this.remainingSeconds = this.totalSeconds;
-        this.updateDisplay();
-    },
-
-    addTime(minutes) {
-        this.pause();
-        this.totalSeconds += minutes * 60;
-        this.remainingSeconds = this.totalSeconds;
-        this.updateDisplay();
-    },
-
-    updateDisplay() {
-        const hours = Math.floor(this.remainingSeconds / 3600);
-        const mins = Math.floor((this.remainingSeconds % 3600) / 60);
-        const secs = this.remainingSeconds % 60;
-
-        const hourStr = hours < 10 ? '0' + hours : hours.toString();
-        const minStr = mins < 10 ? '0' + mins : mins.toString();
-        const secStr = secs < 10 ? '0' + secs : secs.toString();
-
-        // Cập nhật với hiệu ứng nhẹ
-        this.updateCardWithEffect('f-hours', hourStr);
-        this.updateCardWithEffect('f-minutes', minStr);
-        this.updateCardWithEffect('f-seconds', secStr);
-
-        // ✅ CHỈ CẬP NHẬT TITLE KHI ĐANG Ở CHỂ ĐỘ FOCUS
-        if (this.elements.overlay && this.elements.overlay.style.display !== 'none') {
-            document.title = '(' + hourStr + ':' + minStr + ':' + secStr + ') Whalio Focus';
-        }
-    },
-
-    updateCardWithEffect(cardId, newValue) {
-        const card = document.getElementById(cardId);
-        if (!card) return;
-
-        const currentValue = card.innerText;
-
-        if (currentValue !== newValue) {
-            card.classList.add('changing');
-            card.innerText = newValue;
-
-            setTimeout(() => {
-                card.classList.remove('changing');
-            }, 200);
-        }
-    },
-
-    updateBtnState() {
-        if (this.elements.btnMain) {
-            this.elements.btnMain.innerText = this.isRunning ? 'TẠM DỪNG' : 'BẮT ĐẦU';
-        }
-    },
-
-    openSettings() {
-        if (typeof openTimePickerModal === 'function') {
-            openTimePickerModal();
-        } else {
-            console.warn('openTimePickerModal chưa được định nghĩa');
+        this.reset();
+        if (this.elements.overlay) {
+            this.elements.overlay.style.display = 'none';
         }
     }
 };
 
-// ✅ Di chuyển lệnh Expose ra ngoài cùng sau khi object đã định nghĩa xong
 // Expose to window
 window.StudyTimer = StudyTimer;
 
@@ -2596,18 +2459,12 @@ function highlightActivePreset(minutes) {
     });
 }
 
-// Đặt thời gian từ preset button (Cộng dồn theo yêu cầu)
-function setTimeFromModal(minutesToAdd) {
+// Đặt thời gian từ preset button
+function setTimeFromModal(minutes) {
     const slider = document.getElementById('time-slider');
     if (slider) {
-        // Cộng dồn vào thời gian hiện tại
-        let newTime = selectedMinutes + parseInt(minutesToAdd);
-        
-        // Giới hạn tối đa (ví dụ 300 phút = 5 tiếng)
-        if (newTime > 300) newTime = 300;
-        
-        slider.value = newTime;
-        updateTimeDisplay(newTime);
+        slider.value = minutes;
+        updateTimeDisplay(minutes);
     }
 }
 
@@ -2678,23 +2535,11 @@ const ProfileManager = {
         const container = document.getElementById('profile-my-docs-list');
         if (!container || !AppState.currentUser) return;
 
-        const currentUsername = AppState.currentUser.username;
-        const currentFullName = AppState.currentUser.fullName;
-
-        // Lọc tài liệu: Người upload trùng tên User hiện tại hoặc username (nếu có)
-        const myDocs = AppState.allDocuments.filter(doc => {
-            // Check username first (more precise)
-            if (doc.uploaderUsername && currentUsername && 
-                doc.uploaderUsername === currentUsername) {
-                return true;
-            }
-            // Fallback to fullName (for legacy docs)
-            if (doc.uploader && currentFullName && 
-                doc.uploader.trim() === currentFullName.trim()) {
-                return true;
-            }
-            return false;
-        });
+        // Lọc tài liệu: Người upload trùng tên User hiện tại
+        // Lưu ý: Lúc upload bạn lưu là fullName, nên so sánh theo fullName
+        const myDocs = AppState.allDocuments.filter(doc =>
+            doc.uploader === AppState.currentUser.fullName
+        );
 
         if (myDocs.length === 0) {
             container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #9ca3af;"><svg width="60" height="60" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; margin-bottom: 10px;"><path d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg><p>Bạn chưa tải lên tài liệu nào.</p></div>';
