@@ -379,6 +379,7 @@ const ExamCreator = {
     // --- STATE ---
     tempQuestions: [],
     currentStep: 'upload',
+    allExamsMetadata: [], // Lưu danh sách đề để kiểm tra quyền xóa
 
     // Biến tạm để xử lý xóa đề
     pendingDeleteId: null,
@@ -674,16 +675,18 @@ const ExamCreator = {
     // 7. LOAD DANH SÁCH ĐỀ THI (CÓ NÚT XÓA + FIX TIME)
     async loadAndRenderExams() {
         try {
-            // Lấy thông tin user để check quyền Admin
+            // Lấy thông tin user để check quyền
             const currentUserStr = localStorage.getItem('currentUser');
             let isAdmin = false;
             let currentUsername = "";
+            let currentUserRole = "";
 
             if (currentUserStr) {
                 const user = JSON.parse(currentUserStr);
+                currentUsername = user.username;
+                currentUserRole = user.role;
                 if (user.role === 'admin') {
                     isAdmin = true;
-                    currentUsername = user.username;
                 }
             }
 
@@ -692,25 +695,30 @@ const ExamCreator = {
 
             const exams = await response.json();
 
-            // Lưu vào biến toàn cục của ExamRunner để dùng khi thi (Timer chuẩn)
+            // Lưu vào biến toàn cục của ExamRunner và ExamCreator để dùng khi thi và xóa
             if (window.ExamRunner) {
                 window.ExamRunner.allExamsMetadata = exams;
             }
+            this.allExamsMetadata = exams;
 
             const container = document.getElementById('exams-list-container');
             if (!container) return;
             container.innerHTML = '';
 
             exams.forEach(exam => {
-                // --- XỬ LÝ NÚT XÓA (ADMIN ONLY) ---
+                // --- XỬ LÝ NÚT XÓA ---
                 let deleteBtnHTML = '';
-                if (isAdmin) {
-                    // Dùng class 'btn-delete-exam' để CSS xử lý hover
-                    // Gọi hàm mở Modal Xóa thay vì confirm()
+                
+                // Kiểm tra quyền: Admin hoặc người tạo đề
+                const isCreator = currentUsername === exam.createdBy;
+                const canDelete = isAdmin || isCreator;
+
+                if (canDelete) {
+                    const deleteTitle = isAdmin ? "Xóa đề thi (Admin)" : "Xóa đề thi";
                     deleteBtnHTML = `
                         <button class="btn-delete-exam"
                                 onclick="event.stopPropagation(); ExamCreator.openDeleteModal(${exam.id}, '${currentUsername}')" 
-                                title="Xóa đề thi (Admin)">
+                                title="${deleteTitle}">
                             🗑️
                         </button>
                     `;
@@ -755,6 +763,30 @@ const ExamCreator = {
 
     // Mở Modal xác nhận
     openDeleteModal(examId, username) {
+        // Lấy thông tin đề thi
+        const exam = this.allExamsMetadata.find(e => e.id == examId);
+        if (!exam) {
+            alert("Không tìm thấy đề thi!");
+            return;
+        }
+
+        // Lấy thông tin user từ localStorage
+        const userStr = localStorage.getItem('currentUser');
+        if (!userStr) {
+            alert("Vui lòng đăng nhập!");
+            return;
+        }
+
+        const currentUser = JSON.parse(userStr);
+        const isAdmin = currentUser.role === 'admin';
+        const isCreator = currentUser.username === exam.createdBy;
+
+        // Kiểm tra quyền
+        if (!isAdmin && !isCreator) {
+            alert("❌ Bạn chỉ có thể xóa đề thi do chính mình tạo!");
+            return;
+        }
+
         this.pendingDeleteId = examId;
         this.pendingDeleteUser = username;
         // Giả sử bạn đã thêm HTML Modal vào index.html

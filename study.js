@@ -48,7 +48,8 @@ const DOM = {
         mainDashboard: document.getElementById('main-dashboard'),
         profileSection: document.getElementById('profile-section'),
         documentsSection: document.getElementById('documents-section'),
-        examsSection: document.getElementById('exams-section')
+        examsSection: document.getElementById('exams-section'),
+        communitySection: document.getElementById('community-section')
     },
     // ... code cũ containers, alert, ui ...
     containers: {
@@ -600,6 +601,12 @@ const DocumentManager = {
 
     // Mở Modal
     openDeleteModal(docId, username) {
+        // Kiểm tra quyền admin trước tiên
+        if (!AppState.currentUser || AppState.currentUser.role !== 'admin') {
+            Utils.showAlert("Lỗi", "Chỉ quản trị viên mới có thể xóa tài liệu!", false);
+            return;
+        }
+
         this.pendingDocId = docId;
         this.pendingDocUser = username;
         
@@ -652,7 +659,7 @@ const DocumentManager = {
                 // Đóng modal TRƯỚC khi load lại để giao diện mượt
                 this.closeDeleteModal(); 
                 await this.loadAllDocuments();
-                Utils.showAlert("Đã xóa", "Tài liệu đã bay màu! 🗑️", true);
+                Utils.showAlert("Đã xóa", "Tài liệu đã bị xóa vĩnh viễn! 🗑️", true);
             } else {
                 alert("❌ Lỗi: " + result.message);
                 this.closeDeleteModal();
@@ -759,7 +766,8 @@ const DocumentManager = {
                 body: JSON.stringify({
                     docId: this.editingDocId,
                     name: newName,
-                    course: newCourse
+                    course: newCourse,
+                    username: AppState.currentUser?.username
                 })
             });
 
@@ -1069,6 +1077,45 @@ const PageManager = {
 
         // Load danh sách đề
         ExamManager.renderExams();
+    },
+
+    // Show community page
+    showCommunityPage(menuItem = null) {
+        console.log('🎯 showCommunityPage called', menuItem);
+        if (!AppState.currentUser) {
+            Utils.showAlert("Thông báo", "Vui lòng đăng nhập để truy cập cộng đồng!", false);
+            return;
+        }
+
+        this.hideAllSections();
+        const communitySection = document.getElementById('community-section');
+        if (communitySection) {
+            Utils.showElement(communitySection);
+            console.log('✅ Community section shown');
+        } else {
+            console.error('❌ Community section not found!');
+        }
+
+        // Clear all active nav items
+        document.querySelectorAll('.nav-center .nav-item').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.nav-menu a').forEach(el => el.classList.remove('active'));
+        
+        // Set active on community nav item
+        const communityNavItem = document.querySelector('[data-tooltip="Cộng đồng"]');
+        if (communityNavItem) {
+            communityNavItem.classList.add('active');
+            console.log('✅ Community nav item marked active');
+        }
+
+        document.title = 'Cộng Đồng - Whalio';
+
+        // Initialize Community
+        if (Community && Community.init) {
+            console.log('🚀 Calling Community.init()');
+            Community.init();
+        } else {
+            console.error('❌ Community object not found!');
+        }
     },
 
     // Show profile page
@@ -1643,6 +1690,11 @@ window.showSavedDocumentsPage = (el) => {
     if (el) el.preventDefault();
     PageManager.showSavedDocumentsPage(el?.target);
 };
+window.showCommunityPage = (el) => {
+    console.log('🔗 window.showCommunityPage called', el);
+    if (el) el.preventDefault();
+    PageManager.showCommunityPage(el?.target);
+};
 window.toggleSaveDocument = (docId) => DocumentManager.toggleSave(docId);
 window.searchDocuments = (keyword) => DocumentManager.searchDocuments(keyword);
 window.filterByType = (type) => DocumentManager.filterByType(type);
@@ -1986,6 +2038,12 @@ if (window.App) {
 // --- BỔ SUNG HÀM XÓA TÀI LIỆU VÀO CUỐI FILE study.js ---
 
 DocumentManager.deleteDocument = async function (docId) {
+    // Kiểm tra quyền trước tiên
+    if (!AppState.currentUser || AppState.currentUser.role !== 'admin') {
+        Utils.showAlert("Lỗi", "Chỉ quản trị viên mới có thể xóa tài liệu!", false);
+        return;
+    }
+
     if (!confirm("⚠️ CẢNH BÁO ADMIN:\nBạn có chắc chắn muốn xóa vĩnh viễn tài liệu này không? Hành động này không thể hoàn tác.")) {
         return;
     }
@@ -2003,7 +2061,7 @@ DocumentManager.deleteDocument = async function (docId) {
         const result = await response.json();
 
         if (result.success) {
-            Utils.showAlert("Đã xóa", "Tài liệu đã bay màu! 🗑️", true);
+            Utils.showAlert("Đã xóa", "Tài liệu đã bị xóa vĩnh viễn! 🗑️", true);
             // Reload danh sách
             this.loadAllDocuments();
         } else {

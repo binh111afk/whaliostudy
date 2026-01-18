@@ -1,0 +1,91 @@
+[
+  {
+    "id": 1768708958502,
+    "author": "binhgold",
+    "content": "nice",
+    "images": [],
+    "files": [
+      {
+        "originalName": "giáº¥y chá»©ng nháº­n sinh viÃªn.pdf",
+        "name": "giáº¥y chá»©ng nháº­n sinh viÃªn.pdf",
+        "path": "/uploads/giay-chang-nhan-sinh-vian.pdf",
+        "size": 568986,
+        "mimeType": "application/pdf"
+      }
+    ],
+    "likes": 0,
+    "likedBy": [],
+    "comments": [],
+    "savedBy": [],
+    "createdAt": "2026-01-18T04:02:38.502Z",
+    "deleted": false
+  },
+  {
+    "id": 1768708189020,
+    "author": "binhgold",
+    "content": "hehe",
+    "images": [],
+    "files": [
+      {
+        "name": "giáº¥y chá»©ng nháº­n sinh viÃªn.pdf",
+        "path": "/uploads/giay-chang-nhan-sinh-vian.pdf",
+        "size": 568986
+      }
+    ],
+    "likes": 0,
+    "likedBy": [],
+    "comments": [],
+    "savedBy": [],
+    "createdAt": "2026-01-18T03:49:49.020Z",
+    "deleted": true
+  },
+  {
+    "id": 1768708171594,
+    "author": "binhgold",
+    "content": "ảnh đẹp vl",
+    "images": [
+      "/uploads/z74404803540294d23918cb7fb53f7511e1f39ff2258f7.jpg"
+    ],
+    "files": [],
+    "likes": 0,
+    "likedBy": [],
+    "comments": [],
+    "savedBy": [],
+    "createdAt": "2026-01-18T03:49:31.594Z",
+    "deleted": true
+  },
+  {
+    "id": 1768706323331,
+    "author": "binhgold",
+    "content": "Quang Bình đẹp trai nhất",
+    "images": [],
+    "files": [],
+    "likes": 0,
+    "likedBy": [],
+    "comments": [
+      {
+        "id": 1768708344309,
+        "author": "binhgold",
+        "content": "đúng z",
+        "createdAt": "2026-01-18T03:52:24.309Z",
+        "reactions": {
+          "😀": {
+            "count": 1,
+            "users": [
+              "binhgold"
+            ]
+          },
+          "😂": {
+            "count": 1,
+            "users": [
+              "binhgold"
+            ]
+          }
+        }
+      }
+    ],
+    "savedBy": [],
+    "createdAt": "2026-01-18T03:18:43.331Z",
+    "deleted": true
+  }
+]
