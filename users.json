@@ -48,5 +48,49 @@
       1768584989184
     ],
     "createdAt": "2026-01-15T18:51:56.286Z"
+  },
+  {
+    "id": 1768769240910,
+    "username": "ngocchau",
+    "password": "ngocchau123",
+    "fullName": "Trần Thị Ngọc Châu",
+    "email": "qqq@gmail.com",
+    "avatar": "T",
+    "role": "member",
+    "savedDocs": [],
+    "createdAt": "2026-01-18T20:47:20.910Z"
+  },
+  {
+    "id": 1768770243249,
+    "username": "testuser",
+    "password": "123456",
+    "fullName": "cccc",
+    "email": "ccc@gmail.com",
+    "avatar": "C",
+    "role": "member",
+    "savedDocs": [],
+    "createdAt": "2026-01-18T21:04:03.249Z"
+  },
+  {
+    "id": 1768770492851,
+    "username": "rrrr",
+    "password": "rrrrrr",
+    "fullName": "rrrr",
+    "email": "rrrr@gmail.com",
+    "avatar": "R",
+    "role": "member",
+    "savedDocs": [],
+    "createdAt": "2026-01-18T21:08:12.851Z"
+  },
+  {
+    "id": 1768770772679,
+    "username": "hocsinh1",
+    "password": "123456",
+    "fullName": "Học sinh",
+    "email": "hocsinh1@gmail.com",
+    "avatar": "H",
+    "role": "member",
+    "savedDocs": [],
+    "createdAt": "2026-01-18T21:12:52.679Z"
   }
 ]

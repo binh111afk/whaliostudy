@@ -2168,6 +2168,46 @@ main {
     min-width: 160px;
 }
 
+/* ========== TIMETABLE MODAL GRID LAYOUT ========== */
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* Ensure modals don't get cut off on smaller screens */
+.modal-box {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* Compact form groups for timetable */
+#createClassModal .form-group {
+    margin-bottom: 10px;
+}
+
+#createClassModal .form-label {
+    margin-bottom: 4px;
+    font-size: 13px;
+}
+
+#createClassModal .form-input {
+    font-size: 14px;
+    padding: 8px 10px;
+}
+
+/* Responsive: Stack on mobile */
+@media (max-width: 600px) {
+    .form-grid-2 {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-box {
+        max-width: 95% !important;
+        margin: 10px;
+    }
+}
+
 .btn-refresh {
     display: flex;
     align-items: center;
@@ -4191,6 +4231,150 @@ main {
     background-color: #ffe4e6;
 }
 
+/* ==================== TIMETABLE STYLES (COMPACT & SCROLLABLE) ==================== */
+
+/* Wrapper to prevent layout overflow */
+.timetable-wrapper {
+    width: 100%;
+    overflow-x: auto; /* Allow horizontal scrolling */
+    -webkit-overflow-scrolling: touch;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border: 1px solid #e5e7eb;
+    margin-bottom: 20px;
+}
+
+/* Table styles - compact and scrollable */
+.timetable-table {
+    width: 100%;
+    min-width: 800px; /* Force table to maintain shape, user scrolls if screen is small */
+    border-collapse: collapse;
+}
+
+.timetable-table th,
+.timetable-table td {
+    padding: 8px; /* Reduce padding for compact view */
+    font-size: 13px; /* Compact font */
+    border: 1px solid #e5e7eb !important;
+    text-align: center;
+    vertical-align: top;
+}
+
+.timetable-table th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.session-col {
+    background: #f9fafb;
+    font-weight: 600;
+    color: #374151;
+    min-width: 80px;
+}
+
+.timetable-cell {
+    background: #ffffff;
+    min-height: 100px;
+    position: relative;
+}
+
+.timetable-cell-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px;
+}
+
+/* Compact class card */
+.class-card {
+    padding: 6px;
+    font-size: 12px;
+    border-radius: 6px;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.class-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.class-subject {
+    font-weight: 600;
+    margin-bottom: 3px;
+    font-size: 13px;
+}
+
+.class-room,
+.class-time {
+    font-size: 11px;
+    opacity: 0.85;
+    margin: 2px 0;
+}
+
+.btn-delete-class {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(239, 68, 68, 0.9);
+    border: none;
+    border-radius: 4px;
+    padding: 4px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: white;
+}
+
+.class-card:hover .btn-delete-class {
+    opacity: 1;
+}
+
+.btn-delete-class:hover {
+    background: rgba(220, 38, 38, 1);
+}
+
+/* Add class button in header */
+.btn-add-class {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-add-class:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .timetable-table {
+        min-width: 600px;
+    }
+    
+    .timetable-table th,
+    .timetable-table td {
+        padding: 6px;
+        font-size: 12px;
+    }
+    
+    .class-card {
+        padding: 4px;
+        font-size: 11px;
+    }
+}
+
 /* Chỉnh lại mũi tên một chút cho cân đối */
 .btn-back-exam::before {
     /* Nếu bạn dùng text "←" trong HTML thì không cần cái này, 
@@ -5963,4 +6147,306 @@ body.full-mode .main-content {
     background: #ef4444;
     color: white;
     transform: scale(1.1) !important;
+}
+
+/* =========================================
+   TIMETABLE (Thời Khóa Biểu) STYLES
+   ========================================= */
+
+.timetable-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+.timetable-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.timetable-header h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-add-class {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-add-class:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.timetable-grid {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-md);
+    overflow-x: auto;
+}
+
+.timetable-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+}
+
+.timetable-table thead th {
+    background: var(--primary-light);
+    color: var(--primary-color);
+    font-weight: 700;
+    padding: 16px 10px;
+    text-align: center;
+    font-size: 14px;
+    border: 1px solid var(--border-color);
+}
+
+.timetable-table tbody td {
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    vertical-align: top;
+    min-height: 100px;
+    background: #fafbfc;
+}
+
+.session-label {
+    font-weight: 700;
+    color: var(--primary-color);
+    text-align: center;
+    background: var(--primary-light) !important;
+    font-size: 14px;
+}
+
+.timetable-cell {
+    position: relative;
+    min-height: 120px;
+}
+
+.class-card {
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    position: relative;
+    border-left: 4px solid rgba(0, 0, 0, 0.2);
+    transition: var(--transition);
+}
+
+.class-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.class-subject {
+    font-weight: 700;
+    font-size: 14px;
+    color: #1f2937;
+    margin-bottom: 6px;
+}
+
+.class-time {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.class-time::before {
+    content: '🕐';
+    font-size: 11px;
+}
+
+.class-room {
+    font-size: 12px;
+    color: #374151;
+    font-weight: 600;
+}
+
+.btn-delete-class {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    background: white;
+    border: 1px solid #fee2e2;
+    color: #ef4444;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: var(--transition);
+    padding: 0;
+}
+
+.class-card:hover .btn-delete-class {
+    opacity: 1;
+}
+
+.btn-delete-class:hover {
+    background: #ef4444;
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Modal Styles for Create Class */
+#createClassModal .modal-box {
+    animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#calculatedTime {
+    font-size: 16px;
+    font-weight: 600;
+    color: #6366f1;
+    padding: 10px;
+    background: #f0f2f5;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.btn-submit-create-class {
+    width: 100%;
+    background: #6366f1;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: var(--transition);
+}
+
+.btn-submit-create-class:hover {
+    background: #4f46e5;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Timetable Table Structure */
+.timetable-wrapper {
+    overflow-x: auto;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.timetable-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    min-width: 900px;
+}
+
+.timetable-table thead th {
+    background: var(--primary-light);
+    color: var(--primary-color);
+    font-weight: 700;
+    padding: 14px 10px;
+    text-align: center;
+    font-size: 14px;
+    border: 1px solid #e5e7eb;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.timetable-table tbody td {
+    border: 1px solid #e5e7eb;
+    padding: 10px;
+    text-align: center;
+    vertical-align: top;
+    min-height: 150px;
+    background: #fafbfc;
+    position: relative;
+}
+
+.session-col {
+    background: #f9fafb !important;
+    font-weight: 700;
+    color: var(--primary-color);
+    width: 80px;
+    vertical-align: middle !important;
+    font-size: 14px;
+}
+
+.timetable-cell-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 120px;
+}
+
+/* Responsive for Timetable */
+@media (max-width: 768px) {
+    .timetable-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+
+    .timetable-header h1 {
+        font-size: 22px;
+    }
+
+    .btn-add-class {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .timetable-wrapper {
+        padding: 0;
+        overflow-x: scroll;
+    }
+
+    .timetable-table {
+        font-size: 12px;
+    }
+
+    .class-card {
+        padding: 8px;
+    }
+
+    .class-subject {
+        font-size: 12px;
+    }
+
+    .class-time,
+    .class-room {
+        font-size: 11px;
+    }
 }

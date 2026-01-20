@@ -45,7 +45,8 @@
                         d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
                 </svg>
             </a>
-            <a href="#" id="nav-docs" class="nav-item" data-tooltip="Tài liệu" onclick="PageManager.showLibraryPage(this)">
+            <a href="#" id="nav-docs" class="nav-item" data-tooltip="Tài liệu"
+                onclick="PageManager.showLibraryPage(this)">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round"
                         d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
@@ -164,6 +165,13 @@
                     </svg>
                     Studytime
                 </a>
+                <a href="#" onclick="PageManager.showTimetablePage(this)">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z" />
+                    </svg>
+                    Thời khóa biểu
+                </a>
             </nav>
             <div class="social-links">
                 <a href="#" class="social-link">
@@ -207,8 +215,9 @@
                 <div class="section-header">
                     <div class="section-title">
                         <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" style="margin-right: 8px;">
-                            <path d="M12 14l9-5-9-5-9 5 9 5z"/>
-                            <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+                            <path d="M12 14l9-5-9-5-9 5 9 5z" />
+                            <path
+                                d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
                         </svg>
                         TÀI LIỆU CÁC MÔN
                     </div>
@@ -258,7 +267,8 @@
                 <div class="section-header">
                     <div class="section-title">
                         <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" style="margin-right: 8px;">
-                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            <path
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
                         ĐỀ THI
                     </div>
@@ -309,7 +319,8 @@
                 <div class="section-header">
                     <div class="section-title">
                         <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" style="margin-right: 8px;">
-                            <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                            <path
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                         </svg>
                         BỘ THẺ FLASHCARD
                     </div>
@@ -366,9 +377,11 @@
                             </svg>
                         </a>
                         <a href="#" id="menu-my-docs" class="p-menu-item" onclick="ProfileManager.switchTab('my-docs')">
-                            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-                                <path d="M12 14l9-5-9-5-9 5 9 5z"/>
-                                <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+                            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"
+                                style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                                <path d="M12 14l9-5-9-5-9 5 9 5z" />
+                                <path
+                                    d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
                             </svg> Tài liệu của tôi
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
@@ -376,8 +389,9 @@
                             </svg>
                         </a>
                         <a href="#" id="menu-saved" class="p-menu-item" onclick="ProfileManager.switchTab('saved')">
-                            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-                                <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"
+                                style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                                <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                             </svg> Tài liệu đã lưu
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
@@ -472,8 +486,9 @@
                 <div class="page-header">
                     <div class="page-title">
                         <h1>
-                            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
-                                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"
+                                style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                             </svg>
                             Kho Tài Liệu Chung
                         </h1>
@@ -525,7 +540,8 @@
                 <div class="course-filters-section">
                     <span class="filter-label">Lọc theo môn:</span>
                     <div class="course-filter-buttons">
-                        <button class="course-filter-btn active" onclick="DocumentManager.filterDocsByCourse('all')">Tất cả</button>
+                        <button class="course-filter-btn active" onclick="DocumentManager.filterDocsByCourse('all')">Tất
+                            cả</button>
                         <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(1)">GT1</button>
                         <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(2)">DSTD</button>
                         <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(3)">VL1</button>
@@ -537,7 +553,8 @@
                         <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(9)">TMML</button>
                         <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(10)">PLDC</button>
                         <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(11)">TLDC</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse('other')">Khác</button>
+                        <button class="course-filter-btn"
+                            onclick="DocumentManager.filterDocsByCourse('other')">Khác</button>
                     </div>
                 </div>
 
@@ -561,7 +578,7 @@
                 <div id="documents-list-container" class="documents-grid">
                     <!-- Tài liệu sẽ được render ở đây -->
                 </div>
-                
+
                 <!-- Pagination cho documents section -->
                 <div id="pagination-container" class="pagination-container"></div>
             </div>
@@ -614,7 +631,8 @@
             <div class="doc-page-container">
 
                 <div class="doc-page-header">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h2 class="doc-page-title">THƯ VIỆN TÀI LIỆU SỐ</h2>
                         <button onclick="openUploadDocModal()" class="btn-upload-header">
                             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -629,18 +647,20 @@
                     <div class="search-instructions">
                         <div class="instructions-icon">
                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
                         <div class="instructions-text">
-                            <strong>Hướng dẫn tìm kiếm:</strong> Dùng các tag môn học bên dưới để lọc tài liệu theo môn, hoặc gõ tên tài liệu vào ô tìm kiếm để tìm nhanh
+                            <strong>Hướng dẫn tìm kiếm:</strong> Dùng các tag môn học bên dưới để lọc tài liệu theo môn,
+                            hoặc gõ tên tài liệu vào ô tìm kiếm để tìm nhanh
                         </div>
                     </div>
 
                     <!-- Course Filter Tags -->
                     <div class="doc-course-filters">
                         <span class="filter-label">Lọc theo môn:</span>
-                        <button class="course-filter-btn active" onclick="DocumentManager.filterByCourse('all')">Tất cả</button>
+                        <button class="course-filter-btn active" onclick="DocumentManager.filterByCourse('all')">Tất
+                            cả</button>
                         <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(1)">GT1</button>
                         <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(2)">DSTD</button>
                         <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(3)">VL1</button>
@@ -652,7 +672,8 @@
                         <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(9)">TMML</button>
                         <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(10)">PLDC</button>
                         <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(11)">TLDC</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse('other')">Khác</button>
+                        <button class="course-filter-btn"
+                            onclick="DocumentManager.filterByCourse('other')">Khác</button>
                     </div>
 
                     <div class="doc-level-tags">
@@ -703,12 +724,12 @@
                 <div class="community-header">
                     <h1>🌍 Cộng Đồng</h1>
                     <div class="community-tabs">
-                        <button class="tab-btn active" onclick="Community.switchTab('feed')">Bảng Tin</button>
-                        <button class="tab-btn" onclick="Community.switchTab('saved')">Đã Lưu</button>
+                        <button class="tab-btn active" data-tab="feed">Bảng Tin</button>
+                        <button class="tab-btn" data-tab="saved">Đã Lưu</button>
                     </div>
-                    <button class="btn-create-post" onclick="Community.openCreatePostModal()">
+                    <button class="btn-create-post">
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
                         Đăng Bài
                     </button>
@@ -727,6 +748,44 @@
             </div>
         </section>
 
+        <!-- TIMETABLE SECTION -->
+        <section id="timetable-section" style="display: none; width: 100%;">
+            <div class="timetable-container">
+                <div class="timetable-header">
+                    <h1>📅 Thời Khóa Biểu</h1>
+                    <button class="btn-add-class">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Thêm Lớp Học
+                    </button>
+                </div>
+                <div class="timetable-wrapper">
+                    <table class="timetable-table">
+                        <thead>
+                            <tr>
+                                <th class="session-col">Buổi</th>
+                                <th>Thứ 2</th>
+                                <th>Thứ 3</th>
+                                <th>Thứ 4</th>
+                                <th>Thứ 5</th>
+                                <th>Thứ 6</th>
+                                <th>Thứ 7</th>
+                                <th>CN</th>
+                            </tr>
+                        </thead>
+                        <tbody id="timetable-body">
+                            <!-- Rows will be generated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <button onclick="PageManager.showDashboard()"
+                    style="position: fixed; bottom: 20px; right: 20px; padding: 10px 20px; background: #374151; color: white; border-radius: 30px; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1000;">
+                    ↩ Quay về Dashboard
+                </button>
+            </div>
+        </section>
+
 
 
         <aside class="sidebar-right">
@@ -734,8 +793,9 @@
             <div class="widget-box group-storage">
                 <div class="widget-header">
                     <h3>
-                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-                            <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"
+                            style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                            <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                         </svg>
                         Kho Tài Liệu Chung
                     </h3>
@@ -755,13 +815,16 @@
 
                     <div class="storage-detail" style="display: flex; justify-content: space-between; margin-top: 8px;">
                         <span id="storage-file-size" style="color: #4b5563; font-weight: 500;">
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"
+                                style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                             </svg> Files: 0 MB
                         </span>
                         <span id="storage-image-size" style="color: #4b5563; font-weight: 500;">
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                                <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"
+                                style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                <path
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg> Ảnh: 0 MB
                         </span>
                     </div>
@@ -779,8 +842,9 @@
             <div class="widget-box recent-activity">
                 <div class="widget-header">
                     <h3>
-                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"
+                            style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                         Hoạt động mới
                     </h3>
@@ -817,8 +881,10 @@
             <div class="widget-box upcoming-event">
                 <div class="widget-header">
                     <h3>
-                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-                            <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"
+                            style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                            <path
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         Sự kiện sắp tới
                     </h3>
@@ -871,21 +937,26 @@
                     <h4>Lối tắt</h4>
                     <ul class="footer-links">
                         <li><a href="#">
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
-                            </svg>
-                            Kho tài liệu chung</a></li>
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"
+                                    style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                    <path
+                                        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                </svg>
+                                Kho tài liệu chung</a></li>
                         <li><a href="#">
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                                <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
-                            Lịch thi / Deadline</a></li>
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"
+                                    style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                    <path
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Lịch thi / Deadline</a></li>
                         <li><a href="#">📝 Thảo luận nhóm</a></li>
                         <li><a href="#">
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                                <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
-                            Upload nhanh</a></li>
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"
+                                    style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                    <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                Upload nhanh</a></li>
                     </ul>
                 </div>
 
@@ -959,9 +1030,8 @@
                     <div class="password-wrapper">
                         <input type="password" id="passwordInput" class="auth-input" placeholder="Nhập mật khẩu"
                             required>
-                        <span class="toggle-pass" onclick="togglePassword()" title="Hiện/Ẩn mật khẩu">
-                            <svg id="eye-icon" width="20" height="20" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
+                        <span class="toggle-pass" onclick="togglePassword(this)" title="Hiện/Ẩn mật khẩu">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -997,7 +1067,7 @@
                 <p>Tham gia cộng đồng Whalio ngay hôm nay</p>
             </div>
 
-            <form id="registerForm" onsubmit="handleRegister(event)">
+            <form id="registerForm">
                 <div class="form-group">
                     <label class="form-label">Họ và tên</label>
                     <input type="text" id="regFullname" class="auth-input" placeholder="Ví dụ: Nguyễn Văn A" required>
@@ -1016,13 +1086,35 @@
 
                 <div class="form-group">
                     <label class="form-label">Mật khẩu</label>
-                    <input type="password" id="regPassword" class="auth-input" placeholder="Nhập mật khẩu" required>
+                    <div class="password-wrapper">
+                        <input type="password" id="regPassword" class="auth-input" placeholder="Nhập mật khẩu" required>
+                        <span class="toggle-pass" onclick="togglePassword(this)" title="Hiện/Ẩn mật khẩu">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                </path>
+                            </svg>
+                        </span>
+                    </div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Nhập lại mật khẩu</label>
-                    <input type="password" id="regConfirmPassword" class="auth-input" placeholder="Nhập lại mật khẩu"
-                        required>
+                    <div class="password-wrapper">
+                        <input type="password" id="regConfirmPassword" class="auth-input"
+                            placeholder="Nhập lại mật khẩu" required>
+                        <span class="toggle-pass" onclick="togglePassword(this)" title="Hiện/Ẩn mật khẩu">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                </path>
+                            </svg>
+                        </span>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn-submit-login">Đăng ký ngay</button>
@@ -1091,8 +1183,10 @@
                     onchange="handleAvatarPreview()">
                 <button type="button" onclick="document.getElementById('avatar-input').click()"
                     style="font-size: 13px; color: var(--primary-color); background: none; border: 1px dashed var(--primary-color); padding: 6px 12px; border-radius: 6px; cursor: pointer;">
-                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                        <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"
+                        style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                        <path
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     Đổi ảnh đại diện
                 </button>
@@ -1219,8 +1313,9 @@
             <button class="btn-close-modal" onclick="closeUploadDocModal()">✕</button>
             <div class="modal-header">
                 <h2>
-                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
-                        <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"
+                        style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                        <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                     </svg>
                     Tải lên tài liệu
                 </h2>
@@ -1228,13 +1323,14 @@
             <form onsubmit="handleUploadDocument(event)">
                 <div class="form-group">
                     <label class="form-label">Tên tài liệu</label>
-                    <input type="text" id="docName" class="auth-input" placeholder="VD: Giải tích 1 - Chương 2"
-                        required>
+                    <input type="text" id="docName" class="auth-input" placeholder="VD: Giải tích 1 - Chương 2" required>
                 </div>
+
                 <div class="form-group">
                     <label class="form-label">Chọn file</label>
                     <input type="file" id="docFile" class="auth-input" required>
                 </div>
+
                 <div class="form-group">
                     <label class="form-label">Loại file</label>
                     <select id="docType" class="auth-input">
@@ -1246,12 +1342,22 @@
                         <option value="other">Khác</option>
                     </select>
                 </div>
+
+                <div class="form-group">
+                    <label class="form-label">Chế độ hiển thị</label>
+                    <select id="docVisibility" class="auth-input">
+                        <option value="public">🌐 Công khai (Mọi người đều thấy)</option>
+                        <option value="private">🔒 Riêng tư (Chỉ mình tôi)</option>
+                    </select>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">Chọn môn học</label>
                     <select id="docCourse" class="auth-input">
                         <option value="">-- Chọn môn --</option>
                     </select>
                 </div>
+
                 <button type="submit" class="btn-submit-login">Tải lên ngay</button>
             </form>
         </div>
@@ -1260,14 +1366,18 @@
     <!-- Edit Document Modal -->
     <div class="modal-overlay" id="editDocModal">
         <div class="modal-box">
-            <button class="btn-close-modal" onclick="DocumentManager.closeEditModal()">✕</button>
-            <div class="modal-header">
-                <h2>Sửa thông tin tài liệu 📝</h2>
-            </div>
             <form onsubmit="DocumentManager.handleEditDocument(event)">
                 <div class="form-group">
                     <label class="form-label">Tên tài liệu</label>
                     <input type="text" id="editDocName" class="auth-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Chế độ hiển thị</label>
+                    <select id="editDocVisibility" class="auth-input">
+                        <option value="public">🌐 Công khai</option>
+                        <option value="private">🔒 Riêng tư</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Chọn môn học</label>
@@ -1536,7 +1646,7 @@
                         style="border: 2px dashed #d1d5db; padding: 40px; text-align: center; border-radius: 12px; cursor: pointer; transition: 0.2s; background: #f9fafb;">
                         <div style="font-size: 40px; margin-bottom: 10px;">
                             <svg width="40" height="40" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                             </svg>
                         </div>
                         <p style="font-weight: 600; color: #4b5563;">Nhấn để chọn file Word (.docx)</p>
@@ -1553,8 +1663,9 @@
                 <div id="step-review" style="display: none; flex-direction: column; gap: 15px;">
                     <div
                         style="background: #eef2ff; border: 1px solid #c7d2fe; padding: 12px; border-radius: 8px; font-size: 13px; color: #3730a3;">
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                            <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"
+                            style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                            <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <b>Kiểm tra kỹ:</b> Bạn có thể sửa nội dung câu hỏi, chọn lại đáp án đúng hoặc xóa câu hỏi
                         rác trước khi tạo đề.
@@ -1626,40 +1737,53 @@
                 <h2>✍️ Tạo Bài Viết Mới</h2>
             </div>
             <div class="modal-body" style="padding: 20px;">
-                <textarea id="postContent" class="form-input" placeholder="Bạn đang nghĩ gì?" rows="5" style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 14px;"></textarea>
-                
+                <textarea id="postContent" class="form-input" placeholder="Bạn đang nghĩ gì?" rows="5"
+                    style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 14px;"></textarea>
+
                 <div style="margin-top: 16px; display: flex; gap: 12px;">
-                    <label style="flex: 1; display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; background: #f9fafb;">
+                    <label
+                        style="flex: 1; display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; background: #f9fafb;">
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         <span>Ảnh</span>
                         <input type="file" id="postImages" accept="image/*" multiple style="display: none;">
                     </label>
-                    <label style="flex: 1; display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; background: #f9fafb;">
+                    <label
+                        style="flex: 1; display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; background: #f9fafb;">
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
                         <span>File</span>
-                        <input type="file" id="postFiles" accept=".pdf,.doc,.docx,.xls,.xlsx,.zip" multiple style="display: none;">
+                        <input type="file" id="postFiles" accept=".pdf,.doc,.docx,.xls,.xlsx,.zip" multiple
+                            style="display: none;">
                     </label>
                 </div>
 
                 <!-- Preview Container -->
-                <div id="filePreviewContainer" style="display: none; margin-top: 16px; padding: 12px; background: #f3f4f6; border-radius: 8px; border: 1px solid #e5e7eb;">
+                <div id="filePreviewContainer"
+                    style="display: none; margin-top: 16px; padding: 12px; background: #f3f4f6; border-radius: 8px; border: 1px solid #e5e7eb;">
                     <div id="imagePreview" style="display: none; margin-bottom: 12px;">
                         <strong style="font-size: 13px;">
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                                <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"
+                                style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                <path
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                             Ảnh được chọn:
                         </strong>
-                        <div id="imagePreviewList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin-top: 8px;"></div>
+                        <div id="imagePreviewList"
+                            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin-top: 8px;">
+                        </div>
                     </div>
                     <div id="filePreview" style="display: none;">
                         <strong style="font-size: 13px;">
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"
+                                style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                <path
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                             File được chọn:
                         </strong>
@@ -1668,8 +1792,9 @@
                 </div>
             </div>
             <div class="modal-footer-actions" style="margin-top: 20px; display: flex; gap: 10px;">
-                <button onclick="Community.closeCreatePostModal()" class="btn-cancel-modal" style="flex: 1;">Hủy</button>
-                <button onclick="Community.createPost()" class="btn-submit-login" style="flex: 1;">Đăng Bài</button>
+                <button onclick="Community.closeCreatePostModal()" class="btn-cancel-modal"
+                    style="flex: 1;">Hủy</button>
+                <button class="btn-submit-create-post btn-submit-login" style="flex: 1;">Đăng Bài</button>
             </div>
         </div>
     </div>
@@ -1680,47 +1805,75 @@
             <button class="btn-close-modal" onclick="Community.closeCommentModal()">✕</button>
             <div class="modal-header">
                 <h2>
-                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-                        <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"
+                        style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                        <path
+                            d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
                     </svg>
                     Bình Luận
                 </h2>
             </div>
             <div class="modal-body" style="padding: 20px;">
-                <textarea id="commentContent" class="form-input" placeholder="Nội dung bình luận..." rows="4" style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 14px;"></textarea>
-                
+                <!-- Comments List -->
+                <div id="commentsList"
+                    style="max-height: 300px; overflow-y: auto; margin-bottom: 20px; padding: 10px; background: #f9fafb; border-radius: 8px;">
+                    <p style="text-align: center; color: #9ca3af; padding: 20px;">Chưa có bình luận nào</p>
+                </div>
+
+                <!-- Comment Input with Avatar -->
+                <div style="display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px;">
+                    <img src="img/avt.png" class="comment-input-avatar"
+                        style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;" alt="avatar">
+                    <div style="flex: 1;">
+                        <textarea id="commentContent" class="form-input" placeholder="Viết bình luận..." rows="3"
+                            style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 14px;"></textarea>
+                    </div>
+                </div>
+
                 <div style="margin-top: 12px; display: flex; gap: 10px;">
-                    <label style="flex: 1; display: flex; align-items: center; gap: 6px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; background: #f9fafb; font-size: 13px;">
+                    <label
+                        style="flex: 1; display: flex; align-items: center; gap: 6px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; background: #f9fafb; font-size: 13px;">
                         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         <span>Ảnh</span>
                         <input type="file" id="commentImages" accept="image/*" multiple style="display: none;">
                     </label>
-                    <label style="flex: 1; display: flex; align-items: center; gap: 6px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; background: #f9fafb; font-size: 13px;">
+                    <label
+                        style="flex: 1; display: flex; align-items: center; gap: 6px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; background: #f9fafb; font-size: 13px;">
                         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
                         <span>File</span>
-                        <input type="file" id="commentFiles" accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.txt" multiple style="display: none;">
+                        <input type="file" id="commentFiles" accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.txt" multiple
+                            style="display: none;">
                     </label>
                 </div>
 
                 <!-- Preview Container -->
-                <div id="commentFilePreviewContainer" style="display: none; margin-top: 10px; padding: 10px; background: #f3f4f6; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 12px;">
+                <div id="commentFilePreviewContainer"
+                    style="display: none; margin-top: 10px; padding: 10px; background: #f3f4f6; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 12px;">
                     <div id="commentImagePreview" style="display: none; margin-bottom: 8px;">
                         <strong>
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                                <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"
+                                style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                <path
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                             Ảnh:
                         </strong>
-                        <div id="commentImagePreviewList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 6px; margin-top: 6px;"></div>
+                        <div id="commentImagePreviewList"
+                            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 6px; margin-top: 6px;">
+                        </div>
                     </div>
                     <div id="commentFilePreview" style="display: none;">
                         <strong>
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"
+                                style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                <path
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                             File:
                         </strong>
@@ -1730,7 +1883,7 @@
             </div>
             <div class="modal-footer-actions" style="margin-top: 16px; display: flex; gap: 10px;">
                 <button onclick="Community.closeCommentModal()" class="btn-cancel-modal" style="flex: 1;">Hủy</button>
-                <button onclick="Community.submitComment()" class="btn-submit-login" style="flex: 1;">Gửi</button>
+                <button class="btn-submit-comment btn-submit-login" style="flex: 1;">Gửi</button>
             </div>
         </div>
     </div>
@@ -1741,48 +1894,64 @@
             <button class="btn-close-modal" onclick="Community.closeReplyCommentModal()">✕</button>
             <div class="modal-header">
                 <h2>
-                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-                        <path d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"
+                        style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                        <path d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                     </svg>
                     Trả Lời Bình Luận
                 </h2>
             </div>
             <div class="modal-body" style="padding: 20px;">
-                <div id="replyingToComment" style="padding: 10px; background: #f3f4f6; border-radius: 6px; margin-bottom: 12px; border-left: 3px solid #6366f1; font-size: 13px;"></div>
-                <textarea id="replyCommentContent" class="form-input" placeholder="Trả lời bình luận..." rows="4" style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 14px;"></textarea>
-                
+                <div id="replyingToComment"
+                    style="padding: 10px; background: #f3f4f6; border-radius: 6px; margin-bottom: 12px; border-left: 3px solid #6366f1; font-size: 13px;">
+                </div>
+                <textarea id="replyCommentContent" class="form-input" placeholder="Trả lời bình luận..." rows="4"
+                    style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 14px;"></textarea>
+
                 <div style="margin-top: 12px; display: flex; gap: 10px;">
-                    <label style="flex: 1; display: flex; align-items: center; gap: 6px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; background: #f9fafb; font-size: 13px;">
+                    <label
+                        style="flex: 1; display: flex; align-items: center; gap: 6px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; background: #f9fafb; font-size: 13px;">
                         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         <span>Ảnh</span>
                         <input type="file" id="replyImages" accept="image/*" multiple style="display: none;">
                     </label>
-                    <label style="flex: 1; display: flex; align-items: center; gap: 6px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; background: #f9fafb; font-size: 13px;">
+                    <label
+                        style="flex: 1; display: flex; align-items: center; gap: 6px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; background: #f9fafb; font-size: 13px;">
                         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
                         <span>File</span>
-                        <input type="file" id="replyFiles" accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.txt" multiple style="display: none;">
+                        <input type="file" id="replyFiles" accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.txt" multiple
+                            style="display: none;">
                     </label>
                 </div>
 
                 <!-- Preview Container -->
-                <div id="replyFilePreviewContainer" style="display: none; margin-top: 10px; padding: 10px; background: #f3f4f6; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 12px;">
+                <div id="replyFilePreviewContainer"
+                    style="display: none; margin-top: 10px; padding: 10px; background: #f3f4f6; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 12px;">
                     <div id="replyImagePreview" style="display: none; margin-bottom: 8px;">
                         <strong>
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                                <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"
+                                style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                <path
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                             Ảnh:
                         </strong>
-                        <div id="replyImagePreviewList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 6px; margin-top: 6px;"></div>
+                        <div id="replyImagePreviewList"
+                            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 6px; margin-top: 6px;">
+                        </div>
                     </div>
                     <div id="replyFilePreview" style="display: none;">
                         <strong>
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"
+                                style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                <path
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                             File:
                         </strong>
@@ -1791,7 +1960,8 @@
                 </div>
             </div>
             <div class="modal-footer-actions" style="margin-top: 16px; display: flex; gap: 10px;">
-                <button onclick="Community.closeReplyCommentModal()" class="btn-cancel-modal" style="flex: 1;">Hủy</button>
+                <button onclick="Community.closeReplyCommentModal()" class="btn-cancel-modal"
+                    style="flex: 1;">Hủy</button>
                 <button onclick="Community.submitReplyComment()" class="btn-submit-login" style="flex: 1;">Gửi</button>
             </div>
         </div>
@@ -1805,11 +1975,12 @@
                 <h2>✏️ Chỉnh Sửa Bài Viết</h2>
             </div>
             <div class="modal-body" style="padding: 20px;">
-                <textarea id="editPostContent" class="form-input" placeholder="Nội dung bài viết..." rows="5" style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 14px;"></textarea>
+                <textarea id="editPostContent" class="form-input" placeholder="Nội dung bài viết..." rows="5"
+                    style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 14px;"></textarea>
             </div>
             <div class="modal-footer-actions" style="margin-top: 20px; display: flex; gap: 10px;">
                 <button onclick="Community.closeEditPostModal()" class="btn-cancel-modal" style="flex: 1;">Hủy</button>
-                <button onclick="Community.submitEditPost()" class="btn-submit-login" style="flex: 1;">Cập Nhật</button>
+                <button class="btn-submit-edit-post btn-submit-login" style="flex: 1;">Cập Nhật</button>
             </div>
         </div>
     </div>
@@ -1822,11 +1993,14 @@
                 <h2>✏️ Chỉnh Sửa Bình Luận</h2>
             </div>
             <div class="modal-body" style="padding: 20px;">
-                <textarea id="editCommentContent" class="form-input" placeholder="Nội dung bình luận..." rows="4" style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 14px;"></textarea>
+                <textarea id="editCommentContent" class="form-input" placeholder="Nội dung bình luận..." rows="4"
+                    style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 14px;"></textarea>
             </div>
             <div class="modal-footer-actions" style="margin-top: 20px; display: flex; gap: 10px;">
-                <button onclick="Community.closeEditCommentModal()" class="btn-cancel-modal" style="flex: 1;">Hủy</button>
-                <button onclick="Community.submitEditComment()" class="btn-submit-login" style="flex: 1;">Cập Nhật</button>
+                <button onclick="Community.closeEditCommentModal()" class="btn-cancel-modal"
+                    style="flex: 1;">Hủy</button>
+                <button onclick="Community.submitEditComment()" class="btn-submit-login" style="flex: 1;">Cập
+                    Nhật</button>
             </div>
         </div>
     </div>
@@ -1839,18 +2013,115 @@
                 <h2>✏️ Chỉnh Sửa Trả Lời</h2>
             </div>
             <div class="modal-body">
-                <textarea id="editReplyContent" class="form-input" placeholder="Nội dung trả lời..." rows="4" style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 14px;"></textarea>
+                <textarea id="editReplyContent" class="form-input" placeholder="Nội dung trả lời..." rows="4"
+                    style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 14px;"></textarea>
             </div>
             <div class="modal-footer-actions" style="margin-top: 20px; display: flex; gap: 10px;">
                 <button onclick="Community.closeEditReplyModal()" class="btn-cancel-modal" style="flex: 1;">Hủy</button>
-                <button onclick="Community.submitEditReply()" class="btn-submit-login" style="flex: 1;">Cập Nhật</button>
+                <button onclick="Community.submitEditReply()" class="btn-submit-login" style="flex: 1;">Cập
+                    Nhật</button>
             </div>
         </div>
     </div>
 
-    <script src="study.js"></script>
-    <script src="exam.js"></script>
-    <script src="community.js"></script>
+    <!-- Create Class Modal -->
+    <div class="modal-overlay" id="createClassModal" style="display: none;">
+        <div class="modal-box" style="max-width: 520px;">
+            <button class="btn-close-modal" onclick="Timetable.closeCreateModal()">✕</button>
+            <div class="modal-header">
+                <h2>➕ Thêm Lớp Học</h2>
+                <p>Điền thông tin lớp học vào thời khóa biểu</p>
+            </div>
+            <form id="createClassForm" class="modal-body" style="padding: 16px;">
+                <!-- Row 1: Tên môn học (Full width) -->
+                <div class="form-group">
+                    <label class="form-label">Tên môn học</label>
+                    <input type="text" id="classSubject" class="form-input" placeholder="Ví dụ: Toán cao cấp" required>
+                </div>
+
+                <!-- Row 2: Phòng học | Thứ -->
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Phòng học</label>
+                        <input type="text" id="classRoom" class="form-input" placeholder="Ví dụ: A101" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Cơ sở</label>
+                        <input type="text" id="classCampus" class="form-input"
+                            placeholder="Nhập cơ sở">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Thứ</label>
+                        <select id="classDay" class="form-input" required>
+                            <option value="2">Thứ Hai</option>
+                            <option value="3">Thứ Ba</option>
+                            <option value="4">Thứ Tư</option>
+                            <option value="5">Thứ Năm</option>
+                            <option value="6">Thứ Sáu</option>
+                            <option value="7">Thứ Bảy</option>
+                            <option value="CN">Chủ Nhật</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Row 3: Buổi | Tiết bắt đầu -->
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Buổi</label>
+                        <select id="classSession" class="form-input" required>
+                            <option value="morning">Sáng</option>
+                            <option value="afternoon">Chiều</option>
+                            <option value="evening">Tối</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tiết bắt đầu</label>
+                        <select id="classStartPeriod" class="form-input" required>
+                            <option value="1">Tiết 1 (06:30)</option>
+                            <option value="2">Tiết 2 (07:20)</option>
+                            <option value="3">Tiết 3 (08:10)</option>
+                            <option value="4">Tiết 4 (09:10)</option>
+                            <option value="5">Tiết 5 (10:00)</option>
+                            <option value="6">Tiết 6 (10:50)</option>
+                            <option value="7">Tiết 7 (12:30)</option>
+                            <option value="8">Tiết 8 (13:20)</option>
+                            <option value="9">Tiết 9 (14:10)</option>
+                            <option value="10">Tiết 10 (15:10)</option>
+                            <option value="11">Tiết 11 (16:00)</option>
+                            <option value="12">Tiết 12 (16:50)</option>
+                            <option value="13">Tiết 13 (17:50)</option>
+                            <option value="14">Tiết 14 (18:40)</option>
+                            <option value="15">Tiết 15 (19:50)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Row 4: Số tiết (Full width) -->
+                <div class="form-group">
+                    <label class="form-label">Số tiết</label>
+                    <input type="number" id="classNumPeriods" class="form-input" min="1" max="5" value="2" required>
+                </div>
+
+                <!-- Thời gian tự động -->
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Thời gian (Tự động)</label>
+                    <div id="calculatedTime"
+                        style="font-size: 15px; font-weight: 600; color: #6366f1; padding: 8px 12px; background: #f0f2f5; border-radius: 6px; text-align: center;">
+                        06:30 - 08:05</div>
+                </div>
+
+                <button type="button" class="btn-submit-create-class"
+                    style="width: 100%; background: #6366f1; color: white; padding: 11px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 14px;">
+                    💾 Lưu Lớp Học
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="./js/main.js"></script>
+    <script src="./js/exam.js"></script>
+    <script src="./js/community.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 
 </body>

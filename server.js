@@ -30,7 +30,7 @@ function decodeFileName(filename) {
         // Multer có thể gửi filename với encoding sai, cần decode đúng cách
         // Nếu filename đã là UTF-8 thì giữ nguyên
         if (!filename) return filename;
-        
+
         // Kiểm tra xem có phải là Latin1 encoding không (encoding mặc định của HTTP headers)
         // Nếu có ký tự lạ thì decode từ Latin1 sang UTF-8
         if (/[\xC0-\xFF]/.test(filename)) {
@@ -38,7 +38,7 @@ function decodeFileName(filename) {
             const buffer = Buffer.from(filename, 'latin1');
             return buffer.toString('utf8');
         }
-        
+
         return filename;
     } catch (err) {
         console.error('Error decoding filename:', err);
@@ -90,10 +90,10 @@ const storage = multer.diskStorage({
         // Decode tên file đúng cách trước
         const decodedName = decodeFileName(file.originalname);
         const safeName = normalizeFileName(decodedName);
-        
+
         // Lưu tên gốc đã decode vào metadata
         file.decodedOriginalName = decodedName;
-        
+
         cb(null, safeName);
     }
 });
@@ -108,6 +108,8 @@ const USERS_FILE = 'users.json';
 const DOCS_FILE = 'documents.json';
 const EXAMS_FILE = 'exams.json';         // Lưu danh sách đề thi (Metadata)
 const QUESTIONS_FILE = 'questions.json'; // Lưu nội dung câu hỏi (Object)
+const ACTIVITIES_FILE = 'activities.json'; // Lưu lịch sử hoạt động
+const TIMETABLE_FILE = 'timetable.json'; // Lưu thời khóa biểu
 
 // Helper functions
 async function readJSON(file) {
@@ -121,6 +123,53 @@ async function readJSON(file) {
 
 async function writeJSON(file, data) {
     await fs.writeFile(file, JSON.stringify(data, null, 2));
+}
+
+// ==================== ACTIVITY LOGGING SYSTEM ====================
+async function logActivity(username, action, target, link, type) {
+    try {
+        // 1. Đọc danh sách user để lấy avatar
+        const users = await readJSON(USERS_FILE);
+        const user = users.find(u => u.username === username);
+
+        // 2. Tạo activity object
+        const activity = {
+            id: Date.now(),
+            user: user?.fullName || username,
+            username: username,
+            userAvatar: user?.avatar || null, // CRITICAL: Include avatar
+            action: action,
+            target: target,
+            link: link,
+            type: type,
+            time: new Date().toISOString(),
+            timestamp: Date.now()
+        };
+
+        // 3. Đọc activities hiện tại
+        let activities = [];
+        try {
+            const data = await fs.readFile(ACTIVITIES_FILE, 'utf8');
+            activities = JSON.parse(data || '[]');
+        } catch (err) {
+            activities = [];
+        }
+
+        // 4. Thêm activity mới lên đầu
+        activities.unshift(activity);
+
+        // 5. Giới hạn 100 activities gần nhất (tránh file quá lớn)
+        if (activities.length > 100) {
+            activities = activities.slice(0, 100);
+        }
+
+        // 6. Lưu vào file
+        await writeJSON(ACTIVITIES_FILE, activities);
+
+        console.log(`📌 Activity logged: ${username} ${action}`);
+    } catch (err) {
+        console.error('❌ Log activity error:', err);
+    }
 }
 
 // API Routes
@@ -278,7 +327,7 @@ app.get('/api/documents', async (req, res) => {
 
 app.post('/api/upload-document', upload.single('file'), async (req, res) => {
     try {
-        const { name, type, uploader, course, username } = req.body;
+        const { name, type, uploader, course, username, visibility } = req.body;
         const file = req.file;
 
         if (!file) {
@@ -300,12 +349,25 @@ app.post('/api/upload-document', upload.single('file'), async (req, res) => {
             size: file.size,
             downloadCount: 0,
             course: course || '',
+            visibility: visibility || 'public',
             createdAt: new Date().toISOString()
         };
 
         const docs = await readJSON(DOCS_FILE);
         docs.unshift(newDoc); // Thêm lên đầu
         await writeJSON(DOCS_FILE, docs);
+
+        // 🔔 Log activity
+        // 🔔 Log activity (CHỈ GHI NẾU KHÔNG PHẢI RIÊNG TƯ)
+        if (visibility !== 'private') { 
+            await logActivity(
+                username || 'Ẩn danh',
+                'đã tải lên',
+                newDoc.name,
+                `#doc-${newDoc.id}`,
+                'upload'
+            );
+        }
 
         res.json({ success: true, document: newDoc });
     } catch (err) {
@@ -395,35 +457,51 @@ app.get('/api/stats', async (req, res) => {
 
 // --- BỔ SUNG API XÓA TÀI LIỆU (Dán vào cuối danh sách API, trước phần Khởi động server) ---
 
+// POST /api/delete-document
 app.post('/api/delete-document', async (req, res) => {
     try {
         const { docId, username } = req.body;
         const users = await readJSON(USERS_FILE);
         const docs = await readJSON(DOCS_FILE);
 
-        // 1. Kiểm tra quyền Admin
         const user = users.find(u => u.username === username);
-        if (!user || user.role !== 'admin') {
-            return res.status(403).json({ success: false, message: "Bạn không có quyền xóa tài liệu!" });
+        if (!user) {
+            return res.status(403).json({ success: false, message: "Người dùng không tồn tại!" });
         }
 
-        // 2. Tìm tài liệu
+        // 1. Tìm tài liệu trước
         const docIndex = docs.findIndex(d => d.id === parseInt(docId));
         if (docIndex === -1) {
             return res.status(404).json({ success: false, message: "Không tìm thấy tài liệu!" });
         }
+        
+        const doc = docs[docIndex];
 
-        // 3. Xóa file vật lý trong thư mục uploads
-        const filePath = path.join(__dirname, docs[docIndex].path);
-        try {
-            await fs.unlink(filePath); // Xóa file
-        } catch (err) {
-            console.warn("Lỗi xóa file vật lý (có thể file không tồn tại):", err.message);
+        // 2. 👇 KIỂM TRA QUYỀN: Là Admin HOẶC Là người up file (so sánh username)
+        const isAdmin = user.role === 'admin';
+        const isUploader = doc.uploaderUsername === username; 
+        
+        // Nếu file cũ chưa có uploaderUsername, so sánh tạm bằng tên hiển thị (uploader)
+        const isLegacyUploader = !doc.uploaderUsername && doc.uploader === user.fullName;
+
+        if (!isAdmin && !isUploader && !isLegacyUploader) {
+            return res.status(403).json({ success: false, message: "⛔ Bạn không có quyền xóa tài liệu của người khác!" });
         }
 
-        // 4. Xóa trong database JSON
+        // 3. Xóa file vật lý
+        const filePath = path.join(__dirname, doc.path);
+        try {
+            await fs.unlink(filePath);
+        } catch (err) {
+            console.warn("Lỗi xóa file vật lý:", err.message);
+        }
+
+        // 4. Xóa trong database
         docs.splice(docIndex, 1);
         await writeJSON(DOCS_FILE, docs);
+
+        // 🔔 Log activity
+        await logActivity(username, 'đã xóa tài liệu', doc.name, '#', 'delete');
 
         res.json({ success: true, message: "Đã xóa tài liệu vĩnh viễn!" });
 
@@ -433,44 +511,51 @@ app.post('/api/delete-document', async (req, res) => {
     }
 });
 
-// API: Cập nhật thông tin tài liệu (tên và môn học)
+// API: Cập nhật thông tin tài liệu (ĐÃ FIX BẢO MẬT)
 app.post('/api/update-document', async (req, res) => {
     try {
-        const { docId, name, course, username } = req.body;
+        const { docId, name, course, username, visibility } = req.body;
         console.log('Update request received:', { docId, name, course, username });
-        
+
         const docs = await readJSON(DOCS_FILE);
         const users = await readJSON(USERS_FILE);
 
         // 1. Tìm tài liệu
         const doc = docs.find(d => d.id === parseInt(docId) || d.id == docId);
         if (!doc) {
-            console.error('Document not found:', docId);
             return res.status(404).json({ success: false, message: "Không tìm thấy tài liệu!" });
         }
 
-        // 2. Kiểm tra quyền sửa tag (course)
-        // Chỉ admin hoặc người upload lên mới có quyền sửa tag
-        if (course && course !== doc.course) {
-            const user = users.find(u => u.username === username);
-            const isAdmin = user && user.role === 'admin';
-            const isUploader = doc.uploader === user?.fullName;
-
-            if (!isAdmin && !isUploader) {
-                return res.status(403).json({ 
-                    success: false, 
-                    message: "❌ Chỉ admin hoặc người upload tài liệu mới có quyền thay đổi tag môn!" 
-                });
-            }
+        // 2. 👇 KIỂM TRA QUYỀN (BẮT BUỘC CHO MỌI THAO TÁC)
+        const user = users.find(u => u.username === username);
+        const isAdmin = user && user.role === 'admin';
+        
+        let isOwner = false;
+        // Ưu tiên so sánh username (cho file mới)
+        if (doc.uploaderUsername) {
+            isOwner = doc.uploaderUsername === username; 
+        } else {
+            // Fallback: So sánh tên hiển thị (cho file cũ)
+            isOwner = doc.uploader === user?.fullName;   
         }
 
-        // 3. Cập nhật thông tin
-        doc.name = name.trim();
-        doc.course = course || '';
+        // Nếu không phải Admin và không phải chủ sở hữu -> CHẶN NGAY
+        if (!isAdmin && !isOwner) {
+            console.log(`⛔ Blocked edit attempt by ${username} on doc ${docId}`);
+            return res.status(403).json({ 
+                success: false, 
+                message: "⛔ Bạn không có quyền sửa tài liệu của người khác!" 
+            });
+        }
+
+        // 3. Nếu qua được bước trên mới cho phép cập nhật
+        if (name) doc.name = name.trim();
+        if (course) doc.course = course || ''; // Cho phép chọn 'Khác' hoặc rỗng
+        if (visibility) doc.visibility = visibility;
 
         // 4. Lưu vào database
         await writeJSON(DOCS_FILE, docs);
-        console.log('Document updated successfully:', doc.id);
+        console.log(`✏️ Document updated successfully: ${doc.id} by ${username}`);
 
         res.json({ success: true, message: "Cập nhật thành công!" });
 
@@ -533,7 +618,7 @@ app.post('/api/delete-exam', async (req, res) => {
         try {
             const qData = await fs.readFile(QUESTIONS_FILE, 'utf8');
             let questionBank = JSON.parse(qData || "{}");
-            
+
             if (questionBank[String(examId)]) {
                 delete questionBank[String(examId)]; // Xóa key
                 await fs.writeFile(QUESTIONS_FILE, JSON.stringify(questionBank, null, 2));
@@ -605,57 +690,22 @@ app.post('/api/create-exam', async (req, res) => {
 // File paths
 const POSTS_FILE = 'posts.json';
 
-// API: Lấy hoạt động gần đây (upload file, bình luận)
+// API: Lấy hoạt động gần đây (đọc từ activities.json)
 app.get('/api/recent-activities', async (req, res) => {
     try {
-        const docs = await readJSON(DOCS_FILE);
-        const posts = await readJSON(POSTS_FILE);
-        const users = await readJSON(USERS_FILE);
-        
-        const activities = [];
-        
-        // Lấy 5 tài liệu mới nhất
-        docs.slice(0, 5).forEach(doc => {
-            const user = users.find(u => u.fullName === doc.uploader);
-            activities.push({
-                type: 'upload',
-                user: doc.uploader,
-                username: user?.username || '',
-                avatar: doc.uploader.charAt(0).toUpperCase(),
-                userAvatar: user?.avatar || null,
-                action: 'vừa tải lên',
-                target: doc.name,
-                link: doc.path,
-                time: doc.createdAt,
-                timestamp: new Date(doc.createdAt).getTime()
-            });
-        });
-        
-        // Lấy 5 bình luận mới nhất từ cộng đồng
-        posts.slice(0, 10).forEach(post => {
-            if (post.comments && post.comments.length > 0) {
-                post.comments.slice(-3).forEach(comment => {
-                    const user = users.find(u => u.username === comment.author);
-                    activities.push({
-                        type: 'comment',
-                        user: user?.fullName || comment.author,
-                        username: comment.author,
-                        avatar: (user?.fullName || comment.author).charAt(0).toUpperCase(),
-                        userAvatar: user?.avatar || null,
-                        action: 'đã bình luận',
-                        target: comment.content.substring(0, 30) + '...',
-                        link: '#',
-                        time: comment.createdAt,
-                        timestamp: new Date(comment.createdAt).getTime()
-                    });
-                });
-            }
-        });
-        
+        // Đọc từ activities.json
+        let activities = [];
+        try {
+            const data = await fs.readFile(ACTIVITIES_FILE, 'utf8');
+            activities = JSON.parse(data || '[]');
+        } catch (err) {
+            activities = [];
+        }
+
         // Sắp xếp theo thời gian mới nhất và lấy 10 hoạt động
         activities.sort((a, b) => b.timestamp - a.timestamp);
         const recentActivities = activities.slice(0, 10);
-        
+
         res.json({ success: true, activities: recentActivities, count: recentActivities.length });
     } catch (err) {
         console.error('Get recent activities error:', err);
@@ -667,15 +717,15 @@ app.get('/api/recent-activities', async (req, res) => {
 app.get('/api/posts', async (req, res) => {
     try {
         const posts = await readJSON(POSTS_FILE);
-        res.json(posts);
+        res.json({ success: true, posts: posts });
     } catch (err) {
         console.error('Get posts error:', err);
-        res.json([]);
+        res.json({ success: true, posts: [] });
     }
 });
 
 // Tạo bài viết mới
-app.post('/api/create-post', upload.fields([
+app.post('/api/posts', upload.fields([
     { name: 'images', maxCount: 5 },
     { name: 'files', maxCount: 10 }
 ]), async (req, res) => {
@@ -693,17 +743,17 @@ app.post('/api/create-post', upload.fields([
         }
 
         const posts = await readJSON(POSTS_FILE);
-        
+
         // Xử lý images
-        const images = req.files?.images 
+        const images = req.files?.images
             ? req.files.images.map(f => `/uploads/${f.filename}`)
             : [];
 
         // Xử lý files (không được có video)
-        const files = req.files?.files 
+        const files = req.files?.files
             ? req.files.files
                 .filter(f => !f.mimetype.startsWith('video/'))
-                .map(f => ({ 
+                .map(f => ({
                     originalName: f.decodedOriginalName || decodeFileName(f.originalname),
                     name: f.decodedOriginalName || decodeFileName(f.originalname),
                     path: `/uploads/${f.filename}`,
@@ -719,7 +769,7 @@ app.post('/api/create-post', upload.fields([
                 if (file.mimetype.startsWith('video/')) {
                     try {
                         await fs.unlink(file.path);
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             }
             return res.status(400).json({ success: false, message: "❌ Không được phép đăng video!" });
@@ -745,6 +795,15 @@ app.post('/api/create-post', upload.fields([
         posts.unshift(newPost);
         await writeJSON(POSTS_FILE, posts);
 
+        // 🔔 Log activity
+        await logActivity(
+            username,
+            'đã đăng bài viết',
+            'trong Cộng đồng',
+            `#post-${newPost.id}`,
+            'post'
+        );
+
         console.log(`✅ Bài viết mới từ ${username}: ID ${newPost.id}`);
         res.json({ success: true, message: "Đã đăng bài thành công!", post: newPost });
 
@@ -755,7 +814,7 @@ app.post('/api/create-post', upload.fields([
 });
 
 // Like bài viết
-app.post('/api/like-post', async (req, res) => {
+app.post('/api/posts/like', async (req, res) => {
     try {
         const { postId, username } = req.body;
         const posts = await readJSON(POSTS_FILE);
@@ -784,7 +843,7 @@ app.post('/api/like-post', async (req, res) => {
 });
 
 // Bình luận bài viết
-app.post('/api/comment-post', upload.fields([
+app.post('/api/comments', upload.fields([
     { name: 'images', maxCount: 5 },
     { name: 'files', maxCount: 10 }
 ]), async (req, res) => {
@@ -800,13 +859,13 @@ app.post('/api/comment-post', upload.fields([
         }
 
         // Xử lý images
-        const images = req.files?.images 
+        const images = req.files?.images
             ? req.files.images.map(f => `/uploads/${f.filename}`)
             : [];
 
         // Xử lý files
-        const files = req.files?.files 
-            ? req.files.files.map(f => ({ 
+        const files = req.files?.files
+            ? req.files.files.map(f => ({
                 originalName: f.decodedOriginalName || decodeFileName(f.originalname),
                 name: f.decodedOriginalName || decodeFileName(f.originalname),
                 path: `/uploads/${f.filename}`,
@@ -832,6 +891,16 @@ app.post('/api/comment-post', upload.fields([
         post.comments.push(comment);
 
         await writeJSON(POSTS_FILE, posts);
+
+        // 🔔 Log activity
+        await logActivity(
+            username,
+            'đã bình luận',
+            `vào bài viết của ${post.author}`,
+            `#post-${postId}`,
+            'comment'
+        );
+
         res.json({ success: true, comment: comment });
 
     } catch (err) {
@@ -841,7 +910,7 @@ app.post('/api/comment-post', upload.fields([
 });
 
 // Lưu bài viết
-app.post('/api/save-post', async (req, res) => {
+app.post('/api/posts/save', async (req, res) => {
     try {
         const { postId, username } = req.body;
         const posts = await readJSON(POSTS_FILE);
@@ -852,7 +921,7 @@ app.post('/api/save-post', async (req, res) => {
         }
 
         if (!post.savedBy) post.savedBy = [];
-        
+
         const saveIndex = post.savedBy.indexOf(username);
         if (saveIndex === -1) {
             post.savedBy.push(username);
@@ -870,7 +939,7 @@ app.post('/api/save-post', async (req, res) => {
 });
 
 // Xóa bài viết
-app.post('/api/delete-post', async (req, res) => {
+app.post('/api/posts/delete', async (req, res) => {
     try {
         const { postId, username } = req.body;
         const users = await readJSON(USERS_FILE);
@@ -900,7 +969,7 @@ app.post('/api/delete-post', async (req, res) => {
 });
 
 // Xóa bình luận
-app.post('/api/delete-comment', async (req, res) => {
+app.post('/api/comments/delete', async (req, res) => {
     try {
         const { postId, commentId, username } = req.body;
         const users = await readJSON(USERS_FILE);
@@ -936,7 +1005,7 @@ app.post('/api/delete-comment', async (req, res) => {
 });
 
 // Chỉnh sửa bài viết
-app.post('/api/edit-post', async (req, res) => {
+app.post('/api/posts/edit', async (req, res) => {
     try {
         const { postId, content, username } = req.body;
         const users = await readJSON(USERS_FILE);
@@ -961,7 +1030,7 @@ app.post('/api/edit-post', async (req, res) => {
 
         post.content = content;
         post.editedAt = new Date().toISOString();
-        
+
         await writeJSON(POSTS_FILE, posts);
         console.log(`✏️ Bài viết ${postId} được chỉnh sửa bởi ${username}`);
         res.json({ success: true, message: "Đã cập nhật bài viết", post: post });
@@ -1036,13 +1105,13 @@ app.post('/api/reply-comment', upload.fields([
         }
 
         // Xử lý images
-        const images = req.files?.images 
+        const images = req.files?.images
             ? req.files.images.map(f => `/uploads/${f.filename}`)
             : [];
 
         // Xử lý files
-        const files = req.files?.files 
-            ? req.files.files.map(f => ({ 
+        const files = req.files?.files
+            ? req.files.files.map(f => ({
                 originalName: f.decodedOriginalName || decodeFileName(f.originalname),
                 name: f.decodedOriginalName || decodeFileName(f.originalname),
                 path: `/uploads/${f.filename}`,
@@ -1103,7 +1172,7 @@ app.post('/api/add-emoji-reaction', async (req, res) => {
             if (userIndex > -1) {
                 userEmojis.splice(userIndex, 1);
             }
-            
+
             if (userEmojis.length === 0) {
                 delete comment.reactions[emoji];
             } else {
@@ -1215,6 +1284,229 @@ app.post('/api/delete-reply', async (req, res) => {
     }
 });
 
+// ==================== TIMETABLE ENDPOINTS ====================
+
+// GET /api/timetable - Lấy thời khóa biểu của user
+app.get('/api/timetable', async (req, res) => {
+    try {
+        const username = req.query.username;
+
+        if (!username) {
+            return res.json({ success: false, message: 'Missing username' });
+        }
+
+        // Verify user exists
+        const users = await readJSON(USERS_FILE);
+        const user = users.find(u => u.username === username);
+
+        if (!user) {
+            return res.json({ success: false, message: 'User not found' });
+        }
+
+        // Get user's classes
+        const allTimetables = await readJSON(TIMETABLE_FILE);
+        const userClasses = allTimetables.filter(cls => cls.username === username);
+
+        console.log(`📅 Loaded ${userClasses.length} classes for ${username}`);
+        res.json({ success: true, timetable: userClasses });
+
+    } catch (err) {
+        console.error('Error loading timetable:', err);
+        res.json({ success: false, message: 'Server error', timetable: [] });
+    }
+});
+
+// POST /api/timetable - Add new class (using username in body)
+app.post('/api/timetable', async (req, res) => {
+    try {
+        const { username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange } = req.body;
+
+        // Validate required fields
+        if (!username) {
+            return res.json({ success: false, message: '❌ Missing username' });
+        }
+
+        if (!subject || !room || !day || !session || !startPeriod || !numPeriods) {
+            return res.json({ success: false, message: '❌ Thiếu thông tin bắt buộc' });
+        }
+
+        // Verify user exists
+        const users = await readJSON(USERS_FILE);
+        const user = users.find(u => u.username === username);
+
+        if (!user) {
+            return res.json({ success: false, message: '❌ Người dùng không tồn tại - Vui lòng đăng nhập lại' });
+        }
+
+        // Create new class
+        const newClass = {
+            id: Date.now(),
+            username: username,
+            subject: subject.trim(),
+            room: room.trim(),
+            campus: campus || 'Cơ sở chính',
+            day,
+            session,
+            startPeriod: parseInt(startPeriod),
+            numPeriods: parseInt(numPeriods),
+            timeRange,
+            createdAt: new Date().toISOString()
+        };
+
+        // Save to database
+        const timetables = await readJSON(TIMETABLE_FILE);
+        timetables.push(newClass);
+        await writeJSON(TIMETABLE_FILE, timetables);
+
+        console.log(`✅ Added class: ${subject} for ${username}`);
+        res.json({ success: true, message: 'Thêm lớp học thành công!', class: newClass });
+
+    } catch (err) {
+        console.error('Error creating class:', err);
+        res.json({ success: false, message: 'Lỗi server: ' + err.message });
+    }
+});
+
+// POST /api/timetable - Thêm lớp học mới
+/*app.post('/api/timetable', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) {
+            return res.json({ success: false, message: 'Unauthorized - Vui lòng đăng nhập lại' });
+        }
+
+        const users = await readJSON(USERS_FILE);
+        const user = users.find(u => u.token === token);
+        if (!user) {
+            return res.json({ success: false, message: 'User not found - Vui lòng đăng xuất và đăng nhập lại' });
+        }
+
+        const { subject, room, day, session, startPeriod, numPeriods, timeRange } = req.body;
+
+        if (!subject || !room || !day || !session || !startPeriod || !numPeriods) {
+            return res.json({ success: false, message: 'Thiếu thông tin bắt buộc' });
+        }
+
+        const newClass = {
+            id: Date.now(),
+            username: user.username,
+            subject,
+            room,
+            day,
+            session,
+            startPeriod: parseInt(startPeriod),
+            numPeriods: parseInt(numPeriods),
+            timeRange,
+            createdAt: new Date().toISOString()
+        };
+
+        const timetables = await readJSON(TIMETABLE_FILE);
+        timetables.push(newClass);
+        await writeJSON(TIMETABLE_FILE, timetables);
+
+        console.log(`✅ Thêm lớp học: ${subject} cho user ${user.username}`);
+        res.json({ success: true, message: 'Thêm lớp học thành công!' });
+    } catch (err) {
+        console.error('Error creating class:', err);
+        res.json({ success: false, message: 'Lỗi server: ' + err.message });
+    }
+});*/
+
+// POST /api/timetable/delete - Xóa lớp học
+app.post('/api/timetable/delete', async (req, res) => {
+    try {
+        const { classId, username } = req.body;
+
+        if (!classId || !username) {
+            return res.json({ success: false, message: '❌ Missing required data' });
+        }
+
+        // Verify user exists
+        const users = await readJSON(USERS_FILE);
+        const user = users.find(u => u.username === username);
+
+        if (!user) {
+            return res.json({ success: false, message: '❌ User not found' });
+        }
+
+        // Load timetables
+        let timetables = await readJSON(TIMETABLE_FILE);
+
+        // Find class to delete
+        const classToDelete = timetables.find(cls => String(cls.id) === String(classId));
+
+        if (!classToDelete) {
+            return res.json({ success: false, message: '❌ Class not found' });
+        }
+
+        // Security: Only allow deleting own classes
+        if (classToDelete.username !== username) {
+            return res.json({ success: false, message: '❌ Unauthorized - You can only delete your own classes' });
+        }
+
+        // Delete class
+        timetables = timetables.filter(cls => cls.id != classId);
+        await writeJSON(TIMETABLE_FILE, timetables);
+
+        console.log(`🗑️ Deleted class ${classId} by ${username}`);
+        res.json({ success: true, message: 'Xóa lớp học thành công!' });
+
+    } catch (err) {
+        console.error('Error deleting class:', err);
+        res.json({ success: false, message: 'Server error' });
+    }
+});
+
+// POST /api/timetable/update - Cập nhật lớp học
+app.post('/api/timetable/update', async (req, res) => {
+    try {
+        const { classId, username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange } = req.body;
+
+        if (!classId || !username) {
+            return res.json({ success: false, message: '❌ Thiếu thông tin định danh' });
+        }
+
+        // Load timetables
+        let timetables = await readJSON(TIMETABLE_FILE);
+
+        // Tìm lớp cần sửa
+        const index = timetables.findIndex(cls => String(cls.id) === String(classId));
+
+        if (index === -1) {
+            return res.json({ success: false, message: '❌ Không tìm thấy lớp học' });
+        }
+
+        // Security: Chỉ cho phép sửa lớp của chính mình
+        if (timetables[index].username !== username) {
+            return res.json({ success: false, message: '❌ Bạn không có quyền sửa lớp này' });
+        }
+
+        // Cập nhật thông tin (giữ lại id và createdAt cũ)
+        timetables[index] = {
+            ...timetables[index],
+            subject: subject.trim(),
+            room: room.trim(),
+            campus: campus || 'Cơ sở chính',
+            day,
+            session,
+            startPeriod: parseInt(startPeriod),
+            numPeriods: parseInt(numPeriods),
+            timeRange,
+            updatedAt: new Date().toISOString()
+        };
+
+        await writeJSON(TIMETABLE_FILE, timetables);
+
+        console.log(`✏️ Updated class ${classId} by ${username}`);
+        res.json({ success: true, message: 'Cập nhật thành công!' });
+
+    } catch (err) {
+        console.error('Error updating class:', err);
+        res.json({ success: false, message: 'Server error' });
+    }
+});
+// ==================== SERVER START ====================
+
 // Khởi động server
 app.listen(PORT, async () => {
     console.log(`✅ Server đang chạy tại: http://localhost:${PORT}`);
@@ -1223,20 +1515,28 @@ app.listen(PORT, async () => {
     try { await fs.access(USERS_FILE); } catch { await writeJSON(USERS_FILE, []); }
     try { await fs.access(DOCS_FILE); } catch { await writeJSON(DOCS_FILE, []); }
     try { await fs.access(POSTS_FILE); } catch { await writeJSON(POSTS_FILE, []); }
+    try { await fs.access(ACTIVITIES_FILE); } catch { await writeJSON(ACTIVITIES_FILE, []); console.log('📌 activities.json created'); }
 
     // --- THÊM ĐOẠN NÀY ĐỂ TẠO FILE ĐỀ THI ---
-    try { 
-        await fs.access(EXAMS_FILE); 
-    } catch { 
+    try {
+        await fs.access(EXAMS_FILE);
+    } catch {
         await writeJSON(EXAMS_FILE, []); // Mảng rỗng cho danh sách đề
         console.log('📄 Đã tạo exams.json');
     }
 
-    try { 
-        await fs.access(QUESTIONS_FILE); 
-    } catch { 
+    try {
+        await fs.access(QUESTIONS_FILE);
+    } catch {
         await fs.writeFile(QUESTIONS_FILE, JSON.stringify({}, null, 2)); // Object rỗng {} cho câu hỏi
         console.log('📄 Đã tạo questions.json');
+    }
+
+    try {
+        await fs.access(TIMETABLE_FILE);
+    } catch {
+        await writeJSON(TIMETABLE_FILE, []);
+        console.log('📅 Đã tạo timetable.json');
     }
     // ----------------------------------------
 
