@@ -6,6 +6,24 @@ import {
     ICON_BOOKMARK_OUTLINE, ICON_DOWNLOAD, ICON_TRASH 
 } from './icons.js';
 
+// ==================== SUBJECT TO COURSE MAPPING ====================
+const SUBJECT_TO_COURSE_MAP = {
+    'Pháp luật đại cương': 10,
+    'Tâm lý học đại cương': 11,
+    'Tâm lý học Đại cương': 11,
+    'Cơ sở toán trong CNTT': 1,
+    'Toán rời rạc': 2,
+    'Giải tích 1': 1,
+    'Đại số tuyến tính': 2,
+    'Vật lý 1': 3,
+    'Hóa học': 4,
+    'Tiếng Anh': 5,
+    'Lập trình C++': 6,
+    'Cơ sở dữ liệu': 7,
+    'Web Development': 8,
+    'Triết học Mác Lenin': 9
+};
+
 // ==================== DOCUMENT MANAGER ====================
 export const DocumentManager = {
     pendingDocId: null,
@@ -768,5 +786,65 @@ export const DocumentManager = {
     renderDocuments(docs, container) {
         if (!container) return;
         container.innerHTML = this.generateCardsHTML(docs);
+    },
+
+    // ==================== SUBJECT CARD NAVIGATION ====================
+    /**
+     * Handles click on subject card from Home Dashboard
+     * Navigates to Documents page and applies the course filter
+     * @param {string} subjectName - Name of the subject clicked
+     */
+    navigateFromSubjectCard(subjectName) {
+        console.log('📚 Navigating from subject:', subjectName);
+        
+        // Find the course ID from the subject name
+        const courseId = SUBJECT_TO_COURSE_MAP[subjectName];
+        
+        if (!courseId) {
+            console.warn('⚠️ No course mapping found for:', subjectName);
+            // Navigate to documents page without filter
+            localStorage.setItem('pendingCourseFilter', 'all');
+        } else {
+            // Store the course ID to apply filter after navigation
+            localStorage.setItem('pendingCourseFilter', courseId.toString());
+            console.log('💾 Stored pending filter:', courseId);
+        }
+        
+        // Trigger navigation to documents page
+        // This will be handled by PageManager
+        const docsMenuItem = document.querySelector('.sidebar-left .nav-menu a[onclick*="showDocumentsPage"]');
+        if (docsMenuItem) {
+            docsMenuItem.click();
+        }
+    },
+
+    /**
+     * Checks and applies pending course filter from localStorage
+     * Called when Documents page is initialized
+     */
+    applyPendingFilter() {
+        const pendingFilter = localStorage.getItem('pendingCourseFilter');
+        
+        if (pendingFilter) {
+            console.log('✅ Applying pending filter:', pendingFilter);
+            
+            // Clear the pending filter immediately
+            localStorage.removeItem('pendingCourseFilter');
+            
+            // Apply the filter with a small delay to ensure DOM is ready
+            setTimeout(() => {
+                if (pendingFilter === 'all') {
+                    this.filterDocsByCourse('all');
+                } else {
+                    this.filterDocsByCourse(pendingFilter);
+                }
+                
+                // Scroll to documents section
+                const docsSection = document.getElementById('documents-section');
+                if (docsSection) {
+                    docsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+        }
     }
 };

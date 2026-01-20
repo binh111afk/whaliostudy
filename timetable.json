@@ -127,7 +127,8 @@
     "startPeriod": 10,
     "numPeriods": 3,
     "timeRange": "15:10 - 17:40",
-    "createdAt": "2026-01-19T16:24:10.350Z"
+    "createdAt": "2026-01-19T16:24:10.350Z",
+    "updatedAt": "2026-01-20T11:19:27.032Z"
   },
   {
     "id": 1768839879333,

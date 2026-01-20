@@ -44,7 +44,7 @@ export const RecentActivity = {
                 const postCard = document.querySelector(`.post-card[data-post-id="${postId}"]`);
                 if (postCard) {
                     postCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    
+
                     // Add highlight flash
                     postCard.classList.add('highlight-flash');
                     setTimeout(() => postCard.classList.remove('highlight-flash'), 2000);
@@ -69,7 +69,7 @@ export const RecentActivity = {
                 const docCard = document.querySelector(`.doc-card[data-doc-id="${docId}"]`);
                 if (docCard) {
                     docCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    
+
                     // Add highlight flash
                     docCard.classList.add('highlight-flash');
                     setTimeout(() => docCard.classList.remove('highlight-flash'), 2000);
@@ -397,6 +397,28 @@ export const Community = {
             }
         });
 
+        document.addEventListener('keydown', (e) => {
+            // Chỉ áp dụng cho phím TAB và khi đang gõ trong các ô nhập nội dung
+            if (e.key === 'Tab' && (
+                e.target.id === 'postContent' ||      // Ô tạo bài viết
+                e.target.id === 'editPostContent' ||  // Ô sửa bài viết
+                e.target.id === 'commentContent' ||   // Ô bình luận
+                e.target.id.startsWith('replyContent-') // Ô trả lời bình luận
+            )) {
+                e.preventDefault(); // Chặn hành vi chuyển ô mặc định của trình duyệt
+
+                const start = e.target.selectionStart;
+                const end = e.target.selectionEnd;
+
+                // Chèn 4 khoảng trắng (giả lập Tab) vào vị trí con trỏ
+                const spaces = "    ";
+                e.target.value = e.target.value.substring(0, start) + spaces + e.target.value.substring(end);
+
+                // Đưa con trỏ về đúng vị trí sau khi chèn
+                e.target.selectionStart = e.target.selectionEnd = start + spaces.length;
+            }
+        });
+
         this.eventListenersInitialized = true;
         console.log(' Event Delegation Initialized Successfully');
     },
@@ -477,7 +499,7 @@ export const Community = {
                     </div>
                 </div>
                 <div class="post-content">
-                    <p class="post-text">${this.escapeHtml(post.content)}</p>
+                    <p class="post-text" style="white-space: pre-wrap; word-break: break-word; line-height: 1.5;">${this.escapeHtml(post.content)}</p>
                 </div>
                 ${hasImage ? '<div class="post-images">' + post.images.map((img, idx) => '<img src="' + img + '" alt="image-' + idx + '" class="post-image">').join('') + '</div>' : ''}
                 ${hasFile ? '<div class="post-files">' + post.files.map(file => '<a href="' + file.path + '" class="file-item" download="' + (file.originalName || file.name) + '"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/></svg>' + (file.originalName || file.name) + '</a>').join('') + '</div>' : ''}
@@ -549,12 +571,12 @@ export const Community = {
     async createPost() {
         const content = document.getElementById('postContent')?.value.trim();
         if (!content) {
-            alert('Vui lòng nhập nội dung bài viết');
+            Swal.fire('Thiếu nội dung', 'Vui lòng nhập nội dung bài viết', 'warning');
             return;
         }
 
         if (!AppState.currentUser || !AppState.currentUser.username) {
-            alert('Vui lòng đăng nhập để tạo bài viết');
+            Swal.fire('Chưa đăng nhập', 'Vui lòng đăng nhập để tạo bài viết', 'warning');
             return;
         }
 
@@ -587,17 +609,17 @@ export const Community = {
                 await this.loadPosts();
                 this.renderFeed();
                 this.closeCreatePostModal();
-                
+
                 // Reload recent activities
                 if (window.RecentActivity) {
                     RecentActivity.loadActivities();
                 }
             } else {
-                alert(data.message || 'Tạo bài viết thất bại');
+                Swal.fire('Thất bại', data.message || 'Tạo bài viết thất bại', 'error');
             }
         } catch (error) {
             console.error(' Create post error:', error);
-            alert('Lỗi khi tạo bài viết: ' + error.message);
+            Swal.fire('Lỗi', 'Lỗi khi tạo bài viết: ' + error.message, 'error');
         }
     },
 
@@ -689,7 +711,7 @@ export const Community = {
                 <img src="${avatarSrc}" class="comment-avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" alt="avatar">
                 <div class="comment-content">
                     <div class="comment-author">${isCurrentUser ? 'Bạn' : comment.author}</div>
-                    <div class="comment-text">${this.escapeHtml(comment.content)}</div>
+                    <div class="comment-text" style="white-space: pre-wrap; word-break: break-word; line-height: 1.4;">${this.escapeHtml(comment.content)}</div>
                     ${imagesHtml}
                     ${filesHtml}
                     <div class="comment-time">
@@ -741,12 +763,12 @@ export const Community = {
         const content = document.getElementById('commentContent')?.value.trim();
 
         if (!postId || !content) {
-            alert('Vui lòng nhập nội dung bình luận');
+            Swal.fire('Thiếu nội dung', 'Vui lòng nhập nội dung bình luận', 'warning');
             return;
         }
 
         if (!AppState.currentUser || !AppState.currentUser.username) {
-            alert('Vui lòng đăng nhập để bình luận');
+            Swal.fire('Chưa đăng nhập', 'Vui lòng đăng nhập để bình luận', 'warning');
             return;
         }
 
@@ -791,24 +813,36 @@ export const Community = {
                 document.getElementById('commentImages').value = '';
                 document.getElementById('commentFiles').value = '';
                 this.clearCommentPreview();
-                
+
                 // Reload recent activities
                 if (window.RecentActivity) {
                     RecentActivity.loadActivities();
                 }
             } else {
-                alert(data.message || 'Gửi bình luận thất bại');
+                Swal.fire('Thất bại', data.message || 'Gửi bình luận thất bại', 'error');
             }
         } catch (error) {
             console.error(' Submit comment error:', error);
-            alert('Lỗi khi gửi bình luận: ' + error.message);
+            Swal.fire('Lỗi', 'Lỗi khi gửi bình luận: ' + error.message, 'error');
         }
     },
 
     // ==================== DELETE COMMENT ====================
     async deleteComment(postId, commentId) {
-        if (!confirm('Bạn chắc chắn muốn xóa bình luận này?')) return;
         if (!AppState.currentUser || !AppState.currentUser.username) return;
+
+        const result = await Swal.fire({
+            title: 'Xác nhận xóa',
+            text: 'Bạn chắc chắn muốn xóa bình luận này?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy'
+        });
+
+        if (!result.isConfirmed) return;
 
         try {
             const response = await fetch('/api/comments/delete', {
@@ -849,8 +883,20 @@ export const Community = {
 
     // ==================== DELETE POST ====================
     async deletePost(postId) {
-        if (!confirm('Bạn chắc chắn muốn xóa bài viết này?')) return;
         if (!AppState.currentUser || !AppState.currentUser.username) return;
+
+        const result = await Swal.fire({
+            title: 'Xác nhận xóa',
+            text: 'Bạn chắc chắn muốn xóa bài viết này?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy'
+        });
+
+        if (!result.isConfirmed) return;
 
         try {
             const response = await fetch('/api/posts/delete', {
@@ -894,7 +940,7 @@ export const Community = {
         const content = document.getElementById('editPostContent')?.value.trim();
 
         if (!postId || !content) {
-            alert('Vui lòng nhập nội dung');
+            Swal.fire('Thiếu nội dung', 'Vui lòng nhập nội dung', 'warning');
             return;
         }
 
@@ -913,11 +959,11 @@ export const Community = {
                 this.renderFeed();
                 this.closeEditPostModal();
             } else {
-                alert(data.message || 'Chỉnh sửa thất bại');
+                Swal.fire('Thất bại', data.message || 'Chỉnh sửa thất bại', 'error');
             }
         } catch (error) {
             console.error(' Edit post error:', error);
-            alert('Lỗi khi chỉnh sửa');
+            Swal.fire('Lỗi', 'Lỗi khi chỉnh sửa', 'error');
         }
     },
 
@@ -1106,12 +1152,12 @@ export const Community = {
         const content = document.getElementById(`replyContent-${parentCommentId}`)?.value.trim();
 
         if (!content) {
-            alert('Vui lòng nhập nội dung trả lời');
+            Swal.fire('Thiếu nội dung', 'Vui lòng nhập nội dung trả lời', 'warning');
             return;
         }
 
         if (!AppState.currentUser || !AppState.currentUser.username) {
-            alert('Vui lòng đăng nhập để trả lời');
+            Swal.fire('Chưa đăng nhập', 'Vui lòng đăng nhập để trả lời', 'warning');
             return;
         }
 
@@ -1155,11 +1201,11 @@ export const Community = {
                     RecentActivity.loadActivities();
                 }
             } else {
-                alert(data.message || 'Gửi trả lời thất bại');
+                Swal.fire('Thất bại', data.message || 'Gửi trả lời thất bại', 'error');
             }
         } catch (error) {
             console.error('❌ Submit reply error:', error);
-            alert('Lỗi khi gửi trả lời: ' + error.message);
+            Swal.fire('Lỗi', 'Lỗi khi gửi trả lời: ' + error.message, 'error');
         }
     },
 

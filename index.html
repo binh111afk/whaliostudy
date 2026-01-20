@@ -36,7 +36,7 @@
                     </path>
                 </svg>
             </a>
-            <a href="#" class="nav-item" data-tooltip="Khóa học">
+            <a href="#" class="nav-item" data-tooltip="Tính GPA">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -227,31 +227,31 @@
                     <button class="btn-scroll btn-left" onclick="scrollDocs('left')">❮</button>
 
                     <div class="teachers-scroll" id="docScrollContainer">
-                        <div class="teacher-card">
+                        <div class="teacher-card" onclick="DocumentManager.navigateFromSubjectCard('Pháp luật đại cương')" style="cursor: pointer;">
                             <img src="./img/pldc-pic.png" class="teacher-img" alt="Pháp luật">
                             <div class="teacher-info">
                                 <h3 class="teacher-name">PHÁP LUẬT ĐẠI CƯƠNG</h3>
                             </div>
                         </div>
-                        <div class="teacher-card">
+                        <div class="teacher-card" onclick="DocumentManager.navigateFromSubjectCard('Tâm lý học Đại cương')" style="cursor: pointer;">
                             <img src="./img/tlhdc-pic.png" class="teacher-img" alt="Tâm lý">
                             <div class="teacher-info">
                                 <h3 class="teacher-name">TÂM LÝ HỌC ĐẠI CƯƠNG</h3>
                             </div>
                         </div>
-                        <div class="teacher-card">
+                        <div class="teacher-card" onclick="DocumentManager.navigateFromSubjectCard('Cơ sở toán trong CNTT')" style="cursor: pointer;">
                             <img src="./img/cst-pic.png" class="teacher-img" alt="Cơ sở toán">
                             <div class="teacher-info">
                                 <h3 class="teacher-name">CƠ SỞ TOÁN TRONG CNTT</h3>
                             </div>
                         </div>
-                        <div class="teacher-card">
+                        <div class="teacher-card" onclick="DocumentManager.navigateFromSubjectCard('Toán rời rạc')" style="cursor: pointer;">
                             <img src="./img/trr-pic.png" class="teacher-img" alt="Toán rời rạc">
                             <div class="teacher-info">
                                 <h3 class="teacher-name">TOÁN RỜI RẠC</h3>
                             </div>
                         </div>
-                        <div class="teacher-card">
+                        <div class="teacher-card" onclick="DocumentManager.navigateFromSubjectCard('Triết học Mác Lenin')" style="cursor: pointer;">
                             <img src="./img/triethoc-pic.png" class="teacher-img" alt="Triết học">
                             <div class="teacher-info">
                                 <h3 class="teacher-name">TRIẾT HỌC MÁC - LÊNIN</h3>
@@ -274,7 +274,7 @@
                     </div>
                 </div>
                 <div class="courses-grid">
-                    <div class="course-card">
+                    <div class="course-card" onclick="DocumentManager.navigateFromSubjectCard('Pháp luật đại cương')" style="cursor: pointer;">
                         <img src="./img/pldc-pic.png" class="course-thumb" alt="Course">
                         <div class="course-content">
                             <h3 class="course-title">PHÁP LUẬT ĐẠI CƯƠNG</h3>
@@ -287,7 +287,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="course-card">
+                    <div class="course-card" onclick="DocumentManager.navigateFromSubjectCard('Tâm lý học Đại cương')" style="cursor: pointer;">
                         <img src="./img/tlhdc-pic.png" class="course-thumb" alt="Course">
                         <div class="course-content">
                             <h3 class="course-title">TÂM LÝ HỌC ĐẠI CƯƠNG</h3>
@@ -300,7 +300,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="course-card">
+                    <div class="course-card" onclick="DocumentManager.navigateFromSubjectCard('Toán rời rạc')" style="cursor: pointer;">
                         <img src="./img/trr-pic.png" class="course-thumb" alt="Course">
                         <div class="course-content">
                             <h3 class="course-title">TOÁN RỜI RẠC</h3>
@@ -2119,8 +2119,10 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="module" src="./js/main.js"></script>
     <script src="./js/exam.js"></script>
+    <script src="./js/gpa-calculator.js"></script>
     <script src="./js/community.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 

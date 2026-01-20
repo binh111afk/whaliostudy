@@ -1,13 +1,13 @@
 // ==================== SVG ICONS ====================
 
 // User/Person Icon
-export const ICON_USER = '<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>';
+export const ICON_USER = '<img src="./img/user.png" alt="User Icon" style="width:14px; height:14px; display: inline-block; vertical-align: middle; margin-right: 4px;">';
 
 // Calendar Icon
-export const ICON_CALENDAR = '<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>';
+export const ICON_CALENDAR = '<img src="./img/calendar.png" alt="Calendar Icon" style="width:14px; height:14px; display: inline-block; vertical-align: middle; margin-right: 4px;">';
 
 // Database/Size Icon
-export const ICON_DATABASE = '<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>';
+export const ICON_DATABASE = '<img src="./img/database.png" alt="Database Icon" style="width:14px; height:14px; display: inline-block; vertical-align: middle; margin-right: 4px;">';
 
 // Eye Icon (View)
 export const ICON_EYE = '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>';
@@ -28,10 +28,10 @@ export const ICON_DOWNLOAD = '<svg width="18" height="18" fill="none" stroke="cu
 export const ICON_TRASH = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>';
 
 // Folder Icon
-export const ICON_FOLDER = '<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>';
+export const ICON_FOLDER = 'img src="./img/folder.png" alt="Folder Icon" style="width:14px; height:14px; display: inline-block; vertical-align: middle; margin-right: 4px;">';
 
 // Image Icon
-export const ICON_IMAGE = '<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>';
+export const ICON_IMAGE = 'img src="./img/img.png" alt="Image Icon" style="width:14px; height:14px; display: inline-block; vertical-align: middle; margin-right: 4px;">';
 
 // Cloud Icon (Upload)
 export const ICON_CLOUD_UPLOAD = '<svg width="60" height="60" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; margin-bottom: 10px;"><path d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>';

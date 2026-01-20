@@ -799,7 +799,7 @@ export const Timetable = {
                 currentUser = JSON.parse(savedUser);
                 AppState.currentUser = currentUser;
             } else {
-                alert('❌ Vui lòng đăng nhập để sử dụng tính năng này!');
+                Swal.fire('Chưa đăng nhập', 'Vui lòng đăng nhập để sử dụng tính năng này!', 'error');
                 return;
             }
         }
@@ -816,18 +816,18 @@ export const Timetable = {
 
         // Validate
         if (!subject || !room) {
-            alert('Vui lòng nhập đầy đủ thông tin!');
+            Swal.fire('Thiếu thông tin', 'Vui lòng nhập đầy đủ thông tin!', 'error');
             return;
         }
 
         if (numPeriods < 1 || numPeriods > 5) {
-            alert('Số tiết phải từ 1 đến 5!');
+            Swal.fire('Số tiết không hợp lệ', 'Số tiết phải từ 1 đến 5!', 'error');
             return;
         }
 
         const endPeriod = startPeriod + numPeriods - 1;
         if (endPeriod > 15) {
-            alert('Vượt quá tiết 15! Vui lòng điều chỉnh lại.');
+            Swal.fire('Vượt quá giới hạn', 'Vượt quá tiết 15! Vui lòng điều chỉnh lại.', 'error');
             return;
         }
 
@@ -880,18 +880,35 @@ export const Timetable = {
                 // Reset trạng thái sửa
                 this.editingClassId = null; 
                 
-                alert(this.editingClassId ? '✅ Cập nhật thành công!' : '✅ Thêm lớp học thành công!');
+                Swal.fire({
+                    title: 'Thành công!',
+                    text: this.editingClassId ? 'Cập nhật thành công!' : 'Thêm lớp học thành công!',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
             } else {
-                alert('❌ ' + (data.message || 'Thao tác thất bại!'));
+                Swal.fire('Thất bại', data.message || 'Thao tác thất bại!', 'error');
             }
         } catch (error) {
             console.error('❌ Network error:', error);
-            alert('❌ Lỗi kết nối server!');
+            Swal.fire('Lỗi kết nối', 'Lỗi kết nối server!', 'error');
         }
     },
 
     async deleteClass(classId) {
-        if (!confirm('Bạn chắc chắn muốn xóa lớp học này?')) return;
+        const result = await Swal.fire({
+            title: 'Bạn có chắc chắn?',
+            text: 'Bạn có muốn xóa lớp học này khỏi thời khóa biểu không?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Có, xóa đi',
+            cancelButtonText: 'Hủy'
+        });
+
+        if (!result.isConfirmed) return;
 
         // Get username from AppState or localStorage
         let currentUser = AppState.currentUser;
@@ -905,7 +922,7 @@ export const Timetable = {
 
         const username = currentUser?.username;
         if (!username) {
-            alert('Vui lòng đăng nhập để sử dụng tính năng này!');
+            Swal.fire('Chưa đăng nhập', 'Vui lòng đăng nhập để sử dụng tính năng này!', 'error');
             return;
         }
 
@@ -929,16 +946,16 @@ export const Timetable = {
                     data.message.includes('Unauthorized') ||
                     data.message.includes('không tìm thấy')
                 )) {
-                    alert('⚠️ Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
+                    Swal.fire('Phiên hết hạn', 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!', 'warning');
                     localStorage.clear();
                     location.reload();
                     return;
                 }
-                alert(data.message || 'Xóa lớp học thất bại!');
+                Swal.fire('Thất bại', data.message || 'Xóa lớp học thất bại!', 'error');
             }
         } catch (error) {
             console.error('❌ Delete class error:', error);
-            alert('Lỗi khi xóa lớp học!');
+            Swal.fire('Lỗi', 'Lỗi khi xóa lớp học!', 'error');
         }
     },
 

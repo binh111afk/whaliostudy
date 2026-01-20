@@ -12,6 +12,10 @@
   "type": "commonjs",
   "dependencies": {
     "express": "^5.2.1",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "sweetalert2": "^11.26.17"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.2"
   }
 }

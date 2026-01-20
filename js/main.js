@@ -76,6 +76,9 @@ const PageManager = {
 
         DocumentManager.currentMode = 'normal';
         DocumentManager.loadAllDocuments();
+        
+        // Check and apply pending course filter (from subject card navigation)
+        DocumentManager.applyPendingFilter();
     },
 
     showSavedDocumentsPage(menuItem = null) {
@@ -742,6 +745,210 @@ window.openEditProfileModal = () => {
 window.closeEditProfileModal = () => ModalManager.close('editProfile');
 window.openChangePassModal = () => ModalManager.open('changePass');
 window.closeChangePassModal = () => ModalManager.close('changePass');
+
+// ==================== PROFILE MANAGEMENT FUNCTIONS ====================
+
+// Fill edit profile form with current user data
+window.fillEditProfileForm = function() {
+    const user = AppState.currentUser;
+    if (!user) return;
+
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val || '';
+    };
+
+    setVal('edit-username', user.username);
+    setVal('edit-fullname', user.fullName);
+    setVal('edit-email', user.email);
+    setVal('edit-phone', user.phone);
+    setVal('edit-gender', user.gender || 'Nam');
+    setVal('edit-birth', user.birthYear);
+    setVal('edit-school', user.school);
+    setVal('edit-city', user.city);
+    setVal('edit-facebook', user.facebook);
+
+    const previewImg = document.getElementById('preview-img');
+    const previewText = document.getElementById('preview-text');
+
+    if (previewImg && previewText) {
+        previewText.style.display = 'none';
+        previewImg.style.display = 'block';
+        
+        if (user.avatar && user.avatar.includes('/uploads/')) {
+            previewImg.src = user.avatar;
+        } else {
+            previewImg.src = 'img/avt.png';
+        }
+    }
+};
+
+// Handle avatar preview
+window.handleAvatarPreview = function() {
+    const fileInput = document.getElementById('avatar-input');
+    const previewImg = document.getElementById('preview-img');
+    const previewText = document.getElementById('preview-text');
+
+    if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewImg.style.display = 'block';
+            previewText.style.display = 'none';
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+    }
+};
+
+// Update user profile
+window.handleUpdateProfile = async function(event) {
+    event.preventDefault();
+
+    const btnSubmit = event.target.querySelector('button[type="submit"]');
+    const originalText = btnSubmit.textContent;
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = 'Đang lưu...';
+
+    const getValue = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value.trim() : '';
+    };
+
+    const profileData = {
+        username: AppState.currentUser.username,
+        fullName: getValue('edit-fullname'),
+        email: getValue('edit-email'),
+        phone: getValue('edit-phone'),
+        gender: getValue('edit-gender'),
+        birthYear: getValue('edit-birth'),
+        school: getValue('edit-school'),
+        city: getValue('edit-city'),
+        facebook: getValue('edit-facebook')
+    };
+
+    try {
+        const response = await fetch('/api/update-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(profileData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            const newUserState = { ...AppState.currentUser, ...result.user };
+            AppState.saveUser(newUserState);
+
+            UI.showUserInterface(newUserState);
+            if (PageManager.fillProfileData) {
+                PageManager.fillProfileData(newUserState);
+            }
+
+            // ✅ SUCCESS NOTIFICATION WITH SWEETALERT2
+            Swal.fire({
+                icon: 'success',
+                title: 'Thành công',
+                text: 'Thông tin cá nhân đã được cập nhật!',
+                timer: 1500,
+                showConfirmButton: false
+            });
+            
+            ModalManager.close('editProfile');
+        } else {
+            throw new Error(result.message);
+        }
+
+    } catch (error) {
+        console.error('Lỗi cập nhật:', error);
+        // ❌ ERROR NOTIFICATION WITH SWEETALERT2
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi',
+            text: error.message || 'Không thể kết nối tới server'
+        });
+    } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = originalText;
+    }
+};
+
+// Change password
+window.handleChangePassword = async function(event) {
+    event.preventDefault();
+
+    const oldPass = document.getElementById('old-pass').value.trim();
+    const newPass = document.getElementById('new-pass').value.trim();
+    const confirmPass = document.getElementById('confirm-new-pass').value.trim();
+    const btnSubmit = event.target.querySelector('button[type="submit"]');
+
+    if (!oldPass || !newPass || !confirmPass) {
+        Swal.fire('Thiếu thông tin', 'Vui lòng nhập đầy đủ các trường!', 'warning');
+        return;
+    }
+
+    if (newPass !== confirmPass) {
+        Swal.fire('Lỗi', 'Mật khẩu mới xác nhận không khớp!', 'error');
+        return;
+    }
+
+    if (newPass.length < 6) {
+        Swal.fire('Lỗi', 'Mật khẩu mới phải có ít nhất 6 ký tự!', 'error');
+        return;
+    }
+
+    const originalText = btnSubmit.textContent;
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = 'Đang xử lý...';
+
+    try {
+        const response = await fetch('/api/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: AppState.currentUser.username,
+                oldPass: oldPass,
+                newPass: newPass
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // ✅ SUCCESS NOTIFICATION WITH SWEETALERT2
+            Swal.fire({
+                icon: 'success',
+                title: 'Thành công',
+                text: 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại!',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+            ModalManager.close('changePass');
+            event.target.reset();
+
+            if (AppState.currentUser) {
+                AppState.currentUser.password = newPass;
+                AppState.saveUser(AppState.currentUser);
+            }
+
+            setTimeout(() => {
+                Auth.logout();
+            }, 2000);
+
+        } else {
+            // ❌ ERROR NOTIFICATION WITH SWEETALERT2
+            Swal.fire('Thất bại', result.message || 'Có lỗi xảy ra', 'error');
+        }
+
+    } catch (error) {
+        console.error('Lỗi kết nối:', error);
+        // ❌ NETWORK ERROR NOTIFICATION
+        Swal.fire('Lỗi mạng', 'Không thể kết nối tới server!', 'error');
+    } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = originalText;
+    }
+};
 
 // Start application
 window.addEventListener('DOMContentLoaded', initializeApp);
