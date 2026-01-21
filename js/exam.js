@@ -167,25 +167,66 @@ export const ExamRunner = {
 
     renderQuestions() {
         const container = document.getElementById('questions-container');
-        container.innerHTML = this.currentQuestions.map((q, index) => `
-            <div class="question-card" id="q-card-${q.id}">
-                <div class="question-header">
-                    <div class="q-number">${index + 1}</div>
-                    <div class="q-text">${q.question}</div>
-                </div>
-                <div class="options-list">
-                    ${q.options.map((opt, optIndex) => `
-                        <div class="option-item" id="opt-${q.id}-${optIndex}" onclick="ExamRunner.selectOption(${q.id}, ${optIndex})">
-                            <div class="option-label">${String.fromCharCode(65 + optIndex)}</div>
-                            <div class="option-content">${opt}</div>
+        container.innerHTML = this.currentQuestions.map((q, index) => {
+            // Essay question rendering
+            if (q.type === 'essay') {
+                return `
+                    <div class="question-card" id="q-card-${q.id}">
+                        <div class="question-header">
+                            <div class="q-number">${index + 1}</div>
+                            <div class="q-text">${q.question}</div>
                         </div>
-                    `).join('')}
+                        <div class="essay-answer-area" style="margin-top: 16px;">
+                            <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">📝 Câu trả lời của bạn:</label>
+                            <textarea 
+                                id="essay-${q.id}" 
+                                class="essay-textarea" 
+                                placeholder="Nhập câu trả lời của bạn vào đây..."
+                                oninput="ExamRunner.saveEssayAnswer(${q.id}, this.value)"
+                                style="width: 100%; min-height: 150px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical;"
+                            >${this.userAnswers[q.id] || ''}</textarea>
+                        </div>
+                        <div class="explanation-box" id="explain-${q.id}" style="display: none;">
+                            <strong>💡 Gợi ý:</strong> ${q.explanation || "Câu hỏi tự luận, không có đáp án chuẩn."}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Multiple choice rendering (existing)
+            return `
+                <div class="question-card" id="q-card-${q.id}">
+                    <div class="question-header">
+                        <div class="q-number">${index + 1}</div>
+                        <div class="q-text">${q.question}</div>
+                    </div>
+                    <div class="options-list">
+                        ${q.options.map((opt, optIndex) => `
+                            <div class="option-item" id="opt-${q.id}-${optIndex}" onclick="ExamRunner.selectOption(${q.id}, ${optIndex})">
+                                <div class="option-label">${String.fromCharCode(65 + optIndex)}</div>
+                                <div class="option-content">${opt}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="explanation-box" id="explain-${q.id}">
+                        <strong>💡 Giải thích:</strong> ${q.explanation || "Không có giải thích chi tiết."}
+                    </div>
                 </div>
-                <div class="explanation-box" id="explain-${q.id}">
-                    <strong>💡 Giải thích:</strong> ${q.explanation || "Không có giải thích chi tiết."}
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
+        this.updateProgress();
+    },
+
+    saveEssayAnswer(questionId, text) {
+        this.userAnswers[questionId] = text;
+        const mapNode = document.getElementById(`map-node-${questionId}`);
+        if (mapNode) {
+            if (text.trim().length > 0) {
+                mapNode.classList.add('done');
+            } else {
+                mapNode.classList.remove('done');
+            }
+        }
         this.updateProgress();
     },
 
@@ -358,7 +399,8 @@ export const ExamRunner = {
 // ==================== EXAM CREATOR ====================
 export const ExamCreator = {
     tempQuestions: [],
-    currentStep: 'upload',
+    currentStep: 'mode-selection',
+    selectedMode: 'multiple_choice', // 'multiple_choice' or 'essay'
     allExamsMetadata: [],
     pendingDeleteId: null,
     pendingDeleteUser: null,
@@ -367,8 +409,15 @@ export const ExamCreator = {
         const modal = document.getElementById('createExamModal');
         if (!modal) return alert("Thiếu HTML modal tạo đề!");
         modal.classList.add('active');
-        this.setStep('upload');
+        this.setStep('mode-selection');
+        this.selectedMode = 'multiple_choice';
         document.getElementById('exam-file-upload').value = '';
+    },
+
+    selectMode(mode) {
+        this.selectedMode = mode;
+        console.log('📌 Selected exam mode:', mode);
+        this.setStep('upload');
     },
 
     close() {
@@ -377,8 +426,9 @@ export const ExamCreator = {
 
     setStep(stepName) {
         this.currentStep = stepName;
-        ['upload', 'review', 'config'].forEach(id => {
-            document.getElementById(`step-${id}`).style.display = 'none';
+        ['mode-selection', 'upload', 'review', 'config'].forEach(id => {
+            const el = document.getElementById(`step-${id}`);
+            if (el) el.style.display = 'none';
         });
         const target = document.getElementById(`step-${stepName}`);
         if (target) target.style.display = (stepName === 'review') ? 'flex' : 'block';
@@ -386,8 +436,13 @@ export const ExamCreator = {
         const btnBack = document.getElementById('btn-back-step');
         const btnMain = document.getElementById('btn-main-action');
 
-        if (stepName === 'upload') {
+        if (stepName === 'mode-selection') {
             btnBack.style.display = 'none';
+            btnMain.style.display = 'none';
+        } else if (stepName === 'upload') {
+            btnBack.style.display = 'block';
+            btnBack.textContent = "← Quay lại";
+            btnBack.onclick = () => this.setStep('mode-selection');
             btnMain.style.display = 'none';
         } else if (stepName === 'review') {
             btnBack.style.display = 'block';
@@ -430,7 +485,43 @@ export const ExamCreator = {
         let currentQ = null;
 
         const regexQuestion = /^(Câu\s+\d+|Bài\s+\d+|Question\s+\d+|\d+\.)[\s:.]/i;
+        // Essay mode: simpler parsing without looking for A/B/C/D
+        if (this.selectedMode === 'essay') {
+            paragraphs.forEach(p => {
+                let text = p.innerText.trim();
+                if (!text) return;
 
+                if (regexQuestion.test(text)) {
+                    if (currentQ) questions.push(currentQ);
+
+                    currentQ = {
+                        id: questions.length + 1,
+                        question: text,
+                        options: [], // Empty for essay
+                        answer: -1, // No correct answer for essay
+                        explanation: "",
+                        type: 'essay'
+                    };
+                } else if (currentQ) {
+                    // Append additional paragraphs to question text
+                    currentQ.question += '\n' + text;
+                }
+            });
+            if (currentQ) questions.push(currentQ);
+
+            if (questions.length === 0) { 
+                alert("Không tìm thấy câu hỏi! File cần có định dạng: 'Câu 1:', 'Bài 1:', etc."); 
+                return; 
+            }
+
+            this.tempQuestions = questions;
+            document.getElementById('new-exam-title').value = fileName.replace('.docx', '') + ' (Tự luận)';
+            this.renderReviewUI();
+            this.setStep('review');
+            return;
+        }
+
+        // Multiple choice mode: existing logic
         paragraphs.forEach(p => {
             let text = p.innerText.trim();
             const html = p.innerHTML;
@@ -498,6 +589,25 @@ export const ExamCreator = {
         this.tempQuestions.forEach((q, idx) => {
             const item = document.createElement('div');
             item.className = 'review-item';
+            
+            // Essay question rendering
+            if (q.type === 'essay') {
+                item.innerHTML = `
+                    <div class="review-q-header">
+                        <span class="review-q-num">📝 Câu ${idx + 1}</span>
+                        <div class="btn-del-q" onclick="ExamCreator.deleteQuestion(${idx})">🗑️ Xóa</div>
+                    </div>
+                    <textarea class="review-q-input" onchange="ExamCreator.updateQuestionText(${idx}, this.value)" 
+                        style="min-height: 100px;">${q.question}</textarea>
+                    <div style="background: #f0fdf4; border: 1px solid #86efac; padding: 10px; border-radius: 6px; margin-top: 8px; font-size: 13px; color: #166534;">
+                        <b>💡 Dạng tự luận:</b> Học sinh sẽ nhập câu trả lời vào ô văn bản.
+                    </div>
+                `;
+                container.appendChild(item);
+                return;
+            }
+            
+            // Multiple choice question rendering (existing code)
 
             let optionsHTML = '';
             if (!q.options || q.options.length === 0) q.options = ["", "", "", ""];
@@ -587,6 +697,7 @@ export const ExamCreator = {
             time: time.toString().includes("phút") ? time : `${time} phút`,
             limit: limit,
             subject: subject,
+            type: this.selectedMode, // 'multiple_choice' or 'essay'
             image: examImage,
             questions: this.tempQuestions
         };
@@ -600,12 +711,26 @@ export const ExamCreator = {
             const result = await response.json();
 
             if (result.success) {
-                alert("✅ Đã tạo đề thi thành công!");
-                this.close();
-                this.switchToExamsTab();
-                if (window.ExamRunner) await ExamRunner.init();
+                // Show success notification
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Thành công!',
+                    text: 'Đề thi mới đã được tạo.',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: 'var(--primary-color)',
+                    didClose: () => {
+                        this.close();
+                        this.switchToExamsTab();
+                        if (window.ExamRunner) ExamRunner.init();
+                    }
+                });
             } else {
-                alert("Lỗi: " + result.message);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lỗi!',
+                    text: result.message || 'Không thể tạo đề thi.',
+                    confirmButtonColor: 'var(--primary-color)'
+                });
             }
         } catch (error) {
             alert("Lỗi kết nối Server!");
@@ -709,13 +834,23 @@ export const ExamCreator = {
     openDeleteModal(examId, username) {
         const exam = this.allExamsMetadata.find(e => e.id == examId);
         if (!exam) {
-            alert("Không tìm thấy đề thi!");
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi!',
+                text: 'Không tìm thấy đề thi!',
+                confirmButtonColor: 'var(--primary-color)'
+            });
             return;
         }
 
         const userStr = localStorage.getItem('currentUser');
         if (!userStr) {
-            alert("Vui lòng đăng nhập!");
+            Swal.fire({
+                icon: 'warning',
+                title: 'Chưa đăng nhập',
+                text: 'Vui lòng đăng nhập để thực hiện thao tác này!',
+                confirmButtonColor: 'var(--primary-color)'
+            });
             return;
         }
 
@@ -724,19 +859,32 @@ export const ExamCreator = {
         const isCreator = currentUser.username === exam.createdBy;
 
         if (!isAdmin && !isCreator) {
-            alert("❌ Bạn chỉ có thể xóa đề thi do chính mình tạo!");
+            Swal.fire({
+                icon: 'error',
+                title: 'Không có quyền!',
+                text: 'Bạn chỉ có thể xóa đề thi do chính mình tạo!',
+                confirmButtonColor: 'var(--primary-color)'
+            });
             return;
         }
 
-        this.pendingDeleteId = examId;
-        this.pendingDeleteUser = username;
-        const modal = document.getElementById('deleteConfirmModal');
-        if (modal) modal.classList.add('active');
-        else {
-            if (confirm("Bạn muốn xóa đề thi này chứ?")) {
+        // Show SweetAlert2 delete confirmation
+        Swal.fire({
+            icon: 'warning',
+            title: 'Bạn chắc chắn chứ?',
+            text: 'Đề thi này sẽ bị xóa vĩnh viễn và không thể khôi phục!',
+            showCancelButton: true,
+            confirmButtonText: 'Xóa ngay',
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                this.pendingDeleteId = examId;
+                this.pendingDeleteUser = username;
                 this.confirmDeleteAction();
             }
-        }
+        });
     },
 
     closeDeleteModal() {
@@ -752,9 +900,6 @@ export const ExamCreator = {
         const examId = this.pendingDeleteId;
         const username = this.pendingDeleteUser;
 
-        const modalBtn = document.querySelector('#deleteConfirmModal button:last-child');
-        if (modalBtn) modalBtn.textContent = "Đang xóa...";
-
         try {
             const response = await fetch('/api/delete-exam', {
                 method: 'POST',
@@ -765,18 +910,38 @@ export const ExamCreator = {
             const result = await response.json();
 
             if (result.success) {
-                this.closeDeleteModal();
+                // Show success toast
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Đã xóa!',
+                    text: 'Đề thi đã được xóa thành công.',
+                    timer: 2000,
+                    timerProgressBar: true,
+                    showConfirmButton: false,
+                    position: 'top-end'
+                });
+                
+                // Reload exams list
                 await this.loadAndRenderExams();
             } else {
-                alert("❌ Lỗi: " + result.message);
-                this.closeDeleteModal();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lỗi!',
+                    text: result.message || 'Không thể xóa đề thi.',
+                    confirmButtonColor: 'var(--primary-color)'
+                });
             }
         } catch (error) {
             console.error(error);
-            alert("Lỗi kết nối Server!");
-            this.closeDeleteModal();
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi!',
+                text: 'Lỗi kết nối Server!',
+                confirmButtonColor: 'var(--primary-color)'
+            });
         } finally {
-            if (modalBtn) modalBtn.textContent = "Xóa ngay";
+            this.pendingDeleteId = null;
+            this.pendingDeleteUser = null;
         }
     }
 };

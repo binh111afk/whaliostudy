@@ -3,7 +3,7 @@ const fs = require('fs').promises;
 const multer = require('multer');
 const path = require('path');
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
@@ -1509,7 +1509,7 @@ app.post('/api/timetable/update', async (req, res) => {
 
 // Khởi động server
 app.listen(PORT, async () => {
-    console.log(`✅ Server đang chạy tại: http://localhost:${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 
     // Tạo files user/docs nếu chưa tồn tại (Code cũ của bạn)
     try { await fs.access(USERS_FILE); } catch { await writeJSON(USERS_FILE, []); }

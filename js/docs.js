@@ -24,6 +24,23 @@ const SUBJECT_TO_COURSE_MAP = {
     'Triết học Mác Lenin': 9
 };
 
+// ==================== SUBJECT LIST FOR DROPDOWN ====================
+const SUBJECT_LIST = [
+    { id: 'all', name: 'Tất cả môn học' },
+    { id: 1, name: 'Cơ sở toán trong CNTT' },
+    { id: 2, name: 'Tâm lý học đại cương' },
+    { id: 3, name: 'Kinh tế chính trị' },
+    { id: 4, name: 'Chủ nghĩa xã hội' },
+    { id: 5, name: 'Tâm lý học giáo dục' },
+    { id: 6, name: 'Lập trình C++' },
+    { id: 7, name: 'Toán rời rạc' },
+    { id: 8, name: 'Xác suất thống kê' },
+    { id: 9, name: 'Triết học Mác Lenin' },
+    { id: 10, name: 'Pháp luật đại cương' },
+    { id: 11, name: 'Quân sự' },
+    { id: 'other', name: 'Khác' }
+];
+
 // ==================== DOCUMENT MANAGER ====================
 export const DocumentManager = {
     pendingDocId: null,
@@ -33,6 +50,146 @@ export const DocumentManager = {
     currentFilteredDocs: [],
     editingDocId: null,
     currentCourseFilter: 'all',
+    selectedSubject: { id: 'all', name: 'Tất cả môn học' },
+    isDropdownOpen: false,
+
+    // Toggle dropdown visibility
+    toggleCourseDropdown(event) {
+        // Get the button that was clicked
+        const btn = event?.target?.closest('.course-dropdown-btn') || document.getElementById('courseDropdownBtn');
+        if (!btn) return;
+        
+        // Find the dropdown menu (next sibling of button)
+        const container = btn.closest('.course-dropdown-container');
+        const dropdown = container?.querySelector('.course-dropdown-menu');
+        
+        if (!dropdown) return;
+        
+        this.isDropdownOpen = !this.isDropdownOpen;
+        
+        if (this.isDropdownOpen) {
+            // Close any other open dropdowns first
+            document.querySelectorAll('.course-dropdown-menu').forEach(d => {
+                if (d !== dropdown) d.style.display = 'none';
+            });
+            document.querySelectorAll('.course-dropdown-btn').forEach(b => {
+                if (b !== btn) b.classList.remove('active');
+            });
+            
+            dropdown.style.display = 'block';
+            btn.classList.add('active');
+            
+            // Focus search input
+            const searchInput = dropdown.querySelector('.course-search-input');
+            if (searchInput) {
+                setTimeout(() => searchInput.focus(), 100);
+            }
+        } else {
+            dropdown.style.display = 'none';
+            btn.classList.remove('active');
+        }
+    },
+
+    // Close dropdown when clicking outside
+    setupDropdownListeners() {
+        document.addEventListener('click', (e) => {
+            const dropdowns = document.querySelectorAll('.course-dropdown-menu');
+            const buttons = document.querySelectorAll('.course-dropdown-btn');
+            
+            // Check if click is outside all dropdowns and buttons
+            let clickedInside = false;
+            dropdowns.forEach(dropdown => {
+                if (dropdown.contains(e.target)) clickedInside = true;
+            });
+            buttons.forEach(btn => {
+                if (btn.contains(e.target)) clickedInside = true;
+            });
+            
+            if (!clickedInside && this.isDropdownOpen) {
+                this.isDropdownOpen = false;
+                dropdowns.forEach(dropdown => {
+                    dropdown.style.display = 'none';
+                });
+                buttons.forEach(btn => {
+                    btn.classList.remove('active');
+                });
+            }
+        });
+    },
+
+    // Filter dropdown items based on search input
+    searchCourseDropdown(searchTerm, event) {
+        // Get the dropdown container from the search input
+        const searchInput = event?.target || document.activeElement;
+        const container = searchInput?.closest('.course-dropdown-container');
+        const items = container?.querySelectorAll('.course-dropdown-item') || 
+                     document.querySelectorAll('.course-dropdown-item');
+        
+        const term = searchTerm.toLowerCase().trim();
+        
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            if (text.includes(term)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    },
+
+    // Select course from dropdown
+    selectCourseFromDropdown(courseId, courseName, event) {
+        this.selectedSubject = { id: courseId, name: courseName };
+        
+        // Get the clicked item's container
+        const item = event?.target?.closest('.course-dropdown-item');
+        const container = item?.closest('.course-dropdown-container');
+        const btn = container?.querySelector('.course-dropdown-btn');
+        const dropdown = container?.querySelector('.course-dropdown-menu');
+        
+        // Update button text
+        if (btn) {
+            const textSpan = btn.querySelector('.dropdown-btn-text');
+            if (textSpan) {
+                textSpan.textContent = courseName;
+            }
+        }
+        
+        // Close dropdown
+        this.isDropdownOpen = false;
+        if (dropdown && btn) {
+            dropdown.style.display = 'none';
+            btn.classList.remove('active');
+        }
+        
+        // Clear search
+        const searchInput = container?.querySelector('.course-search-input');
+        if (searchInput) {
+            searchInput.value = '';
+            this.searchCourseDropdown('', { target: searchInput });
+        }
+        
+        // Trigger filter
+        this.filterDocsByCourse(courseId);
+    },
+
+    // Render dropdown items
+    renderCourseDropdown() {
+        const containers = document.querySelectorAll('.course-dropdown-items');
+        if (!containers.length) return;
+        
+        const html = SUBJECT_LIST.map(subject => `
+            <div class="course-dropdown-item" 
+                 onclick="DocumentManager.selectCourseFromDropdown('${subject.id}', '${subject.name}', event)">
+                <span class="dropdown-item-text">${subject.name}</span>
+            </div>
+        `).join('');
+        
+        // Render to all dropdown containers
+        containers.forEach(container => {
+            container.innerHTML = html;
+        });
+    },
 
     async loadAllDocuments() {
         if (AppState.isLoading) {
@@ -70,17 +227,17 @@ export const DocumentManager = {
     async loadCourses() {
         try {
             AppState.allCourses = [
-                { id: 1, name: "Giải tích 1", code: "GT1" },
-                { id: 2, name: "Đại số tuyến tính", code: "DSTD" },
-                { id: 3, name: "Vật lý 1", code: "VL1" },
-                { id: 4, name: "Hóa học", code: "HH" },
-                { id: 5, name: "Tiếng Anh", code: "TA" },
-                { id: 6, name: "Lập trình C++", code: "LP" },
-                { id: 7, name: "Cơ sở dữ liệu", code: "CSDL" },
-                { id: 8, name: "Web Development", code: "WEB" },
-                { id: 9, name: "Triết học Mác Lenin", code: "TMML" },
-                { id: 10, name: "Pháp luật đại cương", code: "PLDC" },
-                { id: 11, name: "Tâm lý học Đại cương", code: "TLDC" }
+                { id: 1, name: "Cơ sở toán trong CNTT", code: "Cơ sở toán" },
+                { id: 2, name: "Tâm lý học đại cương", code: "Tâm lý học đại cương" },
+                { id: 3, name: "Kinh tế chính trị", code: "Kinh tế chính trị" },
+                { id: 4, name: "Chủ nghĩa xã hội", code: "Chủ nghĩa xã hội" },
+                { id: 5, name: "Tâm lý học giáo dục", code: "Tâm lý học giáo dục" },
+                { id: 6, name: "Lập trình C++", code: "Lập trình C++" },
+                { id: 7, name: "Toán rời rạc", code: "Toán rời rạc" },
+                { id: 8, name: "Xác suất thống kê", code: "Xác suất thống kê" },
+                { id: 9, name: "Triết học Mác Lenin", code: "Triết học Mác Lenin" },
+                { id: 10, name: "Pháp luật đại cương", code: "Pháp luật đại cương" },
+                { id: 11, name: "Quân sự", code: "Quân sự" }
             ];
             this.populateCourseDropdown();
         } catch (error) {
@@ -732,26 +889,13 @@ export const DocumentManager = {
     },
 
     filterDocsByCourse(courseId) {
-        document.querySelectorAll('.course-filter-buttons .course-filter-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
+        // Store current filter
+        this.currentCourseFilter = courseId;
         
-        const btns = document.querySelectorAll('.course-filter-buttons .course-filter-btn');
-        if (courseId === 'all') {
-            btns[0].classList.add('active');
-        } else {
-            btns.forEach((btn, idx) => {
-                const btnCourseId = btn.getAttribute('onclick').match(/\d+|'other'/);
-                if (btnCourseId && (btnCourseId[0] == courseId || btnCourseId[0] === "'other'" && courseId === 'other')) {
-                    btn.classList.add('active');
-                }
-            });
-        }
+        // Get source documents (public only)
+        let src = AppState.allDocuments.filter(d => d.visibility !== 'private');
 
-        let src = AppState.isViewingSaved 
-            ? AppState.allDocuments.filter(d => AppState.currentUser?.savedDocs?.includes(d.id)) 
-            : AppState.allDocuments.filter(d => d.visibility !== 'private');
-
+        // Apply course filter
         if (courseId === 'all') {
             this.currentFilteredDocs = [...src];
         } else if (courseId === 'other') {
@@ -760,6 +904,7 @@ export const DocumentManager = {
             this.currentFilteredDocs = src.filter(d => d.course == courseId);
         }
 
+        // Reset to first page and render
         this.pagination.currentPage = 1;
         this.renderPagedDocuments();
     },

@@ -204,6 +204,12 @@ class SemesterDataManager {
 
     saveToStorage() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.subjects));
+        
+        // Auto-update analytics charts when GPA data changes
+        if (window.AnalyticsManager && typeof window.AnalyticsManager.updateCharts === 'function') {
+            console.log('🔄 GPA data saved, refreshing analytics charts...');
+            window.AnalyticsManager.updateCharts();
+        }
     }
 
     addSubject() {
@@ -746,12 +752,39 @@ window.clearAllSubjectsConfirm = async function () {
 }
 
 /**
- * Show User Guide Modal (UPDATED CONTENT)
+ * Show User Guide Modal (FINAL MIX: Style cũ + Bảng mới)
  */
 window.showUserGuide = function() {
+    // 1. CHUẨN BỊ DỮ LIỆU BẢNG (Giữ nguyên logic bảng màu)
+    let tableRows = '';
+    let index = 0;
+    
+    const getGradeColor = (grade) => {
+        if (grade.startsWith('A')) return '#10b981';
+        if (grade.startsWith('B')) return '#3b82f6';
+        if (grade.startsWith('C')) return '#f59e0b';
+        if (grade.startsWith('D')) return '#ea580c';
+        return '#ef4444';
+    };
+
+    Object.entries(GRADE_SCALE).forEach(([grade, data]) => {
+        const bgRow = index % 2 === 0 ? '#ffffff' : '#f9fafb';
+        const color = getGradeColor(grade);
+        
+        tableRows += `
+            <tr style="background: ${bgRow}; border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 10px; font-weight: 800; color: ${color}; font-size: 15px;">${grade}</td>
+                <td style="padding: 10px; color: #374151; font-family: monospace; font-size: 13px;">${data.min} - ${data.max}</td>
+                <td style="padding: 10px; font-weight: 600; color: #1f2937;">${data.point}</td>
+            </tr>
+        `;
+        index++;
+    });
+
+    // 2. HIỂN THỊ (Style HTML cũ cho 3 mục đầu)
     Swal.fire({
         title: '📖 Hướng dẫn sử dụng',
-        width: '650px',
+        width: '700px',
         html: `
             <div style="text-align: left; font-size: 14px; line-height: 1.6; color: #374151;">
                 
@@ -762,10 +795,10 @@ window.showUserGuide = function() {
                     </strong>
                     <ul style="margin: 8px 0 0 34px; padding: 0; list-style-type: disc; color: #4b5563;">
                         <li><b>Chọn Loại môn:</b> Rất quan trọng để xét Đậu/Rớt.
-                            <br>🔹 <i>Đại cương:</i> Cần tổng kết <b style="color:#374151">≥ 4.0</b> để qua môn.
-                            <br>🔸 <i>Chuyên ngành:</i> Cần tổng kết <b style="color:#374151">≥ 5.5</b> để qua môn.
+                            <br>🔹 <i>Đại cương:</i> Cần tổng kết <b>≥ 4.0</b> để qua.
+                            <br>🔸 <i>Chuyên ngành:</i> Cần tổng kết <b>≥ 5.5</b> để qua.
                         </li>
-                        <li><b>Nhập điểm:</b> Nhập điểm hệ số 10 và trọng số %. Tổng trọng số các cột phải đủ <b>100%</b>.</li>
+                        <li><b>Nhập điểm:</b> Nhập đủ hệ số 10 và trọng số %.</li>
                     </ul>
                 </div>
 
@@ -774,31 +807,47 @@ window.showUserGuide = function() {
                         <span style="background:#f3e8ff; width:24px; height:24px; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:12px;">2</span>
                         Xem điểm cần thi ("Cần đạt")
                     </strong>
-                    <p style="margin: 8px 0 8px 34px;">Muốn biết cuối kỳ cần thi bao nhiêu để được A, B+?</p>
-                    <ul style="margin: 0 0 0 34px; padding: 0; list-style-type: disc; color: #4b5563;">
+                    <ul style="margin: 8px 0 0 34px; padding: 0; list-style-type: disc; color: #4b5563;">
                         <li>👉 Hãy <b>ĐỂ TRỐNG</b> ô điểm cuối kỳ.</li>
-                        <li>Nhìn sang cột <b>Kết quả</b>:
-                            <br>• Nếu hiện số (ví dụ <b>7.5</b>): Bạn cần thi <b style="color:#374151">≥ 7.5</b>.
-                            <br>• Nếu hiện <span style="color:#059669; font-weight:700; background:#ecfdf5; padding:0 4px; border-radius:4px; font-size:11px;">Đã đạt</span>: Chúc mừng! Dù bạn thi 0 điểm thì tổng kết vẫn đạt mức đó.
-                        </li>
+                        <li>Nhìn cột <b>Kết quả</b>: Nếu hiện <span style="color:#059669; font-weight:700; background:#ecfdf5; padding:0 4px; border-radius:4px; font-size:11px;">Đã đạt</span> nghĩa là bạn đã qua mức đó.</li>
                     </ul>
                 </div>
 
-                <div style="margin-bottom: 5px;">
+                <div style="margin-bottom: 20px; padding-bottom: 5px;">
                     <strong style="color: #10b981; font-size: 16px; display: flex; align-items: center; gap: 8px;">
                         <span style="background:#d1fae5; width:24px; height:24px; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:12px;">3</span>
-                        Dự đoán GPA
+                        Dự đoán GPA (Tính ngược)
                     </strong>
                     <ul style="margin: 8px 0 0 34px; padding: 0; list-style-type: disc; color: #4b5563;">
-                        <li>Bấm nút <b>Dự đoán GPA Học kỳ</b> bên dưới.</li>
-                        <li>Nhập GPA mong muốn (ví dụ <b>3.6</b>). Hệ thống sẽ tự tính toán và điền điểm giả định vào các ô trống giúp bạn (Các ô điểm có nét đức và được highlight bằng màu tím chính là <b>điểm giả định</b>).</li>
+                        <li>Bấm nút <b>🎯 Dự đoán GPA</b>, nhập mục tiêu (ví dụ 3.6). Hệ thống sẽ tự điền điểm vào các ô trống.</li>
                     </ul>
+                </div>
+
+                <div style="margin-top: 25px;">
+                    <div style="background: linear-gradient(90deg, #4f46e5, #7c3aed); color: white; padding: 10px 15px; border-top-left-radius: 12px; border-top-right-radius: 12px; font-weight: 700; text-align: center; text-transform: uppercase; letter-spacing: 1px; font-size: 13px;">
+                        Bảng quy đổi điểm HCMUE
+                    </div>
+                    
+                    <div style="border: 1px solid #e5e7eb; border-top: none; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; overflow: hidden;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: center;">
+                            <thead style="background: #f3f4f6; color: #6b7280; font-size: 12px; text-transform: uppercase;">
+                                <tr>
+                                    <th style="padding: 10px;">Điểm Chữ</th>
+                                    <th style="padding: 10px;">Thang 10</th>
+                                    <th style="padding: 10px;">Thang 4</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableRows}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
             </div>
         `,
         confirmButtonText: 'Đã hiểu',
-        confirmButtonColor: '#2563eb', // Màu xanh đậm hơn chút cho đẹp
+        confirmButtonColor: '#2563eb',
         showCloseButton: true
     });
 }
@@ -934,7 +983,7 @@ function addGPAStyles() {
         }
 
         /* Item con: Căn giữa tuyệt đối & Nền tối */
-        .stat-item {
+        .gpa-summary .stat-item {
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -948,12 +997,12 @@ function addGPAStyles() {
             transition: all 0.3s ease;
         }
 
-        .stat-item:hover {
+        .gpa-summary .stat-item:hover {
             transform: translateY(-4px);
             background: rgba(0, 0, 0, 0.3);
         }
 
-        .stat-label {
+        .gpa-summary .stat-label {
             font-size: 13px;
             font-weight: 600;
             text-transform: uppercase;
@@ -964,7 +1013,7 @@ function addGPAStyles() {
             line-height: 1.2;
         }
 
-        .stat-value {
+        .gpa-summary .stat-value {
             font-size: 30px;
             font-weight: 800;
             color: #ffffff;
@@ -974,7 +1023,7 @@ function addGPAStyles() {
         }
 
         /* GPA màu vàng nổi bật */
-        .stat-item.highlight .stat-value {
+        .gpa-summary .stat-item.highlight .stat-value {
             color: #fbbf24;
             font-size: 36px;
             text-shadow: 0 0 20px rgba(251, 191, 36, 0.4);

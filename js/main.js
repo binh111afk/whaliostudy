@@ -9,6 +9,10 @@ import { ExamManager, ExamRunner, ExamCreator } from './exam.js';
 import { ProfileManager } from './profile.js';
 import { RecentActivity, Community } from './community.js';
 import { Timetable } from './timetable.js';
+import { EventManager } from './events.js';
+import { DataManager } from './data.js';
+import { AnalyticsManager } from './analytics.js';
+import { FlashcardManager } from './flashcard.js';
 
 // ==================== PAGE MANAGER ====================
 const PageManager = {
@@ -561,6 +565,10 @@ async function initializeApp() {
         DocumentManager.loadCourses()
     ]);
     console.log('✅ Initial data loaded');
+    
+    // Initialize course dropdown
+    DocumentManager.renderCourseDropdown();
+    DocumentManager.setupDropdownListeners();
 
     ModalManager.setupCloseListeners();
     EventHandlers.setupMenuEvents();
@@ -568,6 +576,14 @@ async function initializeApp() {
 
     StudyTimer.init();
     StatsManager.init();
+    EventManager.init();
+    DataManager.init();
+    
+    console.log('🚀 Calling AnalyticsManager.init()...');
+    AnalyticsManager.init();
+    
+    console.log('🚀 Calling FlashcardManager.init()...');
+    FlashcardManager.init();
     
     if (isLoggedIn) {
         RecentActivity.loadActivities();
@@ -598,6 +614,7 @@ window.Community = Community;
 window.PageManager = PageManager;
 window.ModalManager = ModalManager;
 window.Utils = Utils;
+window.EventManager = EventManager;
 
 // Timer functions
 window.selectedMinutes = 25;
@@ -954,3 +971,93 @@ window.handleChangePassword = async function(event) {
 window.addEventListener('DOMContentLoaded', initializeApp);
 
 console.log('📦 ES6 Modules loaded');
+
+// ==================== MOBILE MENU TOGGLE ====================
+
+/**
+ * Toggle mobile sidebar menu
+ */
+window.toggleMobileMenu = function() {
+    console.log('🍔 Hamburger button clicked!');
+    const sidebar = document.querySelector('.sidebar-left');
+    const overlay = document.querySelector('#mobile-overlay');
+    
+    if (sidebar && overlay) {
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+        
+        console.log('🍔 Menu toggled!', {
+            sidebarActive: sidebar.classList.contains('active'),
+            overlayActive: overlay.classList.contains('active')
+        });
+        
+        // Prevent body scroll when menu is open
+        if (sidebar.classList.contains('active')) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+    } else {
+        console.error('❌ Elements not found:', { sidebar, overlay });
+    }
+};
+
+/**
+ * Auto-close mobile menu when clicking sidebar links
+ */
+function setupMobileMenuAutoClose() {
+    const sidebarLinks = document.querySelectorAll('.sidebar-left a, .sidebar-left .nav-menu a');
+    
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            // Only close on mobile/tablet
+            if (window.innerWidth < 1024) {
+                const sidebar = document.querySelector('.sidebar-left');
+                const overlay = document.querySelector('#mobile-overlay');
+                
+                if (sidebar && overlay) {
+                    sidebar.classList.remove('active');
+                    overlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                    console.log('🔒 Menu closed after link click');
+                }
+            }
+        });
+    });
+}
+
+// Initialize mobile menu auto-close
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupMobileMenuAutoClose);
+} else {
+    setupMobileMenuAutoClose();
+}
+
+/**
+ * Close mobile menu when clicking overlay
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    const overlay = document.querySelector('#mobile-overlay');
+    if (overlay) {
+        overlay.addEventListener('click', () => {
+            console.log('🔒 Overlay clicked - closing menu');
+            window.toggleMobileMenu();
+        });
+    }
+});
+
+/**
+ * Close mobile menu on window resize to desktop
+ */
+window.addEventListener('resize', () => {
+    if (window.innerWidth >= 1024) {
+        const sidebar = document.querySelector('.sidebar-left');
+        const overlay = document.getElementById('mobile-overlay');
+        
+        if (sidebar && overlay) {
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    }
+});

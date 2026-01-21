@@ -37,11 +37,57 @@ export const Timetable = {
         '#FFFFE5'  // Light yellow
     ],
 
+    // Get current day in timetable format (2-7, CN)
+    getCurrentDay() {
+        const dayOfWeek = new Date().getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+        
+        // Convert JavaScript day (0-6) to timetable format
+        if (dayOfWeek === 0) return 'CN'; // Sunday
+        return String(dayOfWeek + 1); // Monday=2, Tuesday=3, ..., Saturday=7
+    },
+
+    // Highlight the current day column in the timetable
+    highlightCurrentDay() {
+        const today = this.getCurrentDay();
+        console.log('📅 Today is:', today);
+
+        // Remove any existing highlight
+        document.querySelectorAll('.is-today').forEach(el => {
+            el.classList.remove('is-today');
+        });
+
+        // Find and highlight all cells for today (header + body cells)
+        const headers = document.querySelectorAll('.timetable-table thead th');
+        const rows = document.querySelectorAll('.timetable-table tbody tr');
+        
+        // Find the column index for today
+        let todayColumnIndex = -1;
+        headers.forEach((header, index) => {
+            const dayValue = header.getAttribute('data-day');
+            if (dayValue === today) {
+                todayColumnIndex = index;
+                header.classList.add('is-today');
+                console.log('✅ Highlighted header for day:', today);
+            }
+        });
+
+        // Highlight all cells in this column
+        if (todayColumnIndex >= 0) {
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells[todayColumnIndex]) {
+                    cells[todayColumnIndex].classList.add('is-today');
+                }
+            });
+        }
+    },
+
     async init() {
         console.log('📅 Initializing Timetable...');
         this.injectStyles();
         await this.loadTimetable();
         this.renderTimetable();
+        this.highlightCurrentDay();
         this.setupEventListeners();
     },
 
@@ -265,6 +311,36 @@ export const Timetable = {
 
             .class-card:hover .btn-delete-class { opacity: 1; }
             .btn-delete-class:hover { background: #ef4444; color: white; }
+
+            /* --- HIGHLIGHT CURRENT DAY --- */
+            .is-today {
+                position: relative;
+                z-index: 10;
+                border: 2px solid #8b5cf6 !important;
+            }
+
+            /* Add "Hôm nay" badge to the header of current day */
+            .timetable-table thead th.is-today::after {
+                content: "Hôm nay";
+                display: block;
+                font-size: 10px;
+                font-weight: 700;
+                color: #ffffff;
+                background: #8b5cf6;
+                padding: 4px 12px;
+                border-radius: 12px;
+                margin-top: 6px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+            }
+
+            /* Enhance current day cells with subtle animation */
+            .timetable-table tbody td.is-today {
+                animation: pulse-today 3s ease-in-out infinite;
+            }
+
+            
         `;
         document.head.appendChild(styleTag);
         console.log('✅ Đã nạp CSS: Bảng rộng 1600px + Thanh cuộn ngang');
@@ -296,15 +372,18 @@ export const Timetable = {
                 console.log('✅ Timetable loaded:', this.currentTimetable.length, 'classes');
                 console.log('📋 Timetable contents:', this.currentTimetable);
                 this.renderTimetable();
+                this.highlightCurrentDay();
             } else {
                 console.warn('⚠️ Timetable load failed:', data.message);
                 this.currentTimetable = [];
                 this.renderTimetable();
+                this.highlightCurrentDay();
             }
         } catch (error) {
             console.error('❌ Load timetable error:', error);
             this.currentTimetable = [];
             this.renderTimetable();
+            this.highlightCurrentDay();
         }
     },
 
@@ -331,13 +410,13 @@ export const Timetable = {
                         <thead>
                             <tr>
                                 <th class="session-col">Buổi</th>
-                                <th>Thứ 2</th>
-                                <th>Thứ 3</th>
-                                <th>Thứ 4</th>
-                                <th>Thứ 5</th>
-                                <th>Thứ 6</th>
-                                <th>Thứ 7</th>
-                                <th>CN</th>
+                                <th data-day="2">Thứ 2</th>
+                                <th data-day="3">Thứ 3</th>
+                                <th data-day="4">Thứ 4</th>
+                                <th data-day="5">Thứ 5</th>
+                                <th data-day="6">Thứ 6</th>
+                                <th data-day="7">Thứ 7</th>
+                                <th data-day="CN">CN</th>
                             </tr>
                         </thead>
                         <tbody id="timetable-body"></tbody>
@@ -596,13 +675,13 @@ export const Timetable = {
                     <thead>
                         <tr>
                             <th class="session-col">Buổi</th>
-                            <th>Thứ 2</th>
-                            <th>Thứ 3</th>
-                            <th>Thứ 4</th>
-                            <th>Thứ 5</th>
-                            <th>Thứ 6</th>
-                            <th>Thứ 7</th>
-                            <th>CN</th>
+                            <th data-day="2">Thứ 2</th>
+                            <th data-day="3">Thứ 3</th>
+                            <th data-day="4">Thứ 4</th>
+                            <th data-day="5">Thứ 5</th>
+                            <th data-day="6">Thứ 6</th>
+                            <th data-day="7">Thứ 7</th>
+                            <th data-day="CN">CN</th>
                         </tr>
                     </thead>
                     <tbody id="timetable-body"></tbody>
@@ -875,6 +954,7 @@ export const Timetable = {
             if (data.success) {
                 console.log('✅ Success');
                 await this.loadTimetable(); // Tải lại bảng
+                this.highlightCurrentDay(); // Highlight current day again
                 this.closeCreateModal();    // Đóng modal
                 
                 // Reset trạng thái sửa
@@ -939,6 +1019,7 @@ export const Timetable = {
             if (data.success) {
                 console.log('✅ Class deleted');
                 await this.loadTimetable();
+                this.highlightCurrentDay();
             } else {
                 if (data.message && (
                     data.message.includes('User not found') ||

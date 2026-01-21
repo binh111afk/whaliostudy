@@ -745,30 +745,185 @@
     transition: all 0.3s ease;
 }
 
-/* RESPONSIVE */
+/* ==================== RESPONSIVE DESIGN ==================== */
+
+/* TABLET & SMALLER LAPTOPS (Max-width: 1024px) */
+@media (max-width: 1024px) {
+    .community-container {
+        padding: 16px;
+    }
+    
+    .community-main {
+        flex-direction: column;
+    }
+    
+    .community-sidebar {
+        width: 100%;
+    }
+}
+
+/* MOBILE DEVICES (Max-width: 768px) */
 @media (max-width: 768px) {
+    /* Container & Layout */
+    .community-container {
+        padding: 12px;
+        max-width: 100%;
+    }
+    
     .community-header {
         flex-direction: column;
         align-items: flex-start;
+        padding: 16px;
+        gap: 12px;
+    }
+
+    .community-header h1 {
+        font-size: 20px;
     }
 
     .community-tabs {
         width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+    }
+    
+    .tab-btn {
+        padding: 8px 16px;
+        font-size: 13px;
+        white-space: nowrap;
     }
 
     .btn-create-post {
         width: 100%;
+        justify-content: center;
+    }
+    
+    .community-main {
+        flex-direction: column;
+        gap: 16px;
     }
 
+    /* Post Cards */
+    .post-card {
+        padding: 15px;
+        border-radius: 8px;
+    }
+    
+    .post-header {
+        margin-bottom: 12px;
+    }
+    
+    .author-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+    
+    .author-name {
+        font-size: 14px;
+    }
+    
+    .post-time {
+        font-size: 11px;
+    }
+    
+    .post-text {
+        font-size: 14px;
+    }
+
+    /* Post Images - Single Column */
     .post-images {
         grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .post-image {
+        height: 200px;
     }
 
+    /* Post Actions */
     .post-actions {
         flex-wrap: wrap;
+        gap: 6px;
     }
 
     .post-action-btn {
-        flex: 0 1 calc(33.333% - 6px);
+        flex: 0 1 calc(33.333% - 4px);
+        padding: 6px;
+        font-size: 12px;
+    }
+    
+    .post-stats {
+        font-size: 12px;
+        gap: 12px;
+    }
+
+    /* Comments */
+    #commentsList {
+        max-height: 300px;
+    }
+    
+    .comment-avatar {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .comment-author {
+        font-size: 12px;
+    }
+    
+    .comment-text {
+        font-size: 13px;
+    }
+    
+    .comment-images {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Comment Form */
+    #commentForm {
+        padding: 12px;
+    }
+    
+    #newCommentText {
+        font-size: 14px;
+        padding: 10px;
+    }
+    
+    .btn-submit-comment {
+        padding: 6px 16px;
+        font-size: 13px;
+    }
+    
+    .attach-files-group {
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .btn-attach-file {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* File Items */
+    .file-item {
+        font-size: 13px;
+        padding: 8px;
+    }
+    
+    /* Sidebar (if exists) */
+    .community-sidebar {
+        width: 100%;
+    }
+    
+    /* Prevent horizontal overflow */
+    .post-content,
+    .comment-content,
+    .community-feed {
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
+        max-width: 100%;
     }
 }

@@ -5,6 +5,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Whalio - Dashboard</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#7c3aed">
+    <meta name="description" content="A comprehensive student dashboard for managing courses, exams, flashcards, and study time">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Apple Touch Icon (iOS Support) -->
+    <link rel="apple-touch-icon" href="img/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Whalio">
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -16,6 +28,11 @@
 
     <header>
         <div class="nav-left">
+            <button class="menu-toggle" onclick="toggleMobileMenu()">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
             <a href="#" class="nav-logo" onclick="showDashboard()">
                 <img src="./img/logo.png" alt="Logo Whalio">
             </a>
@@ -58,12 +75,6 @@
                     <path stroke-linecap="round" stroke-linejoin="round"
                         d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
                     </path>
-                </svg>
-            </a>
-            <a href="#" class="nav-item" data-tooltip="Giải trí">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
             </a>
         </nav>
@@ -109,6 +120,7 @@
 
                         <a href="#" class="dropdown-item" onclick="showProfilePage()">Hồ sơ cá nhân</a>
                         <a href="#" class="dropdown-item">Cài đặt</a>
+                        <a href="#" class="dropdown-item" onclick="ModalManager.open('dataSettings')">💾 Sao lưu & Khôi phục</a>
 
                         <a href="#" onclick="handleLogout()" class="dropdown-item item-logout">Đăng xuất</a>
                     </div>
@@ -324,36 +336,15 @@
                         </svg>
                         BỘ THẺ FLASHCARD
                     </div>
-                    <a href="#" class="view-all">Xem tất cả</a>
+                    <button class="btn-add-mini" onclick="FlashcardManager.openCreateModal()">+ Tạo bộ thẻ</button>
                 </div>
 
-                <div class="flashcard-grid">
-                    <div class="set-card color-1">
-                        <div class="set-icon">⚖️</div>
-                        <div class="set-info">
-                            <h4>Thuật ngữ Luật</h4>
-                            <span>25 thẻ • Đã học 40%</span>
-                        </div>
-                        <button class="btn-play">▶</button>
+                <div class="flashcard-widget-wrapper" style="position: relative;">
+                    <button class="btn-scroll-deck btn-left" onclick="FlashcardManager.scrollDecks('left')">❮</button>
+                    <div class="flashcard-carousel" id="flashcard-scroll-container">
+                        <!-- Flashcard decks will be rendered here by FlashcardManager -->
                     </div>
-
-                    <div class="set-card color-2">
-                        <div class="set-icon">∑</div>
-                        <div class="set-info">
-                            <h4>Công thức Toán</h4>
-                            <span>12 thẻ • Chưa học</span>
-                        </div>
-                        <button class="btn-play">▶</button>
-                    </div>
-
-                    <div class="set-card color-3">
-                        <div class="set-icon">🧠</div>
-                        <div class="set-info">
-                            <h4>Tâm lý học ĐC</h4>
-                            <span>50 thẻ • Đã học 90%</span>
-                        </div>
-                        <button class="btn-play">▶</button>
-                    </div>
+                    <button class="btn-scroll-deck btn-right" onclick="FlashcardManager.scrollDecks('right')">❯</button>
                 </div>
             </section>
         </main>
@@ -539,22 +530,27 @@
                 <!-- Course Filter for Documents -->
                 <div class="course-filters-section">
                     <span class="filter-label">Lọc theo môn:</span>
-                    <div class="course-filter-buttons">
-                        <button class="course-filter-btn active" onclick="DocumentManager.filterDocsByCourse('all')">Tất
-                            cả</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(1)">GT1</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(2)">DSTD</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(3)">VL1</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(4)">HH</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(5)">TA</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(6)">LP</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(7)">CSDL</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(8)">WEB</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(9)">TMML</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(10)">PLDC</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterDocsByCourse(11)">TLDC</button>
-                        <button class="course-filter-btn"
-                            onclick="DocumentManager.filterDocsByCourse('other')">Khác</button>
+                    
+                    <!-- Searchable Dropdown -->
+                    <div class="course-dropdown-container">
+                        <button class="course-dropdown-btn" id="courseDropdownBtn" onclick="DocumentManager.toggleCourseDropdown(event)">
+                            <span class="dropdown-btn-text">Tất cả môn học</span>
+                            <span class="dropdown-btn-arrow">▼</span>
+                        </button>
+                        
+                        <div class="course-dropdown-menu" id="courseDropdownMenu">
+                            <div class="course-dropdown-search">
+                                <input 
+                                    type="text" 
+                                    class="course-search-input" 
+                                    placeholder="Tìm kiếm môn học..."
+                                    oninput="DocumentManager.searchCourseDropdown(this.value, event)"
+                                />
+                            </div>
+                            <div class="course-dropdown-items">
+                                <!-- Items will be rendered by JS -->
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -659,21 +655,28 @@
                     <!-- Course Filter Tags -->
                     <div class="doc-course-filters">
                         <span class="filter-label">Lọc theo môn:</span>
-                        <button class="course-filter-btn active" onclick="DocumentManager.filterByCourse('all')">Tất
-                            cả</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(1)">GT1</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(2)">DSTD</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(3)">VL1</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(4)">HH</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(5)">TA</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(6)">LP</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(7)">CSDL</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(8)">WEB</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(9)">TMML</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(10)">PLDC</button>
-                        <button class="course-filter-btn" onclick="DocumentManager.filterByCourse(11)">TLDC</button>
-                        <button class="course-filter-btn"
-                            onclick="DocumentManager.filterByCourse('other')">Khác</button>
+                        
+                        <!-- Searchable Dropdown for Library -->
+                        <div class="course-dropdown-container">
+                            <button class="course-dropdown-btn" onclick="DocumentManager.toggleCourseDropdown(event)">
+                                <span class="dropdown-btn-text">Tất cả môn học</span>
+                                <span class="dropdown-btn-arrow">▼</span>
+                            </button>
+                            
+                            <div class="course-dropdown-menu">
+                                <div class="course-dropdown-search">
+                                    <input 
+                                        type="text" 
+                                        class="course-search-input" 
+                                        placeholder="🔍 Tìm kiếm môn học..."
+                                        oninput="DocumentManager.searchCourseDropdown(this.value, event)"
+                                    />
+                                </div>
+                                <div class="course-dropdown-items">
+                                    <!-- Items will be rendered by JS -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="doc-level-tags">
@@ -765,13 +768,13 @@
                         <thead>
                             <tr>
                                 <th class="session-col">Buổi</th>
-                                <th>Thứ 2</th>
-                                <th>Thứ 3</th>
-                                <th>Thứ 4</th>
-                                <th>Thứ 5</th>
-                                <th>Thứ 6</th>
-                                <th>Thứ 7</th>
-                                <th>CN</th>
+                                <th data-day="2">Thứ 2</th>
+                                <th data-day="3">Thứ 3</th>
+                                <th data-day="4">Thứ 4</th>
+                                <th data-day="5">Thứ 5</th>
+                                <th data-day="6">Thứ 6</th>
+                                <th data-day="7">Thứ 7</th>
+                                <th data-day="CN">CN</th>
                             </tr>
                         </thead>
                         <tbody id="timetable-body">
@@ -789,6 +792,73 @@
 
 
         <aside class="sidebar-right">
+
+            <div class="widget-box upcoming-event">
+                <div class="widget-header">
+                    <h3>
+                        <img src="./img/calendar.png" alt="Calendar Icon" style="width:14px; height:14px; display: inline-block; vertical-align: middle; margin-right: 4px;">
+                        Sự kiện sắp tới
+                    </h3>
+                    <button type="button" onclick="event.stopPropagation(); if(window.EventManager) window.EventManager.openModal();" class="btn-add-event" title="Thêm sự kiện">+</button>
+                </div>
+                <div class="event-list">
+                    <!-- Events will be rendered here by EventManager -->
+                </div>
+            </div>
+
+            <!-- Analytics Widget -->
+            <div class="widget-box analytics-box">
+                <div class="widget-header">
+                    <h3>📊 Thống Kê Học Tập</h3>
+                </div>
+                <div class="chart-container" style="margin-bottom: 20px;">
+                    <p class="chart-title">Giờ học tuần này</p>
+                    <canvas id="activityChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <p class="chart-title">Năng lực môn học</p>
+                    <canvas id="skillsChart"></canvas>
+                </div>
+            </div>
+
+            <div class="widget-box recent-activity">
+                <div class="widget-header">
+                    <h3>
+                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"
+                            style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Hoạt động mới
+                    </h3>
+                    <span class="badge-count">3</span>
+                </div>
+                <ul class="activity-list">
+                    <li>
+                        <div class="avatar-small">H</div>
+                        <div class="activity-info">
+                            <p><strong>Quang Huy</strong> vừa tải lên</p>
+                            <a href="#" class="file-link">De-thi-giua-ky-Toan.pdf</a>
+                            <span class="time-ago">5 phút trước</span>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="avatar-small bg-green">B</div>
+                        <div class="activity-info">
+                            <p><strong>Bình Gold</strong> đã bình luận</p>
+                            <a href="#" class="file-link">Trong "Giải tích 1"</a>
+                            <span class="time-ago">1 giờ trước</span>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="avatar-small bg-purple">T</div>
+                        <div class="activity-info">
+                            <p><strong>Thảo Nhi</strong> vừa tải lên</p>
+                            <a href="#" class="file-link">Slide-Tam-ly-hoc.pptx</a>
+                            <span class="time-ago">2 giờ trước</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
 
             <div class="widget-box group-storage">
                 <div class="widget-header">
@@ -839,77 +909,6 @@
                 </button>
             </div>
 
-            <div class="widget-box recent-activity">
-                <div class="widget-header">
-                    <h3>
-                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"
-                            style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-                            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                        Hoạt động mới
-                    </h3>
-                    <span class="badge-count">3</span>
-                </div>
-                <ul class="activity-list">
-                    <li>
-                        <div class="avatar-small">H</div>
-                        <div class="activity-info">
-                            <p><strong>Quang Huy</strong> vừa tải lên</p>
-                            <a href="#" class="file-link">De-thi-giua-ky-Toan.pdf</a>
-                            <span class="time-ago">5 phút trước</span>
-                        </div>
-                    </li>
-                    <li>
-                        <div class="avatar-small bg-green">B</div>
-                        <div class="activity-info">
-                            <p><strong>Bình Gold</strong> đã bình luận</p>
-                            <a href="#" class="file-link">Trong "Giải tích 1"</a>
-                            <span class="time-ago">1 giờ trước</span>
-                        </div>
-                    </li>
-                    <li>
-                        <div class="avatar-small bg-purple">T</div>
-                        <div class="activity-info">
-                            <p><strong>Thảo Nhi</strong> vừa tải lên</p>
-                            <a href="#" class="file-link">Slide-Tam-ly-hoc.pptx</a>
-                            <span class="time-ago">2 giờ trước</span>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="widget-box upcoming-event">
-                <div class="widget-header">
-                    <h3>
-                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"
-                            style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-                            <path
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Sự kiện sắp tới
-                    </h3>
-                </div>
-                <div class="event-card">
-                    <div class="event-date">
-                        <span class="day">20</span>
-                        <span class="month">Th1</span>
-                    </div>
-                    <div class="event-details">
-                        <span class="event-title">Thi cuối kỳ Giải Tích</span>
-                        <span class="event-countdown">Còn 5 ngày</span>
-                    </div>
-                </div>
-                <div class="event-card">
-                    <div class="event-date orange">
-                        <span class="day">15</span>
-                        <span class="month">Th2</span>
-                    </div>
-                    <div class="event-details">
-                        <span class="event-title">Nộp BTL Web</span>
-                        <span class="event-countdown">Còn 30 ngày</span>
-                    </div>
-                </div>
-            </div>
 
         </aside>
 
@@ -1641,7 +1640,33 @@
 
             <div style="flex: 1; overflow-y: auto; padding: 4px;">
 
-                <div id="step-upload">
+                <!-- Step 0: Mode Selection -->
+                <div id="step-mode-selection">
+                    <div class="exam-modes-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
+                        <div class="mode-card" onclick="ExamCreator.selectMode('multiple_choice')" 
+                            style="cursor: pointer; border: 2px solid #e5e7eb; border-radius: 12px; padding: 30px; transition: all 0.2s; text-align: center;">
+                            <div style="font-size: 50px; margin-bottom: 15px;">☑️</div>
+                            <h3 style="color: var(--primary-color); margin-bottom: 8px; font-size: 18px;">Trắc nghiệm</h3>
+                            <p style="font-size: 13px; color: #6b7280; line-height: 1.5;">Câu hỏi có 4 đáp án A, B, C, D. Chọn 1 đáp án đúng.</p>
+                        </div>
+
+                        <div class="mode-card" onclick="ExamCreator.selectMode('essay')" 
+                            style="cursor: pointer; border: 2px solid #e5e7eb; border-radius: 12px; padding: 30px; transition: all 0.2s; text-align: center;">
+                            <div style="font-size: 50px; margin-bottom: 15px;">📝</div>
+                            <h3 style="color: #10b981; margin-bottom: 8px; font-size: 18px;">Tự luận</h3>
+                            <p style="font-size: 13px; color: #6b7280; line-height: 1.5;">Câu hỏi mở, người dùng tự nhập câu trả lời.</p>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #fef3c7; border: 1px solid #fbbf24; padding: 14px; border-radius: 8px; margin-top: 24px; font-size: 13px; color: #92400e;">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                            <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <b>Lưu ý:</b> Chọn loại đề phù hợp với file Word của bạn. Sau khi chọn, hệ thống sẽ tự động phân tích file.
+                    </div>
+                </div>
+
+                <div id="step-upload" style="display: none;">
                     <div class="upload-area" onclick="document.getElementById('exam-file-upload').click()"
                         style="border: 2px dashed #d1d5db; padding: 40px; text-align: center; border-radius: 12px; cursor: pointer; transition: 0.2s; background: #f9fafb;">
                         <div style="font-size: 40px; margin-bottom: 10px;">
@@ -1653,7 +1678,10 @@
                         <p style="font-size: 13px; color: #6b7280; margin-top: 8px;">
                             Hệ thống tự động chọn đáp án đúng nếu thấy:<br>
                             <b>In đậm</b>, <i>In nghiêng</i>, <u>Gạch chân</u>, <span style="color:red">Màu đỏ</span>
-                            hoặc <span style="background: yellow; color: black; padding: 0 4px;">Highlight</span>
+                            hoặc <span style="background: yellow; color: black; padding: 0 4px;">Highlight</span> <br>
+                            Nếu là tự luận thì trong file phải có số câu, số bài VD: Câu 1, Câu 2,... <br>
+                            <i>Lưu ý: Hệ thống sẽ không tự động chọn đáp án đúng cho câu hỏi tự luận.Tính năng này đang được phát triển.</i>
+
                         </p>
                         <input type="file" id="exam-file-upload" accept=".docx" style="display: none;"
                             onchange="ExamCreator.handleFile(event)">
@@ -2120,11 +2148,268 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="./js/main.js"></script>
     <script src="./js/exam.js"></script>
     <script src="./js/gpa-calculator.js"></script>
     <script src="./js/community.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+    <!-- Events Modal -->
+    <div id="eventsModal" class="modal-overlay" style="display: none; z-index: 2050;" onclick="if(event.target === this && window.EventManager) window.EventManager.closeModal()">
+        <div class="modal-box" style="max-width: 700px; max-height: 85vh; display: flex; flex-direction: column;">
+            <button type="button" class="btn-close-modal" onclick="event.stopPropagation(); if(window.EventManager) window.EventManager.closeModal()">✕</button>
+
+            <div class="modal-header">
+                <h2>📅 Quản lý Sự kiện</h2>
+                <p>Thêm và quản lý các sự kiện sắp tới</p>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 20px; display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px;">
+                <!-- LEFT: Form -->
+                <div>
+                    <h3 style="margin: 0 0 16px 0; color: #1f2937; font-size: 15px;">➕ Thêm Sự kiện</h3>
+                    
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label" style="font-size: 13px;">Tiêu đề</label>
+                        <input type="text" id="eventTitle" class="auth-input" placeholder="VD: Thi cuối kỳ Toán" maxlength="50">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label" style="font-size: 13px;">Ngày</label>
+                        <input type="date" id="eventDate" class="auth-input">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label" style="font-size: 13px;">Loại</label>
+                        <select id="eventType" class="auth-input">
+                            <option value="exam">🎯 Kỳ thi</option>
+                            <option value="deadline">⏰ Hạn chót</option>
+                            <option value="activity">🎉 Hoạt động</option>
+                        </select>
+                    </div>
+
+                    <button type="button" onclick="event.stopPropagation(); if(window.EventManager) window.EventManager.handleAddEvent()" class="btn-submit-login" style="width: 100%; margin-top: 16px;">
+                        Thêm Sự kiện
+                    </button>
+                </div>
+
+                <!-- RIGHT: Events List -->
+                <div>
+                    <h3 style="margin: 0 0 16px 0; color: #1f2937; font-size: 15px;">📋 Danh sách</h3>
+                    <div id="events-modal-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto;">
+                    </div>
+                </div>
+            </div>
+
+            <div style="padding: 16px 20px; border-top: 1px solid #e5e7eb; text-align: right;">
+                <button type="button" onclick="event.stopPropagation(); if(window.EventManager) window.EventManager.closeModal()" style="padding: 8px 16px; background: #e5e7eb; border: none; border-radius: 6px; color: #374151; cursor: pointer; font-weight: 500;">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Backup & Restore Modal -->
+    <div id="dataSettingsModal" class="modal-overlay" style="display: none; z-index: 2050;">
+        <div class="modal-box" style="max-width: 500px;">
+            <button type="button" class="btn-close-modal" onclick="ModalManager.close('dataSettings')">✕</button>
+
+            <div class="modal-header">
+                <h2>💾 Sao lưu & Khôi phục Dữ liệu</h2>
+                <p>Quản lý dữ liệu học tập của bạn</p>
+            </div>
+
+            <div style="padding: 24px;">
+                <!-- Export Data -->
+                <div class="data-action-card">
+                    <div class="data-action-icon" style="background: #dbeafe;">
+                        <svg width="24" height="24" fill="none" stroke="#2563eb" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                        </svg>
+                    </div>
+                    <div class="data-action-content">
+                        <h3>Sao lưu dữ liệu</h3>
+                        <p>Xuất toàn bộ dữ liệu (GPA, sự kiện, thời khóa biểu) thành file JSON</p>
+                    </div>
+                    <button type="button" class="btn-data-action" onclick="DataManager.exportData()" style="background: #2563eb;">
+                        Tải xuống
+                    </button>
+                </div>
+
+                <!-- Import Data -->
+                <div class="data-action-card">
+                    <div class="data-action-icon" style="background: #dcfce7;">
+                        <svg width="24" height="24" fill="none" stroke="#16a34a" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                    </div>
+                    <div class="data-action-content">
+                        <h3>Khôi phục dữ liệu</h3>
+                        <p>Nhập file sao lưu để khôi phục dữ liệu đã lưu</p>
+                    </div>
+                    <button type="button" class="btn-data-action restore" onclick="DataManager.triggerImport()">
+                        Tải lên
+                    </button>
+                </div>
+
+                <!-- Clear Data (Optional) -->
+                <div class="data-action-card" style="border-color: #fecaca;">
+                    <div class="data-action-icon" style="background: #fee2e2;">
+                        <svg width="24" height="24" fill="none" stroke="#dc2626" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                    </div>
+                    <div class="data-action-content">
+                        <h3>Xóa toàn bộ dữ liệu</h3>
+                        <p style="color: #dc2626;">Xóa vĩnh viễn tất cả dữ liệu (không thể hoàn tác)</p>
+                    </div>
+                    <button type="button" class="btn-data-action" onclick="DataManager.clearAllData()" style="background: #dc2626;">
+                        Xóa tất cả
+                    </button>
+                </div>
+            </div>
+
+            <div style="padding: 16px 20px; border-top: 1px solid #e5e7eb; text-align: right;">
+                <button type="button" onclick="ModalManager.close('dataSettings')" style="padding: 8px 16px; background: #e5e7eb; border: none; border-radius: 6px; color: #374151; cursor: pointer; font-weight: 500;">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden File Input for Import (event listener attached in DataManager.init) -->
+    <input type="file" id="backup-file-input" accept=".json" style="display: none;">
+
+    <!-- Create Deck Modal -->
+    <div id="createDeckModal" class="modal">
+        <div class="create-modal-container">
+            <!-- Header -->
+            <div class="create-modal-header">
+                <h2>➕ Tạo Bộ Thẻ Mới</h2>
+                <p>Nhập tiêu đề và danh sách các thẻ học</p>
+            </div>
+
+            <!-- Deck Settings -->
+            <div class="deck-settings">
+                <input type="text" id="deckTitle" class="input-deck" placeholder="Tiêu đề học phần (VD: Tiếng Anh, Toán...)" />
+                <input type="text" id="deckIcon" class="input-deck" placeholder="Icon" value="📚" maxlength="2" />
+                <select id="deckColor" class="input-deck">
+                    <option value="blue">Xanh dương</option>
+                    <option value="purple">Tím</option>
+                    <option value="green">Xanh lá</option>
+                    <option value="red">Đỏ</option>
+                    <option value="orange">Cam</option>
+                    <option value="pink">Hồng</option>
+                </select>
+            </div>
+
+            <!-- Card Input List -->
+            <div id="card-input-list">
+                <!-- Card rows will be added here dynamically -->
+            </div>
+
+            <!-- Footer -->
+            <div class="create-modal-footer">
+                <button type="button" class="btn-add-card-row" onclick="FlashcardManager.addCardRow()">
+                    + Thêm thẻ
+                </button>
+                <button type="button" class="btn-cancel-deck" onclick="FlashcardManager.closeCreateModal()">
+                    Hủy
+                </button>
+                <button type="button" class="btn-save-deck" onclick="FlashcardManager.saveDeck()">
+                    💾 Lưu bộ thẻ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flashcard Study Modal -->
+    <div id="studyModal" class="modal">
+        <div class="study-modal-container">
+            <!-- Header -->
+            <div class="study-modal-header">
+                <h2 id="studyModalTitle">Flashcard Deck</h2>
+                <button type="button" class="btn-close-study" onclick="FlashcardManager.closeStudyModal()" title="Đóng">×</button>
+            </div>
+
+            <!-- Progress -->
+            <div class="study-progress">
+                <p>Thẻ <span id="cardProgress">1 / 10</span></p>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" id="progressBarFill" style="width: 10%"></div>
+                </div>
+            </div>
+
+            <!-- Card Container (3D Flip) -->
+            <div class="card-container" onclick="FlashcardManager.flipCard()">
+                <div class="card-inner">
+                    <!-- Front Face (Question) -->
+                    <div class="card-front">
+                        <span class="card-label">Câu hỏi</span>
+                        <p id="cardQuestion">Click để lật thẻ</p>
+                    </div>
+                    <!-- Back Face (Answer) -->
+                    <div class="card-back">
+                        <span class="card-label">Câu trả lời</span>
+                        <p id="cardAnswer">Đáp án sẽ hiện ở đây</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="study-controls">
+                <button type="button" class="btn-nav-card" id="btnPrevCard" onclick="FlashcardManager.prevCard()">
+                    ← Trước
+                </button>
+                <button type="button" class="btn-flip-card" onclick="FlashcardManager.flipCard()">
+                    🔄 Lật thẻ
+                </button>
+                <button type="button" class="btn-nav-card" id="btnNextCard" onclick="FlashcardManager.nextCard()">
+                    Sau →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then((registration) => {
+                        console.log('✅ Service Worker registered successfully:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.error('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+
+        // PWA Install Prompt (Optional)
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent the mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Stash the event so it can be triggered later
+            deferredPrompt = e;
+            console.log('💡 PWA Install prompt available');
+            
+            // Optional: Show custom install button
+            // You can add a button in your UI to trigger this:
+            // deferredPrompt.prompt();
+        });
+
+        // Log when app is installed
+        window.addEventListener('appinstalled', () => {
+            console.log('🎉 PWA was installed successfully!');
+            deferredPrompt = null;
+        });
+    </script>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-overlay" onclick="toggleMobileMenu()"></div>
 
 </body>
 

@@ -30,7 +30,8 @@ export const DOM = {
         editProfile: document.getElementById('editProfileModal'),
         changePass: document.getElementById('changePassModal'),
         uploadDoc: document.getElementById('uploadDocModal'),
-        alert: document.getElementById('customAlert')
+        alert: document.getElementById('customAlert'),
+        dataSettings: document.getElementById('dataSettingsModal')
     },
     actions: {
         guestActions: document.getElementById('guest-actions'),

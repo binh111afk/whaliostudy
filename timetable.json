@@ -148,14 +148,15 @@
     "id": 1768839930959,
     "username": "binhdzvl",
     "subject": "Chủ nghĩa xã hội khoa học",
-    "room": "GD18",
+    "room": "GD19",
     "campus": "LVS",
     "day": "4",
     "session": "afternoon",
     "startPeriod": 7,
     "numPeriods": 3,
     "timeRange": "12:30 - 15:00",
-    "createdAt": "2026-01-19T16:25:30.959Z"
+    "createdAt": "2026-01-19T16:25:30.959Z",
+    "updatedAt": "2026-01-21T12:58:00.774Z"
   },
   {
     "id": 1768840718745,
