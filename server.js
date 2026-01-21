@@ -3,8 +3,19 @@ const fs = require('fs').promises;
 const multer = require('multer');
 const path = require('path');
 const mongoose = require('mongoose');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ==================== CLOUDINARY CONFIGURATION ====================
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+console.log('☁️  Cloudinary configured:', process.env.CLOUDINARY_CLOUD_NAME ? '✅' : '❌');
 
 // ==================== MONGODB CONNECTION ====================
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/whalio';
@@ -209,28 +220,27 @@ function normalizeFileName(str) {
     }
 }
 
-// Multer configuration
-const storage = multer.diskStorage({
-    destination: async (req, file, cb) => {
-        const dir = 'uploads/';
-        try {
-            await fs.mkdir(dir, { recursive: true });
-            cb(null, dir);
-        } catch (err) {
-            cb(err, dir);
+// ==================== CLOUDINARY STORAGE CONFIGURATION ====================
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'whalio-documents',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar'],
+        resource_type: 'auto',
+        public_id: (req, file) => {
+            const decodedName = decodeFileName(file.originalname);
+            const safeName = normalizeFileName(decodedName);
+            // Store original name for later use
+            file.decodedOriginalName = decodedName;
+            // Remove extension from public_id (Cloudinary adds it automatically)
+            return safeName.replace(path.extname(safeName), '');
         }
-    },
-    filename: (req, file, cb) => {
-        const decodedName = decodeFileName(file.originalname);
-        const safeName = normalizeFileName(decodedName);
-        file.decodedOriginalName = decodedName;
-        cb(null, safeName);
     }
 });
 
 const upload = multer({
     storage,
-    limits: { fileSize: 50 * 1024 * 1024 }
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
 });
 
 // ==================== ACTIVITY LOGGING (MongoDB) ====================
@@ -365,21 +375,15 @@ app.post('/api/upload-avatar', upload.single('avatar'), async (req, res) => {
             return res.status(400).json({ success: false, message: "Chưa chọn ảnh!" });
         }
 
-        const avatarPath = '/uploads/' + file.filename;
+        const avatarPath = file.path; // Cloudinary secure_url
         const user = await User.findOne({ username });
 
         if (!user) {
             return res.status(404).json({ success: false, message: "Không tìm thấy user" });
         }
 
-        // Delete old avatar
-        if (user.avatar && user.avatar.startsWith('/uploads/')) {
-            try {
-                await fs.unlink(path.join(__dirname, user.avatar));
-            } catch (err) {
-                console.warn('Không thể xóa ảnh cũ:', err.message);
-            }
-        }
+        // TODO: Delete old avatar from Cloudinary if needed
+        // Extract public_id from old avatar URL and call cloudinary.uploader.destroy(public_id)
 
         user.avatar = avatarPath;
         await user.save();
@@ -397,7 +401,12 @@ app.post('/api/upload-avatar', upload.single('avatar'), async (req, res) => {
 app.get('/api/documents', async (req, res) => {
     try {
         const docs = await Document.find().sort({ createdAt: -1 }).lean();
-        res.json(docs);
+        // Map _id to id for frontend compatibility
+        const formattedDocs = docs.map(doc => ({
+            ...doc,
+            id: doc._id.toString()
+        }));
+        res.json(formattedDocs);
     } catch (err) {
         console.error('Get documents error:', err);
         res.status(500).json([]);
@@ -413,7 +422,10 @@ app.post('/api/upload-document', upload.single('file'), async (req, res) => {
             return res.status(400).json({ success: false, message: "Chưa chọn file!" });
         }
 
-        const decodedOriginalName = file.decodedOriginalName || decodeFileName(file.originalname);
+        const decodedOriginalName = file.originalname || file.decodedOriginalName || decodeFileName(file.originalname);
+
+        // Cloudinary provides the secure_url directly
+        const cloudinaryUrl = file.path; // This is the secure_url from Cloudinary
 
         const newDoc = new Document({
             name: name || decodedOriginalName.replace(/\.[^/.]+$/, ""),
@@ -422,7 +434,7 @@ app.post('/api/upload-document', upload.single('file'), async (req, res) => {
             date: new Date().toLocaleDateString('vi-VN'),
             time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
             type: type || "other",
-            path: '/uploads/' + file.filename,
+            path: cloudinaryUrl, // Store Cloudinary secure_url
             size: file.size,
             downloadCount: 0,
             course: course || '',
@@ -435,10 +447,18 @@ app.post('/api/upload-document', upload.single('file'), async (req, res) => {
             await logActivity(username || 'Ẩn danh', 'đã tải lên', newDoc.name, `#doc-${newDoc._id}`, 'upload');
         }
 
-        res.json({ success: true, document: newDoc });
+        // Return document with id field for frontend compatibility
+        const docResponse = {
+            ...newDoc.toObject(),
+            id: newDoc._id.toString()
+        };
+
+        console.log(`✅ Document uploaded to Cloudinary: ${newDoc.name} (ID: ${newDoc._id})`);
+        console.log(`🔗 Cloudinary URL: ${cloudinaryUrl}`);
+        res.json({ success: true, document: docResponse });
     } catch (err) {
         console.error('Upload document error:', err);
-        res.status(500).json({ success: false, message: "Lỗi server" });
+        res.status(500).json({ success: false, message: "Lỗi server: " + err.message });
     }
 });
 
@@ -489,11 +509,17 @@ app.post('/api/delete-document', async (req, res) => {
             return res.status(403).json({ success: false, message: "⛔ Bạn không có quyền xóa tài liệu của người khác!" });
         }
 
-        const filePath = path.join(__dirname, doc.path);
+        // Delete file from Cloudinary
         try {
-            await fs.unlink(filePath);
+            // Extract public_id from Cloudinary URL
+            // URL format: https://res.cloudinary.com/[cloud]/[type]/upload/[version]/[folder]/[public_id].[ext]
+            const urlParts = doc.path.split('/');
+            const fileWithExt = urlParts[urlParts.length - 1];
+            const publicId = `whalio-documents/${fileWithExt.split('.')[0]}`;
+            await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+            console.log(`✅ Deleted file from Cloudinary: ${publicId}`);
         } catch (err) {
-            console.warn("Lỗi xóa file vật lý:", err.message);
+            console.warn("Lỗi xóa file từ Cloudinary:", err.message);
         }
 
         await Document.findByIdAndDelete(docId);
@@ -695,25 +721,30 @@ app.post('/api/posts', upload.fields([
             return res.status(400).json({ success: false, message: "Nội dung bài viết không được trống!" });
         }
 
-        const images = req.files?.images ? req.files.images.map(f => `/uploads/${f.filename}`) : [];
+        const images = req.files?.images ? req.files.images.map(f => f.path) : []; // Cloudinary URLs
         const files = req.files?.files
             ? req.files.files
                 .filter(f => !f.mimetype.startsWith('video/'))
                 .map(f => ({
                     originalName: f.decodedOriginalName || decodeFileName(f.originalname),
                     name: f.decodedOriginalName || decodeFileName(f.originalname),
-                    path: `/uploads/${f.filename}`,
+                    path: f.path, // Cloudinary secure_url
                     size: f.size,
                     mimeType: f.mimetype
                 }))
             : [];
 
         if (req.files?.files && req.files.files.some(f => f.mimetype.startsWith('video/'))) {
+            // Delete videos from Cloudinary
             for (let file of req.files.files) {
                 if (file.mimetype.startsWith('video/')) {
                     try {
-                        await fs.unlink(file.path);
-                    } catch (e) { }
+                        // Extract public_id from Cloudinary path
+                        const publicId = file.filename; // Cloudinary public_id
+                        await cloudinary.uploader.destroy(publicId);
+                    } catch (e) { 
+                        console.warn('Failed to delete video from Cloudinary:', e.message);
+                    }
                 }
             }
             return res.status(400).json({ success: false, message: "❌ Không được phép đăng video!" });
@@ -783,12 +814,12 @@ app.post('/api/comments', upload.fields([
             return res.status(404).json({ success: false, message: "Bài viết không tồn tại!" });
         }
 
-        const images = req.files?.images ? req.files.images.map(f => `/uploads/${f.filename}`) : [];
+        const images = req.files?.images ? req.files.images.map(f => f.path) : []; // Cloudinary URLs
         const files = req.files?.files
             ? req.files.files.map(f => ({
                 originalName: f.decodedOriginalName || decodeFileName(f.originalname),
                 name: f.decodedOriginalName || decodeFileName(f.originalname),
-                path: `/uploads/${f.filename}`,
+                path: f.path, // Cloudinary secure_url
                 size: f.size,
                 mimeType: f.mimetype
             }))
@@ -978,12 +1009,12 @@ app.post('/api/reply-comment', upload.fields([
             return res.status(404).json({ success: false, message: "Bình luận gốc không tồn tại!" });
         }
 
-        const images = req.files?.images ? req.files.images.map(f => `/uploads/${f.filename}`) : [];
+        const images = req.files?.images ? req.files.images.map(f => f.path) : []; // Cloudinary URLs
         const files = req.files?.files
             ? req.files.files.map(f => ({
                 originalName: f.decodedOriginalName || decodeFileName(f.originalname),
                 name: f.decodedOriginalName || decodeFileName(f.originalname),
-                path: `/uploads/${f.filename}`,
+                path: f.path, // Cloudinary secure_url
                 size: f.size,
                 mimeType: f.mimetype
             }))

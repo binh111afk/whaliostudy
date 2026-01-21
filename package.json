@@ -11,9 +11,11 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "cloudinary": "^1.41.3",
     "express": "^5.2.1",
     "mongoose": "^8.21.0",
     "multer": "^2.0.2",
+    "multer-storage-cloudinary": "^4.0.0",
     "sweetalert2": "^11.26.17"
   },
   "devDependencies": {
