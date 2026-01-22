@@ -328,17 +328,29 @@ export const DocumentManager = {
             const fileType = Utils.getFileType(doc.type);
             const uploadDate = doc.time ? `${doc.date} ${doc.time}` : doc.date;
             
+            // --- 🛠️ FIX LOGIC TẠO LINK DOWNLOAD & FILE NAME ---
+            // 1. Xác định tên file chuẩn (có đuôi)
             const extension = doc.path.substring(doc.path.lastIndexOf('.'));
             let downloadFileName = doc.name;
             if (!downloadFileName.toLowerCase().endsWith(extension.toLowerCase())) {
                 downloadFileName += extension;
             }
 
+            // 2. Tạo Link "Ép tải xuống" (Force Download) cho Cloudinary
+            // Chèn cờ fl_attachment để server trả về đúng tên file mong muốn
+            let downloadUrl = doc.path;
+            if (doc.path.includes('/upload/')) {
+                // Mẹo: Chèn fl_attachment:tên_file vào URL
+                // Ví dụ: .../upload/fl_attachment:BaiTap.docx/v123/file
+                const attachmentFlag = `fl_attachment:${encodeURIComponent(downloadFileName)}`;
+                downloadUrl = doc.path.replace('/upload/', `/upload/${attachmentFlag}/`);
+            }
+            // ---------------------------------------------------
+
             let visibilityIcon = '';
             if (doc.visibility === 'private') {
                 visibilityIcon = `<span title="Riêng tư" style="font-size: 12px; margin-left: 6px; background: #fee2e2; color: #ef4444; padding: 2px 6px; border-radius: 4px;">🔒 Riêng tư</span>`;
             } else {
-                // Nếu muốn hiện chữ Công khai (hoặc bỏ trống nếu muốn gọn)
                 visibilityIcon = `<span title="Công khai" style="font-size: 12px; margin-left: 6px; background: #ecfdf5; color: #10b981; padding: 2px 6px; border-radius: 4px;">🌐</span>`;
             }
 
@@ -365,9 +377,9 @@ export const DocumentManager = {
                 canEdit = doc.uploader === AppState.currentUser?.fullName;
             }
 
-            // 👇 HIỂN THỊ NÚT SỬA
+            // Nút Sửa (Có stopPropagation)
             const editBtn = canEdit ? `
-                <button class="doc-card-btn btn-edit-card" onclick="event.stopPropagation(); DocumentManager.openEditModal(${doc.id})" title="Sửa thông tin">
+                <button class="doc-card-btn btn-edit-card" onclick="event.stopPropagation(); DocumentManager.openEditModal('${doc.id}')" title="Sửa thông tin">
                     ${ICON_EDIT}
                     <span>Sửa</span>
                 </button>
@@ -377,16 +389,14 @@ export const DocumentManager = {
             if (isAdmin) {
                 canDelete = true;
             } else if (doc.uploaderUsername) {
-                // File mới: So sánh chính xác username
                 canDelete = doc.uploaderUsername === currentUsername;
             } else {
-                // File cũ: So sánh tên hiển thị
                 canDelete = doc.uploader === AppState.currentUser?.fullName;
             }
 
             const deleteBtn = canDelete ? ` 
                 <button class="admin-delete-btn" 
-                        onclick="event.stopPropagation(); DocumentManager.openDeleteModal(${doc.id}, '${currentUsername}')" 
+                        onclick="event.stopPropagation(); DocumentManager.openDeleteModal('${doc.id}', '${currentUsername}')" 
                         title="Xóa vĩnh viễn">
                     ${ICON_TRASH}
                 </button>
@@ -426,10 +436,10 @@ export const DocumentManager = {
                                 <span>Xem</span>
                             </button>
                             ${editBtn}
-                            <button class="doc-card-btn btn-save-card ${isSaved ? 'saved' : ''}" onclick="event.stopPropagation(); DocumentManager.toggleSave(${doc.id})">
+                            <button class="doc-card-btn btn-save-card ${isSaved ? 'saved' : ''}" onclick="event.stopPropagation(); DocumentManager.toggleSave('${doc.id}')">
                                 ${isSaved ? ICON_BOOKMARK_FILLED : ICON_BOOKMARK_OUTLINE}
                             </button>
-                            <a href="${doc.path}" download="${downloadFileName}" class="doc-card-btn btn-download-card" onclick="event.stopPropagation(); DocumentManager.trackDownload(${doc.id})">
+                            <a href="${downloadUrl}" class="doc-card-btn btn-download-card" onclick="event.stopPropagation(); DocumentManager.trackDownload('${doc.id}')">
                                 ${ICON_DOWNLOAD}
                                 <span>Tải</span>
                             </a>

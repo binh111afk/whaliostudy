@@ -449,15 +449,17 @@ function normalizeFileName(str) {
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: (req, file) => {
+        // Xử lý tên file tiếng Việt
         const decodedName = decodeFileName(file.originalname);
         const safeName = normalizeFileName(decodedName);
-        file.decodedOriginalName = decodedName; 
+        
+        // Lưu lại tên gốc
+        file.decodedOriginalName = decodedName;
         
         return {
             folder: 'whalio-documents',
             resource_type: 'auto', // Tự động nhận diện (Ảnh/Video/File)
-            public_id: safeName.replace(path.extname(safeName), ''),
-            // ❌ ĐÃ XÓA DÒNG allowed_formats Ở ĐÂY ĐỂ TRÁNH XUNG ĐỘT
+            public_id: safeName,
         };
     }
 });
