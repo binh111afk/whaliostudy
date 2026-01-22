@@ -1332,18 +1332,18 @@
             <form id="uploadForm" onsubmit="DocumentManager.handleUploadSubmit(event)">
                 <div class="form-group">
                     <label class="form-label">Tên tài liệu</label>
-                    <input type="text" id="docName" class="auth-input" placeholder="VD: Giải tích 1 - Chương 2"
-                        required>
+                    <input type="text" id="docName" name="name" class="auth-input"
+                        placeholder="VD: Giải tích 1 - Chương 2" required>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Chọn file</label>
-                    <input type="file" id="docFile" class="auth-input" required>
+                    <input type="file" id="docFile" name="file" class="auth-input" required>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Loại file</label>
-                    <select id="docType" class="auth-input">
+                    <select id="docType" name="type" class="auth-input">
                         <option value="pdf">PDF</option>
                         <option value="word">Word</option>
                         <option value="ppt">PowerPoint</option>
@@ -1355,7 +1355,7 @@
 
                 <div class="form-group">
                     <label class="form-label">Chế độ hiển thị</label>
-                    <select id="docVisibility" class="auth-input">
+                    <select id="docVisibility" name="visibility" class="auth-input">
                         <option value="public">🌐 Công khai (Mọi người đều thấy)</option>
                         <option value="private">🔒 Riêng tư (Chỉ mình tôi)</option>
                     </select>
@@ -1363,7 +1363,7 @@
 
                 <div class="form-group">
                     <label class="form-label">Chọn môn học</label>
-                    <select id="docCourse" class="auth-input">
+                    <select id="docCourse" name="course" class="auth-input">
                         <option value="">-- Chọn môn --</option>
                     </select>
                 </div>
