@@ -159,6 +159,15 @@ const timetableSchema = new mongoose.Schema({
     updatedAt: Date
 });
 
+// Event Schema
+const eventSchema = new mongoose.Schema({
+    username: { type: String, required: true, ref: 'User', index: true },
+    title: { type: String, required: true },
+    date: { type: Date, required: true },
+    type: { type: String, default: 'exam', enum: ['exam', 'deadline', 'other'] },
+    createdAt: { type: Date, default: Date.now }
+});
+
 // Create Models
 const User = mongoose.model('User', userSchema);
 const Document = mongoose.model('Document', documentSchema);
@@ -166,6 +175,7 @@ const Exam = mongoose.model('Exam', examSchema);
 const Post = mongoose.model('Post', postSchema);
 const Activity = mongoose.model('Activity', activitySchema);
 const Timetable = mongoose.model('Timetable', timetableSchema);
+const Event = mongoose.model('Event', eventSchema);
 
 // Middleware
 app.use(express.json());
@@ -1326,6 +1336,80 @@ app.post('/api/timetable/update', async (req, res) => {
         res.json({ success: true, message: 'Cập nhật thành công!' });
     } catch (err) {
         console.error('Error updating class:', err);
+        res.json({ success: false, message: 'Server error' });
+    }
+});
+
+// ==================== EVENT API ENDPOINTS ====================
+
+// GET /api/events - Fetch user's events
+app.get('/api/events', async (req, res) => {
+    try {
+        const { username } = req.query;
+        
+        if (!username) {
+            return res.json({ success: false, message: 'Username is required' });
+        }
+
+        const events = await Event.find({ username }).sort({ date: 1 });
+        console.log(`📅 Fetched ${events.length} events for ${username}`);
+        res.json({ success: true, events });
+    } catch (err) {
+        console.error('Error fetching events:', err);
+        res.json({ success: false, message: 'Server error' });
+    }
+});
+
+// POST /api/events - Add a new event
+app.post('/api/events', async (req, res) => {
+    try {
+        const { username, title, date, type } = req.body;
+
+        if (!username || !title || !date) {
+            return res.json({ success: false, message: 'Missing required fields' });
+        }
+
+        const event = new Event({
+            username,
+            title: title.trim(),
+            date: new Date(date),
+            type: type || 'exam'
+        });
+
+        await event.save();
+        console.log(`✅ Event created: ${title} for ${username}`);
+        res.json({ success: true, event });
+    } catch (err) {
+        console.error('Error creating event:', err);
+        res.json({ success: false, message: 'Server error' });
+    }
+});
+
+// DELETE /api/events/:id - Delete an event
+app.delete('/api/events/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { username } = req.query;
+
+        if (!username) {
+            return res.json({ success: false, message: 'Username is required' });
+        }
+
+        const event = await Event.findById(id);
+        
+        if (!event) {
+            return res.json({ success: false, message: 'Event not found' });
+        }
+
+        if (event.username !== username) {
+            return res.json({ success: false, message: 'Unauthorized' });
+        }
+
+        await Event.findByIdAndDelete(id);
+        console.log(`🗑️ Event deleted: ${id} by ${username}`);
+        res.json({ success: true, message: 'Event deleted successfully' });
+    } catch (err) {
+        console.error('Error deleting event:', err);
         res.json({ success: false, message: 'Server error' });
     }
 });

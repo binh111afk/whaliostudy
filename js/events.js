@@ -4,30 +4,37 @@ export const EventManager = {
     events: [],
 
     // ===== INITIALIZATION =====
-    init() {
+    async init() {
         console.log('🚀 EventManager initializing...');
-        this.loadEvents();
+        await this.loadEvents();
         this.renderWidget();
         console.log('✅ EventManager initialized');
     },
 
-    // ===== LOCAL STORAGE OPERATIONS =====
-    loadEvents() {
+    // ===== DATA OPERATIONS =====
+    async loadEvents() {
         try {
-            const stored = localStorage.getItem(this.STORAGE_KEY);
-            this.events = stored ? JSON.parse(stored) : [];
-            this.events = this.sortEventsByDate(this.events);
+            const username = localStorage.getItem('currentUsername');
+            if (!username) {
+                console.warn('⚠️ No username found, skipping event load');
+                this.events = [];
+                return;
+            }
+
+            const response = await fetch(`/api/events?username=${encodeURIComponent(username)}`);
+            const data = await response.json();
+
+            if (data.success) {
+                this.events = data.events || [];
+                this.events = this.sortEventsByDate(this.events);
+                console.log(`✅ Loaded ${this.events.length} events from MongoDB`);
+            } else {
+                console.error('Error loading events:', data.message);
+                this.events = [];
+            }
         } catch (error) {
             console.error('Error loading events:', error);
             this.events = [];
-        }
-    },
-
-    saveEvents() {
-        try {
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.events));
-        } catch (error) {
-            console.error('Error saving events:', error);
         }
     },
 
@@ -36,7 +43,7 @@ export const EventManager = {
     },
 
     // ===== EVENT OPERATIONS =====
-    addEvent(title, date, type = 'exam') {
+    async addEvent(title, date, type = 'exam') {
         if (!title.trim()) {
             Swal.fire('Lỗi', 'Vui lòng nhập tiêu đề sự kiện!', 'warning');
             return false;
@@ -51,28 +58,69 @@ export const EventManager = {
             return false;
         }
 
-        const event = {
-            id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-            title: title.trim(),
-            date: date,
-            type: type,
-            createdAt: new Date().toISOString()
-        };
+        const username = localStorage.getItem('currentUsername');
+        if (!username) {
+            Swal.fire('Lỗi', 'Vui lòng đăng nhập!', 'warning');
+            return false;
+        }
 
-        this.events.push(event);
-        this.events = this.sortEventsByDate(this.events);
-        this.saveEvents();
-        this.renderWidget();
-        this.renderModal();
+        try {
+            const response = await fetch('/api/events', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username,
+                    title: title.trim(),
+                    date,
+                    type
+                })
+            });
 
-        return true;
+            const data = await response.json();
+
+            if (data.success) {
+                await this.loadEvents(); // Reload from server
+                this.renderWidget();
+                this.renderModal();
+                console.log('✅ Event added successfully');
+                return true;
+            } else {
+                Swal.fire('Lỗi', data.message || 'Không thể thêm sự kiện', 'error');
+                return false;
+            }
+        } catch (error) {
+            console.error('Error adding event:', error);
+            Swal.fire('Lỗi', 'Lỗi kết nối server', 'error');
+            return false;
+        }
     },
 
-    deleteEvent(id) {
-        this.events = this.events.filter(e => e.id !== id);
-        this.saveEvents();
-        this.renderWidget();
-        this.renderModal();
+    async deleteEvent(id) {
+        const username = localStorage.getItem('currentUsername');
+        if (!username) {
+            Swal.fire('Lỗi', 'Vui lòng đăng nhập!', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/events/${id}?username=${encodeURIComponent(username)}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                await this.loadEvents(); // Reload from server
+                this.renderWidget();
+                this.renderModal();
+                console.log('✅ Event deleted successfully');
+            } else {
+                Swal.fire('Lỗi', data.message || 'Không thể xóa sự kiện', 'error');
+            }
+        } catch (error) {
+            console.error('Error deleting event:', error);
+            Swal.fire('Lỗi', 'Lỗi kết nối server', 'error');
+        }
     },
 
     // ===== DATE UTILITIES =====
@@ -146,7 +194,7 @@ export const EventManager = {
                         ${this.getCountdownText(daysRemaining)}
                     </div>
                 </div>
-                <button type="button" class="btn-delete-event-widget" onclick="event.stopPropagation(); if(window.EventManager) window.EventManager.deleteEvent('${event.id}')" title="Xóa sự kiện">
+                <button type="button" class="btn-delete-event-widget" onclick="event.stopPropagation(); if(window.EventManager) window.EventManager.deleteEvent('${event._id}')" title="Xóa sự kiện">
                     ✕
                 </button>
             `;
@@ -192,7 +240,7 @@ export const EventManager = {
                         </span>
                     </div>
                 </div>
-                <button class="btn-delete-event" onclick="EventManager.deleteEvent('${event.id}')" title="Xóa sự kiện">
+                <button class="btn-delete-event" onclick="EventManager.deleteEvent('${event._id}')" title="Xóa sự kiện">
                     ✕
                 </button>
             `;
@@ -227,12 +275,12 @@ export const EventManager = {
         }
     },
 
-    handleAddEvent() {
+    async handleAddEvent() {
         const title = document.getElementById('eventTitle')?.value || '';
         const date = document.getElementById('eventDate')?.value || '';
         const type = document.getElementById('eventType')?.value || 'exam';
 
-        if (this.addEvent(title, date, type)) {
+        if (await this.addEvent(title, date, type)) {
             document.getElementById('eventTitle').value = '';
             document.getElementById('eventDate').value = '';
             document.getElementById('eventType').value = 'exam';
