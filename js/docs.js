@@ -1,9 +1,9 @@
 import { CONFIG, Utils } from './config.js';
 import { AppState } from './state.js';
-import { 
-    ICON_USER, ICON_CALENDAR, ICON_DATABASE, 
-    ICON_EYE, ICON_EDIT, ICON_BOOKMARK_FILLED, 
-    ICON_BOOKMARK_OUTLINE, ICON_DOWNLOAD, ICON_TRASH 
+import {
+    ICON_USER, ICON_CALENDAR, ICON_DATABASE,
+    ICON_EYE, ICON_EDIT, ICON_BOOKMARK_FILLED,
+    ICON_BOOKMARK_OUTLINE, ICON_DOWNLOAD, ICON_TRASH
 } from './icons.js';
 
 // ==================== SUBJECT TO COURSE MAPPING ====================
@@ -58,15 +58,15 @@ export const DocumentManager = {
         // Get the button that was clicked
         const btn = event?.target?.closest('.course-dropdown-btn') || document.getElementById('courseDropdownBtn');
         if (!btn) return;
-        
+
         // Find the dropdown menu (next sibling of button)
         const container = btn.closest('.course-dropdown-container');
         const dropdown = container?.querySelector('.course-dropdown-menu');
-        
+
         if (!dropdown) return;
-        
+
         this.isDropdownOpen = !this.isDropdownOpen;
-        
+
         if (this.isDropdownOpen) {
             // Close any other open dropdowns first
             document.querySelectorAll('.course-dropdown-menu').forEach(d => {
@@ -75,10 +75,10 @@ export const DocumentManager = {
             document.querySelectorAll('.course-dropdown-btn').forEach(b => {
                 if (b !== btn) b.classList.remove('active');
             });
-            
+
             dropdown.style.display = 'block';
             btn.classList.add('active');
-            
+
             // Focus search input
             const searchInput = dropdown.querySelector('.course-search-input');
             if (searchInput) {
@@ -95,7 +95,7 @@ export const DocumentManager = {
         document.addEventListener('click', (e) => {
             const dropdowns = document.querySelectorAll('.course-dropdown-menu');
             const buttons = document.querySelectorAll('.course-dropdown-btn');
-            
+
             // Check if click is outside all dropdowns and buttons
             let clickedInside = false;
             dropdowns.forEach(dropdown => {
@@ -104,7 +104,7 @@ export const DocumentManager = {
             buttons.forEach(btn => {
                 if (btn.contains(e.target)) clickedInside = true;
             });
-            
+
             if (!clickedInside && this.isDropdownOpen) {
                 this.isDropdownOpen = false;
                 dropdowns.forEach(dropdown => {
@@ -122,11 +122,11 @@ export const DocumentManager = {
         // Get the dropdown container from the search input
         const searchInput = event?.target || document.activeElement;
         const container = searchInput?.closest('.course-dropdown-container');
-        const items = container?.querySelectorAll('.course-dropdown-item') || 
-                     document.querySelectorAll('.course-dropdown-item');
-        
+        const items = container?.querySelectorAll('.course-dropdown-item') ||
+            document.querySelectorAll('.course-dropdown-item');
+
         const term = searchTerm.toLowerCase().trim();
-        
+
         items.forEach(item => {
             const text = item.textContent.toLowerCase();
             if (text.includes(term)) {
@@ -140,13 +140,13 @@ export const DocumentManager = {
     // Select course from dropdown
     selectCourseFromDropdown(courseId, courseName, event) {
         this.selectedSubject = { id: courseId, name: courseName };
-        
+
         // Get the clicked item's container
         const item = event?.target?.closest('.course-dropdown-item');
         const container = item?.closest('.course-dropdown-container');
         const btn = container?.querySelector('.course-dropdown-btn');
         const dropdown = container?.querySelector('.course-dropdown-menu');
-        
+
         // Update button text
         if (btn) {
             const textSpan = btn.querySelector('.dropdown-btn-text');
@@ -154,21 +154,21 @@ export const DocumentManager = {
                 textSpan.textContent = courseName;
             }
         }
-        
+
         // Close dropdown
         this.isDropdownOpen = false;
         if (dropdown && btn) {
             dropdown.style.display = 'none';
             btn.classList.remove('active');
         }
-        
+
         // Clear search
         const searchInput = container?.querySelector('.course-search-input');
         if (searchInput) {
             searchInput.value = '';
             this.searchCourseDropdown('', { target: searchInput });
         }
-        
+
         // Trigger filter
         this.filterDocsByCourse(courseId);
     },
@@ -177,14 +177,14 @@ export const DocumentManager = {
     renderCourseDropdown() {
         const containers = document.querySelectorAll('.course-dropdown-items');
         if (!containers.length) return;
-        
+
         const html = SUBJECT_LIST.map(subject => `
             <div class="course-dropdown-item" 
                  onclick="DocumentManager.selectCourseFromDropdown('${subject.id}', '${subject.name}', event)">
                 <span class="dropdown-item-text">${subject.name}</span>
             </div>
         `).join('');
-        
+
         // Render to all dropdown containers
         containers.forEach(container => {
             container.innerHTML = html;
@@ -201,9 +201,9 @@ export const DocumentManager = {
         try {
             const response = await fetch(CONFIG.API_ENDPOINTS.DOCUMENTS);
             AppState.allDocuments = await response.json();
-            
+
             if (AppState.isViewingSaved) {
-                this.currentFilteredDocs = AppState.allDocuments.filter(doc => 
+                this.currentFilteredDocs = AppState.allDocuments.filter(doc =>
                     AppState.currentUser?.savedDocs?.includes(doc.id)
                 );
             } else {
@@ -211,7 +211,7 @@ export const DocumentManager = {
             }
 
             this.pagination.currentPage = 1;
-            this.renderPagedDocuments(); 
+            this.renderPagedDocuments();
             this.updateStats();
         } catch (error) {
             console.error('❌ Load documents error:', error);
@@ -267,7 +267,7 @@ export const DocumentManager = {
     renderPagedDocuments() {
         let containerId = 'documents-list-container';
         let paginationId = 'pagination-container';
-        
+
         if (this.currentMode === 'library') {
             containerId = 'library-grid-container';
             paginationId = 'library-pagination';
@@ -294,12 +294,12 @@ export const DocumentManager = {
 
         if (docsToShow.length === 0) {
             const icon = AppState.isViewingSaved ? '📭' : (AppState.isLoading ? '⏳' : '📂');
-            const msg = AppState.isViewingSaved 
-                ? 'Bạn chưa lưu tài liệu nào!' 
+            const msg = AppState.isViewingSaved
+                ? 'Bạn chưa lưu tài liệu nào!'
                 : (AppState.isLoading ? 'Đang tải tài liệu...' : 'Chưa có tài liệu nào! Hãy tải lên tài liệu đầu tiên.');
             this.renderEmptyState(msg, icon, container);
             const pageContainer = document.getElementById(paginationId);
-            if(pageContainer) pageContainer.innerHTML = '';
+            if (pageContainer) pageContainer.innerHTML = '';
             return;
         }
 
@@ -327,21 +327,21 @@ export const DocumentManager = {
             const isSaved = savedList.includes(doc.id);
             const fileType = Utils.getFileType(doc.type);
             const uploadDate = doc.time ? `${doc.date} ${doc.time}` : doc.date;
-            
+
             // --- 🛠️ XỬ LÝ LINK THÔNG MINH ---
             const extension = doc.path.substring(doc.path.lastIndexOf('.')).toLowerCase();
-            
+
             // 1. Xử lý Link XEM (Preview)
             let viewUrl = doc.path;
             // Nếu là file Office (Word, Excel, PowerPoint) -> Dùng Google/Microsoft Viewer để xem online
             if (['.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt'].includes(extension)) {
                 viewUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(doc.path)}`;
             }
-            
+
             // 2. Xử lý Link TẢI (Download)
             // Vì Server đã fix lỗi lưu tên file, ta dùng link gốc để tránh lỗi 400 với file Raw
-            let downloadUrl = doc.path; 
-            
+            let downloadUrl = doc.path;
+
             // ---------------------------------
 
             let visibilityIcon = '';
@@ -450,7 +450,7 @@ export const DocumentManager = {
     openDeleteModal(docId, username) {
         // 1. Tìm tài liệu để xác minh quyền sở hữu
         const doc = AppState.allDocuments.find(d => d.id === docId);
-        
+
         if (!doc) {
             Utils.showAlert("Lỗi", "Không tìm thấy tài liệu!", false);
             return;
@@ -464,7 +464,7 @@ export const DocumentManager = {
 
         // 2. Kiểm tra quyền: Là Admin HOẶC là người đăng (Owner)
         const isAdmin = currentUser.role === 'admin';
-        
+
         // Logic so sánh chủ sở hữu (giống như lúc hiển thị nút xóa)
         let isOwner = false;
         if (doc.uploaderUsername) {
@@ -483,7 +483,7 @@ export const DocumentManager = {
         // 3. Nếu qua được bước trên thì mở Modal
         this.pendingDocId = docId;
         this.pendingDocUser = username; // username này lấy từ tham số truyền vào
-        
+
         const modal = document.getElementById('deleteDocConfirmModal');
         if (modal) {
             modal.classList.add('active');
@@ -510,10 +510,10 @@ export const DocumentManager = {
         const modal = document.getElementById('deleteDocConfirmModal');
         const buttons = modal ? modal.querySelectorAll('button') : [];
         const btnDelete = buttons.length > 0 ? buttons[buttons.length - 1] : null;
-        
+
         const originalText = btnDelete ? btnDelete.textContent : "Xóa ngay";
 
-        if(btnDelete) {
+        if (btnDelete) {
             btnDelete.textContent = "Đang xóa...";
             btnDelete.disabled = true;
         }
@@ -525,9 +525,9 @@ export const DocumentManager = {
                 body: JSON.stringify({ docId: this.pendingDocId, username: this.pendingDocUser })
             });
             const result = await response.json();
-            
+
             if (result.success) {
-                this.closeDeleteModal(); 
+                this.closeDeleteModal();
                 await this.loadAllDocuments();
                 if (document.getElementById('profile-section').style.display !== 'none') {
                     if (ProfileManager && ProfileManager.renderMyDocs) {
@@ -543,7 +543,7 @@ export const DocumentManager = {
             alert("Lỗi kết nối Server!");
             this.closeDeleteModal();
         } finally {
-            if(btnDelete) {
+            if (btnDelete) {
                 btnDelete.textContent = originalText;
                 btnDelete.disabled = false;
             }
@@ -563,7 +563,7 @@ export const DocumentManager = {
         // 👇 CẬP NHẬT LOGIC KIỂM TRA QUYỀN (Đồng bộ với bên trên)
         const isAdmin = currentUser.role === 'admin';
         let isOwner = false;
-        
+
         if (doc.uploaderUsername) {
             isOwner = doc.uploaderUsername === currentUser.username;
         } else {
@@ -727,12 +727,12 @@ export const DocumentManager = {
     // 👇 HÀM MỚI: Xử lý sự kiện Upload (Hiện popup, đóng modal, load lại trang)
     async handleUploadSubmit(event) {
         event.preventDefault(); // Chặn trang web bị load lại
-        
+
         // 1. Hiệu ứng nút bấm "Đang tải..."
         const form = event.target;
         const btn = form.querySelector('button[type="submit"]');
         const originalText = btn.textContent;
-        
+
         if (btn) {
             btn.textContent = 'Đang tải lên...';
             btn.disabled = true;
@@ -741,7 +741,7 @@ export const DocumentManager = {
         try {
             // 2. Lấy dữ liệu từ form
             const formData = new FormData(form);
-            
+
             // Đảm bảo có username
             if (AppState.currentUser && !formData.has('username')) {
                 formData.append('username', AppState.currentUser.username);
@@ -754,10 +754,10 @@ export const DocumentManager = {
             if (result.success) {
                 // 🎉 ĐÂY RỒI! POP-UP CỦA BẠN ĐÂY
                 Utils.showAlert("Thành công!", "Tài liệu đã được tải lên thành công.", true);
-                
+
                 // Reset form cho sạch
                 form.reset();
-                
+
                 // Đóng Modal (Nếu có ModalManager)
                 if (window.ModalManager) {
                     window.ModalManager.close('uploadDocModal'); // Hoặc ID modal upload của bạn
@@ -766,7 +766,7 @@ export const DocumentManager = {
                     const modal = document.getElementById('uploadDocModal');
                     if (modal) modal.classList.remove('active');
                 }
-                
+
                 // Tải lại danh sách tài liệu
                 await this.loadAllDocuments();
             } else {
@@ -789,18 +789,18 @@ export const DocumentManager = {
             <div class="docs-empty-state" style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #9ca3af;">
                 <div class="icon" style="font-size: 40px; margin-bottom: 10px;">${icon}</div>
                 <h3 style="font-size: 16px; font-weight: 600;">${message}</h3>
-                ${!AppState.isViewingSaved ? 
-                    `<button class="btn-upload-header" onclick="ModalManager.open('uploadDoc')" style="margin-top: 15px; padding: 8px 16px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer;">Tải tài liệu lên</button>` : ''}
+                ${!AppState.isViewingSaved ?
+                `<button class="btn-upload-header" onclick="ModalManager.open('uploadDoc')" style="margin-top: 15px; padding: 8px 16px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer;">Tải tài liệu lên</button>` : ''}
             </div>
         `;
     },
-    
+
     renderPaginationControl(targetId) {
         const container = document.getElementById(targetId);
         if (!container) return;
         const totalPages = Math.ceil(this.currentFilteredDocs.length / this.pagination.itemsPerPage);
         if (totalPages <= 1) { container.innerHTML = ''; return; }
-        
+
         let html = '';
         html += `<button class="page-btn ${this.pagination.currentPage === 1 ? 'disabled' : ''}" onclick="DocumentManager.changePage(${this.pagination.currentPage - 1})">❮</button>`;
         for (let i = 1; i <= totalPages; i++) {
@@ -822,25 +822,25 @@ export const DocumentManager = {
     async toggleSave(docId) {
         if (!AppState.currentUser) { Utils.showAlert("Thông báo", "Vui lòng đăng nhập!", false); return; }
         try {
-            const res = await fetch(CONFIG.API_ENDPOINTS.TOGGLE_SAVE, { 
-                method: 'POST', 
-                headers: {'Content-Type':'application/json'}, 
-                body: JSON.stringify({username: AppState.currentUser.username, docId}) 
+            const res = await fetch(CONFIG.API_ENDPOINTS.TOGGLE_SAVE, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: AppState.currentUser.username, docId })
             });
             const data = await res.json();
-            if(data.success) {
-                AppState.currentUser.savedDocs = data.savedDocs; 
+            if (data.success) {
+                AppState.currentUser.savedDocs = data.savedDocs;
                 AppState.saveUser(AppState.currentUser);
                 this.renderPagedDocuments();
-                Utils.showAlert("Thành công", data.action==='saved'?'Đã lưu':'Đã bỏ lưu', true);
+                Utils.showAlert("Thành công", data.action === 'saved' ? 'Đã lưu' : 'Đã bỏ lưu', true);
             }
-        } catch(e) { 
-            Utils.showAlert("Lỗi", "Không thể lưu", false); 
+        } catch (e) {
+            Utils.showAlert("Lỗi", "Không thể lưu", false);
         }
     },
 
-    trackDownload(docId) { 
-        console.log('DL', docId); 
+    trackDownload(docId) {
+        console.log('DL', docId);
     },
 
     updateStats() {
@@ -848,16 +848,20 @@ export const DocumentManager = {
         const savedDocsEl = document.getElementById('saved-docs');
         const recentDocsEl = document.getElementById('recent-docs');
         const publicDocs = AppState.allDocuments.filter(doc => doc.visibility !== 'private');
-        
+
         if (totalDocsEl) {
             totalDocsEl.textContent = publicDocs.length; // ✅ Chỉ đếm file công khai
         }
-        
+
         if (savedDocsEl && AppState.currentUser) {
-            const savedCount = AppState.currentUser.savedDocs?.length || 0;
-            savedDocsEl.textContent = savedCount;
+            // ✅ Code mới: Chỉ đếm những tài liệu CÒN TỒN TẠI trong hệ thống
+            const validSavedDocs = AppState.currentUser.savedDocs?.filter(savedId =>
+                AppState.allDocuments.some(doc => doc.id === savedId)
+            ) || [];
+
+            savedDocsEl.textContent = validSavedDocs.length;
         }
-        
+
         if (recentDocsEl) {
             const sevenDaysAgo = new Date();
             sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -875,7 +879,7 @@ export const DocumentManager = {
         AppState.allDocuments.forEach(doc => {
             const size = doc.size || 0;
             totalSize += size;
-            
+
             if (doc.type === 'image') {
                 imageSize += size;
             } else {
@@ -903,20 +907,20 @@ export const DocumentManager = {
 
         const barFile = document.getElementById('storage-bar-file');
         const barImage = document.getElementById('storage-bar-image');
-        
+
         if (barImage) {
             barImage.innerHTML = `<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`;
         }
-        
+
         if (barFile) barFile.style.width = filePercent + '%';
         if (barImage) barImage.style.width = imagePercent + '%';
 
         const fileSizeEl = document.getElementById('storage-file-size');
         const imageSizeEl = document.getElementById('storage-image-size');
-        
+
         const folderIcon = '<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>';
         const imageIcon = '<svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>';
-        
+
         if (fileSizeEl) fileSizeEl.innerHTML = folderIcon + ' Files: ' + fileSizeMB.toFixed(1) + ' MB';
         if (imageSizeEl) imageSizeEl.innerHTML = imageIcon + ' Ảnh: ' + imageSizeMB.toFixed(1) + ' MB';
     },
@@ -924,22 +928,22 @@ export const DocumentManager = {
     filterLibrary(type) {
         document.querySelectorAll('.type-filter-btn').forEach(btn => {
             btn.classList.remove('active');
-            if((!type && btn.textContent==='Tất cả') || (type && btn.textContent.toLowerCase().includes(type==='ppt'?'slide':type))) btn.classList.add('active');
+            if ((!type && btn.textContent === 'Tất cả') || (type && btn.textContent.toLowerCase().includes(type === 'ppt' ? 'slide' : type))) btn.classList.add('active');
         });
-        this.filterByType(type==='all'?'':type);
+        this.filterByType(type === 'all' ? '' : type);
     },
 
-    searchLibrary(v) { 
-        this.searchDocuments(v); 
+    searchLibrary(v) {
+        this.searchDocuments(v);
     },
 
     filterByCourse(courseId) {
         document.querySelectorAll('.course-filter-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        
+
         const activeBtn = document.querySelector(`.course-filter-btn[onclick*="filterByCourse('${courseId}')"]`) ||
-                         document.querySelector(`.course-filter-btn[onclick*='filterByCourse(${courseId})']`);
+            document.querySelector(`.course-filter-btn[onclick*='filterByCourse(${courseId})']`);
         if (activeBtn) activeBtn.classList.add('active');
 
         this.currentCourseFilter = courseId;
@@ -960,7 +964,7 @@ export const DocumentManager = {
     filterDocsByCourse(courseId) {
         // Store current filter
         this.currentCourseFilter = courseId;
-        
+
         // Get source documents (public only)
         let src = AppState.allDocuments.filter(d => d.visibility !== 'private');
 
@@ -980,8 +984,8 @@ export const DocumentManager = {
 
     searchDocuments(k) {
         const term = k.toLowerCase().trim();
-        let src = AppState.isViewingSaved 
-            ? AppState.allDocuments.filter(d=>AppState.currentUser?.savedDocs?.includes(d.id)) 
+        let src = AppState.isViewingSaved
+            ? AppState.allDocuments.filter(d => AppState.currentUser?.savedDocs?.includes(d.id))
             : AppState.allDocuments.filter(d => d.visibility !== 'private'); // 👈 LỌC PRIVATE
         this.currentFilteredDocs = term ? src.filter(d => d.name.toLowerCase().includes(term) || d.uploader.toLowerCase().includes(term)) : [...src];
         this.pagination.currentPage = 1;
@@ -989,8 +993,8 @@ export const DocumentManager = {
     },
 
     filterByType(t) {
-        let src = AppState.isViewingSaved 
-            ? AppState.allDocuments.filter(d=>AppState.currentUser?.savedDocs?.includes(d.id)) 
+        let src = AppState.isViewingSaved
+            ? AppState.allDocuments.filter(d => AppState.currentUser?.savedDocs?.includes(d.id))
             : AppState.allDocuments.filter(d => d.visibility !== 'private');
         this.currentFilteredDocs = t ? src.filter(d => d.type === t) : [...src];
         this.pagination.currentPage = 1;
@@ -1010,10 +1014,10 @@ export const DocumentManager = {
      */
     navigateFromSubjectCard(subjectName) {
         console.log('📚 Navigating from subject:', subjectName);
-        
+
         // Find the course ID from the subject name
         const courseId = SUBJECT_TO_COURSE_MAP[subjectName];
-        
+
         if (!courseId) {
             console.warn('⚠️ No course mapping found for:', subjectName);
             // Navigate to documents page without filter
@@ -1023,7 +1027,7 @@ export const DocumentManager = {
             localStorage.setItem('pendingCourseFilter', courseId.toString());
             console.log('💾 Stored pending filter:', courseId);
         }
-        
+
         // Trigger navigation to documents page
         // This will be handled by PageManager
         const docsMenuItem = document.querySelector('.sidebar-left .nav-menu a[onclick*="showDocumentsPage"]');
@@ -1038,13 +1042,13 @@ export const DocumentManager = {
      */
     applyPendingFilter() {
         const pendingFilter = localStorage.getItem('pendingCourseFilter');
-        
+
         if (pendingFilter) {
             console.log('✅ Applying pending filter:', pendingFilter);
-            
+
             // Clear the pending filter immediately
             localStorage.removeItem('pendingCourseFilter');
-            
+
             // Apply the filter with a small delay to ensure DOM is ready
             setTimeout(() => {
                 if (pendingFilter === 'all') {
@@ -1052,7 +1056,7 @@ export const DocumentManager = {
                 } else {
                     this.filterDocsByCourse(pendingFilter);
                 }
-                
+
                 // Scroll to documents section
                 const docsSection = document.getElementById('documents-section');
                 if (docsSection) {
