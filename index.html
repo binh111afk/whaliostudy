@@ -1329,7 +1329,7 @@
                     Tải lên tài liệu
                 </h2>
             </div>
-            <form id="uploadForm">
+            <form id="uploadForm" onsubmit="DocumentManager.handleUploadSubmit(event)">
                 <div class="form-group">
                     <label class="form-label">Tên tài liệu</label>
                     <input type="text" id="docName" class="auth-input" placeholder="VD: Giải tích 1 - Chương 2"
