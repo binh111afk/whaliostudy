@@ -344,95 +344,6 @@ const EventHandlers = {
         Utils.setButtonLoading(btnSubmit, false);
     },
 
-    async handleUploadDocument(event) {
-        event.preventDefault();
-
-        const form = event.target;
-        const fileInput = document.getElementById('docFile');
-        const nameInput = document.getElementById('docName');
-        const btn = form.querySelector('button[type="submit"]');
-
-        if (!fileInput.files.length) {
-            Utils.showAlert("Thông báo", "Vui lòng chọn file!", false);
-            return;
-        }
-
-        const file = fileInput.files[0];
-        const fileName = file.name.toLowerCase();
-        let finalType = 'other';
-
-        if (fileName.endsWith('.pdf')) {
-            finalType = 'pdf';
-        } else if (fileName.includes('.doc') || fileName.includes('.docx')) {
-            finalType = 'word';
-        } else if (fileName.includes('.xls') || fileName.includes('.xlsx') || fileName.includes('.csv')) {
-            finalType = 'excel';
-        } else if (fileName.includes('.ppt') || fileName.includes('.pptx')) {
-            finalType = 'ppt';
-        } else if (/\.(jpg|jpeg|png|gif|webp)$/.test(fileName)) {
-            finalType = 'image';
-        }
-
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('name', nameInput.value);
-        formData.append('type', finalType);
-
-        const courseSelect = document.getElementById('docCourse');
-        const selectedCourse = courseSelect.value;
-        formData.append('course', selectedCourse);
-
-        const visibilitySelect = document.getElementById('docVisibility');
-        const visibility = visibilitySelect ? visibilitySelect.value : 'public';
-        formData.append('visibility', visibility);
-
-        formData.append('uploader', AppState.currentUser.fullName);
-        formData.append('username', AppState.currentUser.username);
-
-        Utils.setButtonLoading(btn, true);
-
-        try {
-            // Upload document to server
-            const response = await fetch('/api/upload-document', {
-                method: 'POST',
-                body: formData
-            });
-
-            const result = await response.json();
-
-            Utils.setButtonLoading(btn, false);
-
-            if (response.ok && result.success) {
-                // Show success message
-                alert("Upload thành công!");
-                
-                // Clear the form
-                form.reset();
-                
-                // Reload documents from server to update the UI
-                await DocumentManager.loadAllDocuments();
-                
-                // Reload recent activities
-                RecentActivity.loadActivities();
-                
-                // Close the upload modal
-                setTimeout(() => {
-                    const uploadModal = document.getElementById('uploadDocModal');
-                    if (uploadModal) {
-                        uploadModal.classList.remove('active');
-                        uploadModal.style.display = 'none';
-                    }
-                }, 300);
-            } else {
-                alert("Lỗi: " + (result.message || "Không thể tải lên!"));
-            }
-        } catch (error) {
-            Utils.setButtonLoading(btn, false);
-            console.error('Upload error:', error);
-            alert("Lỗi kết nối: " + error.message);
-        }
-    },
-
     confirmLogout() {
         const btn = document.querySelector('#logoutModal button:last-child');
         btn.textContent = "Đang đăng xuất...";
@@ -506,10 +417,105 @@ const EventHandlers = {
             registerForm.addEventListener('submit', this.handleRegister.bind(this));
         }
 
+        // Upload form event listener - attach using event delegation for reliability
         const uploadForm = document.getElementById('uploadForm');
         if (uploadForm && !uploadForm.dataset.listenerAdded) {
             uploadForm.dataset.listenerAdded = 'true';
-            uploadForm.addEventListener('submit', this.handleUploadDocument.bind(this));
+            uploadForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const form = e.target;
+                const fileInput = document.getElementById('docFile');
+                const nameInput = document.getElementById('docName');
+                const courseSelect = document.getElementById('docCourse');
+                const visibilitySelect = document.getElementById('docVisibility');
+                const btn = form.querySelector('button[type="submit"]');
+
+                // Validation
+                if (!fileInput.files.length) {
+                    alert("Vui lòng chọn file!");
+                    return;
+                }
+
+                if (!AppState.currentUser) {
+                    alert("Vui lòng đăng nhập để tải lên tài liệu!");
+                    return;
+                }
+
+                // Show loading state
+                const originalBtnText = btn.textContent;
+                btn.disabled = true;
+                btn.textContent = "Đang tải lên...";
+
+                try {
+                    // Prepare form data
+                    const file = fileInput.files[0];
+                    const fileName = file.name.toLowerCase();
+                    let fileType = 'other';
+
+                    if (fileName.endsWith('.pdf')) fileType = 'pdf';
+                    else if (fileName.includes('.doc')) fileType = 'word';
+                    else if (fileName.includes('.xls')) fileType = 'excel';
+                    else if (fileName.includes('.ppt')) fileType = 'ppt';
+                    else if (/\.(jpg|jpeg|png|gif|webp)$/.test(fileName)) fileType = 'image';
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('name', nameInput.value);
+                    formData.append('type', fileType);
+                    formData.append('course', courseSelect.value);
+                    formData.append('visibility', visibilitySelect ? visibilitySelect.value : 'public');
+                    formData.append('uploader', AppState.currentUser.fullName);
+                    formData.append('username', AppState.currentUser.username);
+
+                    // Send to server
+                    const response = await fetch('/api/upload-document', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    // Reset button
+                    btn.disabled = false;
+                    btn.textContent = originalBtnText;
+
+                    if (response.ok && result.success) {
+                        // Success!
+                        alert("Upload thành công!");
+                        
+                        // Reset form
+                        form.reset();
+                        
+                        // CRITICAL: Reload documents immediately to update UI
+                        await DocumentManager.loadAllDocuments();
+                        
+                        // Update stats counter
+                        StatsManager.init();
+                        
+                        // Reload recent activities
+                        if (RecentActivity && RecentActivity.loadActivities) {
+                            RecentActivity.loadActivities();
+                        }
+                        
+                        // Close modal
+                        setTimeout(() => {
+                            const uploadModal = document.getElementById('uploadDocModal');
+                            if (uploadModal) {
+                                uploadModal.classList.remove('active');
+                                uploadModal.style.display = 'none';
+                            }
+                        }, 300);
+                    } else {
+                        alert("Lỗi: " + (result.message || "Không thể tải lên!"));
+                    }
+                } catch (error) {
+                    btn.disabled = false;
+                    btn.textContent = originalBtnText;
+                    console.error('Upload error:', error);
+                    alert("Lỗi kết nối: " + error.message);
+                }
+            });
         }
 
         const docFileInput = document.getElementById('docFile');
