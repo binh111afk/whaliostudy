@@ -418,7 +418,7 @@ const EventHandlers = {
         }
 
         // Upload form event listener - attach using event delegation for reliability
-        const uploadForm = document.getElementById('uploadForm');
+        /*const uploadForm = document.getElementById('uploadForm');
         if (uploadForm && !uploadForm.dataset.listenerAdded) {
             uploadForm.dataset.listenerAdded = 'true';
             uploadForm.addEventListener('submit', async (e) => {
@@ -516,7 +516,7 @@ const EventHandlers = {
                     alert("Lỗi kết nối: " + error.message);
                 }
             });
-        }
+        } */
 
         const docFileInput = document.getElementById('docFile');
         if (docFileInput) {
