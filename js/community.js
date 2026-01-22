@@ -229,7 +229,7 @@ export const Community = {
             if (e.target.closest('.btn-like-post')) {
                 console.log(' Like button clicked');
                 const postCard = e.target.closest('.post-card');
-                const postId = parseInt(postCard?.dataset.postId);
+                const postId = postCard?.dataset.postId;
                 if (postId) this.likePost(postId);
             }
 
@@ -237,7 +237,7 @@ export const Community = {
             if (e.target.closest('.btn-comment-post')) {
                 console.log(' Comment button clicked');
                 const postCard = e.target.closest('.post-card');
-                const postId = parseInt(postCard?.dataset.postId);
+                const postId = postCard?.dataset.postId;
                 if (postId) this.openCommentModal(postId);
             }
 
@@ -245,7 +245,7 @@ export const Community = {
             if (e.target.closest('.btn-save-post')) {
                 console.log(' Save button clicked');
                 const postCard = e.target.closest('.post-card');
-                const postId = parseInt(postCard?.dataset.postId);
+                const postId = postCard?.dataset.postId;
                 if (postId) this.savePost(postId);
             }
 
@@ -300,8 +300,8 @@ export const Community = {
             if (e.target.closest('.btn-delete-comment')) {
                 console.log(' Delete comment button clicked');
                 const commentEl = e.target.closest('.comment-item');
-                const postId = parseInt(commentEl?.dataset.postId);
-                const commentId = parseInt(commentEl?.dataset.commentId);
+                const postId = commentEl?.dataset.postId;  // Keep as string for MongoDB
+                const commentId = parseInt(commentEl?.dataset.commentId);  // Comment IDs are still numeric
                 if (postId && commentId) this.deleteComment(postId, commentId);
             }
 
@@ -692,7 +692,8 @@ export const Community = {
     // ==================== COMMENT MODAL ====================
     openCommentModal(postId) {
         console.log('Open Comment Modal:', postId);
-        const post = this.allPosts.find(p => p.id === postId);
+        // Handle both MongoDB _id and legacy id
+        const post = this.allPosts.find(p => String(p._id || p.id) === String(postId));
         if (!post) return;
 
         const modal = document.getElementById('commentModal');
@@ -803,7 +804,7 @@ export const Community = {
     async submitComment() {
         console.log(' submitComment called');
         const modal = document.getElementById('commentModal');
-        const postId = parseInt(modal?.dataset.postId);
+        const postId = modal?.dataset.postId;  // Keep as string for MongoDB ObjectId
         const content = document.getElementById('commentContent')?.value.trim();
 
         if (!postId || !content) {
@@ -1277,7 +1278,7 @@ export const Community = {
     async submitReply(parentCommentId) {
         console.log('📤 Submitting reply to comment:', parentCommentId);
         const modal = document.getElementById('commentModal');
-        const postId = parseInt(modal?.dataset.postId);
+        const postId = modal?.dataset.postId;  // Keep as string for MongoDB ObjectId
         const content = document.getElementById(`replyContent-${parentCommentId}`)?.value.trim();
 
         if (!content) {

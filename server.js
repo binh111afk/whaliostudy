@@ -939,29 +939,62 @@ app.post('/api/comments/delete', async (req, res) => {
 
 app.post('/api/posts/edit', async (req, res) => {
     try {
-        const { postId, content, username } = req.body;
-        const post = await Post.findById(postId);
-
-        if (!post) {
-            return res.status(404).json({ success: false, message: "Bài viết không tồn tại!" });
+        // CRITICAL: Extract postId as STRING (MongoDB ObjectId)
+        let { postId, content, username } = req.body;
+        
+        // DEFENSIVE: Ensure postId is always a string, never a number
+        postId = String(postId);
+        
+        console.log('📝 Edit Post Request - postId:', postId, 'type:', typeof postId);
+        console.log('📝 Edit Post Request - username:', username);
+        console.log('📝 Edit Post Request - content length:', content?.length);
+        
+        // Validation
+        if (!postId || postId === 'undefined' || postId === 'null') {
+            console.error('❌ Invalid postId received:', postId);
+            return res.status(400).json({ success: false, message: "ID bài viết không hợp lệ!" });
         }
-
-        if (post.author !== username) {
-            return res.status(403).json({ success: false, message: "Bạn không có quyền chỉnh sửa bài viết này!" });
-        }
-
+        
         if (!content || content.trim().length === 0) {
             return res.status(400).json({ success: false, message: "Nội dung bài viết không được trống!" });
         }
+        
+        if (!username) {
+            return res.status(401).json({ success: false, message: "Chưa đăng nhập!" });
+        }
+        
+        // Find post by MongoDB ObjectId (as string)
+        const post = await Post.findById(postId);
 
+        if (!post) {
+            console.error('❌ Post not found with ID:', postId);
+            return res.status(404).json({ success: false, message: "Bài viết không tồn tại!" });
+        }
+
+        // Verify ownership
+        if (post.author !== username) {
+            console.error('❌ Permission denied - author:', post.author, 'vs user:', username);
+            return res.status(403).json({ success: false, message: "Bạn không có quyền chỉnh sửa bài viết này!" });
+        }
+
+        // Update post
         post.content = content;
         post.editedAt = new Date();
         await post.save();
+        
+        console.log('✅ Post updated successfully - ID:', postId);
 
         res.json({ success: true, message: "Đã cập nhật bài viết", post });
     } catch (err) {
-        console.error('Edit post error:', err);
-        res.status(500).json({ success: false, message: "Lỗi server" });
+        console.error('❌ Edit post error:', err);
+        console.error('Error type:', err.name);
+        console.error('Error message:', err.message);
+        console.error('Full error:', JSON.stringify(err, null, 2));
+        res.status(500).json({ 
+            success: false, 
+            message: "Lỗi server: " + err.message,
+            errorType: err.name
+        });
     }
 });
 
