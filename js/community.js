@@ -606,9 +606,26 @@ export const Community = {
 
             const data = await response.json();
             if (data.success) {
+                // Show success alert
+                alert("Đăng bài thành công!");
+                
+                // Reset form inputs
+                document.getElementById('postContent').value = '';
+                const imageInput = document.getElementById('postImages');
+                const fileInput = document.getElementById('postFiles');
+                if (imageInput) imageInput.value = '';
+                if (fileInput) fileInput.value = '';
+                
+                // Clear preview
+                const previewContainer = document.getElementById('filePreviewContainer');
+                if (previewContainer) previewContainer.style.display = 'none';
+                
+                // Close modal
+                this.closeCreatePostModal();
+                
+                // CRITICAL: Reload posts to update UI immediately
                 await this.loadPosts();
                 this.renderFeed();
-                this.closeCreatePostModal();
 
                 // Reload recent activities
                 if (window.RecentActivity) {
