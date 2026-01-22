@@ -465,7 +465,24 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({
     storage,
-    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+    fileFilter: (req, file, cb) => {
+        // Allowed MIME types
+        const allowedMimeTypes = [
+            'application/pdf',                                                                      // PDF
+            'application/msword',                                                                   // Word .doc
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',            // Word .docx
+            'text/plain',                                                                          // Text files
+            'image/jpeg',                                                                          // JPEG images
+            'image/png'                                                                            // PNG images
+        ];
+
+        if (allowedMimeTypes.includes(file.mimetype)) {
+            cb(null, true); // Accept file
+        } else {
+            cb(new Error('An unknown file format not allowed'), false); // Reject file
+        }
+    }
 });
 
 // ==================== ACTIVITY LOGGING (MongoDB) ====================
