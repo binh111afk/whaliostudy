@@ -449,53 +449,63 @@ function normalizeFileName(str) {
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: (req, file) => {
+        // Xử lý tên file tiếng Việt bị lỗi font
         const decodedName = decodeFileName(file.originalname);
         const safeName = normalizeFileName(decodedName);
-        // Store original name for later use
-        file.decodedOriginalName = decodedName;
+        
+        // Lưu tên gốc để dùng sau này
+        file.decodedOriginalName = decodedName; 
         
         return {
             folder: 'whalio-documents',
-            resource_type: 'auto',
+            resource_type: 'auto', // Tự động nhận diện (Raw, Image, Video)
             public_id: safeName.replace(path.extname(safeName), ''),
-            allowed_formats: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar']
+            // ⚠️ QUAN TRỌNG: Bỏ 'allowed_formats' ở đây để Cloudinary không chặn nhầm.
+            // Chúng ta sẽ tự kiểm tra kỹ ở bước fileFilter bên dưới.
         };
     }
 });
 
+// 2. Bộ lọc (Người bảo vệ)
 const upload = multer({
     storage,
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
     fileFilter: (req, file, cb) => {
-        // 1. IN LOG ĐỂ KIỂM TRA (Quan trọng)
         console.log('📂 Đang xử lý file:', file.originalname);
-        console.log('   👉 MIME Type:', file.mimetype);
-
-        // 2. Chuyển đuôi file về chữ thường
+        
+        // Chuyển đuôi file về chữ thường để so sánh
         const ext = path.extname(file.originalname).toLowerCase();
+        
+        // Danh sách đuôi file cho phép
+        const allowedExtensions = [
+            '.pdf', '.doc', '.docx', 
+            '.txt', '.rtf',
+            '.jpg', '.jpeg', '.png', 
+            '.xls', '.xlsx', '.ppt', '.pptx', 
+            '.zip', '.rar'
+        ];
 
-        // 3. DANH SÁCH CHO PHÉP (Kiểm tra cả đuôi file và MIME)
-        const allowedExtensions = ['.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png', '.ppt', '.pptx', '.xls', '.xlsx', '.zip'];
+        // Danh sách MIME Type cho phép (Bao gồm cả loại "lạ" của Windows)
         const allowedMimes = [
             'application/pdf',
             'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'text/plain',
-            'image/jpeg', 
-            'image/png',
-            'application/octet-stream' // <-- QUAN TRỌNG: Windows hay gửi Word dưới dạng này
+            'image/jpeg', 'image/png',
+            'application/octet-stream', // Fix lỗi Word trên Windows/Cốc Cốc
+            'application/zip', 
+            'application/x-zip-compressed'
         ];
 
-        // 4. LOGIC KIỂM TRA "THOÁNG"
-        // Nếu đúng đuôi file HOẶC đúng MIME Type -> Đều cho qua
+        // LOGIC KIỂM TRA: Chỉ cần thỏa mãn 1 trong 2 điều kiện là CHO QUA
         if (allowedExtensions.includes(ext) || allowedMimes.includes(file.mimetype)) {
             console.log('   ✅ File hợp lệ!');
-            return cb(null, true);
+            return cb(null, true); // Quan trọng: có chữ return để dừng hàm ngay
         }
 
-        // Nếu sai cả hai
-        console.error('   ❌ File bị chặn:', file.originalname);
-        cb(new Error(`Định dạng file không hỗ trợ (MIME: ${file.mimetype})`), false);
+        // Nếu không thỏa mãn cái nào mới báo lỗi
+        console.error('   ❌ File bị chặn (MIME hoặc đuôi lạ):', file.mimetype);
+        cb(new Error(`Định dạng file không hỗ trợ!`), false);
     }
 });
 
