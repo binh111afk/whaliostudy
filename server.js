@@ -419,7 +419,9 @@ app.post('/api/upload-document', upload.single('file'), async (req, res) => {
         const { name, type, uploader, course, username, visibility } = req.body;
         const file = req.file;
 
+        // CRITICAL: Check if file exists immediately
         if (!file) {
+            console.error("UPLOAD ERROR: No file received");
             return res.status(400).json({ success: false, message: "Chưa chọn file!" });
         }
 
@@ -456,10 +458,14 @@ app.post('/api/upload-document', upload.single('file'), async (req, res) => {
 
         console.log(`✅ Document uploaded to Cloudinary: ${newDoc.name} (ID: ${newDoc._id})`);
         console.log(`🔗 Cloudinary URL: ${cloudinaryUrl}`);
-        res.json({ success: true, document: docResponse });
-    } catch (err) {
-        console.error('Upload document error:', err);
-        res.status(500).json({ success: false, message: "Lỗi server: " + err.message });
+        
+        // Return status 200 with success
+        return res.status(200).json({ success: true, document: docResponse });
+    } catch (error) {
+        // Enhanced error logging with JSON.stringify
+        console.error("UPLOAD ERROR:", JSON.stringify(error, null, 2));
+        console.error("UPLOAD ERROR STACK:", error.stack);
+        return res.status(500).json({ success: false, message: error.message || "Lỗi server không xác định" });
     }
 });
 
