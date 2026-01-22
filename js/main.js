@@ -391,42 +391,45 @@ const EventHandlers = {
 
         Utils.setButtonLoading(btn, true);
 
-        const result = await DocumentManager.uploadDocument(formData);
+        try {
+            // Upload document to server
+            const response = await fetch('/api/upload-document', {
+                method: 'POST',
+                body: formData
+            });
 
-        Utils.setButtonLoading(btn, false);
+            const result = await response.json();
 
-        if (result.success) {
-            Utils.showAlert("Thành công!", "Tài liệu đã được tải lên!", true);
-            
-            form.reset();
-            
-            // FIX: Reload all documents from server to ensure consistency
-            await DocumentManager.loadAllDocuments();
-            
-            // Update filtered docs based on current view
-            /*if (AppState.isViewingSaved) {
-                DocumentManager.currentFilteredDocs = AppState.allDocuments.filter(doc => 
-                    AppState.currentUser?.savedDocs?.includes(doc.id)
-                );
+            Utils.setButtonLoading(btn, false);
+
+            if (response.ok && result.success) {
+                // Show success message
+                alert("Upload thành công!");
+                
+                // Clear the form
+                form.reset();
+                
+                // Reload documents from server to update the UI
+                await DocumentManager.loadAllDocuments();
+                
+                // Reload recent activities
+                RecentActivity.loadActivities();
+                
+                // Close the upload modal
+                setTimeout(() => {
+                    const uploadModal = document.getElementById('uploadDocModal');
+                    if (uploadModal) {
+                        uploadModal.classList.remove('active');
+                        uploadModal.style.display = 'none';
+                    }
+                }, 300);
             } else {
-                DocumentManager.currentFilteredDocs = AppState.allDocuments.filter(doc => doc.visibility !== 'private');
+                alert("Lỗi: " + (result.message || "Không thể tải lên!"));
             }
-            
-            DocumentManager.pagination.currentPage = 1;
-            DocumentManager.renderPagedDocuments();
-            DocumentManager.updateStats();*/
-            
-            RecentActivity.loadActivities();
-            
-            setTimeout(() => {
-                const uploadModal = document.getElementById('uploadDocModal');
-                if (uploadModal) {
-                    uploadModal.classList.remove('active');
-                    uploadModal.style.display = 'none';
-                }
-            }, 300);
-        } else {
-            Utils.showAlert("Lỗi", result.message || "Không thể tải lên!", false);
+        } catch (error) {
+            Utils.setButtonLoading(btn, false);
+            console.error('Upload error:', error);
+            alert("Lỗi kết nối: " + error.message);
         }
     },
 
