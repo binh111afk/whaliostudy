@@ -529,6 +529,7 @@ export const DocumentManager = {
             if (result.success) {
                 this.closeDeleteModal();
                 await this.loadAllDocuments();
+                this.updateStats();
                 if (document.getElementById('profile-section').style.display !== 'none') {
                     if (ProfileManager && ProfileManager.renderMyDocs) {
                         ProfileManager.renderMyDocs();
@@ -769,6 +770,7 @@ export const DocumentManager = {
 
                 // Tải lại danh sách tài liệu
                 await this.loadAllDocuments();
+                this.updateStats();
             } else {
                 Utils.showAlert("Lỗi", result.message || "Không thể tải tài liệu lên!", false);
             }
@@ -832,6 +834,7 @@ export const DocumentManager = {
                 AppState.currentUser.savedDocs = data.savedDocs;
                 AppState.saveUser(AppState.currentUser);
                 this.renderPagedDocuments();
+                this.updateStats();
                 Utils.showAlert("Thành công", data.action === 'saved' ? 'Đã lưu' : 'Đã bỏ lưu', true);
             }
         } catch (e) {
