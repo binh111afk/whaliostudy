@@ -25,14 +25,14 @@ mongoose.connect(MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })
-.then(() => {
-    console.log('🚀 Whalio is now connected to MongoDB Cloud');
-    seedInitialData(); // Automatically seed data on startup
-})
-.catch((err) => {
-    console.error('❌ MongoDB connection failed:', err);
-    process.exit(1);
-});
+    .then(() => {
+        console.log('🚀 Whalio is now connected to MongoDB Cloud');
+        seedInitialData(); // Automatically seed data on startup
+    })
+    .catch((err) => {
+        console.error('❌ MongoDB connection failed:', err);
+        process.exit(1);
+    });
 
 // ==================== DATA SEEDING FUNCTION (ROBUST VERSION) ====================
 async function seedExamsFromJSON(forceReseed = false) {
@@ -46,16 +46,16 @@ async function seedExamsFromJSON(forceReseed = false) {
         console.log('\n📊 Step 1: Checking database state...');
         const currentExamCount = await Exam.countDocuments();
         console.log(`   Current exams in database: ${currentExamCount}`);
-        
+
         if (currentExamCount > 0 && !forceReseed) {
             console.log(`   ✅ Database already contains ${currentExamCount} exams.`);
             console.log(`   ℹ️  Use forceReseed=true or visit /api/debug/seed-exams to re-seed.`);
             console.log('='.repeat(60) + '\n');
-            return { 
-                success: true, 
-                message: 'Database already populated', 
+            return {
+                success: true,
+                message: 'Database already populated',
                 examCount: currentExamCount,
-                skipped: true 
+                skipped: true
             };
         }
 
@@ -69,13 +69,13 @@ async function seedExamsFromJSON(forceReseed = false) {
         console.log('\n📁 Step 2: Resolving JSON file paths...');
         const examsFilePath = path.join(__dirname, 'exams.json');
         const questionsFilePath = path.join(__dirname, 'questions.json');
-        
+
         console.log(`   Exams file path: ${examsFilePath}`);
         console.log(`   Questions file path: ${questionsFilePath}`);
 
         // Step 3: Check file existence
         console.log('\n🔍 Step 3: Checking file existence...');
-        
+
         if (!fs.existsSync(examsFilePath)) {
             const error = `❌ ERROR: Could not find exams.json at ${examsFilePath}`;
             console.error(`   ${error}`);
@@ -96,9 +96,9 @@ async function seedExamsFromJSON(forceReseed = false) {
 
         // Step 4: Read and parse JSON files
         console.log('\n📖 Step 4: Reading JSON files...');
-        
+
         let examsData, questionsData;
-        
+
         try {
             const examsRaw = fs.readFileSync(examsFilePath, 'utf8');
             examsData = JSON.parse(examsRaw);
@@ -115,7 +115,7 @@ async function seedExamsFromJSON(forceReseed = false) {
             questionsData = JSON.parse(questionsRaw);
             console.log(`   ✅ Successfully parsed questions.json`);
             console.log(`   📝 Found ${Object.keys(questionsData).length} question sets`);
-            
+
             // Log sample of question IDs
             const questionIds = Object.keys(questionsData);
             console.log(`   📋 Question set IDs: ${questionIds.slice(0, 5).join(', ')}${questionIds.length > 5 ? '...' : ''}`);
@@ -127,14 +127,14 @@ async function seedExamsFromJSON(forceReseed = false) {
 
         // Step 5: Transform data for MongoDB
         console.log('\n🔄 Step 5: Transforming data for MongoDB...');
-        
+
         const examsToInsert = [];
         let totalQuestions = 0;
 
         for (const exam of examsData) {
             const examId = exam.id.toString();
             const questionBank = questionsData[examId] || [];
-            
+
             if (questionBank.length === 0) {
                 console.log(`   ⚠️  Exam ID ${examId} ("${exam.title}") has no questions - skipping`);
                 continue;
@@ -172,7 +172,7 @@ async function seedExamsFromJSON(forceReseed = false) {
 
         if (orphanedIds.length > 0) {
             console.log(`   📌 Found ${orphanedIds.length} orphaned question sets`);
-            
+
             for (const id of orphanedIds) {
                 const questionBank = questionsData[id];
                 const examDocument = {
@@ -187,7 +187,7 @@ async function seedExamsFromJSON(forceReseed = false) {
                     isDefault: true,
                     createdAt: new Date()
                 };
-                
+
                 examsToInsert.push(examDocument);
                 totalQuestions += questionBank.length;
                 console.log(`   ✅ Created exam from orphaned set ID ${id} (${questionBank.length} questions)`);
@@ -208,7 +208,7 @@ async function seedExamsFromJSON(forceReseed = false) {
         }
 
         await Exam.insertMany(examsToInsert, { ordered: false });
-        
+
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         console.log(`\n${'='.repeat(60)}`);
         console.log(`✅ SEEDING COMPLETED SUCCESSFULLY in ${duration}s`);
@@ -231,11 +231,11 @@ async function seedExamsFromJSON(forceReseed = false) {
         console.error('Error message:', error.message);
         console.error('Error stack:', error.stack);
         console.error('='.repeat(60) + '\n');
-        
-        return { 
-            success: false, 
+
+        return {
+            success: false,
             error: error.message,
-            stack: error.stack 
+            stack: error.stack
         };
     }
 }
@@ -449,62 +449,51 @@ function normalizeFileName(str) {
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: (req, file) => {
-        // Xử lý tên file tiếng Việt bị lỗi font
         const decodedName = decodeFileName(file.originalname);
         const safeName = normalizeFileName(decodedName);
-        
-        // Lưu tên gốc để dùng sau này
         file.decodedOriginalName = decodedName; 
         
         return {
             folder: 'whalio-documents',
-            resource_type: 'auto', // Tự động nhận diện (Raw, Image, Video)
+            resource_type: 'auto', // Tự động nhận diện (Ảnh/Video/File)
             public_id: safeName.replace(path.extname(safeName), ''),
-            // ⚠️ QUAN TRỌNG: Bỏ 'allowed_formats' ở đây để Cloudinary không chặn nhầm.
-            // Chúng ta sẽ tự kiểm tra kỹ ở bước fileFilter bên dưới.
+            // ❌ ĐÃ XÓA DÒNG allowed_formats Ở ĐÂY ĐỂ TRÁNH XUNG ĐỘT
         };
     }
 });
 
-// 2. Bộ lọc (Người bảo vệ)
+// 2. Bộ lọc kiểm duyệt (Giữ nguyên cái xịn lúc nãy)
 const upload = multer({
     storage,
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
     fileFilter: (req, file, cb) => {
         console.log('📂 Đang xử lý file:', file.originalname);
         
-        // Chuyển đuôi file về chữ thường để so sánh
         const ext = path.extname(file.originalname).toLowerCase();
-        
-        // Danh sách đuôi file cho phép
         const allowedExtensions = [
-            '.pdf', '.doc', '.docx', 
-            '.txt', '.rtf',
-            '.jpg', '.jpeg', '.png', 
+            '.pdf', '.doc', '.docx', '.txt', '.rtf',
+            '.jpg', '.jpeg', '.png', '.gif',
             '.xls', '.xlsx', '.ppt', '.pptx', 
             '.zip', '.rar'
         ];
-
-        // Danh sách MIME Type cho phép (Bao gồm cả loại "lạ" của Windows)
+        
         const allowedMimes = [
             'application/pdf',
             'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'text/plain',
-            'image/jpeg', 'image/png',
-            'application/octet-stream', // Fix lỗi Word trên Windows/Cốc Cốc
-            'application/zip', 
-            'application/x-zip-compressed'
+            'image/jpeg', 'image/png', 'image/gif',
+            'application/octet-stream',
+            'application/zip', 'application/x-zip-compressed', 'application/x-rar-compressed'
         ];
 
-        // LOGIC KIỂM TRA: Chỉ cần thỏa mãn 1 trong 2 điều kiện là CHO QUA
+        // Chỉ cần trúng 1 trong 2 điều kiện là cho qua
         if (allowedExtensions.includes(ext) || allowedMimes.includes(file.mimetype)) {
-            console.log('   ✅ File hợp lệ!');
-            return cb(null, true); // Quan trọng: có chữ return để dừng hàm ngay
+            console.log('   ✅ File hợp lệ! Đang gửi lên Cloudinary...');
+            return cb(null, true);
         }
 
-        // Nếu không thỏa mãn cái nào mới báo lỗi
-        console.error('   ❌ File bị chặn (MIME hoặc đuôi lạ):', file.mimetype);
+        console.error('   ❌ File bị chặn:', file.originalname);
         cb(new Error(`Định dạng file không hỗ trợ!`), false);
     }
 });
@@ -685,14 +674,14 @@ app.post('/api/upload-document', (req, res, next) => {
         if (err) {
             console.error('Multer error:', err);
             if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: 'File quá lớn! Kích thước tối đa là 50MB.' 
+                return res.status(400).json({
+                    success: false,
+                    message: 'File quá lớn! Kích thước tối đa là 50MB.'
                 });
             }
-            return res.status(400).json({ 
-                success: false, 
-                message: err.message || 'Lỗi tải file lên' 
+            return res.status(400).json({
+                success: false,
+                message: err.message || 'Lỗi tải file lên'
             });
         }
         next();
@@ -741,7 +730,7 @@ app.post('/api/upload-document', (req, res, next) => {
 
         console.log(`✅ Document uploaded to Cloudinary: ${newDoc.name} (ID: ${newDoc._id})`);
         console.log(`🔗 Cloudinary URL: ${cloudinaryUrl}`);
-        
+
         // Return status 200 with success
         return res.status(200).json({ success: true, document: docResponse });
     } catch (error) {
@@ -927,11 +916,11 @@ app.get('/api/exams/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const exam = await Exam.findOne({ examId: id }).lean();
-        
+
         if (!exam) {
             return res.status(404).json({ success: false, message: 'Exam not found' });
         }
-        
+
         res.json({
             success: true,
             exam: {
@@ -1063,7 +1052,7 @@ app.post('/api/posts', upload.fields([
                         // Extract public_id from Cloudinary path
                         const publicId = file.filename; // Cloudinary public_id
                         await cloudinary.uploader.destroy(publicId);
-                    } catch (e) { 
+                    } catch (e) {
                         console.warn('Failed to delete video from Cloudinary:', e.message);
                     }
                 }
@@ -1255,28 +1244,28 @@ app.post('/api/posts/edit', async (req, res) => {
     try {
         // CRITICAL: Extract postId as STRING (MongoDB ObjectId)
         let { postId, content, username } = req.body;
-        
+
         // DEFENSIVE: Ensure postId is always a string, never a number
         postId = String(postId);
-        
+
         console.log('📝 Edit Post Request - postId:', postId, 'type:', typeof postId);
         console.log('📝 Edit Post Request - username:', username);
         console.log('📝 Edit Post Request - content length:', content?.length);
-        
+
         // Validation
         if (!postId || postId === 'undefined' || postId === 'null') {
             console.error('❌ Invalid postId received:', postId);
             return res.status(400).json({ success: false, message: "ID bài viết không hợp lệ!" });
         }
-        
+
         if (!content || content.trim().length === 0) {
             return res.status(400).json({ success: false, message: "Nội dung bài viết không được trống!" });
         }
-        
+
         if (!username) {
             return res.status(401).json({ success: false, message: "Chưa đăng nhập!" });
         }
-        
+
         // Find post by MongoDB ObjectId (as string)
         const post = await Post.findById(postId);
 
@@ -1295,7 +1284,7 @@ app.post('/api/posts/edit', async (req, res) => {
         post.content = content;
         post.editedAt = new Date();
         await post.save();
-        
+
         console.log('✅ Post updated successfully - ID:', postId);
 
         res.json({ success: true, message: "Đã cập nhật bài viết", post });
@@ -1304,8 +1293,8 @@ app.post('/api/posts/edit', async (req, res) => {
         console.error('Error type:', err.name);
         console.error('Error message:', err.message);
         console.error('Full error:', JSON.stringify(err, null, 2));
-        res.status(500).json({ 
-            success: false, 
+        res.status(500).json({
+            success: false,
             message: "Lỗi server: " + err.message,
             errorType: err.name
         });
@@ -1651,11 +1640,11 @@ app.get('/api/debug/seed-exams', async (req, res) => {
     console.log('\n🔧 DEBUG ENDPOINT: Manual seed triggered via API');
     console.log('   Request from:', req.ip);
     console.log('   Time:', new Date().toISOString());
-    
+
     try {
         const forceReseed = req.query.force === 'true';
         const result = await seedExamsFromJSON(forceReseed);
-        
+
         res.json(result);
     } catch (error) {
         res.status(500).json({
@@ -1671,7 +1660,7 @@ app.get('/api/debug/db-status', async (req, res) => {
     try {
         const examCount = await Exam.countDocuments();
         const exams = await Exam.find({}, 'examId title subject questions createdBy isDefault').limit(10).lean();
-        
+
         res.json({
             success: true,
             database: {
@@ -1704,7 +1693,7 @@ app.get('/api/debug/db-status', async (req, res) => {
 app.get('/api/events', async (req, res) => {
     try {
         const { username } = req.query;
-        
+
         if (!username) {
             return res.json({ success: false, message: 'Username is required' });
         }
@@ -1754,7 +1743,7 @@ app.delete('/api/events/:id', async (req, res) => {
         }
 
         const event = await Event.findById(id);
-        
+
         if (!event) {
             return res.json({ success: false, message: 'Event not found' });
         }
@@ -1776,7 +1765,7 @@ app.delete('/api/events/:id', async (req, res) => {
 // This catches any errors not handled by route-specific error handling
 app.use((err, req, res, next) => {
     console.error('Unhandled error:', err);
-    
+
     // Always return JSON for API routes
     if (req.path.startsWith('/api/')) {
         return res.status(err.status || 500).json({
@@ -1784,7 +1773,7 @@ app.use((err, req, res, next) => {
             message: err.message || 'Lỗi server không xác định'
         });
     }
-    
+
     // For non-API routes, send generic error
     res.status(err.status || 500).send('Something went wrong!');
 });
