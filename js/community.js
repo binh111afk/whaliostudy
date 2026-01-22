@@ -251,18 +251,42 @@ export const Community = {
 
             // Delete Post Button
             if (e.target.closest('.btn-delete-post')) {
-                console.log(' Delete post button clicked');
-                const postCard = e.target.closest('.post-card');
-                const postId = parseInt(postCard?.dataset.postId);
-                if (postId) this.deletePost(postId);
+                console.log('🔴 Delete post button clicked');
+                const btn = e.target.closest('.btn-delete-post');
+                // Robust ID retrieval: getAttribute first, dataset as fallback
+                const postId = btn?.getAttribute('data-post-id') || btn?.dataset.postId;
+                
+                console.log('🔍 Target Button:', btn);
+                console.log('🔍 Target ID:', postId);
+                
+                if (!postId) {
+                    console.error('❌ Delete failed: No postId found on button');
+                    console.error('Button HTML:', btn?.outerHTML);
+                    return;
+                }
+                
+                console.log('🎯 Attempting to delete post ID:', postId);
+                this.deletePost(postId);
             }
 
             // Edit Post Button
             if (e.target.closest('.btn-edit-post')) {
-                console.log(' Edit post button clicked');
-                const postCard = e.target.closest('.post-card');
-                const postId = parseInt(postCard?.dataset.postId);
-                if (postId) this.openEditPostModal(postId);
+                console.log('✏️ Edit post button clicked');
+                const btn = e.target.closest('.btn-edit-post');
+                // Robust ID retrieval: getAttribute first, dataset as fallback
+                const postId = btn?.getAttribute('data-post-id') || btn?.dataset.postId;
+                
+                console.log('🔍 Target Button:', btn);
+                console.log('🔍 Target ID:', postId);
+                
+                if (!postId) {
+                    console.error('❌ Edit failed: No postId found on button');
+                    console.error('Button HTML:', btn?.outerHTML);
+                    return;
+                }
+                
+                console.log('🎯 Attempting to edit post ID:', postId);
+                this.openEditPostModal(postId);
             }
 
             // Submit Comment Button (CRITICAL FIX)
@@ -462,6 +486,9 @@ export const Community = {
         const currentUser = AppState.currentUser;
         const isCurrentUser = currentUser?.username === post.author;
         const displayName = isCurrentUser ? 'Bạn' : (post.authorFullName || post.author);
+        
+        // Handle both MongoDB _id and legacy id
+        const postId = post._id || post.id;
 
         // Uses current user's avatar if it's their post
         const postAvatar = isCurrentUser
@@ -481,7 +508,7 @@ export const Community = {
         const isEdited = post.editedAt && post.editedAt !== post.createdAt;
 
         return `
-            <div class="post-card" data-post-id="${post.id}">
+            <div class="post-card" data-post-id="${postId}">
                 <div class="post-header">
                     <div class="post-author-info">
                         <img src="${postAvatar}" class="author-avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" alt="avatar">
@@ -494,8 +521,8 @@ export const Community = {
                         </div>
                     </div>
                     <div class="post-actions-menu" style="display: flex; gap: 4px;">
-                        ${canEdit ? '<button class="btn-post-menu btn-edit-post" style="background: none; border: none; color: #6366f1; cursor: pointer; padding: 4px 6px; font-size: 13px; font-weight: 500;">Sửa</button>' : ''}
-                        ${canDelete ? '<button class="btn-post-menu btn-delete-post" style="background: none; border: none; color: #dc2626; cursor: pointer; padding: 4px 6px; font-size: 13px; font-weight: 500;">Xóa</button>' : ''}
+                        ${canEdit ? '<button class="btn-post-menu btn-edit-post" data-post-id="' + postId + '" style="background: none; border: none; color: #6366f1; cursor: pointer; padding: 4px 6px; font-size: 13px; font-weight: 500;">Sửa</button>' : ''}
+                        ${canDelete ? '<button class="btn-post-menu btn-delete-post" data-post-id="' + postId + '" style="background: none; border: none; color: #dc2626; cursor: pointer; padding: 4px 6px; font-size: 13px; font-weight: 500;">Xóa</button>' : ''}
                     </div>
                 </div>
                 <div class="post-content">
@@ -900,7 +927,16 @@ export const Community = {
 
     // ==================== DELETE POST ====================
     async deletePost(postId) {
-        if (!AppState.currentUser || !AppState.currentUser.username) return;
+        if (!AppState.currentUser || !AppState.currentUser.username) {
+            Swal.fire('Chưa đăng nhập', 'Vui lòng đăng nhập', 'warning');
+            return;
+        }
+        
+        if (!postId) {
+            console.error('❌ Delete failed: postId is undefined');
+            Swal.fire('Lỗi', 'Không xác định được bài viết', 'error');
+            return;
+        }
 
         const result = await Swal.fire({
             title: 'Xác nhận xóa',
@@ -914,6 +950,8 @@ export const Community = {
         });
 
         if (!result.isConfirmed) return;
+        
+        console.log('🛠️ Sending delete request for post ID:', postId);
 
         try {
             const response = await fetch('/api/posts/delete', {
@@ -934,10 +972,25 @@ export const Community = {
 
     // ==================== EDIT POST ====================
     openEditPostModal(postId) {
-        const post = this.allPosts.find(p => p.id === postId);
-        if (!AppState.currentUser || !AppState.currentUser.username) return;
-        if (!post || AppState.currentUser.username !== post.author) return;
+        const post = this.allPosts.find(p => String(p._id || p.id) === String(postId));
+        
+        if (!post) {
+            console.error('❌ Post not found with ID:', postId);
+            Swal.fire('Không tìm thấy', 'Không tìm thấy bài viết', 'error');
+            return;
+        }
+        
+        if (!AppState.currentUser || !AppState.currentUser.username) {
+            Swal.fire('Chưa đăng nhập', 'Vui lòng đăng nhập để chỉnh sửa', 'warning');
+            return;
+        }
+        
+        if (AppState.currentUser.username !== post.author) {
+            Swal.fire('Không có quyền', 'Bạn chỉ có thể sửa bài viết của mình', 'error');
+            return;
+        }
 
+        console.log('✏️ Opening edit modal for post:', post);
         document.getElementById('editPostContent').value = post.content;
         const modal = document.getElementById('editPostModal');
         modal.dataset.postId = postId;
