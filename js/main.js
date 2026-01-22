@@ -503,7 +503,7 @@ const EventHandlers = {
             registerForm.addEventListener('submit', this.handleRegister.bind(this));
         }
 
-        const uploadForm = document.querySelector('#uploadDocModal form');
+        const uploadForm = document.getElementById('uploadForm');
         if (uploadForm && !uploadForm.dataset.listenerAdded) {
             uploadForm.dataset.listenerAdded = 'true';
             uploadForm.addEventListener('submit', this.handleUploadDocument.bind(this));

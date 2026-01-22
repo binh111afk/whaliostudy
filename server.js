@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const fs = require('fs').promises;
 const multer = require('multer');
@@ -223,18 +224,18 @@ function normalizeFileName(str) {
 // ==================== CLOUDINARY STORAGE CONFIGURATION ====================
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
-    params: {
-        folder: 'whalio-documents',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar'],
-        resource_type: 'auto',
-        public_id: (req, file) => {
-            const decodedName = decodeFileName(file.originalname);
-            const safeName = normalizeFileName(decodedName);
-            // Store original name for later use
-            file.decodedOriginalName = decodedName;
-            // Remove extension from public_id (Cloudinary adds it automatically)
-            return safeName.replace(path.extname(safeName), '');
-        }
+    params: (req, file) => {
+        const decodedName = decodeFileName(file.originalname);
+        const safeName = normalizeFileName(decodedName);
+        // Store original name for later use
+        file.decodedOriginalName = decodedName;
+        
+        return {
+            folder: 'whalio-documents',
+            resource_type: 'auto',
+            public_id: safeName.replace(path.extname(safeName), ''),
+            allowed_formats: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar']
+        };
     }
 });
 

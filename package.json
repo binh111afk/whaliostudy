@@ -12,6 +12,7 @@
   "type": "commonjs",
   "dependencies": {
     "cloudinary": "^1.41.3",
+    "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "mongoose": "^8.21.0",
     "multer": "^2.0.2",
