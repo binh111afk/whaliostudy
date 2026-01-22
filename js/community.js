@@ -972,30 +972,56 @@ export const Community = {
 
     // ==================== EDIT POST ====================
     openEditPostModal(postId) {
+        console.log('✏️ Opening edit modal for post ID:', postId);
+        
+        // Find post using MongoDB _id compatibility
         const post = this.allPosts.find(p => String(p._id || p.id) === String(postId));
         
         if (!post) {
             console.error('❌ Post not found with ID:', postId);
-            Swal.fire('Không tìm thấy', 'Không tìm thấy bài viết', 'error');
+            console.error('Available posts:', this.allPosts.map(p => ({ id: p._id || p.id, content: p.content?.substring(0, 30) })));
+            Swal.fire('Không tìm thấy', 'Không tìm thấy bài viết để chỉnh sửa', 'error');
             return;
         }
         
+        // Verify user is logged in
         if (!AppState.currentUser || !AppState.currentUser.username) {
             Swal.fire('Chưa đăng nhập', 'Vui lòng đăng nhập để chỉnh sửa', 'warning');
             return;
         }
         
+        // Verify user has permission (must be author)
         if (AppState.currentUser.username !== post.author) {
             Swal.fire('Không có quyền', 'Bạn chỉ có thể sửa bài viết của mình', 'error');
             return;
         }
 
-        console.log('✏️ Opening edit modal for post:', post);
-        document.getElementById('editPostContent').value = post.content;
+        console.log('✅ Post found:', { id: postId, author: post.author, content: post.content?.substring(0, 50) });
+        
+        // Populate textarea with current content
+        const textarea = document.getElementById('editPostContent');
+        if (textarea) {
+            textarea.value = post.content;
+        } else {
+            console.error('❌ Textarea #editPostContent not found');
+            return;
+        }
+        
+        // Get modal and store postId (as string, NOT parsed!)
         const modal = document.getElementById('editPostModal');
+        if (!modal) {
+            console.error('❌ Modal #editPostModal not found');
+            return;
+        }
+        
+        // CRITICAL: Store raw postId (MongoDB ObjectId string)
         modal.dataset.postId = postId;
+        
+        // Show modal
         modal.style.display = 'flex';
-        modal.classList.add('active');
+        setTimeout(() => modal.classList.add('active'), 10);
+        
+        console.log('✅ Edit modal opened with postId:', modal.dataset.postId);
     },
 
     closeEditPostModal() {
@@ -1006,34 +1032,67 @@ export const Community = {
 
     async submitEditPost() {
         const modal = document.getElementById('editPostModal');
-        const postId = parseInt(modal?.dataset.postId);
+        // CRITICAL FIX: Don't use parseInt() on MongoDB ObjectId - keep as string!
+        const postId = modal?.dataset.postId;
         const content = document.getElementById('editPostContent')?.value.trim();
 
+        console.log('📝 Submit Edit - Post ID:', postId);
+        console.log('📝 Submit Edit - Content:', content?.substring(0, 50) + '...');
+
+        // Validation
         if (!postId || !content) {
-            Swal.fire('Thiếu nội dung', 'Vui lòng nhập nội dung', 'warning');
+            Swal.fire('Thiếu nội dung', 'Vui lòng nhập nội dung bài viết', 'warning');
             return;
         }
 
-        if (!AppState.currentUser || !AppState.currentUser.username) return;
+        if (!AppState.currentUser || !AppState.currentUser.username) {
+            Swal.fire('Chưa đăng nhập', 'Vui lòng đăng nhập để chỉnh sửa', 'warning');
+            return;
+        }
 
         try {
+            console.log('🚀 Sending edit request to /api/posts/edit...');
             const response = await fetch('/api/posts/edit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ postId, content, username: AppState.currentUser.username })
+                body: JSON.stringify({ 
+                    postId: postId,  // MongoDB ObjectId as string
+                    content: content, 
+                    username: AppState.currentUser.username 
+                })
             });
 
+            console.log('📡 Response status:', response.status);
+
+            if (!response.ok) {
+                if (response.status === 500) {
+                    Swal.fire('Lỗi Server', 'Lỗi server khi cập nhật bài viết (500)', 'error');
+                    return;
+                }
+                throw new Error('Server returned ' + response.status);
+            }
+
             const data = await response.json();
+            console.log('✅ Server response:', data);
+
             if (data.success) {
+                // Success feedback
+                Swal.fire('Thành công!', 'Cập nhật bài viết thành công!', 'success');
+                
+                // Close modal
+                this.closeEditPostModal();
+                
+                // Reload posts and refresh UI
                 await this.loadPosts();
                 this.renderFeed();
-                this.closeEditPostModal();
+                
+                console.log('✅ Post updated successfully');
             } else {
                 Swal.fire('Thất bại', data.message || 'Chỉnh sửa thất bại', 'error');
             }
         } catch (error) {
-            console.error(' Edit post error:', error);
-            Swal.fire('Lỗi', 'Lỗi khi chỉnh sửa', 'error');
+            console.error('❌ Edit post error:', error);
+            Swal.fire('Lỗi', 'Lỗi khi chỉnh sửa: ' + error.message, 'error');
         }
     },
 
