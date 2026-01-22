@@ -465,23 +465,52 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({
     storage,
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+    limits: { fileSize: 50 * 1024 * 1024 }, // Giới hạn 50MB
     fileFilter: (req, file, cb) => {
-        // Allowed MIME types
+        // 1. In ra Log để xem server nhận được cái gì (Giúp debug nếu vẫn lỗi)
+        console.log('📂 Đang xử lý file:', file.originalname);
+        console.log('   👉 MIME Type nhận được:', file.mimetype);
+
+        // 2. Danh sách đuôi file cho phép (Đây là chốt chặn quan trọng nhất)
+        const allowedExtensions = [
+            '.pdf', '.doc', '.docx', 
+            '.txt', '.rtf',
+            '.jpg', '.jpeg', '.png', 
+            '.xls', '.xlsx', '.ppt', '.pptx', '.zip', '.rar'
+        ];
+
+        // 3. Lấy đuôi file người dùng gửi lên (chuyển về chữ thường)
+        const fileExt = path.extname(file.originalname).toLowerCase();
+
+        // === LOGIC KIỂM TRA ===
+        
+        // CÁCH 1: Kiểm tra đuôi file (Dễ tính nhất - Chấp nhận mọi biến thể MIME)
+        if (allowedExtensions.includes(fileExt)) {
+            console.log('   ✅ Chấp nhận qua đuôi file:', fileExt);
+            return cb(null, true);
+        }
+
+        // CÁCH 2: Kiểm tra MIME Type chuẩn (Dự phòng nếu file không có đuôi)
         const allowedMimeTypes = [
-            'application/pdf',                                                                      // PDF
-            'application/msword',                                                                   // Word .doc
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',            // Word .docx
-            'text/plain',                                                                          // Text files
-            'image/jpeg',                                                                          // JPEG images
-            'image/png'                                                                            // PNG images
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain',
+            'image/jpeg',
+            'image/png',
+            'application/octet-stream', // Cho phép dòng này để fix lỗi file Word trên Windows
+            'application/zip',
+            'application/x-zip-compressed'
         ];
 
         if (allowedMimeTypes.includes(file.mimetype)) {
-            cb(null, true); // Accept file
-        } else {
-            cb(new Error('An unknown file format not allowed'), false); // Reject file
+            console.log('   ✅ Chấp nhận qua MIME Type:', file.mimetype);
+            return cb(null, true);
         }
+
+        // Nếu trượt cả 2 vòng -> Từ chối
+        console.error('   ❌ TỪ CHỐI FILE:', file.originalname, 'Type:', file.mimetype);
+        cb(new Error(`Định dạng file không hỗ trợ! (Nhận được: ${file.mimetype})`), false);
     }
 });
 
