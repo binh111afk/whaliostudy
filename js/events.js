@@ -3,6 +3,27 @@ export const EventManager = {
     STORAGE_KEY: 'whalio_events',
     events: [],
 
+    getCurrentUsername() {
+        // 1. Thử lấy từ AppState (RAM - nếu có)
+        if (window.AppState && window.AppState.currentUser && window.AppState.currentUser.username) {
+            return window.AppState.currentUser.username;
+        }
+        
+        // 2. Thử lấy từ LocalStorage 'currentUser' (Ổ cứng - Cách phổ biến nhất)
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            try {
+                const userObj = JSON.parse(savedUser);
+                return userObj.username;
+            } catch (e) {
+                console.error('Lỗi đọc user:', e);
+            }
+        }
+
+        // 3. Fallback: Thử lấy key cũ (đề phòng)
+        return localStorage.getItem('currentUsername');
+    },
+
     // ===== INITIALIZATION =====
     async init() {
         console.log('🚀 EventManager initializing...');
@@ -14,7 +35,7 @@ export const EventManager = {
     // ===== DATA OPERATIONS =====
     async loadEvents() {
         try {
-            const username = localStorage.getItem('currentUsername');
+            const username = this.getCurrentUsername();
             if (!username) {
                 console.warn('⚠️ No username found, skipping event load');
                 this.events = [];
@@ -58,7 +79,7 @@ export const EventManager = {
             return false;
         }
 
-        const username = localStorage.getItem('currentUsername');
+        const username = this.getCurrentUsername();
         if (!username) {
             Swal.fire('Lỗi', 'Vui lòng đăng nhập!', 'warning');
             return false;
@@ -96,7 +117,7 @@ export const EventManager = {
     },
 
     async deleteEvent(id) {
-        const username = localStorage.getItem('currentUsername');
+        const username = this.getCurrentUsername();
         if (!username) {
             Swal.fire('Lỗi', 'Vui lòng đăng nhập!', 'warning');
             return;
