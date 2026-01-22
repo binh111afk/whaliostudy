@@ -18,12 +18,8 @@ export const ExamRunner = {
         try {
             console.log("🚀 Đang khởi động hệ thống thi...");
 
-            const qResponse = await fetch('questions.json');
-            if (qResponse.ok) {
-                this.questionBank = await qResponse.json();
-            } else {
-                this.questionBank = {};
-            }
+            // Load exams from MongoDB API
+            await this.loadExamsAndQuestions();
 
             if (window.ExamCreator) {
                 await ExamCreator.loadAndRenderExams();
@@ -32,6 +28,36 @@ export const ExamRunner = {
             console.log("✅ Hệ thống đã sẵn sàng!");
         } catch (error) {
             console.error("❌ Lỗi khởi tạo:", error);
+        }
+    },
+
+    async loadExamsAndQuestions() {
+        try {
+            const response = await fetch('/api/exams');
+            if (!response.ok) {
+                console.error('Failed to load exams from API');
+                this.questionBank = {};
+                this.allExamsMetadata = [];
+                return;
+            }
+
+            const exams = await response.json();
+            
+            // Build question bank from exams
+            this.questionBank = {};
+            this.allExamsMetadata = exams;
+            
+            exams.forEach(exam => {
+                if (exam.questionBank && exam.questionBank.length > 0) {
+                    this.questionBank[String(exam.id)] = exam.questionBank;
+                }
+            });
+
+            console.log(`✅ Loaded ${exams.length} exams with ${Object.keys(this.questionBank).length} question banks from MongoDB`);
+        } catch (error) {
+            console.error('Error loading exams and questions:', error);
+            this.questionBank = {};
+            this.allExamsMetadata = [];
         }
     },
 
@@ -49,7 +75,8 @@ export const ExamRunner = {
         const checkData = () => {
             const data = this.questionBank[String(examId)];
             if (!data || data.length === 0) {
-                this.init().then(() => {
+                // Reload from API if data not found
+                this.loadExamsAndQuestions().then(() => {
                     if (!this.questionBank[String(examId)]) {
                         alert("⚠️ Đề thi này chưa có dữ liệu câu hỏi! (ID: " + examId + ")");
                     } else {

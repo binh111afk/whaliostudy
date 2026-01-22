@@ -27,11 +27,105 @@ mongoose.connect(MONGO_URI, {
 })
 .then(() => {
     console.log('🚀 Whalio is now connected to MongoDB Cloud');
+    seedInitialData(); // Automatically seed data on startup
 })
 .catch((err) => {
     console.error('❌ MongoDB connection failed:', err);
     process.exit(1);
 });
+
+// ==================== DATA SEEDING FUNCTION ====================
+async function seedInitialData() {
+    try {
+        // Check if exams already exist in database
+        const examCount = await Exam.countDocuments();
+        
+        if (examCount > 0) {
+            console.log(`✅ Database already contains ${examCount} exams. Skipping seed.`);
+            return;
+        }
+
+        console.log('📦 Starting database seeding...');
+        
+        // Read exams.json
+        const examsFilePath = path.join(__dirname, 'exams.json');
+        const questionsFilePath = path.join(__dirname, 'questions.json');
+        
+        if (!require('fs').existsSync(examsFilePath)) {
+            console.warn('⚠️ exams.json not found. Skipping seed.');
+            return;
+        }
+
+        if (!require('fs').existsSync(questionsFilePath)) {
+            console.warn('⚠️ questions.json not found. Skipping seed.');
+            return;
+        }
+
+        const examsData = JSON.parse(require('fs').readFileSync(examsFilePath, 'utf8'));
+        const questionsData = JSON.parse(require('fs').readFileSync(questionsFilePath, 'utf8'));
+        
+        console.log(`📚 Found ${examsData.length} exams in exams.json`);
+        console.log(`📝 Found ${Object.keys(questionsData).length} question sets in questions.json`);
+
+        // Transform and insert exams with their question banks
+        const examsToInsert = examsData.map(exam => {
+            // Parse time if it's a string like "60 phút"
+            let timeValue = exam.time;
+            if (typeof timeValue === 'string') {
+                timeValue = parseInt(timeValue.replace(/\D/g, '')) || 45;
+            }
+
+            return {
+                examId: exam.id.toString(),
+                title: exam.title,
+                subject: exam.subject || 'Tự tạo',
+                questions: exam.questions,
+                time: timeValue,
+                image: exam.image || './img/snvvnghen.png',
+                createdBy: 'System',
+                questionBank: questionsData[exam.id.toString()] || [],
+                isDefault: true,
+                createdAt: exam.createdAt ? new Date(exam.createdAt) : new Date()
+            };
+        });
+
+        // Filter out exams that don't have question banks
+        const validExams = examsToInsert.filter(exam => exam.questionBank.length > 0);
+        
+        if (validExams.length > 0) {
+            await Exam.insertMany(validExams);
+            console.log(`✅ Successfully seeded ${validExams.length} exams with ${validExams.reduce((sum, e) => sum + e.questionBank.length, 0)} total questions!`);
+        } else {
+            console.warn('⚠️ No valid exams found to seed (missing question banks)');
+        }
+
+        // Also seed exams that have question banks but aren't in exams.json
+        const existingExamIds = new Set(examsData.map(e => e.id.toString()));
+        const orphanedQuestionSets = Object.keys(questionsData).filter(id => !existingExamIds.has(id));
+        
+        if (orphanedQuestionSets.length > 0) {
+            console.log(`📌 Found ${orphanedQuestionSets.length} question sets without exam metadata`);
+            const orphanedExams = orphanedQuestionSets.map(id => ({
+                examId: id,
+                title: `Đề thi ${id}`,
+                subject: 'Tự tạo',
+                questions: questionsData[id].length,
+                time: 45,
+                image: './img/snvvnghen.png',
+                createdBy: 'System',
+                questionBank: questionsData[id],
+                isDefault: true,
+                createdAt: new Date()
+            }));
+            await Exam.insertMany(orphanedExams);
+            console.log(`✅ Seeded ${orphanedExams.length} additional exams from orphaned question sets`);
+        }
+
+    } catch (error) {
+        console.error('❌ Error during database seeding:', error);
+        // Don't crash the server if seeding fails
+    }
+}
 
 // ==================== MONGOOSE SCHEMAS & MODELS ====================
 
@@ -74,6 +168,7 @@ const examSchema = new mongoose.Schema({
     image: { type: String, default: './img/snvvnghen.png.png' },
     createdBy: { type: String, ref: 'User' },
     questionBank: [{ type: mongoose.Schema.Types.Mixed }],
+    isDefault: { type: Boolean, default: false }, // Mark initial seeded exams
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -639,12 +734,43 @@ app.get('/api/exams', async (req, res) => {
             time: e.time,
             image: e.image,
             createdBy: e.createdBy,
+            questionBank: e.questionBank || [], // Include question bank
             createdAt: e.createdAt
         }));
         res.json(examList);
     } catch (err) {
         console.error('Get exams error:', err);
         res.json([]);
+    }
+});
+
+// Get single exam with questions
+app.get('/api/exams/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const exam = await Exam.findOne({ examId: id }).lean();
+        
+        if (!exam) {
+            return res.status(404).json({ success: false, message: 'Exam not found' });
+        }
+        
+        res.json({
+            success: true,
+            exam: {
+                id: exam.examId,
+                title: exam.title,
+                subject: exam.subject,
+                questions: exam.questions,
+                time: exam.time,
+                image: exam.image,
+                createdBy: exam.createdBy,
+                questionBank: exam.questionBank || [],
+                createdAt: exam.createdAt
+            }
+        });
+    } catch (err) {
+        console.error('Get exam error:', err);
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
