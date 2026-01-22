@@ -694,9 +694,10 @@ export const Timetable = {
     renderClassCard(cls) {
         const colorIndex = Math.abs(cls.subject.charCodeAt(0)) % this.pastelColors.length;
         const bgColor = this.pastelColors[colorIndex];
+        const classId = cls._id || cls.id; // Handle both MongoDB _id and id
         
         return `
-            <div class="class-card" style="background-color: ${bgColor};" data-class-id="${cls.id}">
+            <div class="class-card" style="background-color: ${bgColor};" data-class-id="${classId}">
                 <div class="class-subject" title="${this.escapeHtml(cls.subject)}">
                     ${this.escapeHtml(cls.subject)}
                 </div>
@@ -716,11 +717,11 @@ export const Timetable = {
                     </div>
                 </div>
 
-                <button class="btn-edit-class" data-class-id="${cls.id}" title="Sửa môn này">
+                <button class="btn-edit-class" data-class-id="${classId}" title="Sửa môn này">
                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                 </button>
 
-                <button class="btn-delete-class" data-class-id="${cls.id}" title="Xóa môn này">
+                <button class="btn-delete-class" data-class-id="${classId}" title="Xóa môn này">
                     <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
                     </svg>
@@ -792,10 +793,14 @@ export const Timetable = {
     },
 
     openEditModal(classId) {
-        const cls = this.currentTimetable.find(c => String(c.id) === String(classId));
-        if (!cls) return;
+        const cls = this.currentTimetable.find(c => String(c._id || c.id) === String(classId));
+        if (!cls) {
+            console.error('❌ Class not found with ID:', classId);
+            return;
+        }
 
         this.editingClassId = classId; // Đánh dấu là đang sửa
+        console.log('✏️ Opening edit modal for class:', cls);
 
         const modal = document.getElementById('createClassModal');
         if (!modal) return;

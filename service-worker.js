@@ -1,4 +1,4 @@
-const CACHE_NAME = 'whalio-cache-v2'; // Đổi tên cache để ép trình duyệt xóa cache cũ
+const CACHE_NAME = 'whalio-cache-v3'; // Lên đời v3 để xóa cache cũ
 
 const STATIC_CACHE_URLS = [
     './index.html',
@@ -20,7 +20,7 @@ const STATIC_CACHE_URLS = [
 ];
 
 self.addEventListener('install', (event) => {
-    self.skipWaiting(); // Ép service worker mới chạy ngay lập tức
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_CACHE_URLS))
     );
@@ -31,7 +31,6 @@ self.addEventListener('activate', (event) => {
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cacheName) => {
-                    // Xóa tất cả cache cũ không phải v2
                     if (cacheName !== CACHE_NAME) {
                         return caches.delete(cacheName);
                     }
@@ -42,19 +41,22 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-    const url = new URL(event.request.url);
-
-    // 1. KHÔNG BAO GIỜ CACHE API (Quan trọng nhất)
-    if (url.pathname.startsWith('/api/')) {
-        return; // Để mặc cho trình duyệt tự xử lý (gọi thẳng lên server)
+    // 1. CHẶN LỖI CHROME-EXTENSION (Quan trọng)
+    if (!event.request.url.startsWith('http')) {
+        return; 
     }
 
-    // 2. Chiến thuật: Network First (Ưu tiên mạng) cho các file code
-    // Giúp code mới luôn được cập nhật
+    const url = new URL(event.request.url);
+
+    // 2. Không cache API
+    if (url.pathname.startsWith('/api/')) {
+        return;
+    }
+
+    // 3. Network First cho file code
     event.respondWith(
         fetch(event.request)
             .then((networkResponse) => {
-                // Tải được từ mạng -> Lưu bản mới vào cache -> Trả về
                 const responseClone = networkResponse.clone();
                 caches.open(CACHE_NAME).then((cache) => {
                     cache.put(event.request, responseClone);
@@ -62,7 +64,6 @@ self.addEventListener('fetch', (event) => {
                 return networkResponse;
             })
             .catch(() => {
-                // Mất mạng -> Mới lôi cache ra dùng
                 return caches.match(event.request);
             })
     );
