@@ -328,24 +328,21 @@ export const DocumentManager = {
             const fileType = Utils.getFileType(doc.type);
             const uploadDate = doc.time ? `${doc.date} ${doc.time}` : doc.date;
             
-            // --- 🛠️ FIX LOGIC TẠO LINK DOWNLOAD & FILE NAME ---
-            // 1. Xác định tên file chuẩn (có đuôi)
-            const extension = doc.path.substring(doc.path.lastIndexOf('.'));
-            let downloadFileName = doc.name;
-            if (!downloadFileName.toLowerCase().endsWith(extension.toLowerCase())) {
-                downloadFileName += extension;
+            // --- 🛠️ XỬ LÝ LINK THÔNG MINH ---
+            const extension = doc.path.substring(doc.path.lastIndexOf('.')).toLowerCase();
+            
+            // 1. Xử lý Link XEM (Preview)
+            let viewUrl = doc.path;
+            // Nếu là file Office (Word, Excel, PowerPoint) -> Dùng Google/Microsoft Viewer để xem online
+            if (['.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt'].includes(extension)) {
+                viewUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(doc.path)}`;
             }
-
-            // 2. Tạo Link "Ép tải xuống" (Force Download) cho Cloudinary
-            // Chèn cờ fl_attachment để server trả về đúng tên file mong muốn
-            let downloadUrl = doc.path;
-            if (doc.path.includes('/upload/')) {
-                // Mẹo: Chèn fl_attachment:tên_file vào URL
-                // Ví dụ: .../upload/fl_attachment:BaiTap.docx/v123/file
-                const attachmentFlag = `fl_attachment:${encodeURIComponent(downloadFileName)}`;
-                downloadUrl = doc.path.replace('/upload/', `/upload/${attachmentFlag}/`);
-            }
-            // ---------------------------------------------------
+            
+            // 2. Xử lý Link TẢI (Download)
+            // Vì Server đã fix lỗi lưu tên file, ta dùng link gốc để tránh lỗi 400 với file Raw
+            let downloadUrl = doc.path; 
+            
+            // ---------------------------------
 
             let visibilityIcon = '';
             if (doc.visibility === 'private') {
@@ -377,7 +374,6 @@ export const DocumentManager = {
                 canEdit = doc.uploader === AppState.currentUser?.fullName;
             }
 
-            // Nút Sửa (Có stopPropagation)
             const editBtn = canEdit ? `
                 <button class="doc-card-btn btn-edit-card" onclick="event.stopPropagation(); DocumentManager.openEditModal('${doc.id}')" title="Sửa thông tin">
                     ${ICON_EDIT}
@@ -402,8 +398,9 @@ export const DocumentManager = {
                 </button>
             ` : '';
 
+            // 👇 CẬP NHẬT: Dùng viewUrl (đã bọc Viewer) và downloadUrl (link gốc)
             return `
-                <div class="doc-card" data-id="${doc.id}" onclick="window.open('${doc.path}', '_blank')">
+                <div class="doc-card" data-id="${doc.id}" onclick="window.open('${viewUrl}', '_blank')">
                     ${deleteBtn}
                     <div class="doc-card-header">
                         <div class="doc-card-icon ${fileType.class}" style="background-color: ${fileType.color}20; color: ${fileType.color}">
@@ -431,7 +428,7 @@ export const DocumentManager = {
                                 ${Utils.formatFileSize(doc.size)}</div>` : ''}
                         </div>
                         <div class="doc-card-actions">
-                            <button class="doc-card-btn btn-view" onclick="event.stopPropagation(); window.open('${doc.path}', '_blank')">
+                            <button class="doc-card-btn btn-view" onclick="event.stopPropagation(); window.open('${viewUrl}', '_blank')">
                                 ${ICON_EYE}
                                 <span>Xem</span>
                             </button>
