@@ -4,32 +4,36 @@ export const EventManager = {
     events: [],
 
     getCurrentUsername() {
-        // 1. Thử lấy từ AppState (RAM - nếu có)
-        if (window.AppState && window.AppState.currentUser && window.AppState.currentUser.username) {
+        // 1. Kiểm tra AppState (RAM)
+        if (window.AppState?.currentUser?.username) {
+            console.log('✅ Found user in AppState:', window.AppState.currentUser.username);
             return window.AppState.currentUser.username;
         }
-        
-        // 2. Thử lấy từ LocalStorage 'currentUser' (Ổ cứng - Cách phổ biến nhất)
+
+        // 2. Kiểm tra LocalStorage (Ổ cứng)
         const savedUser = localStorage.getItem('currentUser');
-        if (savedUser) {
+        console.log('🔍 Raw localStorage data:', savedUser); // In ra để xem có dữ liệu không
+
+        if (savedUser && savedUser !== "undefined" && savedUser !== "null") {
             try {
                 const userObj = JSON.parse(savedUser);
-                return userObj.username;
+                // Kiểm tra kỹ từng trường hợp
+                if (userObj && userObj.username) return userObj.username;
+                if (userObj && userObj.user && userObj.user.username) return userObj.user.username; // Trường hợp lồng nhau
             } catch (e) {
-                console.error('Lỗi đọc user:', e);
+                console.error('❌ JSON Parse Error:', e);
             }
         }
 
-        // 3. Fallback: Thử lấy key cũ (đề phòng)
+        // 3. Dự phòng cũ
         return localStorage.getItem('currentUsername');
     },
 
     // ===== INITIALIZATION =====
     async init() {
-        console.log('🚀 EventManager initializing...');
+        console.log('🚀 EventManager V2 (Debug Mode) Initialized!'); // Dấu hiệu nhận biết code mới
         await this.loadEvents();
         this.renderWidget();
-        console.log('✅ EventManager initialized');
     },
 
     // ===== DATA OPERATIONS =====
@@ -37,25 +41,20 @@ export const EventManager = {
         try {
             const username = this.getCurrentUsername();
             if (!username) {
-                console.warn('⚠️ No username found, skipping event load');
+                console.warn('⚠️ LoadEvents: Không tìm thấy username. Đang ở chế độ khách.');
                 this.events = [];
                 return;
             }
 
             const response = await fetch(`/api/events?username=${encodeURIComponent(username)}`);
             const data = await response.json();
-
             if (data.success) {
                 this.events = data.events || [];
                 this.events = this.sortEventsByDate(this.events);
-                console.log(`✅ Loaded ${this.events.length} events from MongoDB`);
-            } else {
-                console.error('Error loading events:', data.message);
-                this.events = [];
+                console.log(`✅ Loaded ${this.events.length} events for ${username}`);
             }
         } catch (error) {
             console.error('Error loading events:', error);
-            this.events = [];
         }
     },
 
@@ -81,7 +80,20 @@ export const EventManager = {
 
         const username = this.getCurrentUsername();
         if (!username) {
-            Swal.fire('Lỗi', 'Vui lòng đăng nhập!', 'warning');
+            const rawLS = localStorage.getItem('currentUser') || 'Trống';
+            Swal.fire({
+                title: 'Lỗi Đăng Nhập (Debug)',
+                html: `
+                    <p>Hệ thống không tìm thấy User ID.</p>
+                    <hr>
+                    <p style="text-align:left; font-size: 12px; color: #d33;">
+                        <b>Dữ liệu trong máy:</b><br>
+                        ${rawLS.substring(0, 100)}...
+                    </p>
+                    <p style="font-size: 12px">Hãy chụp ảnh này gửi cho Dev!</p>
+                `,
+                icon: 'error'
+            });
             return false;
         }
 
