@@ -362,7 +362,7 @@ export const Timetable = {
             }
 
             // Server uses username to filter timetable, not token-based auth
-            const response = await fetch(`http://localhost:3000/api/timetable?username=${username}`);
+            const response = await fetch(`/api/timetable?username=${username}`);
             const data = await response.json();
 
             console.log('📥 Raw Server Data:', data);
@@ -928,12 +928,12 @@ export const Timetable = {
         };
 
         // 👇👇👇 PHẦN QUAN TRỌNG NHẤT: CHỌN API ĐÚNG 👇👇👇
-        let url = 'http://localhost:3000/api/timetable'; // Mặc định là TẠO MỚI
+        let url = '/api/timetable'; // Mặc định là TẠO MỚI
 
         // Nếu đang có ID sửa, chuyển sang API UPDATE
         if (this.editingClassId) {
             console.log('✏️ Detected Edit Mode for ID:', this.editingClassId);
-            url = 'http://localhost:3000/api/timetable/update';
+            url = '/api/timetable/update';
             classData.classId = this.editingClassId; // Gửi kèm ID để server biết sửa cái nào
         }
         // 👆👆👆 -------------------------------------- 👆👆👆
@@ -1007,7 +1007,7 @@ export const Timetable = {
         }
 
         try {
-            const response = await fetch('http://localhost:3000/api/timetable/delete', {
+            const response = await fetch('/api/timetable/delete', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
