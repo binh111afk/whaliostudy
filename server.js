@@ -465,52 +465,37 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({
     storage,
-    limits: { fileSize: 50 * 1024 * 1024 }, // Giới hạn 50MB
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
     fileFilter: (req, file, cb) => {
-        // 1. In ra Log để xem server nhận được cái gì (Giúp debug nếu vẫn lỗi)
+        // 1. IN LOG ĐỂ KIỂM TRA (Quan trọng)
         console.log('📂 Đang xử lý file:', file.originalname);
-        console.log('   👉 MIME Type nhận được:', file.mimetype);
+        console.log('   👉 MIME Type:', file.mimetype);
 
-        // 2. Danh sách đuôi file cho phép (Đây là chốt chặn quan trọng nhất)
-        const allowedExtensions = [
-            '.pdf', '.doc', '.docx', 
-            '.txt', '.rtf',
-            '.jpg', '.jpeg', '.png', 
-            '.xls', '.xlsx', '.ppt', '.pptx', '.zip', '.rar'
-        ];
+        // 2. Chuyển đuôi file về chữ thường
+        const ext = path.extname(file.originalname).toLowerCase();
 
-        // 3. Lấy đuôi file người dùng gửi lên (chuyển về chữ thường)
-        const fileExt = path.extname(file.originalname).toLowerCase();
-
-        // === LOGIC KIỂM TRA ===
-        
-        // CÁCH 1: Kiểm tra đuôi file (Dễ tính nhất - Chấp nhận mọi biến thể MIME)
-        if (allowedExtensions.includes(fileExt)) {
-            console.log('   ✅ Chấp nhận qua đuôi file:', fileExt);
-            return cb(null, true);
-        }
-
-        // CÁCH 2: Kiểm tra MIME Type chuẩn (Dự phòng nếu file không có đuôi)
-        const allowedMimeTypes = [
+        // 3. DANH SÁCH CHO PHÉP (Kiểm tra cả đuôi file và MIME)
+        const allowedExtensions = ['.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png', '.ppt', '.pptx', '.xls', '.xlsx', '.zip'];
+        const allowedMimes = [
             'application/pdf',
             'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'text/plain',
-            'image/jpeg',
+            'image/jpeg', 
             'image/png',
-            'application/octet-stream', // Cho phép dòng này để fix lỗi file Word trên Windows
-            'application/zip',
-            'application/x-zip-compressed'
+            'application/octet-stream' // <-- QUAN TRỌNG: Windows hay gửi Word dưới dạng này
         ];
 
-        if (allowedMimeTypes.includes(file.mimetype)) {
-            console.log('   ✅ Chấp nhận qua MIME Type:', file.mimetype);
+        // 4. LOGIC KIỂM TRA "THOÁNG"
+        // Nếu đúng đuôi file HOẶC đúng MIME Type -> Đều cho qua
+        if (allowedExtensions.includes(ext) || allowedMimes.includes(file.mimetype)) {
+            console.log('   ✅ File hợp lệ!');
             return cb(null, true);
         }
 
-        // Nếu trượt cả 2 vòng -> Từ chối
-        console.error('   ❌ TỪ CHỐI FILE:', file.originalname, 'Type:', file.mimetype);
-        cb(new Error(`Định dạng file không hỗ trợ! (Nhận được: ${file.mimetype})`), false);
+        // Nếu sai cả hai
+        console.error('   ❌ File bị chặn:', file.originalname);
+        cb(new Error(`Định dạng file không hỗ trợ (MIME: ${file.mimetype})`), false);
     }
 });
 
