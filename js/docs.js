@@ -722,6 +722,68 @@ export const DocumentManager = {
         }
     },
 
+    // ... Bên trong DocumentManager ...
+
+    // 👇 HÀM MỚI: Xử lý sự kiện Upload (Hiện popup, đóng modal, load lại trang)
+    async handleUploadSubmit(event) {
+        event.preventDefault(); // Chặn trang web bị load lại
+        
+        // 1. Hiệu ứng nút bấm "Đang tải..."
+        const form = event.target;
+        const btn = form.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        
+        if (btn) {
+            btn.textContent = 'Đang tải lên...';
+            btn.disabled = true;
+        }
+
+        try {
+            // 2. Lấy dữ liệu từ form
+            const formData = new FormData(form);
+            
+            // Đảm bảo có username
+            if (AppState.currentUser && !formData.has('username')) {
+                formData.append('username', AppState.currentUser.username);
+            }
+
+            // 3. Gọi hàm uploadDocument (Logic ngầm)
+            const result = await this.uploadDocument(formData);
+
+            // 4. KIỂM TRA & HIỆN POP-UP
+            if (result.success) {
+                // 🎉 ĐÂY RỒI! POP-UP CỦA BẠN ĐÂY
+                Utils.showAlert("Thành công!", "Tài liệu đã được tải lên thành công.", true);
+                
+                // Reset form cho sạch
+                form.reset();
+                
+                // Đóng Modal (Nếu có ModalManager)
+                if (window.ModalManager) {
+                    window.ModalManager.close('uploadDocModal'); // Hoặc ID modal upload của bạn
+                } else {
+                    // Fallback: Tự tìm và đóng nếu không có Manager
+                    const modal = document.getElementById('uploadDocModal');
+                    if (modal) modal.classList.remove('active');
+                }
+                
+                // Tải lại danh sách tài liệu
+                await this.loadAllDocuments();
+            } else {
+                Utils.showAlert("Lỗi", result.message || "Không thể tải tài liệu lên!", false);
+            }
+        } catch (error) {
+            console.error(error);
+            Utils.showAlert("Lỗi", "Lỗi kết nối server!", false);
+        } finally {
+            // 5. Trả lại nút bấm như cũ
+            if (btn) {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+    },
+
     renderEmptyState(message, icon, container) {
         container.innerHTML = `
             <div class="docs-empty-state" style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #9ca3af;">
