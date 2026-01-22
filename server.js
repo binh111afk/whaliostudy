@@ -34,97 +34,216 @@ mongoose.connect(MONGO_URI, {
     process.exit(1);
 });
 
-// ==================== DATA SEEDING FUNCTION ====================
-async function seedInitialData() {
+// ==================== DATA SEEDING FUNCTION (ROBUST VERSION) ====================
+async function seedExamsFromJSON(forceReseed = false) {
+    const startTime = Date.now();
+    console.log('\n' + '='.repeat(60));
+    console.log('🌱 EXAM SEEDING PROCESS STARTED');
+    console.log('='.repeat(60));
+
     try {
-        // Check if exams already exist in database
-        const examCount = await Exam.countDocuments();
+        // Step 1: Check current database state
+        console.log('\n📊 Step 1: Checking database state...');
+        const currentExamCount = await Exam.countDocuments();
+        console.log(`   Current exams in database: ${currentExamCount}`);
         
-        if (examCount > 0) {
-            console.log(`✅ Database already contains ${examCount} exams. Skipping seed.`);
-            return;
+        if (currentExamCount > 0 && !forceReseed) {
+            console.log(`   ✅ Database already contains ${currentExamCount} exams.`);
+            console.log(`   ℹ️  Use forceReseed=true or visit /api/debug/seed-exams to re-seed.`);
+            console.log('='.repeat(60) + '\n');
+            return { 
+                success: true, 
+                message: 'Database already populated', 
+                examCount: currentExamCount,
+                skipped: true 
+            };
         }
 
-        console.log('📦 Starting database seeding...');
-        
-        // Read exams.json
+        if (forceReseed && currentExamCount > 0) {
+            console.log(`   🔄 Force reseed enabled. Clearing ${currentExamCount} existing exams...`);
+            await Exam.deleteMany({});
+            console.log(`   ✅ Cleared existing exams`);
+        }
+
+        // Step 2: Resolve file paths
+        console.log('\n📁 Step 2: Resolving JSON file paths...');
         const examsFilePath = path.join(__dirname, 'exams.json');
         const questionsFilePath = path.join(__dirname, 'questions.json');
         
-        if (!require('fs').existsSync(examsFilePath)) {
-            console.warn('⚠️ exams.json not found. Skipping seed.');
-            return;
-        }
+        console.log(`   Exams file path: ${examsFilePath}`);
+        console.log(`   Questions file path: ${questionsFilePath}`);
 
-        if (!require('fs').existsSync(questionsFilePath)) {
-            console.warn('⚠️ questions.json not found. Skipping seed.');
-            return;
-        }
-
-        const examsData = JSON.parse(require('fs').readFileSync(examsFilePath, 'utf8'));
-        const questionsData = JSON.parse(require('fs').readFileSync(questionsFilePath, 'utf8'));
+        // Step 3: Check file existence
+        console.log('\n🔍 Step 3: Checking file existence...');
         
-        console.log(`📚 Found ${examsData.length} exams in exams.json`);
-        console.log(`📝 Found ${Object.keys(questionsData).length} question sets in questions.json`);
+        if (!fs.existsSync(examsFilePath)) {
+            const error = `❌ ERROR: Could not find exams.json at ${examsFilePath}`;
+            console.error(`   ${error}`);
+            console.log(`   💡 Current directory (__dirname): ${__dirname}`);
+            console.log(`   💡 Files in directory:`, fs.readdirSync(__dirname).filter(f => f.endsWith('.json')));
+            return { success: false, error, files: fs.readdirSync(__dirname).filter(f => f.endsWith('.json')) };
+        }
+        console.log(`   ✅ Found exams.json`);
 
-        // Transform and insert exams with their question banks
-        const examsToInsert = examsData.map(exam => {
-            // Parse time if it's a string like "60 phút"
+        if (!fs.existsSync(questionsFilePath)) {
+            const error = `❌ ERROR: Could not find questions.json at ${questionsFilePath}`;
+            console.error(`   ${error}`);
+            console.log(`   💡 Current directory (__dirname): ${__dirname}`);
+            console.log(`   💡 Files in directory:`, fs.readdirSync(__dirname).filter(f => f.endsWith('.json')));
+            return { success: false, error, files: fs.readdirSync(__dirname).filter(f => f.endsWith('.json')) };
+        }
+        console.log(`   ✅ Found questions.json`);
+
+        // Step 4: Read and parse JSON files
+        console.log('\n📖 Step 4: Reading JSON files...');
+        
+        let examsData, questionsData;
+        
+        try {
+            const examsRaw = fs.readFileSync(examsFilePath, 'utf8');
+            examsData = JSON.parse(examsRaw);
+            console.log(`   ✅ Successfully parsed exams.json`);
+            console.log(`   📚 Found ${examsData.length} exam entries`);
+        } catch (parseError) {
+            const error = `❌ ERROR: Failed to parse exams.json - ${parseError.message}`;
+            console.error(`   ${error}`);
+            return { success: false, error };
+        }
+
+        try {
+            const questionsRaw = fs.readFileSync(questionsFilePath, 'utf8');
+            questionsData = JSON.parse(questionsRaw);
+            console.log(`   ✅ Successfully parsed questions.json`);
+            console.log(`   📝 Found ${Object.keys(questionsData).length} question sets`);
+            
+            // Log sample of question IDs
+            const questionIds = Object.keys(questionsData);
+            console.log(`   📋 Question set IDs: ${questionIds.slice(0, 5).join(', ')}${questionIds.length > 5 ? '...' : ''}`);
+        } catch (parseError) {
+            const error = `❌ ERROR: Failed to parse questions.json - ${parseError.message}`;
+            console.error(`   ${error}`);
+            return { success: false, error };
+        }
+
+        // Step 5: Transform data for MongoDB
+        console.log('\n🔄 Step 5: Transforming data for MongoDB...');
+        
+        const examsToInsert = [];
+        let totalQuestions = 0;
+
+        for (const exam of examsData) {
+            const examId = exam.id.toString();
+            const questionBank = questionsData[examId] || [];
+            
+            if (questionBank.length === 0) {
+                console.log(`   ⚠️  Exam ID ${examId} ("${exam.title}") has no questions - skipping`);
+                continue;
+            }
+
+            // Parse time value
             let timeValue = exam.time;
             if (typeof timeValue === 'string') {
                 timeValue = parseInt(timeValue.replace(/\D/g, '')) || 45;
             }
 
-            return {
-                examId: exam.id.toString(),
+            const examDocument = {
+                examId: examId,
                 title: exam.title,
                 subject: exam.subject || 'Tự tạo',
-                questions: exam.questions,
+                questions: exam.questions || questionBank.length,
                 time: timeValue,
                 image: exam.image || './img/snvvnghen.png',
-                createdBy: 'System',
-                questionBank: questionsData[exam.id.toString()] || [],
+                createdBy: exam.createdBy || 'System',
+                questionBank: questionBank,
                 isDefault: true,
                 createdAt: exam.createdAt ? new Date(exam.createdAt) : new Date()
             };
-        });
 
-        // Filter out exams that don't have question banks
-        const validExams = examsToInsert.filter(exam => exam.questionBank.length > 0);
-        
-        if (validExams.length > 0) {
-            await Exam.insertMany(validExams);
-            console.log(`✅ Successfully seeded ${validExams.length} exams with ${validExams.reduce((sum, e) => sum + e.questionBank.length, 0)} total questions!`);
-        } else {
-            console.warn('⚠️ No valid exams found to seed (missing question banks)');
+            examsToInsert.push(examDocument);
+            totalQuestions += questionBank.length;
+            console.log(`   ✅ Prepared exam: "${exam.title}" (${questionBank.length} questions)`);
         }
 
-        // Also seed exams that have question banks but aren't in exams.json
+        // Step 6: Handle orphaned question sets
+        console.log('\n🔍 Step 6: Checking for orphaned question sets...');
         const existingExamIds = new Set(examsData.map(e => e.id.toString()));
-        const orphanedQuestionSets = Object.keys(questionsData).filter(id => !existingExamIds.has(id));
-        
-        if (orphanedQuestionSets.length > 0) {
-            console.log(`📌 Found ${orphanedQuestionSets.length} question sets without exam metadata`);
-            const orphanedExams = orphanedQuestionSets.map(id => ({
-                examId: id,
-                title: `Đề thi ${id}`,
-                subject: 'Tự tạo',
-                questions: questionsData[id].length,
-                time: 45,
-                image: './img/snvvnghen.png',
-                createdBy: 'System',
-                questionBank: questionsData[id],
-                isDefault: true,
-                createdAt: new Date()
-            }));
-            await Exam.insertMany(orphanedExams);
-            console.log(`✅ Seeded ${orphanedExams.length} additional exams from orphaned question sets`);
+        const allQuestionSetIds = Object.keys(questionsData);
+        const orphanedIds = allQuestionSetIds.filter(id => !existingExamIds.has(id));
+
+        if (orphanedIds.length > 0) {
+            console.log(`   📌 Found ${orphanedIds.length} orphaned question sets`);
+            
+            for (const id of orphanedIds) {
+                const questionBank = questionsData[id];
+                const examDocument = {
+                    examId: id,
+                    title: `Đề thi ${id}`,
+                    subject: 'Tự tạo',
+                    questions: questionBank.length,
+                    time: 45,
+                    image: './img/snvvnghen.png',
+                    createdBy: 'System',
+                    questionBank: questionBank,
+                    isDefault: true,
+                    createdAt: new Date()
+                };
+                
+                examsToInsert.push(examDocument);
+                totalQuestions += questionBank.length;
+                console.log(`   ✅ Created exam from orphaned set ID ${id} (${questionBank.length} questions)`);
+            }
+        } else {
+            console.log(`   ℹ️  No orphaned question sets found`);
         }
+
+        // Step 7: Insert into MongoDB
+        console.log('\n💾 Step 7: Inserting exams into MongoDB...');
+        console.log(`   Total exams to insert: ${examsToInsert.length}`);
+        console.log(`   Total questions: ${totalQuestions}`);
+
+        if (examsToInsert.length === 0) {
+            const error = '❌ ERROR: No valid exams to insert!';
+            console.error(`   ${error}`);
+            return { success: false, error };
+        }
+
+        await Exam.insertMany(examsToInsert, { ordered: false });
+        
+        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        console.log(`\n${'='.repeat(60)}`);
+        console.log(`✅ SEEDING COMPLETED SUCCESSFULLY in ${duration}s`);
+        console.log(`   📊 Imported ${examsToInsert.length} exams`);
+        console.log(`   📝 Imported ${totalQuestions} total questions`);
+        console.log('='.repeat(60) + '\n');
+
+        return {
+            success: true,
+            examCount: examsToInsert.length,
+            questionCount: totalQuestions,
+            duration: duration
+        };
 
     } catch (error) {
-        console.error('❌ Error during database seeding:', error);
-        // Don't crash the server if seeding fails
+        console.error('\n' + '='.repeat(60));
+        console.error('❌ CRITICAL ERROR DURING SEEDING');
+        console.error('='.repeat(60));
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        console.error('='.repeat(60) + '\n');
+        
+        return { 
+            success: false, 
+            error: error.message,
+            stack: error.stack 
+        };
     }
+}
+
+// Auto-seed on startup
+async function seedInitialData() {
+    console.log('\n🔄 AUTO-SEED: Running automatic database seeding on startup...');
+    await seedExamsFromJSON(false);
 }
 
 // ==================== MONGOOSE SCHEMAS & MODELS ====================
@@ -1463,6 +1582,60 @@ app.post('/api/timetable/update', async (req, res) => {
     } catch (err) {
         console.error('Error updating class:', err);
         res.json({ success: false, message: 'Server error' });
+    }
+});
+
+// ==================== DEBUG & ADMIN ENDPOINTS ====================
+
+// Manual seed trigger endpoint
+app.get('/api/debug/seed-exams', async (req, res) => {
+    console.log('\n🔧 DEBUG ENDPOINT: Manual seed triggered via API');
+    console.log('   Request from:', req.ip);
+    console.log('   Time:', new Date().toISOString());
+    
+    try {
+        const forceReseed = req.query.force === 'true';
+        const result = await seedExamsFromJSON(forceReseed);
+        
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
+
+// Database status endpoint
+app.get('/api/debug/db-status', async (req, res) => {
+    try {
+        const examCount = await Exam.countDocuments();
+        const exams = await Exam.find({}, 'examId title subject questions createdBy isDefault').limit(10).lean();
+        
+        res.json({
+            success: true,
+            database: {
+                totalExams: examCount,
+                connectionState: mongoose.connection.readyState,
+                connectionName: mongoose.connection.name
+            },
+            sampleExams: exams,
+            files: {
+                examsJson: fs.existsSync(path.join(__dirname, 'exams.json')),
+                questionsJson: fs.existsSync(path.join(__dirname, 'questions.json'))
+            },
+            paths: {
+                dirname: __dirname,
+                examsPath: path.join(__dirname, 'exams.json'),
+                questionsPath: path.join(__dirname, 'questions.json')
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
     }
 });
 
