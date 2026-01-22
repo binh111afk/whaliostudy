@@ -638,7 +638,25 @@ app.get('/api/documents', async (req, res) => {
     }
 });
 
-app.post('/api/upload-document', upload.single('file'), async (req, res) => {
+app.post('/api/upload-document', (req, res, next) => {
+    // Wrap multer middleware to catch errors and return JSON
+    upload.single('file')(req, res, (err) => {
+        if (err) {
+            console.error('Multer error:', err);
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'File quá lớn! Kích thước tối đa là 50MB.' 
+                });
+            }
+            return res.status(400).json({ 
+                success: false, 
+                message: err.message || 'Lỗi tải file lên' 
+            });
+        }
+        next();
+    });
+}, async (req, res) => {
     try {
         const { name, type, uploader, course, username, visibility } = req.body;
         const file = req.file;
@@ -1711,6 +1729,23 @@ app.delete('/api/events/:id', async (req, res) => {
         console.error('Error deleting event:', err);
         res.json({ success: false, message: 'Server error' });
     }
+});
+
+// ==================== GLOBAL ERROR HANDLER ====================
+// This catches any errors not handled by route-specific error handling
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err);
+    
+    // Always return JSON for API routes
+    if (req.path.startsWith('/api/')) {
+        return res.status(err.status || 500).json({
+            success: false,
+            message: err.message || 'Lỗi server không xác định'
+        });
+    }
+    
+    // For non-API routes, send generic error
+    res.status(err.status || 500).send('Something went wrong!');
 });
 
 // ==================== SERVER START ====================
