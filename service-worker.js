@@ -1,6 +1,5 @@
-const CACHE_NAME = 'whalio-cache-v1';
+const CACHE_NAME = 'whalio-cache-v2'; // Đổi tên cache để ép trình duyệt xóa cache cũ
 
-// Files to cache
 const STATIC_CACHE_URLS = [
     './index.html',
     './home.css',
@@ -20,73 +19,51 @@ const STATIC_CACHE_URLS = [
     './js/icons.js'
 ];
 
-// Install Event - Cache critical files
 self.addEventListener('install', (event) => {
-    console.log('🔧 Service Worker: Installing...');
-    
+    self.skipWaiting(); // Ép service worker mới chạy ngay lập tức
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('📦 Service Worker: Caching static files');
-                return cache.addAll(STATIC_CACHE_URLS);
-            })
-            .then(() => {
-                console.log('✅ Service Worker: Installation complete');
-                return self.skipWaiting(); // Activate immediately
-            })
-            .catch((error) => {
-                console.error('❌ Service Worker: Cache failed', error);
-            })
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_CACHE_URLS))
     );
 });
 
-// Activate Event - Clean up old caches
 self.addEventListener('activate', (event) => {
-    console.log('🚀 Service Worker: Activating...');
-    
     event.waitUntil(
-        caches.keys()
-            .then((cacheNames) => {
-                return Promise.all(
-                    cacheNames.map((cacheName) => {
-                        if (cacheName !== CACHE_NAME) {
-                            console.log('🗑️ Service Worker: Deleting old cache:', cacheName);
-                            return caches.delete(cacheName);
-                        }
-                    })
-                );
-            })
-            .then(() => {
-                console.log('✅ Service Worker: Activation complete');
-                return self.clients.claim(); // Take control immediately
-            })
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cacheName) => {
+                    // Xóa tất cả cache cũ không phải v2
+                    if (cacheName !== CACHE_NAME) {
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        }).then(() => self.clients.claim())
     );
 });
 
-// Fetch Event - Serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
-    // 1. QUAN TRỌNG: Bỏ qua các request không phải http (như chrome-extension://)
-    if (!event.request.url.startsWith('http')) {
-        return;
+    const url = new URL(event.request.url);
+
+    // 1. KHÔNG BAO GIỜ CACHE API (Quan trọng nhất)
+    if (url.pathname.startsWith('/api/')) {
+        return; // Để mặc cho trình duyệt tự xử lý (gọi thẳng lên server)
     }
 
+    // 2. Chiến thuật: Network First (Ưu tiên mạng) cho các file code
+    // Giúp code mới luôn được cập nhật
     event.respondWith(
-        caches.match(event.request)
-            .then((cachedResponse) => {
-                if (cachedResponse) {
-                    return cachedResponse;
-                }
-                return fetch(event.request).then((networkResponse) => {
-                    // Chỉ cache khi request thành công
-                    if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-                        return networkResponse;
-                    }
-                    const responseClone = networkResponse.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, responseClone);
-                    });
-                    return networkResponse;
+        fetch(event.request)
+            .then((networkResponse) => {
+                // Tải được từ mạng -> Lưu bản mới vào cache -> Trả về
+                const responseClone = networkResponse.clone();
+                caches.open(CACHE_NAME).then((cache) => {
+                    cache.put(event.request, responseClone);
                 });
+                return networkResponse;
+            })
+            .catch(() => {
+                // Mất mạng -> Mới lôi cache ra dùng
+                return caches.match(event.request);
             })
     );
 });
