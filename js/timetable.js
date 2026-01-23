@@ -7,6 +7,7 @@ export const Timetable = {
     listenersAttached: false,
     editingClassId: null,
     importedData: [], // Store imported classes temporarily
+    currentWeekStart: null, // Monday of the current selected week
 
     // Period time mapping
     periodTimes: {
@@ -86,10 +87,78 @@ export const Timetable = {
     async init() {
         console.log('📅 Initializing Timetable...');
         this.injectStyles();
+        
+        // Initialize week navigation to current week
+        this.currentWeekStart = this.getMondayOfWeek(new Date());
+        this.updateWeekDisplay();
+        
         await this.loadTimetable();
         this.renderTimetable();
         this.highlightCurrentDay();
         this.setupEventListeners();
+    },
+
+    // Week Navigation Helper Methods
+    getMondayOfWeek(date) {
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = (day === 0 ? -6 : 1) - day; // If Sunday (0), go back 6 days, else go to Monday
+        d.setDate(d.getDate() + diff);
+        d.setHours(0, 0, 0, 0); // Reset to start of day
+        return d;
+    },
+
+    prevWeek() {
+        this.currentWeekStart.setDate(this.currentWeekStart.getDate() - 7);
+        this.updateWeekDisplay();
+        this.renderTimetable();
+    },
+
+    nextWeek() {
+        this.currentWeekStart.setDate(this.currentWeekStart.getDate() + 7);
+        this.updateWeekDisplay();
+        this.renderTimetable();
+    },
+
+    jumpToToday() {
+        this.currentWeekStart = this.getMondayOfWeek(new Date());
+        this.updateWeekDisplay();
+        this.renderTimetable();
+    },
+
+    updateWeekDisplay() {
+        const weekDisplay = document.getElementById('week-display');
+        if (!weekDisplay) return;
+
+        const monday = new Date(this.currentWeekStart);
+        const sunday = new Date(this.currentWeekStart);
+        sunday.setDate(sunday.getDate() + 6);
+
+        const formatDate = (date) => {
+            const d = date.getDate().toString().padStart(2, '0');
+            const m = (date.getMonth() + 1).toString().padStart(2, '0');
+            return `${d}/${m}`;
+        };
+
+        weekDisplay.textContent = `${formatDate(monday)} - ${formatDate(sunday)}`;
+    },
+
+    isClassInWeek(classObj) {
+        // If class has no date range, show it in all weeks
+        if (!classObj.startDate || !classObj.endDate) {
+            return true;
+        }
+
+        const weekStart = new Date(this.currentWeekStart);
+        const weekEnd = new Date(this.currentWeekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+
+        const classStart = new Date(classObj.startDate);
+        const classEnd = new Date(classObj.endDate);
+
+        // Check if there's any overlap between week range and class range
+        return classStart <= weekEnd && classEnd >= weekStart;
     },
 
     injectStyles() {
@@ -463,7 +532,7 @@ export const Timetable = {
 
             // 2. Render 7 Day Columns
             days.forEach(day => {
-                // Filter classes for this cell using strict string comparison
+                // Filter classes for this cell using strict string comparison + week filtering
                 const classes = this.currentTimetable.filter(cls => {
                     const dayMatch = String(cls.day) === String(day);
 
@@ -471,11 +540,14 @@ export const Timetable = {
                     const sessionLower = String(cls.session || '').toLowerCase();
                     const sessionMatch = session.id === sessionLower || session.aliases.includes(sessionLower);
 
-                    const isMatch = dayMatch && sessionMatch;
+                    // Check if class is active in the selected week
+                    const weekMatch = this.isClassInWeek(cls);
+
+                    const isMatch = dayMatch && sessionMatch && weekMatch;
 
                     // Debug logging for each comparison
                     if (cls) {
-                        console.log(`🔍 Checking "${cls.subject}": day=${cls.day} vs ${day} → ${dayMatch ? '✅' : '❌'}, session=${cls.session} vs ${session.id} → ${sessionMatch ? '✅' : '❌'}`);
+                        console.log(`🔍 Checking "${cls.subject}": day=${cls.day} vs ${day} → ${dayMatch ? '✅' : '❌'}, session=${cls.session} vs ${session.id} → ${sessionMatch ? '✅' : '❌'}, week → ${weekMatch ? '✅' : '❌'}`);
                     }
 
                     return isMatch;
@@ -697,8 +769,31 @@ export const Timetable = {
         const bgColor = this.pastelColors[colorIndex];
         const classId = cls._id || cls.id; // Handle both MongoDB _id and id
         
+        // Check if class is currently active
+        let isActive = true;
+        let statusBadge = '';
+        let cardOpacity = '1';
+        
+        if (cls.startDate && cls.endDate) {
+            const today = new Date();
+            const start = new Date(cls.startDate);
+            const end = new Date(cls.endDate);
+            
+            if (today < start) {
+                isActive = false;
+                statusBadge = '<span style="display: inline-block; background: #fbbf24; color: #78350f; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 4px;">⏳ Sắp diễn ra</span>';
+                cardOpacity = '0.6';
+            } else if (today > end) {
+                isActive = false;
+                statusBadge = '<span style="display: inline-block; background: #d1d5db; color: #374151; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 4px;">✓ Đã kết thúc</span>';
+                cardOpacity = '0.5';
+            } else {
+                statusBadge = '<span style="display: inline-block; background: #34d399; color: #064e3b; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 4px;">▶ Đang diễn ra</span>';
+            }
+        }
+        
         return `
-            <div class="class-card" style="background-color: ${bgColor};" data-class-id="${classId}">
+            <div class="class-card" style="background-color: ${bgColor}; opacity: ${cardOpacity};" data-class-id="${classId}">
                 <div class="class-subject" title="${this.escapeHtml(cls.subject)}">
                     ${this.escapeHtml(cls.subject)}
                 </div>
@@ -716,7 +811,15 @@ export const Timetable = {
                         <span class="class-detail-label">GIỜ:</span> 
                         <span class="class-detail-value">${this.escapeHtml(cls.timeRange)}</span>
                     </div>
+                    ${cls.dateRangeDisplay ? `
+                    <div class="class-detail" style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(0,0,0,0.1);">
+                        <span class="class-detail-label">📅 Thời gian:</span> 
+                        <span class="class-detail-value" style="font-size: 12px;">${this.escapeHtml(cls.dateRangeDisplay)}</span>
+                    </div>
+                    ` : ''}
                 </div>
+                
+                ${statusBadge ? `<div style="text-align: center; margin-top: 8px;">${statusBadge}</div>` : ''}
 
                 <button class="btn-edit-class" data-class-id="${classId}" title="Sửa môn này">
                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
@@ -1185,6 +1288,13 @@ export const Timetable = {
                         columnMap.room = colIdx;
                         console.log(`  📌 Room column: ${colIdx} (${row[colIdx]})`);
                     }
+                    // Date Range column
+                    else if (header.includes('từ ngày') || header.includes('đến ngày') || 
+                             header.includes('ngày') || header.includes('time') || 
+                             header.includes('thời gian')) {
+                        columnMap.dateRange = colIdx;
+                        console.log(`  📌 Date Range column: ${colIdx} (${row[colIdx]})`);
+                    }
                     // STT column
                     else if (header.includes('stt') || header === 'stt') {
                         columnMap.stt = colIdx;
@@ -1235,8 +1345,9 @@ export const Timetable = {
             const dayRaw = row[columnMap.day] || '';
             const periodRaw = row[columnMap.period] || '';
             const roomRaw = row[columnMap.room] || '';
+            const dateRangeRaw = columnMap.dateRange !== undefined ? (row[columnMap.dateRange] || '') : '';
             
-            console.log(`Row ${i}:`, { subjectRaw, dayRaw, periodRaw, roomRaw });
+            console.log(`Row ${i}:`, { subjectRaw, dayRaw, periodRaw, roomRaw, dateRangeRaw });
             
             // ===== HANDLE MERGED CELLS: Update lastValidSubject =====
             if (subjectRaw && String(subjectRaw).trim()) {
@@ -1275,6 +1386,9 @@ export const Timetable = {
                 // Parse Room - default to "Online" if empty
                 const room = (roomRaw && String(roomRaw).trim()) ? String(roomRaw).trim() : 'Online';
                 
+                // Parse Date Range
+                const dateInfo = this.parseDateRange(dateRangeRaw);
+                
                 // Determine session based on startPeriod
                 let session = 'morning';
                 if (periodInfo.startPeriod <= 6) {
@@ -1300,7 +1414,10 @@ export const Timetable = {
                     session: session,
                     startPeriod: periodInfo.startPeriod,
                     numPeriods: periodInfo.numPeriods,
-                    timeRange: timeRange
+                    timeRange: timeRange,
+                    startDate: dateInfo.startDate,
+                    endDate: dateInfo.endDate,
+                    dateRangeDisplay: dateInfo.display
                 };
                 
                 importedClasses.push(classData);
@@ -1395,6 +1512,128 @@ export const Timetable = {
         }
         
         throw new Error(`Cannot parse period: ${periodStr}`);
+    },
+
+    parseDateRange(dateRangeStr) {
+        if (!dateRangeStr || !String(dateRangeStr).trim()) {
+            console.log('    ⏭️ No date range provided, using defaults');
+            return {
+                startDate: null,
+                endDate: null,
+                display: ''
+            };
+        }
+
+        try {
+            // Clean the string: remove \n, >, extra spaces
+            let cleaned = String(dateRangeStr)
+                .replace(/\n/g, '')
+                .replace(/>/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            console.log(`    📅 Parsing date range: "${dateRangeStr}" -> cleaned: "${cleaned}"`);
+
+            // Pattern: dd/mm/yyyy->dd/mm/yyyy or dd/mm/yyyy-dd/mm/yyyy
+            const datePattern = /(\d{2})\/(\d{2})\/(\d{4})\s*[-–>]+\s*(\d{2})\/(\d{2})\/(\d{4})/;
+            const match = cleaned.match(datePattern);
+
+            if (match) {
+                const [, startDay, startMonth, startYear, endDay, endMonth, endYear] = match;
+
+                // Create Date objects (month is 0-indexed in JS)
+                const startDate = new Date(parseInt(startYear), parseInt(startMonth) - 1, parseInt(startDay));
+                const endDate = new Date(parseInt(endYear), parseInt(endMonth) - 1, parseInt(endDay));
+
+                // Create display string (short format: dd/mm)
+                const display = `${startDay}/${startMonth} - ${endDay}/${endMonth}`;
+
+                console.log(`    ✅ Parsed dates: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+
+                return {
+                    startDate: startDate.toISOString(),
+                    endDate: endDate.toISOString(),
+                    display: display
+                };
+            }
+
+            // If no match, return empty
+            console.log('    ⚠️ Date range format not recognized');
+            return {
+                startDate: null,
+                endDate: null,
+                display: ''
+            };
+
+        } catch (error) {
+            console.warn('    ⚠️ Error parsing date range:', error.message);
+            return {
+                startDate: null,
+                endDate: null,
+                display: ''
+            };
+        }
+    },
+
+    parseDateRange(dateRangeStr) {
+        if (!dateRangeStr || !String(dateRangeStr).trim()) {
+            console.log('    ⏭️ No date range provided, using defaults');
+            return {
+                startDate: null,
+                endDate: null,
+                display: ''
+            };
+        }
+
+        try {
+            // Clean the string: remove \n, >, extra spaces
+            let cleaned = String(dateRangeStr)
+                .replace(/\n/g, '')
+                .replace(/>/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            console.log(`    📅 Parsing date range: "${dateRangeStr}" -> cleaned: "${cleaned}"`);
+
+            // Pattern: dd/mm/yyyy->dd/mm/yyyy or dd/mm/yyyy-dd/mm/yyyy
+            const datePattern = /(\d{2})\/(\d{2})\/(\d{4})\s*[-–>]+\s*(\d{2})\/(\d{2})\/(\d{4})/;
+            const match = cleaned.match(datePattern);
+
+            if (match) {
+                const [, startDay, startMonth, startYear, endDay, endMonth, endYear] = match;
+
+                // Create Date objects (month is 0-indexed in JS)
+                const startDate = new Date(parseInt(startYear), parseInt(startMonth) - 1, parseInt(startDay));
+                const endDate = new Date(parseInt(endYear), parseInt(endMonth) - 1, parseInt(endDay));
+
+                // Create display string (short format: dd/mm)
+                const display = `${startDay}/${startMonth} - ${endDay}/${endMonth}`;
+
+                console.log(`    ✅ Parsed dates: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+
+                return {
+                    startDate: startDate.toISOString(),
+                    endDate: endDate.toISOString(),
+                    display: display
+                };
+            }
+
+            // If no match, return empty
+            console.log('    ⚠️ Date range format not recognized');
+            return {
+                startDate: null,
+                endDate: null,
+                display: ''
+            };
+
+        } catch (error) {
+            console.warn('    ⚠️ Error parsing date range:', error.message);
+            return {
+                startDate: null,
+                endDate: null,
+                display: ''
+            };
+        }
     },
 
     showPreview(count) {
