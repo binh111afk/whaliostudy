@@ -764,9 +764,13 @@
                 <div class="timetable-header">
                     <h1>📅 Thời Khóa Biểu</h1>
                     <div style="display: flex; gap: 12px;">
-                        <button class="btn-open-import" style="background: #10b981; display: flex; align-items: center; gap: 8px; padding: 12px 24px; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s;" onclick="Timetable.openImportModal()">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        <button class="btn-open-import"
+                            style="background: #10b981; display: flex; align-items: center; gap: 8px; padding: 12px 24px; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s;"
+                            onclick="Timetable.openImportModal()">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                             </svg>
                             Nhập File
                         </button>
@@ -2328,35 +2332,50 @@
 
     <!-- Import Timetable Modal -->
     <div class="modal-overlay" id="modal-import-excel" style="display: none; z-index: 2050;">
-        <div class="modal-box" style="max-width: 550px;">
+        <div class="modal-box" style="max-width: 600px;">
             <button class="btn-close-modal" onclick="Timetable.closeImportModal()">✕</button>
-            
+
             <div class="modal-header">
-                <h2>📤 Nhập Thời Khóa Biểu</h2>
-                <p>Chọn file Excel (.xlsx, .xls) để import</p>
+                <h2>📥 Nhập Thời Khóa Biểu</h2>
+                <p>Hỗ trợ sinh viên HCMUE</p>
             </div>
-            
+
             <div style="padding: 24px;">
-                <!-- File Input -->
-                <div class="form-group">
-                    <label class="form-label">Chọn file Excel</label>
-                    <input type="file" 
-                           id="timetable-file-upload" 
-                           accept=".xlsx,.xls" 
-                           class="auth-input" 
-                           onchange="Timetable.handleFileSelect(event)">
-                    <p style="font-size: 12px; color: #6b7280; margin-top: 8px;">
-                        📌 Hỗ trợ định dạng thời khóa biểu HCMUE (PDF chuyển sang Excel)
+
+                <div
+                    style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                    <h3 style="color: #1e40af; font-size: 15px; margin-bottom: 8px; font-weight: 700;">💡 Bước 1: Chuẩn
+                        bị file Excel</h3>
+                    <p style="font-size: 14px; color: #3b82f6; margin-bottom: 12px; line-height: 1.5;">
+                        Hệ thống cần file Excel để đọc chính xác các ô gộp của trường. Hãy chuyển file PDF thời khóa
+                        biểu của bạn sang Excel trước nhé.
                     </p>
+                    <a href="https://www.ilovepdf.com/vi/pdf_to_excel" target="_blank"
+                        style="display: inline-block; background: #3b82f6; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; transition: 0.2s;">
+                        🚀 Chuyển PDF sang Excel Online (Miễn phí)
+                    </a>
                 </div>
 
-                <!-- Preview Area -->
+                <div class="form-group">
+                    <label class="form-label">Bước 2: Chọn file Excel vừa tải về (.xlsx)</label>
+                    <div onclick="document.getElementById('timetable-file-upload').click()"
+                        style="border: 2px dashed #cbd5e1; background: #f8fafc; padding: 30px; border-radius: 8px; text-align: center; cursor: pointer; transition: 0.2s;"
+                        onmouseover="this.style.borderColor='#6366f1'; this.style.background='#eef2ff'"
+                        onmouseout="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc'">
+
+                        <div style="font-size: 32px; margin-bottom: 8px;">📊</div>
+                        <span style="font-weight: 600; color: #4b5563;">Nhấn vào đây để chọn file Excel</span>
+                        <p style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Chỉ nhận file .xlsx hoặc .xls</p>
+                    </div>
+
+                    <input type="file" id="timetable-file-upload" accept=".xlsx,.xls" style="display: none;"
+                        onchange="Timetable.handleFileSelect(event)">
+                </div>
+
                 <div id="import-preview" style="display: none; margin-top: 20px;">
                     <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 16px;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                            <svg width="20" height="20" fill="#16a34a" viewBox="0 0 24 24">
-                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
+                            <span style="font-size: 20px;">✅</span>
                             <h3 style="color: #16a34a; font-size: 16px; font-weight: 700; margin: 0;">File hợp lệ</h3>
                         </div>
                         <p id="import-info" style="color: #15803d; font-size: 14px; margin: 0;">
@@ -2365,28 +2384,22 @@
                     </div>
                 </div>
 
-                <!-- Error Display -->
                 <div id="import-error" style="display: none; margin-top: 20px;">
                     <div style="background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 16px;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                            <svg width="20" height="20" fill="#dc2626" viewBox="0 0 24 24">
-                                <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
+                            <span style="font-size: 20px;">❌</span>
                             <h3 style="color: #dc2626; font-size: 16px; font-weight: 700; margin: 0;">Lỗi</h3>
                         </div>
                         <p id="error-message" style="color: #991b1b; font-size: 14px; margin: 0;"></p>
                     </div>
                 </div>
             </div>
-            
+
             <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px;">
                 <button onclick="Timetable.closeImportModal()" class="btn-cancel-modal" style="flex: 1;">Hủy</button>
-                <button id="btn-confirm-import" 
-                        onclick="Timetable.confirmImport()" 
-                        class="btn-submit-login" 
-                        style="flex: 1;" 
-                        disabled>
-                    Import Ngay
+                <button id="btn-confirm-import" onclick="Timetable.confirmImport()" class="btn-submit-login"
+                    style="flex: 1;" disabled>
+                    Lưu Thời Khóa Biểu
                 </button>
             </div>
         </div>
