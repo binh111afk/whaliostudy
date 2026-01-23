@@ -1952,14 +1952,25 @@ export const Timetable = {
 
     // ==================== XÓA TẤT CẢ (Đã Fix lỗi F5) ====================
     async deleteAllClasses() {
-        if (!AppState.currentUser || !AppState.currentUser.timetable || AppState.currentUser.timetable.length === 0) {
+        // 1. Lấy dữ liệu từ cả 2 nguồn: Màn hình (currentTimetable) và Kho (AppState)
+        // Ưu tiên dữ liệu đang hiện trên màn hình vì đó là cái người dùng muốn xóa
+        let classesToDelete = [];
+        
+        if (this.currentTimetable && this.currentTimetable.length > 0) {
+            classesToDelete = [...this.currentTimetable];
+        } else if (AppState.currentUser && AppState.currentUser.timetable && AppState.currentUser.timetable.length > 0) {
+            classesToDelete = [...AppState.currentUser.timetable];
+        }
+
+        // 2. Kiểm tra lại: Nếu cả 2 nơi đều rỗng thì mới báo lỗi
+        if (classesToDelete.length === 0) {
             Swal.fire('Thông báo', 'Thời khóa biểu đã trống sẵn rồi!', 'info');
             return;
         }
 
         const result = await Swal.fire({
             title: 'Xóa toàn bộ?',
-            text: 'Bạn có chắc muốn xóa sạch thời khóa biểu không? Hành động này không thể hoàn tác.',
+            text: `Đang có ${classesToDelete.length} lớp học. Bạn có chắc muốn xóa sạch không?`, // Hiện luôn số lượng cho uy tín
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
@@ -1968,56 +1979,49 @@ export const Timetable = {
         });
 
         if (result.isConfirmed) {
-            // Hiện loading
             Swal.fire({
                 title: 'Đang xóa...',
-                text: 'Vui lòng đợi trong giây lát',
+                text: 'Vui lòng đợi...',
                 allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
+                didOpen: () => { Swal.showLoading(); }
             });
 
             try {
-                // 1. Lấy danh sách cần xóa
-                const classesToDelete = [...AppState.currentUser.timetable];
                 const username = AppState.currentUser.username;
 
-                // 2. Gọi API xóa từng môn trên Server (Giả lập hành động xóa tay)
-                // Lưu ý: Chúng ta dùng Promise.all để xóa đồng loạt cho nhanh
+                // 3. Gửi lệnh xóa lên Server (Dùng danh sách vừa tìm được)
                 const deletePromises = classesToDelete.map(cls => {
-                    return fetch('/api/timetable/delete', { // ⚠️ Đảm bảo đường dẫn này giống với hàm xóa lẻ của bạn
+                    // Kiểm tra ID, nếu không có ID (lớp ảo) thì bỏ qua bước gọi API
+                    if (!cls.id) return Promise.resolve(); 
+                    
+                    return fetch('/api/timetable/delete', { 
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            username: username, 
-                            id: cls.id // Gửi ID lớp cần xóa
-                        })
-                    });
+                        body: JSON.stringify({ username: username, id: cls.id })
+                    }).catch(err => console.warn('Lỗi xóa API môn:', cls.Subject, err));
                 });
 
                 await Promise.all(deletePromises);
 
-                // 3. Sau khi Server đã sạch, xóa tiếp ở Local
+                // 4. Dọn dẹp sạch sẽ ở dưới máy (Local)
                 AppState.currentUser.timetable = [];
-                await AppState.saveUser(AppState.currentUser);
+                await AppState.saveUser(AppState.currentUser); // Lưu mảng rỗng xuống bộ nhớ
 
                 this.currentTimetable = [];
                 this.importedData = [];
                 
-                // 4. Vẽ lại bảng trống
+                // 5. Vẽ lại bảng
                 this.render();
 
-                Swal.fire('Thành công!', 'Thời khóa biểu đã được xóa sạch.', 'success');
+                Swal.fire('Thành công!', 'Đã xóa sạch thời khóa biểu.', 'success');
 
             } catch (error) {
-                console.error('Lỗi khi xóa tất cả:', error);
-                // Dù lỗi API thì vẫn xóa local để người dùng đỡ khó chịu
-                AppState.currentUser.timetable = [];
-                await AppState.saveUser(AppState.currentUser);
+                console.error('Lỗi quy trình xóa:', error);
+                // Dù server lỗi vẫn xóa local để phông bạt
+                this.currentTimetable = [];
+                if (AppState.currentUser) AppState.currentUser.timetable = [];
                 this.render();
-                
-                Swal.fire('Lưu ý', 'Đã xóa dữ liệu trên máy, nhưng có thể lỗi kết nối tới máy chủ.', 'warning');
+                Swal.fire('Đã xóa Local', 'Đã xóa hiển thị (Server có thể chưa đồng bộ).', 'warning');
             }
         }
     },
