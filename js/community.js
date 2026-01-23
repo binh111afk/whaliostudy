@@ -1,96 +1,93 @@
 ﻿import { AppState } from './state.js';
 
 // ==================== RECENT ACTIVITY ====================
+// ==================== RECENT ACTIVITY (ĐÃ NÂNG CẤP PREVIEW) ====================
 export const RecentActivity = {
     isInitialized: false,
+    allActivities: [],
+    isShowingAll: false,
 
-    // ==================== INITIALIZE DEEP LINKING ====================
+    // ==================== KHỞI TẠO ====================
     init() {
-        // Guard: Only attach listener once
-        if (this.isInitialized) {
-            console.log('🔗 RecentActivity already initialized');
-            return;
-        }
+        if (this.isInitialized) return;
 
-        console.log('🚀 Initializing RecentActivity Deep Linking...');
+        console.log('🚀 Initializing RecentActivity...');
 
-        // Global event delegation for activity links
+        // 1. Kích hoạt tính năng click vào link (Deep Linking)
+        this.setupDeepLinking();
+
+        // 2. Kích hoạt nút "Xem thêm"
+        this.setupEventListeners();
+
+        this.isInitialized = true;
+    },
+
+    // 👇 HÀM MỚI: Xử lý khi click vào link trong hoạt động
+    setupDeepLinking() {
         document.addEventListener('click', async (e) => {
-            // Check if click is on a file-link inside activity-list
             const link = e.target.closest('.activity-list .file-link');
             if (!link) return;
 
             e.preventDefault();
             const href = link.getAttribute('href');
-            console.log('🔗 Activity link clicked:', href);
-
+            
             if (!href || href === '#') return;
 
-            // ==================== NAVIGATION LOGIC ====================
+            // CASE 1: Click vào Bài viết (#post-...)
             if (href.startsWith('#post-')) {
-                // Navigate to Community and scroll to post
                 const postId = href.replace('#post-', '');
-                console.log('📝 Navigating to post:', postId);
-
-                // Show community page
                 if (window.PageManager && window.PageManager.showCommunityPage) {
                     window.PageManager.showCommunityPage();
                 }
-
-                // Wait for render
                 await new Promise(resolve => setTimeout(resolve, 500));
-
-                // Find and scroll to post
                 const postCard = document.querySelector(`.post-card[data-post-id="${postId}"]`);
                 if (postCard) {
                     postCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-                    // Add highlight flash
                     postCard.classList.add('highlight-flash');
                     setTimeout(() => postCard.classList.remove('highlight-flash'), 2000);
-                    console.log('✅ Scrolled to post:', postId);
-                } else {
-                    console.warn('⚠️ Post not found:', postId);
                 }
+            
+            // CASE 2: Click vào Tài liệu (#doc-...) -> MỞ PREVIEW NGAY
             } else if (href.startsWith('#doc-')) {
-                // Navigate to Documents and scroll to document
                 const docId = href.replace('#doc-', '');
-                console.log('📄 Navigating to document:', docId);
+                console.log('📄 Đang mở tài liệu:', docId);
 
-                // Show documents page
-                if (window.PageManager && window.PageManager.showDocumentsPage) {
-                    window.PageManager.showDocumentsPage();
-                }
+                // Tìm thông tin file trong danh sách đã tải
+                const doc = AppState.allDocuments.find(d => String(d.id) === String(docId));
 
-                // Wait for render
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                // Find and scroll to document
-                const docCard = document.querySelector(`.doc-card[data-doc-id="${docId}"]`);
-                if (docCard) {
-                    docCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-                    // Add highlight flash
-                    docCard.classList.add('highlight-flash');
-                    setTimeout(() => docCard.classList.remove('highlight-flash'), 2000);
-                    console.log('✅ Scrolled to document:', docId);
+                if (doc) {
+                    const extension = doc.path.substring(doc.path.lastIndexOf('.')).toLowerCase();
+                    
+                    // Nếu là file Office -> Dùng Microsoft Viewer
+                    if (['.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt'].includes(extension)) {
+                        const previewUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(doc.path)}`;
+                        window.open(previewUrl, '_blank');
+                    } else {
+                        // Các file khác (PDF, Ảnh) -> Mở trực tiếp
+                        window.open(doc.path, '_blank');
+                    }
                 } else {
-                    console.warn('⚠️ Document not found:', docId);
+                    // Dự phòng: Nếu chưa tải được info file thì chuyển trang như cũ
+                    if (window.PageManager && window.PageManager.showDocumentsPage) {
+                        window.PageManager.showDocumentsPage();
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    const docCard = document.querySelector(`.doc-card[data-doc-id="${docId}"]`);
+                    if (docCard) docCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             }
         });
+    },
 
+    // Xử lý nút Xem thêm / Thu gọn
+    setupEventListeners() {
         document.addEventListener('click', (e) => {
             if (e.target.closest('.btn-view-more-activities')) {
                 e.preventDefault();
-                e.stopImmediatePropagation(); // Chặn các sự kiện trùng lặp khác
-                console.log('🔘 Đã bấm nút Xem thêm hoạt động');
+                e.stopImmediatePropagation();
                 this.toggleViewAll();
             }
         });
-
-        this.isInitialized = true;
-        console.log('✅ RecentActivity Deep Linking initialized');
     },
 
     async loadActivities() {
@@ -99,10 +96,10 @@ export const RecentActivity = {
             const data = await response.json();
 
             if (data.success) {
-                this.renderActivities(data.activities, data.count);
+                // Render mặc định 2 dòng đầu
+                this.allActivities = data.activities || [];
+                this.renderActivities(this.allActivities, data.count);
             }
-
-            // Auto-initialize deep linking on first load
             this.init();
         } catch (error) {
             console.error('Load activities error:', error);
@@ -114,26 +111,25 @@ export const RecentActivity = {
         const badge = document.querySelector('.recent-activity .badge-count');
 
         if (!container) return;
-
-        if (badge) {
-            badge.textContent = count;
-        }
+        if (badge) badge.textContent = count;
 
         if (activities.length === 0) {
             container.innerHTML = '<li style="text-align: center; color: #6b7280; padding: 20px;">Chưa có hoạt động nào</li>';
             return;
         }
 
-        this.allActivities = activities;
-        this.isShowingAll = false;
+        this.allActivities = activities; // Lưu lại full list
+        this.isShowingAll = false;       // Mặc định đang thu gọn
 
+        // Chỉ hiện 2 cái đầu tiên
         this.renderActivityList(activities.slice(0, 2));
 
+        // Nếu tổng > 2 thì hiện nút Xem thêm
         if (activities.length > 2) {
             const viewMoreBtn = document.createElement('li');
             viewMoreBtn.style.textAlign = 'center';
             viewMoreBtn.style.padding = '10px';
-            viewMoreBtn.innerHTML = '<button class="btn-view-more-activities" style="background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 13px;">Xem thêm (' + (activities.length - 2) + ')</button>';
+            viewMoreBtn.innerHTML = `<button class="btn-view-more-activities" style="background: #6366f1; color: white; border: none; padding: 6px 16px; border-radius: 20px; cursor: pointer; font-weight: 500; font-size: 12px;">Xem thêm (${activities.length - 2})</button>`;
             container.appendChild(viewMoreBtn);
         }
     },
@@ -145,13 +141,23 @@ export const RecentActivity = {
         container.innerHTML = activities.map(activity => {
             const bgColor = this.getAvatarColor(activity.type);
             const timeAgo = this.getTimeAgo(activity.time);
+            // Fix hiển thị Avatar
             const hasCustomAvatar = activity.userAvatar && activity.userAvatar.includes('/uploads/');
-
             const avatarHtml = hasCustomAvatar
                 ? `<img src="${activity.userAvatar}" class="avatar-small" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" alt="avatar">`
-                : `<img src="img/avt.png" class="avatar-small ${bgColor}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" alt="avatar">`;
+                : `<div class="avatar-small ${bgColor}" style="width: 32px; height: 32px; border-radius: 50%; display:flex; align-items:center; justify-content:center; color: white; font-size: 14px;">${activity.user.charAt(0).toUpperCase()}</div>`;
 
-            return `<li>${avatarHtml}<div class="activity-info"><p><strong>${activity.user}</strong> ${activity.action}</p><a href="${activity.link}" class="file-link">${activity.target}</a><span class="time-ago">${timeAgo}</span></div></li>`;
+            return `
+                <li style="display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f3f4f6;">
+                    ${avatarHtml}
+                    <div class="activity-info" style="flex: 1;">
+                        <p style="margin: 0; font-size: 13px; color: #374151;">
+                            <strong>${activity.user}</strong> ${activity.action}
+                        </p>
+                        <a href="${activity.link}" class="file-link" style="display: block; font-size: 13px; color: #6366f1; margin-top: 2px; text-decoration: none;">${activity.target}</a>
+                        <span class="time-ago" style="display: block; font-size: 11px; color: #9ca3af; margin-top: 4px;">${timeAgo}</span>
+                    </div>
+                </li>`;
         }).join('');
     },
 
@@ -162,25 +168,27 @@ export const RecentActivity = {
         this.isShowingAll = !this.isShowingAll;
 
         if (this.isShowingAll) {
+            // Mở rộng: Hiện tất cả
             this.renderActivityList(this.allActivities);
             const viewMoreBtn = document.createElement('li');
             viewMoreBtn.style.textAlign = 'center';
             viewMoreBtn.style.padding = '10px';
-            viewMoreBtn.innerHTML = '<button class="btn-view-more-activities" style="background: #6b7280; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 13px;">Thu gọn</button>';
+            viewMoreBtn.innerHTML = '<button class="btn-view-more-activities" style="background: #6b7280; color: white; border: none; padding: 6px 16px; border-radius: 20px; cursor: pointer; font-weight: 500; font-size: 12px;">Thu gọn</button>';
             container.appendChild(viewMoreBtn);
         } else {
+            // Thu gọn: Chỉ hiện 2 cái
             this.renderActivityList(this.allActivities.slice(0, 2));
             const viewMoreBtn = document.createElement('li');
             viewMoreBtn.style.textAlign = 'center';
             viewMoreBtn.style.padding = '10px';
-            viewMoreBtn.innerHTML = '<button class="btn-view-more-activities" style="background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 13px;">Xem thêm (' + (this.allActivities.length - 2) + ')</button>';
+            viewMoreBtn.innerHTML = '<button class="btn-view-more-activities" style="background: #6366f1; color: white; border: none; padding: 6px 16px; border-radius: 20px; cursor: pointer; font-weight: 500; font-size: 12px;">Xem thêm (' + (this.allActivities.length - 2) + ')</button>';
             container.appendChild(viewMoreBtn);
         }
     },
 
     getAvatarColor(type) {
-        const colors = { 'upload': '', 'comment': 'bg-green' };
-        return colors[type] || 'bg-purple';
+        const colors = { 'upload': 'bg-blue', 'comment': 'bg-green', 'post': 'bg-purple' };
+        return colors[type] || 'bg-gray';
     },
 
     getTimeAgo(dateString) {
