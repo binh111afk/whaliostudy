@@ -750,8 +750,9 @@ export const Timetable = {
         }
         // Event delegation for add class buttons
         document.addEventListener('click', (e) => {
-            // Add class button (main header button)
-            if (e.target.closest('.btn-add-class')) {
+            // Add class button (main header button) - EXCLUDE btn-open-import
+            const addClassBtn = e.target.closest('.btn-add-class');
+            if (addClassBtn && !e.target.closest('.btn-open-import')) {
                 e.preventDefault();
                 this.openCreateModal();
             }
@@ -1058,23 +1059,27 @@ export const Timetable = {
     
     openImportModal() {
         console.log('🔵 Opening Import Modal...');
-        const modal = document.getElementById('importTimetableModal');
+        const modal = document.getElementById('modal-import-excel');
         if (modal) {
             modal.style.display = 'flex';
             // Reset state
             this.importedData = [];
             const fileInput = document.getElementById('timetable-file-upload');
             if (fileInput) fileInput.value = '';
-            document.getElementById('import-preview').style.display = 'none';
-            document.getElementById('import-error').style.display = 'none';
-            document.getElementById('btn-confirm-import').disabled = true;
+            const preview = document.getElementById('import-preview');
+            const error = document.getElementById('import-error');
+            if (preview) preview.style.display = 'none';
+            if (error) error.style.display = 'none';
+            const confirmBtn = document.getElementById('btn-confirm-import');
+            if (confirmBtn) confirmBtn.disabled = true;
         } else {
-            console.error('❌ Import modal not found!');
+            console.error('❌ Import modal #modal-import-excel not found!');
         }
     },
 
     closeImportModal() {
-        const modal = document.getElementById('importTimetableModal');
+        console.log('🔵 Closing Import Modal...');
+        const modal = document.getElementById('modal-import-excel');
         if (modal) {
             modal.style.display = 'none';
             this.importedData = [];
