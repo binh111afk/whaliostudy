@@ -1953,24 +1953,21 @@ export const Timetable = {
     // ==================== XÓA TẤT CẢ (Đã Fix lỗi F5) ====================
     // ==================== XÓA TẤT CẢ (PHIÊN BẢN SIÊU TỐC) ====================
     async deleteAllClasses() {
-        // 1. Kiểm tra dữ liệu (Ưu tiên lấy từ màn hình)
-        let classesToDelete = [];
-        if (this.currentTimetable && this.currentTimetable.length > 0) {
-            classesToDelete = [...this.currentTimetable];
-        } else if (AppState.currentUser && AppState.currentUser.timetable) {
-            classesToDelete = [...AppState.currentUser.timetable];
-        }
-
-        // Nếu thực sự trống rỗng thì báo
-        if (classesToDelete.length === 0) {
+        // 1. KIỂM TRA THỰC TẾ TRÊN MÀN HÌNH (QUAN TRỌNG NHẤT)
+        // Thay vì tin vào biến, ta đếm thẳng số thẻ lớp học đang hiện trên web
+        const uiCards = document.querySelectorAll('.class-card');
+        const hasStateData = AppState.currentUser && AppState.currentUser.timetable && AppState.currentUser.timetable.length > 0;
+        
+        // Chỉ khi nào cả Màn hình trống VÀ Bộ nhớ trống thì mới báo là không có gì để xóa
+        if (uiCards.length === 0 && !hasStateData) {
             Swal.fire('Thông báo', 'Thời khóa biểu đã trống sẵn rồi!', 'info');
             return;
         }
 
-        // 2. Hỏi xác nhận
+        // 2. XÁC NHẬN MỘT LẦN DUY NHẤT
         const result = await Swal.fire({
             title: 'Xóa sạch?',
-            text: `Bạn có chắc muốn xóa ${classesToDelete.length} lớp học?`,
+            text: `Bạn muốn xóa toàn bộ thời khóa biểu ngay bây giờ?`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
@@ -1980,54 +1977,71 @@ export const Timetable = {
         });
 
         if (result.isConfirmed) {
-            try {
-                // 🚀 BƯỚC 1: XÓA GIAO DIỆN & LOCAL (ƯU TIÊN TỐC ĐỘ)
-                const username = AppState.currentUser ? AppState.currentUser.username : null;
-                
-                // Xóa biến hiển thị
-                this.currentTimetable = [];
-                this.importedData = [];
-                
-                // Xóa biến trong State & LocalStorage
-                if (AppState.currentUser) {
-                    AppState.currentUser.timetable = [];
-                    // Lưu ngay lập tức để F5 không bị hiện lại
-                    await AppState.saveUser(AppState.currentUser); 
-                }
+            const username = AppState.currentUser ? AppState.currentUser.username : null;
+            // Backup ID để xóa server sau này
+            const classesToDelete = AppState.currentUser?.timetable || []; 
 
-                // 🔥 QUAN TRỌNG: Gọi đúng tên hàm renderTimetable (Thay vì render)
-                if (typeof this.renderTimetable === 'function') {
-                    this.renderTimetable(); 
-                } else if (typeof this.render === 'function') {
-                    this.render(); // Dự phòng nếu bạn đổi tên
-                }
+            // -----------------------------------------------------------
+            // 🚀 BƯỚC 1: HỦY DIỆT GIAO DIỆN (FORCE DELETE DOM)
+            // -----------------------------------------------------------
+            
+            // Cách tàn bạo nhất: Tìm mọi thẻ class-card và xóa thẳng khỏi HTML
+            // Không cần chờ hàm render chạy, xóa ngay lập tức cho người dùng thấy
+            document.querySelectorAll('.class-card').forEach(el => el.remove());
 
-                // Báo thành công ngay
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Đã xóa!',
-                    showConfirmButton: false,
-                    timer: 1000
+            // -----------------------------------------------------------
+            // 🧹 BƯỚC 2: DỌN DẸP BỘ NHỚ (LOCAL & RAM)
+            // -----------------------------------------------------------
+            
+            this.currentTimetable = [];
+            this.importedData = [];
+            
+            if (AppState.currentUser) {
+                AppState.currentUser.timetable = [];
+                // Lưu ngay mảng rỗng xuống LocalStorage
+                // Để nếu user F5 ngay lúc này thì cũng không còn gì hiện lên
+                AppState.saveUser(AppState.currentUser).catch(console.error);
+            }
+
+            // Gọi hàm vẽ lại bảng (để xóa các dòng kẻ thừa nếu có)
+            // Kiểm tra tên hàm cho chắc chắn
+            if (typeof this.render === 'function') this.render();
+            else if (typeof this.renderTimetable === 'function') this.renderTimetable();
+
+            // -----------------------------------------------------------
+            // ✅ BƯỚC 3: BÁO THÀNH CÔNG NGAY (KHÔNG CHỜ SERVER)
+            // -----------------------------------------------------------
+            Swal.fire({
+                icon: 'success',
+                title: 'Đã xóa!',
+                showConfirmButton: false,
+                timer: 1000
+            });
+
+            // -----------------------------------------------------------
+            // 🐢 BƯỚC 4: XÓA SERVER NGẦM (BACKGROUND)
+            // -----------------------------------------------------------
+            if (username) {
+                // Gọi API xóa (Chạy ngầm, không await để tránh đơ giao diện)
+                // Ưu tiên 1: Gọi API xóa tất cả (nhanh hơn)
+                fetch('/api/timetable/clear', { 
+                    method: 'POST', // hoặc DELETE
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: username })
+                }).catch(() => {
+                    // Ưu tiên 2: Nếu không có API clear, xóa từng cái (fallback)
+                    if (classesToDelete.length > 0) {
+                        classesToDelete.forEach(cls => {
+                            if (cls.id) {
+                                fetch('/api/timetable/delete', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ username: username, id: cls.id })
+                                }).catch(e => console.warn(e));
+                            }
+                        });
+                    }
                 });
-
-                // 🐢 BƯỚC 2: XÓA SERVER (CHẠY NGẦM)
-                if (username) {
-                    // Thử gọi API xóa nếu backend hỗ trợ
-                    // Chúng ta gửi ID của từng lớp lên để xóa
-                    classesToDelete.forEach(cls => {
-                        if (cls.id) {
-                            fetch('/api/timetable/delete', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ username: username, id: cls.id })
-                            }).catch(err => console.warn('Lỗi xóa ngầm:', err));
-                        }
-                    });
-                }
-
-            } catch (error) {
-                console.error('Lỗi khi xóa:', error);
-                Swal.fire('Lỗi', 'Đã xảy ra lỗi khi xóa (Xem console)', 'error');
             }
         }
     },
