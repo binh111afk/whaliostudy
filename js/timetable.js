@@ -1492,19 +1492,21 @@ export const Timetable = {
                 };
                 
                 // 🔥 DUPLICATION PREVENTION: Check if this class already exists
-                const isDuplicate = importedClasses.some(existing => 
+                const existingIndex = importedClasses.findIndex(existing => 
                     existing.subject === classData.subject &&
                     existing.day === classData.day &&
                     existing.startPeriod === classData.startPeriod
                 );
                 
-                if (isDuplicate) {
-                    console.log('  ⚠️ Duplicate class detected - skipping:', classData.subject);
-                    continue;
+                if (existingIndex !== -1) {
+                    // Update existing class instead of creating duplicate
+                    importedClasses[existingIndex] = classData;
+                    console.log('  ⚠️ Duplicate class detected - updating existing entry:', classData.subject);
+                } else {
+                    // Add new class
+                    importedClasses.push(classData);
+                    console.log('  ✅ Parsed class:', classData);
                 }
-                
-                importedClasses.push(classData);
-                console.log('  ✅ Parsed class:', classData);
                 
             } catch (error) {
                 console.warn(`  ⚠️ Skipping row ${i} - Parse error:`, error.message);
