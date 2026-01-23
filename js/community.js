@@ -141,11 +141,14 @@ export const RecentActivity = {
         container.innerHTML = activities.map(activity => {
             const bgColor = this.getAvatarColor(activity.type);
             const timeAgo = this.getTimeAgo(activity.time);
-            // Fix hiển thị Avatar
+            
+            // Logic kiểm tra Avatar (Có Custom hay dùng Mặc định)
             const hasCustomAvatar = activity.userAvatar && activity.userAvatar.includes('/uploads/');
+            
+            // ✅ SỬA Ở ĐÂY: Luôn trả về thẻ <img> (Dùng ảnh thật hoặc ảnh avt.png)
             const avatarHtml = hasCustomAvatar
                 ? `<img src="${activity.userAvatar}" class="avatar-small" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" alt="avatar">`
-                : `<div class="avatar-small ${bgColor}" style="width: 32px; height: 32px; border-radius: 50%; display:flex; align-items:center; justify-content:center; color: white; font-size: 14px;">${activity.user.charAt(0).toUpperCase()}</div>`;
+                : `<img src="img/avt.png" class="avatar-small ${bgColor}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" alt="avatar">`;
 
             return `
                 <li style="display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f3f4f6;">
