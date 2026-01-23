@@ -80,6 +80,15 @@ export const RecentActivity = {
             }
         });
 
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.btn-view-more-activities')) {
+                e.preventDefault();
+                e.stopImmediatePropagation(); // Chặn các sự kiện trùng lặp khác
+                console.log('🔘 Đã bấm nút Xem thêm hoạt động');
+                this.toggleViewAll();
+            }
+        });
+
         this.isInitialized = true;
         console.log('✅ RecentActivity Deep Linking initialized');
     },
@@ -333,12 +342,6 @@ export const Community = {
                 const inputId = btn.dataset.inputId;
                 const index = parseInt(btn.dataset.index);
                 this.removeFileFromInput(inputId, index);
-            }
-
-            // View More Activities Button
-            if (e.target.closest('.btn-view-more-activities')) {
-                console.log(' View more activities clicked');
-                RecentActivity.toggleViewAll();
             }
 
             // Create Post Button
