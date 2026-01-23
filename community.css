@@ -928,7 +928,6 @@
     }
 }
 
-/* --- Giới hạn danh sách Hoạt động mới còn 2 dòng --- */
-.activity-list li:nth-child(n+3) {
+.activity-list li:nth-child(n+3):not(:last-child) {
     display: none;
 }
