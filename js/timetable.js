@@ -1062,6 +1062,7 @@ export const Timetable = {
         const modal = document.getElementById('modal-import-excel');
         if (modal) {
             modal.style.display = 'flex';
+            setTimeout(() => { modal.classList.add('active'); }, 10);
             // Reset state
             this.importedData = [];
             const fileInput = document.getElementById('timetable-file-upload');
@@ -1082,6 +1083,10 @@ export const Timetable = {
         const modal = document.getElementById('modal-import-excel');
         if (modal) {
             modal.style.display = 'none';
+            modal.classList.remove('active');
+            
+            // Đợi hiệu ứng mờ dần rồi mới ẩn hẳn
+            setTimeout(() => { modal.style.display = 'none'; }, 300);
             this.importedData = [];
         }
     },
