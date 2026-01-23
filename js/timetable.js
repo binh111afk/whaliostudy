@@ -189,29 +189,38 @@ export const Timetable = {
     },
 
     isClassInWeek(classObj) {
-        // If class has no date range, show it in all weeks
+        // If class has no date range, show it in all weeks (manual classes)
         if (!classObj.startDate || !classObj.endDate) {
             return true;
         }
 
-        // Calculate view start (Monday 00:00) and view end (Sunday 23:59)
-        const viewStart = new Date(this.currentWeekStart);
-        viewStart.setHours(0, 0, 0, 0);
+        if (!this.currentWeekStart) {
+            console.warn('⚠️ currentWeekStart is null, showing all classes');
+            return true;
+        }
+
+        // Calculate week boundaries
+        // weekStart: Monday 00:00:00
+        // weekEnd: Sunday 23:59:59
+        const weekStart = new Date(this.currentWeekStart);
+        weekStart.setHours(0, 0, 0, 0);
         
-        const viewEnd = new Date(this.currentWeekStart);
-        viewEnd.setDate(viewEnd.getDate() + 6);
-        viewEnd.setHours(23, 59, 59, 999);
+        const weekEnd = new Date(this.currentWeekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
 
         const clsStart = new Date(classObj.startDate);
         const clsEnd = new Date(classObj.endDate);
 
-        // STRICT FILTERING: The class must overlap with the current week view
-        // Logic: Skip if class ends before week starts OR class starts after week ends
-        if (clsEnd < viewStart || clsStart > viewEnd) {
-            return false; // SKIP this class, it's not for this week
+        // STRICT WEEK FILTERING
+        // If the class ends BEFORE this week starts → SKIP
+        // OR the class starts AFTER this week ends → SKIP
+        if (clsEnd < weekStart || clsStart > weekEnd) {
+            return false; // Not in this week
         }
 
-        return true; // Class overlaps with current week
+        // Class overlaps with current week
+        return true;
     },
 
     injectStyles() {
@@ -1661,7 +1670,7 @@ export const Timetable = {
 
     parseDateRange(dateRangeStr) {
         if (!dateRangeStr || !String(dateRangeStr).trim()) {
-            console.log('    ⏭️ No date range provided, using defaults');
+            console.log('    ⏭️ No date range provided');
             return {
                 startDate: null,
                 endDate: null,
@@ -1670,16 +1679,18 @@ export const Timetable = {
         }
 
         try {
-            // Clean the string: remove \n, >, extra spaces
-            let cleaned = String(dateRangeStr)
-                .replace(/\n/g, '')
-                .replace(/>/g, '')
-                .replace(/\s+/g, ' ')
+            const original = String(dateRangeStr);
+            console.log(`    🔍 Parsing date range: "${original}"`);
+            
+            // CRITICAL: Clean messy formatting
+            // Remove: newlines (\n, \r), arrows (>), extra whitespace
+            const cleaned = original
+                .replace(/[\n\r\s>-]/g, '')
                 .trim();
 
-            console.log(`    📅 Parsing date range: "${dateRangeStr}" -> cleaned: "${cleaned}"`);
+            console.log(`    🧹 Cleaned: "${cleaned}"`);
 
-            // Regex: Find all dates in DD/MM/YYYY format
+            // Regex: Extract all dates in DD/MM/YYYY format
             const dates = cleaned.match(/(\d{1,2}\/\d{1,2}\/\d{4})/g);
 
             if (dates && dates.length >= 1) {
@@ -1695,15 +1706,16 @@ export const Timetable = {
                 const endMonth = parseInt(endParts[1]);
                 const endYear = parseInt(endParts[2]);
 
-                // Create Date objects (month is 0-indexed in JS)
-                // CRITICAL: Set time to 00:00:00 for start, 23:59:59 for end
+                // CRITICAL: Set time boundaries properly
+                // startDate: 00:00:00 (beginning of day)
+                // endDate: 23:59:59 (end of day)
                 const startDate = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
                 const endDate = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 999);
 
                 // Create display string (short format: dd/mm)
                 const display = `${String(startDay).padStart(2, '0')}/${String(startMonth).padStart(2, '0')} - ${String(endDay).padStart(2, '0')}/${String(endMonth).padStart(2, '0')}`;
 
-                console.log(`    ✅ Parsed dates: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+                console.log(`    ✅ Parsed: ${startDate.toISOString()} to ${endDate.toISOString()}`);
 
                 return {
                     startDate: startDate.toISOString(),
@@ -1713,7 +1725,7 @@ export const Timetable = {
             }
 
             // If no match, return empty
-            console.log('    ⚠️ Date range format not recognized');
+            console.log('    ⚠️ Date format not recognized');
             return {
                 startDate: null,
                 endDate: null,
@@ -1721,7 +1733,7 @@ export const Timetable = {
             };
 
         } catch (error) {
-            console.warn('    ⚠️ Error parsing date range:', error.message);
+            console.error('    ❌ Date parsing error:', error.message);
             return {
                 startDate: null,
                 endDate: null,
@@ -1826,32 +1838,17 @@ export const Timetable = {
     async deleteAllClasses() {
         // Show confirmation dialog
         const result = await Swal.fire({
-            title: '⚠️ Xác nhận xóa',
-            text: 'Bạn có chắc chắn muốn xóa toàn bộ thời khóa biểu?',
+            title: 'Xóa toàn bộ?',
+            text: 'Hành động này không thể hoàn tác!',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Xóa tất cả',
+            confirmButtonText: 'Xóa sạch',
             cancelButtonText: 'Hủy'
         });
 
         if (!result.isConfirmed) {
-            return;
-        }
-
-        // Get current user
-        let currentUser = AppState.currentUser;
-        if (!currentUser || !currentUser.username) {
-            const savedUser = localStorage.getItem('currentUser');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                AppState.currentUser = currentUser;
-            }
-        }
-
-        if (!currentUser || !currentUser.username) {
-            Swal.fire('Chưa đăng nhập', 'Vui lòng đăng nhập để sử dụng tính năng này!', 'error');
             return;
         }
 
@@ -1866,29 +1863,33 @@ export const Timetable = {
                 }
             });
 
-            // Clear timetable in AppState
-            currentUser.timetable = [];
-            AppState.currentUser = currentUser;
-
-            // Save to localStorage and server
-            AppState.saveUser(currentUser);
-
-            // Clear local state
+            // 1. Clear Memory
             this.currentTimetable = [];
+            this.importedData = [];
+            
+            // 2. Clear State (CRITICAL)
+            if (AppState.currentUser) {
+                AppState.currentUser.timetable = [];
+                
+                // 3. PERSIST DATA (Save to Storage AND Server)
+                await AppState.saveUser(AppState.currentUser);
+                
+                console.log('✅ Data cleared from AppState and persisted to localStorage + server');
+            }
 
-            // Re-render
+            // 4. Re-render
             this.renderTimetable();
 
             // Show success message
             Swal.fire({
-                title: 'Thành công!',
-                text: 'Đã xóa toàn bộ thời khóa biểu',
+                title: 'Đã xóa!',
+                text: 'Thời khóa biểu đã được làm sạch.',
                 icon: 'success',
                 timer: 2000,
                 showConfirmButton: false
             });
 
-            console.log('✅ Deleted all classes successfully');
+            console.log('✅ Deleted all classes successfully and persisted');
 
         } catch (error) {
             console.error('❌ Delete all error:', error);
