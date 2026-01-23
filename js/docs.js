@@ -746,6 +746,7 @@ export const DocumentManager = {
             // Đảm bảo có username
             if (AppState.currentUser && !formData.has('username')) {
                 formData.append('username', AppState.currentUser.username);
+                formData.append('uploader', AppState.currentUser.fullName);
             }
 
             // 3. Gọi hàm uploadDocument (Logic ngầm)

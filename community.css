@@ -927,3 +927,8 @@
         max-width: 100%;
     }
 }
+
+/* --- Giới hạn danh sách Hoạt động mới còn 2 dòng --- */
+.activity-list li:nth-child(n+3) {
+    display: none;
+}
