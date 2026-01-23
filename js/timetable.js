@@ -6,6 +6,7 @@ export const Timetable = {
     currentCell: null, // {day, session}
     listenersAttached: false,
     editingClassId: null,
+    importedData: [], // Store imported classes temporarily
 
     // Period time mapping
     periodTimes: {
@@ -1050,6 +1051,323 @@ export const Timetable = {
         if (modal) {
             modal.classList.remove('active');
             setTimeout(() => modal.style.display = 'none', 300);
+        }
+    },
+
+    // ==================== IMPORT FROM EXCEL ====================
+    
+    openImportModal() {
+        const modal = document.getElementById('importTimetableModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            // Reset state
+            this.importedData = [];
+            document.getElementById('timetable-file-input').value = '';
+            document.getElementById('import-preview').style.display = 'none';
+            document.getElementById('import-error').style.display = 'none';
+            document.getElementById('btn-confirm-import').disabled = true;
+        }
+    },
+
+    closeImportModal() {
+        const modal = document.getElementById('importTimetableModal');
+        if (modal) {
+            modal.style.display = 'none';
+            this.importedData = [];
+        }
+    },
+
+    handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                // Get the first sheet
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // Convert to JSON
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                
+                console.log('📊 Excel data loaded:', jsonData);
+                
+                // Process the data
+                this.processExcelData(jsonData);
+                
+            } catch (error) {
+                console.error('❌ Error reading Excel file:', error);
+                this.showError('Lỗi đọc file Excel. Vui lòng kiểm tra định dạng file!');
+            }
+        };
+        
+        reader.onerror = () => {
+            this.showError('Không thể đọc file. Vui lòng thử lại!');
+        };
+        
+        reader.readAsArrayBuffer(file);
+    },
+
+    processExcelData(rows) {
+        console.log('🔄 Processing Excel data...');
+        
+        const importedClasses = [];
+        let currentSubject = '';
+        
+        // Skip header rows (usually first 2-3 rows)
+        // Start from row 3 or 4 depending on your Excel structure
+        for (let i = 3; i < rows.length; i++) {
+            const row = rows[i];
+            
+            // Skip empty rows
+            if (!row || row.length === 0) continue;
+            
+            // Column indices based on HCMUE format:
+            // 0: STT
+            // 1: Subject Code & Name
+            // 5: Day
+            // 6: Period
+            // 7: Room
+            
+            const stt = row[0];
+            const subjectRaw = row[1];
+            const dayRaw = row[5];
+            const periodRaw = row[6];
+            const roomRaw = row[7];
+            
+            // Handle merged cells: if subject is empty but period exists, use currentSubject
+            if (subjectRaw && typeof subjectRaw === 'string' && subjectRaw.trim()) {
+                // Extract subject name (after the "-")
+                const parts = subjectRaw.split('-');
+                if (parts.length > 1) {
+                    currentSubject = parts[1].trim();
+                } else {
+                    currentSubject = subjectRaw.trim();
+                }
+            }
+            
+            // Skip if no period data (means it's not a valid class entry)
+            if (!periodRaw || !dayRaw) continue;
+            
+            try {
+                // Parse Day: "Thứ Hai" -> "2", "Thứ Ba" -> "3", etc.
+                const day = this.parseDayString(dayRaw);
+                
+                // Parse Period: "10 (15h10) -> 12 (17h40)" -> startPeriod=10, numPeriods=3
+                const periodInfo = this.parsePeriodString(periodRaw);
+                
+                // Parse Room
+                const room = roomRaw ? String(roomRaw).trim() : 'TBA';
+                
+                // Determine session based on start period
+                let session = 'morning';
+                if (periodInfo.startPeriod > 12) {
+                    session = 'evening';
+                } else if (periodInfo.startPeriod > 6) {
+                    session = 'afternoon';
+                }
+                
+                // Calculate time range
+                const endPeriod = periodInfo.startPeriod + periodInfo.numPeriods - 1;
+                const startTime = this.periodTimes[periodInfo.startPeriod]?.start || '00:00';
+                const endTime = this.periodTimes[endPeriod]?.end || '23:59';
+                const timeRange = `${startTime} - ${endTime}`;
+                
+                // Create class object
+                const classData = {
+                    subject: currentSubject,
+                    room: room,
+                    campus: 'CS1', // Default campus
+                    day: day,
+                    session: session,
+                    startPeriod: periodInfo.startPeriod,
+                    numPeriods: periodInfo.numPeriods,
+                    timeRange: timeRange
+                };
+                
+                importedClasses.push(classData);
+                console.log('✅ Parsed class:', classData);
+                
+            } catch (error) {
+                console.warn('⚠️ Skipping row', i, '- Parse error:', error.message);
+                continue;
+            }
+        }
+        
+        if (importedClasses.length === 0) {
+            this.showError('Không tìm thấy lớp học nào trong file! Vui lòng kiểm tra định dạng.');
+            return;
+        }
+        
+        // Store imported data
+        this.importedData = importedClasses;
+        
+        // Show preview
+        this.showPreview(importedClasses.length);
+    },
+
+    parseDayString(dayStr) {
+        const dayString = String(dayStr).toLowerCase().trim();
+        
+        const dayMap = {
+            'thứ hai': '2',
+            'thứ ba': '3',
+            'thứ tư': '4',
+            'thứ năm': '5',
+            'thứ sáu': '6',
+            'thứ bảy': '7',
+            'thứ 2': '2',
+            'thứ 3': '3',
+            'thứ 4': '4',
+            'thứ 5': '5',
+            'thứ 6': '6',
+            'thứ 7': '7',
+            'chủ nhật': 'CN',
+            'cn': 'CN',
+            't2': '2',
+            't3': '3',
+            't4': '4',
+            't5': '5',
+            't6': '6',
+            't7': '7'
+        };
+        
+        for (const [key, value] of Object.entries(dayMap)) {
+            if (dayString.includes(key)) {
+                return value;
+            }
+        }
+        
+        throw new Error(`Cannot parse day: ${dayStr}`);
+    },
+
+    parsePeriodString(periodStr) {
+        const str = String(periodStr).trim();
+        
+        // Pattern: "10 (15h10) -> 12 (17h40)" or "10->12" or "10 - 12"
+        // Extract start and end period numbers
+        
+        // Try regex: number followed by optional time, then arrow/dash, then another number
+        const match = str.match(/(\d+)\s*(?:\([^)]+\))?\s*[-–>]+\s*(\d+)/);
+        
+        if (match) {
+            const startPeriod = parseInt(match[1]);
+            const endPeriod = parseInt(match[2]);
+            const numPeriods = endPeriod - startPeriod + 1;
+            
+            return {
+                startPeriod: startPeriod,
+                numPeriods: numPeriods
+            };
+        }
+        
+        // Try single period: "10 (15h10)"
+        const singleMatch = str.match(/^(\d+)/);
+        if (singleMatch) {
+            return {
+                startPeriod: parseInt(singleMatch[1]),
+                numPeriods: 1
+            };
+        }
+        
+        throw new Error(`Cannot parse period: ${periodStr}`);
+    },
+
+    showPreview(count) {
+        document.getElementById('import-error').style.display = 'none';
+        document.getElementById('import-preview').style.display = 'block';
+        document.getElementById('class-count').textContent = count;
+        document.getElementById('btn-confirm-import').disabled = false;
+    },
+
+    showError(message) {
+        document.getElementById('import-preview').style.display = 'none';
+        document.getElementById('import-error').style.display = 'block';
+        document.getElementById('error-message').textContent = message;
+        document.getElementById('btn-confirm-import').disabled = true;
+    },
+
+    async confirmImport() {
+        if (this.importedData.length === 0) {
+            Swal.fire('Lỗi', 'Không có dữ liệu để import!', 'error');
+            return;
+        }
+
+        // Get current user
+        let currentUser = AppState.currentUser;
+        if (!currentUser || !currentUser.username) {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                AppState.currentUser = currentUser;
+            }
+        }
+
+        if (!currentUser || !currentUser.username) {
+            Swal.fire('Chưa đăng nhập', 'Vui lòng đăng nhập để sử dụng tính năng này!', 'error');
+            return;
+        }
+
+        try {
+            // Show loading
+            Swal.fire({
+                title: 'Đang import...',
+                text: `Đang thêm ${this.importedData.length} lớp học vào thời khóa biểu`,
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Send all classes to server
+            const promises = this.importedData.map(classData => {
+                return fetch('/api/timetable', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: currentUser.username,
+                        ...classData
+                    })
+                });
+            });
+
+            const results = await Promise.all(promises);
+            
+            // Check if all succeeded
+            let successCount = 0;
+            for (const response of results) {
+                const data = await response.json();
+                if (data.success) {
+                    successCount++;
+                }
+            }
+
+            // Reload timetable
+            await this.loadTimetable();
+            this.highlightCurrentDay();
+            
+            // Close modal
+            this.closeImportModal();
+
+            // Show success message
+            Swal.fire({
+                title: 'Thành công!',
+                text: `Đã import ${successCount}/${this.importedData.length} lớp học vào thời khóa biểu`,
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+        } catch (error) {
+            console.error('❌ Import error:', error);
+            Swal.fire('Lỗi', 'Có lỗi xảy ra khi import dữ liệu!', 'error');
         }
     }
 };
