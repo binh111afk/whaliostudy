@@ -764,7 +764,7 @@
                 <div class="timetable-header">
                     <h1>📅 Thời Khóa Biểu</h1>
                     <div style="display: flex; gap: 12px;">
-                        <button class="btn-add-class" style="background: #10b981;" onclick="Timetable.openImportModal()">
+                        <button class="btn-open-import" style="background: #10b981; display: flex; align-items: center; gap: 8px; padding: 12px 24px; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s;" onclick="Timetable.openImportModal()">
                             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                             </svg>
@@ -2341,7 +2341,7 @@
                 <div class="form-group">
                     <label class="form-label">Chọn file Excel</label>
                     <input type="file" 
-                           id="timetable-file-input" 
+                           id="timetable-file-upload" 
                            accept=".xlsx,.xls" 
                            class="auth-input" 
                            onchange="Timetable.handleFileSelect(event)">
@@ -2386,7 +2386,7 @@
                         class="btn-submit-login" 
                         style="flex: 1;" 
                         disabled>
-                    Lưu vào TKB
+                    Import Ngay
                 </button>
             </div>
         </div>

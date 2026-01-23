@@ -1057,15 +1057,19 @@ export const Timetable = {
     // ==================== IMPORT FROM EXCEL ====================
     
     openImportModal() {
+        console.log('🔵 Opening Import Modal...');
         const modal = document.getElementById('importTimetableModal');
         if (modal) {
             modal.style.display = 'flex';
             // Reset state
             this.importedData = [];
-            document.getElementById('timetable-file-input').value = '';
+            const fileInput = document.getElementById('timetable-file-upload');
+            if (fileInput) fileInput.value = '';
             document.getElementById('import-preview').style.display = 'none';
             document.getElementById('import-error').style.display = 'none';
             document.getElementById('btn-confirm-import').disabled = true;
+        } else {
+            console.error('❌ Import modal not found!');
         }
     },
 
@@ -1114,61 +1118,71 @@ export const Timetable = {
     },
 
     processExcelData(rows) {
-        console.log('🔄 Processing Excel data...');
+        console.log('🔄 Processing Excel data with HCMUE format...');
+        console.log('📊 Total rows:', rows.length);
         
         const importedClasses = [];
         let currentSubject = '';
         
-        // Skip header rows (usually first 2-3 rows)
-        // Start from row 3 or 4 depending on your Excel structure
-        for (let i = 3; i < rows.length; i++) {
+        // Start from row 1 to skip header (row 0)
+        for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
             
-            // Skip empty rows
-            if (!row || row.length === 0) continue;
+            // Skip completely empty rows
+            if (!row || row.length === 0 || !row.some(cell => cell)) {
+                continue;
+            }
             
-            // Column indices based on HCMUE format:
-            // 0: STT
-            // 1: Subject Code & Name
-            // 5: Day
-            // 6: Period
-            // 7: Room
+            // Extract columns based on HCMUE format
+            const stt = row[0];           // Column 0: STT
+            const subjectRaw = row[1];    // Column 1: Subject Code & Name
+            const dayRaw = row[5];        // Column 5: Day
+            const periodRaw = row[6];     // Column 6: Period
+            const roomRaw = row[7];       // Column 7: Room
             
-            const stt = row[0];
-            const subjectRaw = row[1];
-            const dayRaw = row[5];
-            const periodRaw = row[6];
-            const roomRaw = row[7];
+            console.log(`Row ${i}:`, { stt, subjectRaw, dayRaw, periodRaw, roomRaw });
             
-            // Handle merged cells: if subject is empty but period exists, use currentSubject
+            // Handle Subject with Merged Cells Logic
             if (subjectRaw && typeof subjectRaw === 'string' && subjectRaw.trim()) {
-                // Extract subject name (after the "-")
-                const parts = subjectRaw.split('-');
-                if (parts.length > 1) {
-                    currentSubject = parts[1].trim();
+                // Split by first "-" and take the second part
+                const dashIndex = subjectRaw.indexOf('-');
+                if (dashIndex !== -1) {
+                    currentSubject = subjectRaw.substring(dashIndex + 1).trim();
                 } else {
                     currentSubject = subjectRaw.trim();
                 }
+                console.log('  ✅ New subject detected:', currentSubject);
             }
             
-            // Skip if no period data (means it's not a valid class entry)
-            if (!periodRaw || !dayRaw) continue;
+            // Skip if no period data (not a valid class entry)
+            if (!periodRaw || !dayRaw) {
+                console.log('  ⏭️ Skipping - no period or day data');
+                continue;
+            }
+            
+            // If we don't have a current subject, skip
+            if (!currentSubject) {
+                console.log('  ⏭️ Skipping - no subject available');
+                continue;
+            }
             
             try {
-                // Parse Day: "Thứ Hai" -> "2", "Thứ Ba" -> "3", etc.
+                // Parse Day: "Thứ Hai" -> "2", "Chủ Nhật" -> "CN"
                 const day = this.parseDayString(dayRaw);
                 
-                // Parse Period: "10 (15h10) -> 12 (17h40)" -> startPeriod=10, numPeriods=3
+                // Parse Period: Extract start and end using regex
                 const periodInfo = this.parsePeriodString(periodRaw);
                 
-                // Parse Room
-                const room = roomRaw ? String(roomRaw).trim() : 'TBA';
+                // Parse Room - default to "Online" if empty
+                const room = (roomRaw && String(roomRaw).trim()) ? String(roomRaw).trim() : 'Online';
                 
-                // Determine session based on start period
+                // Determine session based on startPeriod
                 let session = 'morning';
-                if (periodInfo.startPeriod > 12) {
+                if (periodInfo.startPeriod <= 6) {
+                    session = 'morning';
+                } else if (periodInfo.startPeriod > 12) {
                     session = 'evening';
-                } else if (periodInfo.startPeriod > 6) {
+                } else {
                     session = 'afternoon';
                 }
                 
@@ -1191,13 +1205,15 @@ export const Timetable = {
                 };
                 
                 importedClasses.push(classData);
-                console.log('✅ Parsed class:', classData);
+                console.log('  ✅ Parsed class:', classData);
                 
             } catch (error) {
-                console.warn('⚠️ Skipping row', i, '- Parse error:', error.message);
+                console.warn(`  ⚠️ Skipping row ${i} - Parse error:`, error.message);
                 continue;
             }
         }
+        
+        console.log('📦 Total classes parsed:', importedClasses.length);
         
         if (importedClasses.length === 0) {
             this.showError('Không tìm thấy lớp học nào trong file! Vui lòng kiểm tra định dạng.');
@@ -1250,15 +1266,18 @@ export const Timetable = {
         const str = String(periodStr).trim();
         
         // Pattern: "10 (15h10) -> 12 (17h40)" or "10->12" or "10 - 12"
-        // Extract start and end period numbers
+        // Use Regex to capture the first number (Start) and the last number (End)
         
-        // Try regex: number followed by optional time, then arrow/dash, then another number
-        const match = str.match(/(\d+)\s*(?:\([^)]+\))?\s*[-–>]+\s*(\d+)/);
+        // Extract all numbers from the string
+        const numbers = str.match(/\d+/g);
         
-        if (match) {
-            const startPeriod = parseInt(match[1]);
-            const endPeriod = parseInt(match[2]);
+        if (numbers && numbers.length >= 2) {
+            // First number is start period, second number is end period
+            const startPeriod = parseInt(numbers[0]);
+            const endPeriod = parseInt(numbers[1]);
             const numPeriods = endPeriod - startPeriod + 1;
+            
+            console.log(`    📊 Period parsing: "${str}" -> Start: ${startPeriod}, End: ${endPeriod}, Count: ${numPeriods}`);
             
             return {
                 startPeriod: startPeriod,
@@ -1266,11 +1285,12 @@ export const Timetable = {
             };
         }
         
-        // Try single period: "10 (15h10)"
-        const singleMatch = str.match(/^(\d+)/);
-        if (singleMatch) {
+        // Try single period: "10" or "10 (15h10)"
+        if (numbers && numbers.length === 1) {
+            const startPeriod = parseInt(numbers[0]);
+            console.log(`    📊 Single period: "${str}" -> Period: ${startPeriod}`);
             return {
-                startPeriod: parseInt(singleMatch[1]),
+                startPeriod: startPeriod,
                 numPeriods: 1
             };
         }
