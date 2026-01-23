@@ -181,7 +181,8 @@ export const Timetable = {
                 const day = currentDate.getDate().toString().padStart(2, '0');
                 const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
                 
-                dateElement.textContent = `${day}/${month}`;
+                // Update innerHTML to preserve the dd/mm format
+                dateElement.innerHTML = `${day}/${month}`;
             }
         });
         
@@ -189,7 +190,7 @@ export const Timetable = {
     },
 
     isClassInWeek(classObj) {
-        // If class has no date range, show it in all weeks (manual classes)
+        // CRITICAL FIX: If class has no date range, show it in all weeks (manual classes)
         if (!classObj.startDate || !classObj.endDate) {
             return true;
         }
@@ -213,8 +214,9 @@ export const Timetable = {
         const clsEnd = new Date(classObj.endDate);
 
         // STRICT WEEK FILTERING
-        // If the class ends BEFORE this week starts → SKIP
-        // OR the class starts AFTER this week ends → SKIP
+        // Show class ONLY IF it overlaps with the current week
+        // If class ends BEFORE this week starts → HIDE
+        // OR class starts AFTER this week ends → HIDE
         if (clsEnd < weekStart || clsStart > weekEnd) {
             return false; // Not in this week
         }
@@ -523,8 +525,23 @@ export const Timetable = {
         console.log('🎨 Starting renderTimetable with', this.currentTimetable.length, 'classes...');
         console.log('📋 Class data:', this.currentTimetable);
 
-        // Update week display
+        // CRITICAL FIX: Calculate week boundaries for filtering
+        if (!this.currentWeekStart) {
+            this.currentWeekStart = this.getMondayOfWeek(new Date());
+        }
+
+        const weekStart = new Date(this.currentWeekStart);
+        weekStart.setHours(0, 0, 0, 0);
+        
+        const weekEnd = new Date(this.currentWeekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+
+        console.log('📅 Week filter range:', weekStart.toDateString(), 'to', weekEnd.toDateString());
+
+        // Update week display and header dates
         this.updateWeekDisplay();
+        this.renderWeekDatesInHeader();
 
         const tbody = document.getElementById('timetable-body');
         if (!tbody) {
@@ -545,13 +562,13 @@ export const Timetable = {
                         <thead>
                             <tr>
                                 <th class="session-col">Buổi</th>
-                                <th data-day="2">Thứ 2</th>
-                                <th data-day="3">Thứ 3</th>
-                                <th data-day="4">Thứ 4</th>
-                                <th data-day="5">Thứ 5</th>
-                                <th data-day="6">Thứ 6</th>
-                                <th data-day="7">Thứ 7</th>
-                                <th data-day="CN">CN</th>
+                                <th data-day="2">THỨ 2<div class="header-date" id="date-2" style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">--/--</div></th>
+                                <th data-day="3">THỨ 3<div class="header-date" id="date-3" style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">--/--</div></th>
+                                <th data-day="4">THỨ 4<div class="header-date" id="date-4" style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">--/--</div></th>
+                                <th data-day="5">THỨ 5<div class="header-date" id="date-5" style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">--/--</div></th>
+                                <th data-day="6">THỨ 6<div class="header-date" id="date-6" style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">--/--</div></th>
+                                <th data-day="7">THỨ 7<div class="header-date" id="date-7" style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">--/--</div></th>
+                                <th data-day="CN">CN<div class="header-date" id="date-CN" style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">--/--</div></th>
                             </tr>
                         </thead>
                         <tbody id="timetable-body"></tbody>
@@ -568,6 +585,7 @@ export const Timetable = {
 
             // Continue with the new tbody
             this.renderTableRows(newTbody);
+            this.renderWeekDatesInHeader(); // Render dates again after creating structure
             return;
         }
 
@@ -994,6 +1012,28 @@ export const Timetable = {
         document.getElementById('classStartPeriod').value = cls.startPeriod;
         document.getElementById('classNumPeriods').value = cls.numPeriods;
 
+        // CRITICAL FIX: Populate date fields if available
+        const startDateInput = document.getElementById('classStartDate');
+        const endDateInput = document.getElementById('classEndDate');
+        
+        if (cls.startDate && cls.endDate) {
+            // Convert ISO date strings to YYYY-MM-DD format for input
+            const formatDateForInput = (isoString) => {
+                const date = new Date(isoString);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            
+            if (startDateInput) startDateInput.value = formatDateForInput(cls.startDate);
+            if (endDateInput) endDateInput.value = formatDateForInput(cls.endDate);
+        } else {
+            // Clear date inputs if class doesn't have date range
+            if (startDateInput) startDateInput.value = '';
+            if (endDateInput) endDateInput.value = '';
+        }
+
         // Đổi tiêu đề modal và nút bấm cho hợp ngữ cảnh
         modal.querySelector('h2').innerHTML = '✏️ Cập Nhật Lớp Học';
         modal.querySelector('.btn-submit-create-class').innerHTML = '💾 Lưu Thay Đổi';
@@ -1023,9 +1063,44 @@ export const Timetable = {
         document.getElementById('classStartPeriod').value = '1';
         document.getElementById('classNumPeriods').value = '2';
 
-        // Note: Manual classes (without date range) will be shown in all weeks
-        // This is intentional as they are permanent schedule items
-        console.log('ℹ️ Manual classes will be visible in all weeks (no date range restriction)');
+        // CRITICAL FIX: Smart date pre-fill based on currently viewed week
+        if (this.currentWeekStart) {
+            // Calculate Monday and Sunday of the current viewed week
+            const monday = new Date(this.currentWeekStart);
+            monday.setHours(0, 0, 0, 0);
+            
+            const sunday = new Date(this.currentWeekStart);
+            sunday.setDate(sunday.getDate() + 6);
+            sunday.setHours(23, 59, 59, 999);
+
+            // Format dates as YYYY-MM-DD for input[type="date"]
+            const formatDateForInput = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            const startDateInput = document.getElementById('classStartDate');
+            const endDateInput = document.getElementById('classEndDate');
+            
+            if (startDateInput) {
+                startDateInput.value = formatDateForInput(monday);
+                console.log('📅 Pre-filled start date:', formatDateForInput(monday));
+            }
+            
+            if (endDateInput) {
+                endDateInput.value = formatDateForInput(sunday);
+                console.log('📅 Pre-filled end date:', formatDateForInput(sunday));
+            }
+        } else {
+            // Clear date inputs if no week is selected
+            const startDateInput = document.getElementById('classStartDate');
+            const endDateInput = document.getElementById('classEndDate');
+            if (startDateInput) startDateInput.value = '';
+            if (endDateInput) endDateInput.value = '';
+            console.log('ℹ️ Manual classes will be visible in all weeks (no date range restriction)');
+        }
 
         modal.querySelector('h2').innerHTML = '➕ Thêm Lớp Học';
         modal.querySelector('.btn-submit-create-class').innerHTML = '💾 Lưu Lớp Học';
@@ -1103,6 +1178,39 @@ export const Timetable = {
         const endTime = this.periodTimes[endPeriod].end;
         const timeRange = `${startTime} - ${endTime}`;
 
+        // CRITICAL FIX: Get date range from inputs (optional)
+        const startDateInput = document.getElementById('classStartDate');
+        const endDateInput = document.getElementById('classEndDate');
+        
+        let startDate = null;
+        let endDate = null;
+        let dateRangeDisplay = '';
+
+        if (startDateInput && startDateInput.value && endDateInput && endDateInput.value) {
+            // Parse dates from input (YYYY-MM-DD format)
+            const startDateParts = startDateInput.value.split('-');
+            const endDateParts = endDateInput.value.split('-');
+            
+            // Create Date objects with proper time boundaries
+            startDate = new Date(parseInt(startDateParts[0]), parseInt(startDateParts[1]) - 1, parseInt(startDateParts[2]), 0, 0, 0, 0);
+            endDate = new Date(parseInt(endDateParts[0]), parseInt(endDateParts[1]) - 1, parseInt(endDateParts[2]), 23, 59, 59, 999);
+            
+            // Create display string
+            const formatDD_MM = (date) => {
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                return `${day}/${month}`;
+            };
+            
+            dateRangeDisplay = `${formatDD_MM(startDate)} - ${formatDD_MM(endDate)}`;
+            
+            console.log('📅 Date range captured:', {
+                startDate: startDate.toISOString(),
+                endDate: endDate.toISOString(),
+                display: dateRangeDisplay
+            });
+        }
+
         // 3. Chuẩn bị dữ liệu gửi đi
         const classData = {
             username: currentUser.username,
@@ -1115,6 +1223,13 @@ export const Timetable = {
             numPeriods,
             timeRange
         };
+
+        // Add date range if provided
+        if (startDate && endDate) {
+            classData.startDate = startDate.toISOString();
+            classData.endDate = endDate.toISOString();
+            classData.dateRangeDisplay = dateRangeDisplay;
+        }
 
         // 👇👇👇 PHẦN QUAN TRỌNG NHẤT: CHỌN API ĐÚNG 👇👇👇
         let url = '/api/timetable'; // Mặc định là TẠO MỚI
@@ -1586,19 +1701,19 @@ export const Timetable = {
     parsePeriodString(periodStr) {
         const str = String(periodStr).trim();
         
-        // Pattern: "10 (15h10)->\n>12 (17h40)" or "1 (06h30) -> 3"
-        // CRITICAL: Use regex to find numbers followed by opening parenthesis "("
-        // This prevents grabbing hour values (15h10, 17h40)
+        // CRITICAL FIX: Pattern "10 (15h10) -> 12 (17h40)"
+        // We need to extract period numbers (10, 12), NOT hour values (15, 17)
+        // Regex: Match digits that are followed by opening parenthesis "("
+        // This ensures we only capture period numbers, not time values inside parentheses
         
-        // Regex: Find numbers followed by " (" or at start of line
-        const matches = str.match(/(\d+)\s*\(/g);
+        const matches = str.match(/\b(\d+)\s*\(/g);
         
         if (matches && matches.length >= 1) {
             // Extract the numbers from matches (e.g., "10 (" -> 10)
             const periods = matches.map(match => parseInt(match.match(/\d+/)[0]));
             
-            const startPeriod = periods[0]; // First match
-            const endPeriod = periods[periods.length - 1]; // Last match
+            const startPeriod = periods[0]; // First match = start period
+            const endPeriod = periods[periods.length - 1]; // Last match = end period
             const numPeriods = endPeriod - startPeriod + 1;
             
             // Determine session based on start period
@@ -1838,13 +1953,12 @@ export const Timetable = {
     async deleteAllClasses() {
         // Show confirmation dialog
         const result = await Swal.fire({
-            title: 'Xóa toàn bộ?',
-            text: 'Hành động này không thể hoàn tác!',
+            title: 'Xóa sạch dữ liệu?',
+            text: 'Hành động này sẽ xóa toàn bộ dữ liệu trên Server!',
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Xóa sạch',
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Xóa hết',
             cancelButtonText: 'Hủy'
         });
 
@@ -1863,37 +1977,66 @@ export const Timetable = {
                 }
             });
 
-            // 1. Clear Memory
+            // Get current user
+            let currentUser = AppState.currentUser;
+            if (!currentUser || !currentUser.username) {
+                const savedUser = localStorage.getItem('currentUser');
+                if (savedUser) {
+                    currentUser = JSON.parse(savedUser);
+                    AppState.currentUser = currentUser;
+                }
+            }
+
+            if (!currentUser || !currentUser.username) {
+                Swal.fire('Chưa đăng nhập', 'Vui lòng đăng nhập để sử dụng tính năng này!', 'error');
+                return;
+            }
+
+            // 1. CRITICAL FIX: Call API to clear database
+            const response = await fetch('/api/timetable/clear', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: currentUser.username })
+            });
+
+            const data = await response.json();
+            
+            if (!data.success) {
+                console.error('❌ Server deletion failed:', data.message);
+                Swal.fire('Lỗi', 'Không thể xóa dữ liệu server: ' + (data.message || 'Unknown error'), 'error');
+                return;
+            }
+
+            console.log('✅ Server data cleared successfully');
+
+            // 2. Clear local state
             this.currentTimetable = [];
             this.importedData = [];
             
-            // 2. Clear State (CRITICAL)
+            // 3. Clear AppState and persist empty state
             if (AppState.currentUser) {
                 AppState.currentUser.timetable = [];
-                
-                // 3. PERSIST DATA (Save to Storage AND Server)
                 await AppState.saveUser(AppState.currentUser);
-                
-                console.log('✅ Data cleared from AppState and persisted to localStorage + server');
+                console.log('✅ AppState cleared and persisted');
             }
 
-            // 4. Re-render
+            // 4. Re-render empty table
             this.renderTimetable();
 
             // Show success message
             Swal.fire({
                 title: 'Đã xóa!',
-                text: 'Thời khóa biểu đã được làm sạch.',
+                text: 'Dữ liệu đã được làm sạch.',
                 icon: 'success',
                 timer: 2000,
                 showConfirmButton: false
             });
 
-            console.log('✅ Deleted all classes successfully and persisted');
+            console.log('✅ All timetable data deleted successfully (DB + Local + State)');
 
         } catch (error) {
             console.error('❌ Delete all error:', error);
-            Swal.fire('Lỗi', 'Có lỗi xảy ra khi xóa dữ liệu!', 'error');
+            Swal.fire('Lỗi', 'Không thể xóa dữ liệu server: ' + error.message, 'error');
         }
     }
 };

@@ -1599,6 +1599,31 @@ app.post('/api/timetable/delete', async (req, res) => {
     }
 });
 
+// CRITICAL FIX: DELETE /api/timetable/clear - Clear all timetable data for a user
+app.delete('/api/timetable/clear', async (req, res) => {
+    try {
+        const { username } = req.body;
+
+        if (!username) {
+            return res.json({ success: false, message: '❌ Username is required' });
+        }
+
+        // Delete all timetable entries for this user
+        const result = await Timetable.deleteMany({ username: username });
+
+        console.log(`🗑️ Cleared ${result.deletedCount} timetable entries for user: ${username}`);
+        
+        res.json({ 
+            success: true, 
+            message: `Đã xóa ${result.deletedCount} lớp học`,
+            deletedCount: result.deletedCount
+        });
+    } catch (err) {
+        console.error('Error clearing timetable:', err);
+        res.json({ success: false, message: 'Server error: ' + err.message });
+    }
+});
+
 app.post('/api/timetable/update', async (req, res) => {
     try {
         const { classId, username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange } = req.body;

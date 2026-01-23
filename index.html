@@ -762,28 +762,31 @@
         <section id="timetable-section" style="display: none; width: 100%;">
             <div class="timetable-container">
                 <div class="timetable-header" style="display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding: 20px; background: white; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <!-- Left: Title -->
                     <h1 style="font-size: 20px; margin: 0; white-space: nowrap; color: #111827; font-weight: 700;">📅 Thời Khóa Biểu</h1>
                     
-                    <div id="week-navigator" style="background: #ffffff; padding: 6px 16px; border-radius: 50px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; display: flex; align-items: center; gap: 15px;">
+                    <!-- Center: Week Navigator (Floating Container) -->
+                    <div id="week-navigator" style="box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-radius: 50px; padding: 5px 15px; display: flex; gap: 15px; align-items: center; background: #ffffff;">
                         <button onclick="Timetable.changeWeek(-1)" style="border: none; background: none; font-size: 18px; color: #6b7280; cursor: pointer; transition: 0.2s; padding: 4px 8px;" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#6b7280'">❮</button>
                         <span id="current-week-display" style="font-weight: 600; color: #374151; font-size: 14px; min-width: 140px; text-align: center;">Đang tải...</span>
                         <button onclick="Timetable.changeWeek(1)" style="border: none; background: none; font-size: 18px; color: #6b7280; cursor: pointer; transition: 0.2s; padding: 4px 8px;" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#6b7280'">❯</button>
                     </div>
 
+                    <!-- Right: Action Buttons -->
                     <div style="display: flex; gap: 12px; margin-left: auto;">
-                        <button id="btn-delete-all" class="btn-delete-all" onclick="Timetable.deleteAllClasses()" style="background: #fee2e2; color: #ef4444; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; transition: all 0.2s; font-size: 13px;" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">
+                        <button id="btn-delete-all" onclick="Timetable.deleteAllClasses()" style="background: #ef4444; color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; transition: all 0.2s; font-size: 13px;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            Xóa tất cả
+                            Delete All
                         </button>
 
-                        <button class="btn-open-import-v2" onclick="Timetable.openImportModal()" style="background: #d1fae5; color: #10b981; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; transition: all 0.2s; font-size: 13px;" onmouseover="this.style.background='#a7f3d0'" onmouseout="this.style.background='#d1fae5'">
+                        <button class="btn-open-import-v2" onclick="Timetable.openImportModal()" style="background: #10b981; color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; transition: all 0.2s; font-size: 13px;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                            Nhập File
+                            Import File
                         </button>
                         
-                        <button class="btn-add-class" onclick="Timetable.openCreateModal()" style="background: #dbeafe; color: #3b82f6; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; transition: all 0.2s; font-size: 13px;" onmouseover="this.style.background='#bfdbfe'" onmouseout="this.style.background='#dbeafe'">
+                        <button class="btn-add-class" onclick="Timetable.openCreateModal()" style="background: #3b82f6; color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; transition: all 0.2s; font-size: 13px;" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                            Thêm lớp
+                            Add Class
                         </button>
                     </div>
                 </div>
@@ -2164,6 +2167,20 @@
                 <div class="form-group">
                     <label class="form-label">Số tiết</label>
                     <input type="number" id="classNumPeriods" class="form-input" min="1" max="5" value="2" required>
+                </div>
+
+                <!-- Row 5: Date Range (Optional for imported classes) -->
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Ngày bắt đầu (Tùy chọn)</label>
+                        <input type="date" id="classStartDate" class="form-input" placeholder="dd/mm/yyyy">
+                        <small style="color: #6b7280; font-size: 11px;">Để trống để hiển thị mọi tuần</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ngày kết thúc (Tùy chọn)</label>
+                        <input type="date" id="classEndDate" class="form-input" placeholder="dd/mm/yyyy">
+                        <small style="color: #6b7280; font-size: 11px;">Để trống để hiển thị mọi tuần</small>
+                    </div>
                 </div>
 
                 <!-- Thời gian tự động -->
