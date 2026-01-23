@@ -763,28 +763,27 @@
             <div class="timetable-container">
                 <div class="timetable-header">
                     <h1>📅 Thời Khóa Biểu</h1>
-                    <div id="week-navigator" style="display: flex; align-items: center; gap: 10px; background: #f3f4f6; padding: 5px 10px; border-radius: 8px; margin-left: 20px;">
-                        <button onclick="Timetable.changeWeek(-1)" style="border:none; background:none; cursor:pointer; font-weight:bold; font-size: 16px;">❮</button>
-                        <span id="current-week-display" style="font-weight: 600; color: #374151; font-size: 14px; min-width: 150px; text-align: center;">...</span>
-                        <button onclick="Timetable.changeWeek(1)" style="border:none; background:none; cursor:pointer; font-weight:bold; font-size: 16px;">❯</button>
-                        <button onclick="Timetable.jumpToToday()" style="font-size: 12px; padding: 2px 8px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer;">Hôm nay</button>
+                    
+                    <div id="week-navigator" style="display: flex; align-items: center; gap: 10px; background: #f3f4f6; padding: 5px 15px; border-radius: 8px; margin-left: 20px;">
+                        <button onclick="Timetable.changeWeek(-1)" style="border:none; background:none; cursor:pointer; font-weight:bold; font-size: 18px; color: #4b5563;">❮</button>
+                        <span id="current-week-display" style="font-weight: 600; color: #111827; font-size: 14px; min-width: 160px; text-align: center;">Đang tải...</span>
+                        <button onclick="Timetable.changeWeek(1)" style="border:none; background:none; cursor:pointer; font-weight:bold; font-size: 18px; color: #4b5563;">❯</button>
+                        <button onclick="Timetable.jumpToToday()" style="font-size: 12px; padding: 4px 10px; background: #6366f1; color: white; border: none; border-radius: 6px; cursor: pointer;">Hôm nay</button>
                     </div>
+
                     <div style="margin-left: auto; display: flex; gap: 10px;">
-                        <button class="btn-open-import"
-                            style="background: #10b981; display: flex; align-items: center; gap: 8px; padding: 12px 24px; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s;"
-                            onclick="Timetable.openImportModal()">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                            </svg>
-                            Nhập File
+                        <button onclick="Timetable.deleteAllClasses()" style="background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 500; transition: all 0.2s;">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            Xóa tất cả
                         </button>
-                        <button class="btn-add-class">
-                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                            </svg>
-                            Thêm Lớp Học
+
+                        <button class="btn-open-import" onclick="Timetable.openImportModal()" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 500;">
+                            📥 Nhập File
+                        </button>
+                        
+                        <button onclick="Timetable.openCreateModal()" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 500;">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                            Thêm lớp
                         </button>
                     </div>
                 </div>

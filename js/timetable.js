@@ -89,8 +89,7 @@ export const Timetable = {
         this.injectStyles();
         
         // Initialize week navigation to current week
-        this.currentWeekStart = this.getMondayOfWeek(new Date());
-        this.updateWeekDisplay();
+        this.jumpToToday();
         
         await this.loadTimetable();
         this.renderTimetable();
@@ -476,6 +475,9 @@ export const Timetable = {
     renderTimetable() {
         console.log('🎨 Starting renderTimetable with', this.currentTimetable.length, 'classes...');
         console.log('📋 Class data:', this.currentTimetable);
+
+        // Update week display
+        this.updateWeekDisplay();
 
         const tbody = document.getElementById('timetable-body');
         if (!tbody) {
@@ -1550,8 +1552,8 @@ export const Timetable = {
 
             console.log(`    📅 Parsing date range: "${dateRangeStr}" -> cleaned: "${cleaned}"`);
 
-            // Pattern: dd/mm/yyyy->dd/mm/yyyy or dd/mm/yyyy-dd/mm/yyyy
-            const datePattern = /(\d{2})\/(\d{2})\/(\d{4})\s*[-–>]+\s*(\d{2})\/(\d{2})\/(\d{4})/;
+            // Pattern: d/m/yyyy or dd/mm/yyyy (flexible with 1 or 2 digits for day/month)
+            const datePattern = /(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})\s*[-–>]+\s*(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/;
             const match = cleaned.match(datePattern);
 
             if (match) {
@@ -1562,68 +1564,7 @@ export const Timetable = {
                 const endDate = new Date(parseInt(endYear), parseInt(endMonth) - 1, parseInt(endDay));
 
                 // Create display string (short format: dd/mm)
-                const display = `${startDay}/${startMonth} - ${endDay}/${endMonth}`;
-
-                console.log(`    ✅ Parsed dates: ${startDate.toISOString()} to ${endDate.toISOString()}`);
-
-                return {
-                    startDate: startDate.toISOString(),
-                    endDate: endDate.toISOString(),
-                    display: display
-                };
-            }
-
-            // If no match, return empty
-            console.log('    ⚠️ Date range format not recognized');
-            return {
-                startDate: null,
-                endDate: null,
-                display: ''
-            };
-
-        } catch (error) {
-            console.warn('    ⚠️ Error parsing date range:', error.message);
-            return {
-                startDate: null,
-                endDate: null,
-                display: ''
-            };
-        }
-    },
-
-    parseDateRange(dateRangeStr) {
-        if (!dateRangeStr || !String(dateRangeStr).trim()) {
-            console.log('    ⏭️ No date range provided, using defaults');
-            return {
-                startDate: null,
-                endDate: null,
-                display: ''
-            };
-        }
-
-        try {
-            // Clean the string: remove \n, >, extra spaces
-            let cleaned = String(dateRangeStr)
-                .replace(/\n/g, '')
-                .replace(/>/g, '')
-                .replace(/\s+/g, ' ')
-                .trim();
-
-            console.log(`    📅 Parsing date range: "${dateRangeStr}" -> cleaned: "${cleaned}"`);
-
-            // Pattern: dd/mm/yyyy->dd/mm/yyyy or dd/mm/yyyy-dd/mm/yyyy
-            const datePattern = /(\d{2})\/(\d{2})\/(\d{4})\s*[-–>]+\s*(\d{2})\/(\d{2})\/(\d{4})/;
-            const match = cleaned.match(datePattern);
-
-            if (match) {
-                const [, startDay, startMonth, startYear, endDay, endMonth, endYear] = match;
-
-                // Create Date objects (month is 0-indexed in JS)
-                const startDate = new Date(parseInt(startYear), parseInt(startMonth) - 1, parseInt(startDay));
-                const endDate = new Date(parseInt(endYear), parseInt(endMonth) - 1, parseInt(endDay));
-
-                // Create display string (short format: dd/mm)
-                const display = `${startDay}/${startMonth} - ${endDay}/${endMonth}`;
+                const display = `${startDay.padStart(2, '0')}/${startMonth.padStart(2, '0')} - ${endDay.padStart(2, '0')}/${endMonth.padStart(2, '0')}`;
 
                 console.log(`    ✅ Parsed dates: ${startDate.toISOString()} to ${endDate.toISOString()}`);
 
@@ -1742,6 +1683,79 @@ export const Timetable = {
         } catch (error) {
             console.error('❌ Import error:', error);
             Swal.fire('Lỗi', 'Có lỗi xảy ra khi import dữ liệu!', 'error');
+        }
+    },
+
+    async deleteAllClasses() {
+        // Show confirmation dialog
+        const result = await Swal.fire({
+            title: '⚠️ Xác nhận xóa',
+            text: 'Bạn có chắc chắn muốn xóa toàn bộ thời khóa biểu?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Xóa tất cả',
+            cancelButtonText: 'Hủy'
+        });
+
+        if (!result.isConfirmed) {
+            return;
+        }
+
+        // Get current user
+        let currentUser = AppState.currentUser;
+        if (!currentUser || !currentUser.username) {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                AppState.currentUser = currentUser;
+            }
+        }
+
+        if (!currentUser || !currentUser.username) {
+            Swal.fire('Chưa đăng nhập', 'Vui lòng đăng nhập để sử dụng tính năng này!', 'error');
+            return;
+        }
+
+        try {
+            // Show loading
+            Swal.fire({
+                title: 'Đang xóa...',
+                text: 'Đang xóa toàn bộ thời khóa biểu',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Clear timetable in AppState
+            currentUser.timetable = [];
+            AppState.currentUser = currentUser;
+
+            // Save to localStorage and server
+            AppState.saveUser(currentUser);
+
+            // Clear local state
+            this.currentTimetable = [];
+
+            // Re-render
+            this.renderTimetable();
+
+            // Show success message
+            Swal.fire({
+                title: 'Thành công!',
+                text: 'Đã xóa toàn bộ thời khóa biểu',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+            console.log('✅ Deleted all classes successfully');
+
+        } catch (error) {
+            console.error('❌ Delete all error:', error);
+            Swal.fire('Lỗi', 'Có lỗi xảy ra khi xóa dữ liệu!', 'error');
         }
     }
 };
