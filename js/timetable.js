@@ -156,6 +156,36 @@ export const Timetable = {
 
         weekDisplay.textContent = `${formatDate(monday)} - ${formatDate(sunday)}`;
         console.log(`📅 Week display updated: ${weekDisplay.textContent}`);
+        
+        // Also update the header dates for each day
+        this.renderWeekDatesInHeader();
+    },
+
+    renderWeekDatesInHeader() {
+        if (!this.currentWeekStart) {
+            console.warn('⚠️ Cannot render week dates - currentWeekStart is null');
+            return;
+        }
+
+        const monday = new Date(this.currentWeekStart);
+        
+        // Days mapping: 2 = Monday (index 0), 3 = Tuesday (index 1), ..., CN = Sunday (index 6)
+        const dayIds = ['2', '3', '4', '5', '6', '7', 'CN'];
+        
+        dayIds.forEach((dayId, index) => {
+            const dateElement = document.getElementById(`date-${dayId}`);
+            if (dateElement) {
+                const currentDate = new Date(monday);
+                currentDate.setDate(monday.getDate() + index);
+                
+                const day = currentDate.getDate().toString().padStart(2, '0');
+                const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+                
+                dateElement.textContent = `${day}/${month}`;
+            }
+        });
+        
+        console.log('📅 Week dates rendered in headers');
     },
 
     isClassInWeek(classObj) {
@@ -966,6 +996,10 @@ export const Timetable = {
         document.getElementById('classStartPeriod').value = '1';
         document.getElementById('classNumPeriods').value = '2';
 
+        // Note: Manual classes (without date range) will be shown in all weeks
+        // This is intentional as they are permanent schedule items
+        console.log('ℹ️ Manual classes will be visible in all weeks (no date range restriction)');
+
         modal.querySelector('h2').innerHTML = '➕ Thêm Lớp Học';
         modal.querySelector('.btn-submit-create-class').innerHTML = '💾 Lưu Lớp Học';
 
@@ -1306,6 +1340,12 @@ export const Timetable = {
                         columnMap.room = colIdx;
                         console.log(`  📌 Room column: ${colIdx} (${row[colIdx]})`);
                     }
+                    // Campus/Location column
+                    else if (header.includes('cơ sở') || header.includes('địa điểm') || 
+                             header.includes('campus') || header.includes('location')) {
+                        columnMap.campus = colIdx;
+                        console.log(`  📌 Campus column: ${colIdx} (${row[colIdx]})`);
+                    }
                     // Date Range column
                     else if (header.includes('từ ngày') || header.includes('đến ngày') || 
                              header.includes('ngày') || header.includes('time') || 
@@ -1363,9 +1403,10 @@ export const Timetable = {
             const dayRaw = row[columnMap.day] || '';
             const periodRaw = row[columnMap.period] || '';
             const roomRaw = row[columnMap.room] || '';
+            const campusRaw = columnMap.campus !== undefined ? (row[columnMap.campus] || '') : '';
             const dateRangeRaw = columnMap.dateRange !== undefined ? (row[columnMap.dateRange] || '') : '';
             
-            console.log(`Row ${i}:`, { subjectRaw, dayRaw, periodRaw, roomRaw, dateRangeRaw });
+            console.log(`Row ${i}:`, { subjectRaw, dayRaw, periodRaw, roomRaw, campusRaw, dateRangeRaw });
             
             // ===== HANDLE MERGED CELLS: Update lastValidSubject =====
             if (subjectRaw && String(subjectRaw).trim()) {
@@ -1404,6 +1445,18 @@ export const Timetable = {
                 // Parse Room - default to "Online" if empty
                 const room = (roomRaw && String(roomRaw).trim()) ? String(roomRaw).trim() : 'Online';
                 
+                // Parse Campus/Location - extract from campus column or detect from room
+                let campus = 'CS1'; // Default campus
+                if (campusRaw && String(campusRaw).trim()) {
+                    campus = String(campusRaw).trim();
+                } else if (room && room.toLowerCase().includes('cs')) {
+                    // Try to extract campus from room name (e.g., "CS2-A101")
+                    const campusMatch = room.match(/cs\d+/i);
+                    if (campusMatch) {
+                        campus = campusMatch[0].toUpperCase();
+                    }
+                }
+                
                 // Parse Date Range
                 const dateInfo = this.parseDateRange(dateRangeRaw);
                 
@@ -1427,7 +1480,7 @@ export const Timetable = {
                 const classData = {
                     subject: currentSubject,
                     room: room,
-                    campus: 'CS1', // Default campus
+                    campus: campus,
                     day: day,
                     session: session,
                     startPeriod: periodInfo.startPeriod,
@@ -1437,6 +1490,18 @@ export const Timetable = {
                     endDate: dateInfo.endDate,
                     dateRangeDisplay: dateInfo.display
                 };
+                
+                // 🔥 DUPLICATION PREVENTION: Check if this class already exists
+                const isDuplicate = importedClasses.some(existing => 
+                    existing.subject === classData.subject &&
+                    existing.day === classData.day &&
+                    existing.startPeriod === classData.startPeriod
+                );
+                
+                if (isDuplicate) {
+                    console.log('  ⚠️ Duplicate class detected - skipping:', classData.subject);
+                    continue;
+                }
                 
                 importedClasses.push(classData);
                 console.log('  ✅ Parsed class:', classData);
