@@ -108,27 +108,42 @@ export const Timetable = {
         return d;
     },
 
-    prevWeek() {
-        this.currentWeekStart.setDate(this.currentWeekStart.getDate() - 7);
+    changeWeek(offset) {
+        if (!this.currentWeekStart) {
+            this.currentWeekStart = this.getMondayOfWeek(new Date());
+        }
+        this.currentWeekStart.setDate(this.currentWeekStart.getDate() + (offset * 7));
         this.updateWeekDisplay();
         this.renderTimetable();
+        console.log(`📅 Week changed by ${offset}, new start: ${this.currentWeekStart.toDateString()}`);
+    },
+
+    prevWeek() {
+        this.changeWeek(-1);
     },
 
     nextWeek() {
-        this.currentWeekStart.setDate(this.currentWeekStart.getDate() + 7);
-        this.updateWeekDisplay();
-        this.renderTimetable();
+        this.changeWeek(1);
     },
 
     jumpToToday() {
         this.currentWeekStart = this.getMondayOfWeek(new Date());
         this.updateWeekDisplay();
         this.renderTimetable();
+        console.log('📅 Jumped to current week:', this.currentWeekStart.toDateString());
     },
 
     updateWeekDisplay() {
-        const weekDisplay = document.getElementById('week-display');
-        if (!weekDisplay) return;
+        const weekDisplay = document.getElementById('current-week-display') || document.getElementById('week-display');
+        if (!weekDisplay) {
+            console.warn('⚠️ Week display element not found');
+            return;
+        }
+
+        if (!this.currentWeekStart) {
+            weekDisplay.textContent = '...';
+            return;
+        }
 
         const monday = new Date(this.currentWeekStart);
         const sunday = new Date(this.currentWeekStart);
@@ -141,6 +156,7 @@ export const Timetable = {
         };
 
         weekDisplay.textContent = `${formatDate(monday)} - ${formatDate(sunday)}`;
+        console.log(`📅 Week display updated: ${weekDisplay.textContent}`);
     },
 
     isClassInWeek(classObj) {

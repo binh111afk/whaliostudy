@@ -763,26 +763,13 @@
             <div class="timetable-container">
                 <div class="timetable-header">
                     <h1>📅 Thời Khóa Biểu</h1>
-                    <div style="display: flex; gap: 12px; align-items: center;">
-                        <!-- Week Navigation -->
-                        <div style="display: flex; align-items: center; gap: 8px; background: #f3f4f6; padding: 8px 12px; border-radius: 8px;">
-                            <button onclick="Timetable.prevWeek()" 
-                                    style="background: white; border: 1px solid #d1d5db; color: #374151; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;">
-                                ❮
-                            </button>
-                            <span id="week-display" style="font-size: 14px; font-weight: 600; color: #1f2937; min-width: 140px; text-align: center;">
-                                Đang tải...
-                            </span>
-                            <button onclick="Timetable.nextWeek()" 
-                                    style="background: white; border: 1px solid #d1d5db; color: #374151; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;">
-                                ❯
-                            </button>
-                            <button onclick="Timetable.jumpToToday()" 
-                                    style="background: #6366f1; border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; margin-left: 4px; transition: 0.2s;">
-                                Hôm nay
-                            </button>
-                        </div>
-                        
+                    <div id="week-navigator" style="display: flex; align-items: center; gap: 10px; background: #f3f4f6; padding: 5px 10px; border-radius: 8px; margin-left: 20px;">
+                        <button onclick="Timetable.changeWeek(-1)" style="border:none; background:none; cursor:pointer; font-weight:bold; font-size: 16px;">❮</button>
+                        <span id="current-week-display" style="font-weight: 600; color: #374151; font-size: 14px; min-width: 150px; text-align: center;">...</span>
+                        <button onclick="Timetable.changeWeek(1)" style="border:none; background:none; cursor:pointer; font-weight:bold; font-size: 16px;">❯</button>
+                        <button onclick="Timetable.jumpToToday()" style="font-size: 12px; padding: 2px 8px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer;">Hôm nay</button>
+                    </div>
+                    <div style="margin-left: auto; display: flex; gap: 10px;">
                         <button class="btn-open-import"
                             style="background: #10b981; display: flex; align-items: center; gap: 8px; padding: 12px 24px; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s;"
                             onclick="Timetable.openImportModal()">
