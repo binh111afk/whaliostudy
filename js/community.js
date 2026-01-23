@@ -637,7 +637,14 @@ export const Community = {
             const data = await response.json();
             if (data.success) {
                 // Show success alert
-                alert("Đăng bài thành công!");
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Đăng bài thành công!',
+                    text: 'Bài viết của bạn đã được chia sẻ với cộng đồng.',
+                    timer: 1500, // Tự tắt sau 1.5 giây
+                    showConfirmButton: false,
+                    confirmButtonColor: '#6366f1' // Màu tím chủ đạo của web bạn
+                });
                 
                 // Reset form inputs
                 document.getElementById('postContent').value = '';
