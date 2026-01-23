@@ -1095,6 +1095,7 @@ export const Timetable = {
         const file = event.target.files[0];
         if (!file) return;
 
+        console.log('📁 File selected:', file.name);
         const reader = new FileReader();
         
         reader.onload = (e) => {
@@ -1106,12 +1107,13 @@ export const Timetable = {
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
                 
-                // Convert to JSON
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                // Convert to JSON with all rows as arrays
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
                 
-                console.log('📊 Excel data loaded:', jsonData);
+                console.log('📊 Excel data loaded, total rows:', jsonData.length);
+                console.log('📊 First 5 rows:', jsonData.slice(0, 5));
                 
-                // Process the data
+                // Process the data with smart column detection
                 this.processExcelData(jsonData);
                 
             } catch (error) {
@@ -1128,49 +1130,136 @@ export const Timetable = {
     },
 
     processExcelData(rows) {
-        console.log('🔄 Processing Excel data with HCMUE format...');
+        console.log('🔄 Processing Excel data with SMART COLUMN DETECTION...');
         console.log('📊 Total rows:', rows.length);
         
-        const importedClasses = [];
-        let currentSubject = '';
+        // ==================== STEP 1: FIND HEADER ROW ====================
+        let headerRowIndex = -1;
+        const columnMap = {};
         
-        // Start from row 1 to skip header (row 0)
-        for (let i = 1; i < rows.length; i++) {
+        // Search for header row in first 10 rows
+        for (let i = 0; i < Math.min(10, rows.length); i++) {
+            const row = rows[i];
+            if (!row || row.length === 0) continue;
+            
+            // Check if this row contains header keywords
+            const rowString = row.map(cell => String(cell || '').toLowerCase()).join(' ');
+            
+            if (rowString.includes('mã lhp') || 
+                rowString.includes('tên lhp') || 
+                rowString.includes('học phần') ||
+                (rowString.includes('thứ') && rowString.includes('tiết'))) {
+                
+                headerRowIndex = i;
+                console.log(`✅ Header row found at index ${i}:`, row);
+                
+                // Map columns based on header keywords
+                for (let colIdx = 0; colIdx < row.length; colIdx++) {
+                    const header = String(row[colIdx] || '').toLowerCase().trim();
+                    
+                    // Subject column
+                    if (header.includes('tên lhp') || header.includes('tên hp') || 
+                        header.includes('học phần') || header.includes('môn học')) {
+                        columnMap.subject = colIdx;
+                        console.log(`  📌 Subject column: ${colIdx} (${row[colIdx]})`);
+                    }
+                    // Alternative: Subject code column (Mã LHP)
+                    else if (header.includes('mã lhp') || header.includes('mã hp')) {
+                        if (!columnMap.subject) { // Use as fallback
+                            columnMap.subjectCode = colIdx;
+                            console.log(`  📌 Subject Code column: ${colIdx} (${row[colIdx]})`);
+                        }
+                    }
+                    // Day column
+                    else if (header.includes('thứ') && !header.includes('thứ tự')) {
+                        columnMap.day = colIdx;
+                        console.log(`  📌 Day column: ${colIdx} (${row[colIdx]})`);
+                    }
+                    // Period column
+                    else if (header.includes('tiết') || header.includes('giờ học') || header.includes('giờ')) {
+                        columnMap.period = colIdx;
+                        console.log(`  📌 Period column: ${colIdx} (${row[colIdx]})`);
+                    }
+                    // Room column
+                    else if (header.includes('phòng')) {
+                        columnMap.room = colIdx;
+                        console.log(`  📌 Room column: ${colIdx} (${row[colIdx]})`);
+                    }
+                    // STT column
+                    else if (header.includes('stt') || header === 'stt') {
+                        columnMap.stt = colIdx;
+                        console.log(`  📌 STT column: ${colIdx} (${row[colIdx]})`);
+                    }
+                }
+                
+                break;
+            }
+        }
+        
+        // Validation: Check if essential columns were found
+        if (headerRowIndex === -1) {
+            this.showError('❌ Không tìm thấy dòng tiêu đề trong file Excel. Vui lòng kiểm tra định dạng!');
+            console.error('❌ Header row not found in first 10 rows');
+            return;
+        }
+        
+        if (!columnMap.subject && !columnMap.subjectCode) {
+            this.showError('❌ Không tìm thấy cột "Tên học phần" hoặc "Mã LHP"');
+            console.error('❌ Subject column not found');
+            return;
+        }
+        
+        if (columnMap.day === undefined || columnMap.period === undefined) {
+            this.showError('❌ Không tìm thấy cột "Thứ" hoặc "Tiết". Vui lòng kiểm tra file!');
+            console.error('❌ Day or Period column not found');
+            return;
+        }
+        
+        console.log('✅ Column mapping complete:', columnMap);
+        
+        // ==================== STEP 2: PARSE DATA ROWS ====================
+        const importedClasses = [];
+        let lastValidSubject = '';
+        
+        // Start from row after header
+        for (let i = headerRowIndex + 1; i < rows.length; i++) {
             const row = rows[i];
             
             // Skip completely empty rows
-            if (!row || row.length === 0 || !row.some(cell => cell)) {
+            if (!row || row.length === 0 || !row.some(cell => cell && String(cell).trim())) {
                 continue;
             }
             
-            // Extract columns based on HCMUE format
-            const stt = row[0];           // Column 0: STT
-            const subjectRaw = row[1];    // Column 1: Subject Code & Name
-            const dayRaw = row[5];        // Column 5: Day
-            const periodRaw = row[6];     // Column 6: Period
-            const roomRaw = row[7];       // Column 7: Room
+            // Extract data using mapped column indexes
+            const subjectRaw = row[columnMap.subject] || row[columnMap.subjectCode] || '';
+            const dayRaw = row[columnMap.day] || '';
+            const periodRaw = row[columnMap.period] || '';
+            const roomRaw = row[columnMap.room] || '';
             
-            console.log(`Row ${i}:`, { stt, subjectRaw, dayRaw, periodRaw, roomRaw });
+            console.log(`Row ${i}:`, { subjectRaw, dayRaw, periodRaw, roomRaw });
             
-            // Handle Subject with Merged Cells Logic
-            if (subjectRaw && typeof subjectRaw === 'string' && subjectRaw.trim()) {
-                // Split by first "-" and take the second part
-                const dashIndex = subjectRaw.indexOf('-');
+            // ===== HANDLE MERGED CELLS: Update lastValidSubject =====
+            if (subjectRaw && String(subjectRaw).trim()) {
+                const subjectStr = String(subjectRaw).trim();
+                
+                // Extract subject name (after "-" if exists)
+                const dashIndex = subjectStr.indexOf('-');
                 if (dashIndex !== -1) {
-                    currentSubject = subjectRaw.substring(dashIndex + 1).trim();
+                    lastValidSubject = subjectStr.substring(dashIndex + 1).trim();
                 } else {
-                    currentSubject = subjectRaw.trim();
+                    lastValidSubject = subjectStr;
                 }
-                console.log('  ✅ New subject detected:', currentSubject);
+                console.log(`  ✅ New subject detected: "${lastValidSubject}"`);
             }
             
-            // Skip if no period data (not a valid class entry)
+            // Skip if no period or day data (not a valid class entry)
             if (!periodRaw || !dayRaw) {
                 console.log('  ⏭️ Skipping - no period or day data');
                 continue;
             }
             
-            // If we don't have a current subject, skip
+            // Use lastValidSubject if current subject is empty (merged cell)
+            const currentSubject = lastValidSubject;
             if (!currentSubject) {
                 console.log('  ⏭️ Skipping - no subject available');
                 continue;
