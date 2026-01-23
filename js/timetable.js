@@ -194,16 +194,24 @@ export const Timetable = {
             return true;
         }
 
-        const weekStart = new Date(this.currentWeekStart);
-        const weekEnd = new Date(this.currentWeekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-        weekEnd.setHours(23, 59, 59, 999);
+        // Calculate view start (Monday 00:00) and view end (Sunday 23:59)
+        const viewStart = new Date(this.currentWeekStart);
+        viewStart.setHours(0, 0, 0, 0);
+        
+        const viewEnd = new Date(this.currentWeekStart);
+        viewEnd.setDate(viewEnd.getDate() + 6);
+        viewEnd.setHours(23, 59, 59, 999);
 
-        const classStart = new Date(classObj.startDate);
-        const classEnd = new Date(classObj.endDate);
+        const clsStart = new Date(classObj.startDate);
+        const clsEnd = new Date(classObj.endDate);
 
-        // Check if there's any overlap between week range and class range
-        return classStart <= weekEnd && classEnd >= weekStart;
+        // STRICT FILTERING: The class must overlap with the current week view
+        // Logic: Skip if class ends before week starts OR class starts after week ends
+        if (clsEnd < viewStart || clsStart > viewEnd) {
+            return false; // SKIP this class, it's not for this week
+        }
+
+        return true; // Class overlaps with current week
     },
 
     injectStyles() {
@@ -817,6 +825,16 @@ export const Timetable = {
         const bgColor = this.pastelColors[colorIndex];
         const classId = cls._id || cls.id; // Handle both MongoDB _id and id
         
+        // VISUAL FIX: Validate startPeriod and numPeriods
+        const startPeriod = (!isNaN(cls.startPeriod) && cls.startPeriod >= 1) ? cls.startPeriod : 1;
+        const numPeriods = (!isNaN(cls.numPeriods) && cls.numPeriods >= 1) ? cls.numPeriods : 1;
+        
+        // Recalculate time range with validated values
+        const endPeriod = startPeriod + numPeriods - 1;
+        const startTime = this.periodTimes[startPeriod]?.start || '00:00';
+        const endTime = this.periodTimes[endPeriod]?.end || '23:59';
+        const timeRange = cls.timeRange || `${startTime} - ${endTime}`;
+        
         // Check if class is currently active
         let isActive = true;
         let statusBadge = '';
@@ -857,7 +875,7 @@ export const Timetable = {
                     </div>
                     <div class="class-detail">
                         <span class="class-detail-label">GIỜ:</span> 
-                        <span class="class-detail-value">${this.escapeHtml(cls.timeRange)}</span>
+                        <span class="class-detail-value">${this.escapeHtml(timeRange)}</span>
                     </div>
                     ${cls.dateRangeDisplay ? `
                     <div class="class-detail" style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(0,0,0,0.1);">
@@ -1460,15 +1478,8 @@ export const Timetable = {
                 // Parse Date Range
                 const dateInfo = this.parseDateRange(dateRangeRaw);
                 
-                // Determine session based on startPeriod
-                let session = 'morning';
-                if (periodInfo.startPeriod <= 6) {
-                    session = 'morning';
-                } else if (periodInfo.startPeriod > 12) {
-                    session = 'evening';
-                } else {
-                    session = 'afternoon';
-                }
+                // Use session from period info (already calculated in parsePeriodString)
+                const session = periodInfo.session;
                 
                 // Calculate time range
                 const endPeriod = periodInfo.startPeriod + periodInfo.numPeriods - 1;
@@ -1566,33 +1577,82 @@ export const Timetable = {
     parsePeriodString(periodStr) {
         const str = String(periodStr).trim();
         
-        // Pattern: "10 (15h10) -> 12 (17h40)" or "10->12" or "10 - 12"
-        // Use Regex to capture the first number (Start) and the last number (End)
+        // Pattern: "10 (15h10)->\n>12 (17h40)" or "1 (06h30) -> 3"
+        // CRITICAL: Use regex to find numbers followed by opening parenthesis "("
+        // This prevents grabbing hour values (15h10, 17h40)
         
-        // Extract all numbers from the string
+        // Regex: Find numbers followed by " (" or at start of line
+        const matches = str.match(/(\d+)\s*\(/g);
+        
+        if (matches && matches.length >= 1) {
+            // Extract the numbers from matches (e.g., "10 (" -> 10)
+            const periods = matches.map(match => parseInt(match.match(/\d+/)[0]));
+            
+            const startPeriod = periods[0]; // First match
+            const endPeriod = periods[periods.length - 1]; // Last match
+            const numPeriods = endPeriod - startPeriod + 1;
+            
+            // Determine session based on start period
+            let session = 'morning';
+            if (startPeriod <= 6) {
+                session = 'morning';
+            } else if (startPeriod > 6 && startPeriod <= 12) {
+                session = 'afternoon';
+            } else if (startPeriod > 12) {
+                session = 'evening';
+            }
+            
+            console.log(`    📊 Period parsing: "${str}" -> Start: ${startPeriod}, End: ${endPeriod}, Count: ${numPeriods}, Session: ${session}`);
+            
+            return {
+                startPeriod: startPeriod,
+                numPeriods: numPeriods,
+                session: session
+            };
+        }
+        
+        // Fallback: Try extracting any numbers if parenthesis pattern fails
         const numbers = str.match(/\d+/g);
-        
         if (numbers && numbers.length >= 2) {
-            // First number is start period, second number is end period
             const startPeriod = parseInt(numbers[0]);
             const endPeriod = parseInt(numbers[1]);
             const numPeriods = endPeriod - startPeriod + 1;
             
-            console.log(`    📊 Period parsing: "${str}" -> Start: ${startPeriod}, End: ${endPeriod}, Count: ${numPeriods}`);
+            let session = 'morning';
+            if (startPeriod <= 6) {
+                session = 'morning';
+            } else if (startPeriod > 6 && startPeriod <= 12) {
+                session = 'afternoon';
+            } else if (startPeriod > 12) {
+                session = 'evening';
+            }
+            
+            console.log(`    📊 Period parsing (fallback): "${str}" -> Start: ${startPeriod}, End: ${endPeriod}, Count: ${numPeriods}, Session: ${session}`);
             
             return {
                 startPeriod: startPeriod,
-                numPeriods: numPeriods
+                numPeriods: numPeriods,
+                session: session
             };
         }
         
-        // Try single period: "10" or "10 (15h10)"
+        // Single period fallback
         if (numbers && numbers.length === 1) {
             const startPeriod = parseInt(numbers[0]);
-            console.log(`    📊 Single period: "${str}" -> Period: ${startPeriod}`);
+            let session = 'morning';
+            if (startPeriod <= 6) {
+                session = 'morning';
+            } else if (startPeriod > 6 && startPeriod <= 12) {
+                session = 'afternoon';
+            } else if (startPeriod > 12) {
+                session = 'evening';
+            }
+            
+            console.log(`    📊 Single period: "${str}" -> Period: ${startPeriod}, Session: ${session}`);
             return {
                 startPeriod: startPeriod,
-                numPeriods: 1
+                numPeriods: 1,
+                session: session
             };
         }
         
@@ -1619,19 +1679,29 @@ export const Timetable = {
 
             console.log(`    📅 Parsing date range: "${dateRangeStr}" -> cleaned: "${cleaned}"`);
 
-            // Pattern: d/m/yyyy or dd/mm/yyyy (flexible with 1 or 2 digits for day/month)
-            const datePattern = /(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})\s*[-–>]+\s*(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/;
-            const match = cleaned.match(datePattern);
+            // Regex: Find all dates in DD/MM/YYYY format
+            const dates = cleaned.match(/(\d{1,2}\/\d{1,2}\/\d{4})/g);
 
-            if (match) {
-                const [, startDay, startMonth, startYear, endDay, endMonth, endYear] = match;
+            if (dates && dates.length >= 1) {
+                // Parse start date (first match)
+                const startParts = dates[0].split('/');
+                const startDay = parseInt(startParts[0]);
+                const startMonth = parseInt(startParts[1]);
+                const startYear = parseInt(startParts[2]);
+                
+                // Parse end date (last match, or same as start if only one date)
+                const endParts = dates[dates.length - 1].split('/');
+                const endDay = parseInt(endParts[0]);
+                const endMonth = parseInt(endParts[1]);
+                const endYear = parseInt(endParts[2]);
 
                 // Create Date objects (month is 0-indexed in JS)
-                const startDate = new Date(parseInt(startYear), parseInt(startMonth) - 1, parseInt(startDay));
-                const endDate = new Date(parseInt(endYear), parseInt(endMonth) - 1, parseInt(endDay));
+                // CRITICAL: Set time to 00:00:00 for start, 23:59:59 for end
+                const startDate = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
+                const endDate = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 999);
 
                 // Create display string (short format: dd/mm)
-                const display = `${startDay.padStart(2, '0')}/${startMonth.padStart(2, '0')} - ${endDay.padStart(2, '0')}/${endMonth.padStart(2, '0')}`;
+                const display = `${String(startDay).padStart(2, '0')}/${String(startMonth).padStart(2, '0')} - ${String(endDay).padStart(2, '0')}/${String(endMonth).padStart(2, '0')}`;
 
                 console.log(`    ✅ Parsed dates: ${startDate.toISOString()} to ${endDate.toISOString()}`);
 
