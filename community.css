@@ -928,6 +928,3 @@
     }
 }
 
-.activity-list li:nth-child(n+3):not(:last-child) {
-    display: none;
-}

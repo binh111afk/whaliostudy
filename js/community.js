@@ -118,13 +118,13 @@ export const RecentActivity = {
         this.allActivities = activities;
         this.isShowingAll = false;
 
-        this.renderActivityList(activities.slice(0, 4));
+        this.renderActivityList(activities.slice(0, 2));
 
-        if (activities.length > 4) {
+        if (activities.length > 2) {
             const viewMoreBtn = document.createElement('li');
             viewMoreBtn.style.textAlign = 'center';
             viewMoreBtn.style.padding = '10px';
-            viewMoreBtn.innerHTML = '<button class="btn-view-more-activities" style="background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 13px;">Xem thêm (' + (activities.length - 4) + ')</button>';
+            viewMoreBtn.innerHTML = '<button class="btn-view-more-activities" style="background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 13px;">Xem thêm (' + (activities.length - 2) + ')</button>';
             container.appendChild(viewMoreBtn);
         }
     },
@@ -160,11 +160,11 @@ export const RecentActivity = {
             viewMoreBtn.innerHTML = '<button class="btn-view-more-activities" style="background: #6b7280; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 13px;">Thu gọn</button>';
             container.appendChild(viewMoreBtn);
         } else {
-            this.renderActivityList(this.allActivities.slice(0, 4));
+            this.renderActivityList(this.allActivities.slice(0, 2));
             const viewMoreBtn = document.createElement('li');
             viewMoreBtn.style.textAlign = 'center';
             viewMoreBtn.style.padding = '10px';
-            viewMoreBtn.innerHTML = '<button class="btn-view-more-activities" style="background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 13px;">Xem thêm (' + (this.allActivities.length - 4) + ')</button>';
+            viewMoreBtn.innerHTML = '<button class="btn-view-more-activities" style="background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 13px;">Xem thêm (' + (this.allActivities.length - 2) + ')</button>';
             container.appendChild(viewMoreBtn);
         }
     },
