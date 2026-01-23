@@ -1396,3 +1396,5 @@ export const Timetable = {
         }
     }
 };
+
+window.Timetable = Timetable;
