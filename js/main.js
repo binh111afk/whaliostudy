@@ -78,6 +78,8 @@ const PageManager = {
 
         UI.setActiveMenu(menuItem);
 
+        AppState.isViewingSaved = false
+
         DocumentManager.currentMode = 'normal';
         DocumentManager.loadAllDocuments();
         
