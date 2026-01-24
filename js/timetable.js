@@ -1427,111 +1427,132 @@ export const Timetable = {
     },
 
     processExcelData(rows) {
-        console.log('🔄 Processing Excel data with SMART COLUMN DETECTION...');
+        console.log('🔄 Processing Excel data with ADVANCED SMART LOGIC...');
         console.log('📊 Total rows:', rows.length);
         
-        // ==================== STEP 1: FIND HEADER ROW ====================
+        // ==================== STEP 1: DYNAMIC COLUMN MAPPING (NO HARDCODING) ====================
         let headerRowIndex = -1;
-        const columnMap = {};
+        const columnMap = {
+            subject: undefined,
+            day: undefined,
+            period: undefined,
+            room: undefined,
+            dateRange: undefined,
+            campus: undefined,
+            subjectCode: undefined
+        };
         
         // Search for header row in first 10 rows
         for (let i = 0; i < Math.min(10, rows.length); i++) {
             const row = rows[i];
             if (!row || row.length === 0) continue;
             
-            // Check if this row contains header keywords
-            const rowString = row.map(cell => String(cell || '').toLowerCase()).join(' ');
+            // Check each cell for header keywords
+            let foundHeaders = 0;
             
-            if (rowString.includes('mã lhp') || 
-                rowString.includes('tên lhp') || 
-                rowString.includes('học phần') ||
-                (rowString.includes('thứ') && rowString.includes('tiết'))) {
+            for (let colIdx = 0; colIdx < row.length; colIdx++) {
+                const cellValue = String(row[colIdx] || '').toLowerCase().trim();
                 
-                headerRowIndex = i;
-                console.log(`✅ Header row found at index ${i}:`, row);
-                
-                // Map columns based on header keywords
-                for (let colIdx = 0; colIdx < row.length; colIdx++) {
-                    const header = String(row[colIdx] || '').toLowerCase().trim();
-                    
-                    // Subject column
-                    if (header.includes('tên lhp') || header.includes('tên hp') || 
-                        header.includes('học phần') || header.includes('môn học')) {
-                        columnMap.subject = colIdx;
-                        console.log(`  📌 Subject column: ${colIdx} (${row[colIdx]})`);
-                    }
-                    // Alternative: Subject code column (Mã LHP)
-                    else if (header.includes('mã lhp') || header.includes('mã hp')) {
-                        if (!columnMap.subject) { // Use as fallback
-                            columnMap.subjectCode = colIdx;
-                            console.log(`  📌 Subject Code column: ${colIdx} (${row[colIdx]})`);
-                        }
-                    }
-                    // Day column
-                    else if (header.includes('thứ') && !header.includes('thứ tự')) {
-                        columnMap.day = colIdx;
-                        console.log(`  📌 Day column: ${colIdx} (${row[colIdx]})`);
-                    }
-                    // Period column
-                    else if (header.includes('tiết') || header.includes('giờ học') || header.includes('giờ')) {
-                        columnMap.period = colIdx;
-                        console.log(`  📌 Period column: ${colIdx} (${row[colIdx]})`);
-                    }
-                    // Room column
-                    else if (header.includes('phòng')) {
-                        columnMap.room = colIdx;
-                        console.log(`  📌 Room column: ${colIdx} (${row[colIdx]})`);
-                    }
-                    // Campus/Location column
-                    else if (header.includes('cơ sở') || header.includes('địa điểm') || 
-                             header.includes('campus') || header.includes('location')) {
-                        columnMap.campus = colIdx;
-                        console.log(`  📌 Campus column: ${colIdx} (${row[colIdx]})`);
-                    }
-                    // Date Range column
-                    else if (header.includes('từ ngày') || header.includes('đến ngày') || 
-                             header.includes('ngày') || header.includes('time') || 
-                             header.includes('thời gian')) {
-                        columnMap.dateRange = colIdx;
-                        console.log(`  📌 Date Range column: ${colIdx} (${row[colIdx]})`);
-                    }
-                    // STT column
-                    else if (header.includes('stt') || header === 'stt') {
-                        columnMap.stt = colIdx;
-                        console.log(`  📌 STT column: ${colIdx} (${row[colIdx]})`);
-                    }
+                // Subject column: "Tên LHP", "Môn học", "Học phần"
+                if ((cellValue.includes('tên lhp') || cellValue.includes('tên hp') || 
+                     cellValue.includes('học phần') || cellValue.includes('môn học')) &&
+                    columnMap.subject === undefined) {
+                    columnMap.subject = colIdx;
+                    foundHeaders++;
+                    console.log(`  📌 Subject column found at ${colIdx}: "${row[colIdx]}"`);
                 }
                 
+                // Day column: "Thứ" (but not "Thứ tự")
+                if (cellValue.includes('thứ') && !cellValue.includes('thứ tự') && 
+                    columnMap.day === undefined) {
+                    columnMap.day = colIdx;
+                    foundHeaders++;
+                    console.log(`  📌 Day column found at ${colIdx}: "${row[colIdx]}"`);
+                }
+                
+                // Period column: "Tiết", "Giờ"
+                if ((cellValue.includes('tiết') || cellValue.includes('giờ học') || 
+                     (cellValue.includes('giờ') && !cellValue.includes('từ'))) &&
+                    columnMap.period === undefined) {
+                    columnMap.period = colIdx;
+                    foundHeaders++;
+                    console.log(`  📌 Period column found at ${colIdx}: "${row[colIdx]}"`);
+                }
+                
+                // Room column: "Phòng"
+                if (cellValue.includes('phòng') && columnMap.room === undefined) {
+                    columnMap.room = colIdx;
+                    foundHeaders++;
+                    console.log(`  📌 Room column found at ${colIdx}: "${row[colIdx]}"`);
+                }
+                
+                // Date Range column: "Từ ngày", "Thời gian"
+                if ((cellValue.includes('từ ngày') || cellValue.includes('đến ngày') || 
+                     cellValue.includes('thời gian') || 
+                     (cellValue.includes('ngày') && !cellValue.includes('từ ngày'))) &&
+                    columnMap.dateRange === undefined) {
+                    columnMap.dateRange = colIdx;
+                    foundHeaders++;
+                    console.log(`  📌 Date Range column found at ${colIdx}: "${row[colIdx]}"`);
+                }
+                
+                // Campus column: "Cơ sở", "Địa điểm"
+                if ((cellValue.includes('cơ sở') || cellValue.includes('địa điểm') || 
+                     cellValue.includes('campus')) && columnMap.campus === undefined) {
+                    columnMap.campus = colIdx;
+                    console.log(`  📌 Campus column found at ${colIdx}: "${row[colIdx]}"`);
+                }
+                
+                // Subject Code column (fallback): "Mã LHP", "Mã HP"
+                if ((cellValue.includes('mã lhp') || cellValue.includes('mã hp')) && 
+                    columnMap.subjectCode === undefined) {
+                    columnMap.subjectCode = colIdx;
+                    console.log(`  📌 Subject Code column found at ${colIdx}: "${row[colIdx]}"`);
+                }
+            }
+            
+            // If we found at least 3 essential headers, consider this the header row
+            if (foundHeaders >= 3 && columnMap.day !== undefined && columnMap.period !== undefined) {
+                headerRowIndex = i;
+                console.log(`✅ Header row detected at index ${i} (${foundHeaders} headers found)`);
                 break;
             }
         }
         
-        // Validation: Check if essential columns were found
+        // ==================== VALIDATION ====================
         if (headerRowIndex === -1) {
             this.showError('❌ Không tìm thấy dòng tiêu đề trong file Excel. Vui lòng kiểm tra định dạng!');
             console.error('❌ Header row not found in first 10 rows');
             return;
         }
         
-        if (!columnMap.subject && !columnMap.subjectCode) {
+        // Check essential columns
+        if (columnMap.subject === undefined && columnMap.subjectCode === undefined) {
             this.showError('❌ Không tìm thấy cột "Tên học phần" hoặc "Mã LHP"');
             console.error('❌ Subject column not found');
             return;
         }
         
-        if (columnMap.day === undefined || columnMap.period === undefined) {
-            this.showError('❌ Không tìm thấy cột "Thứ" hoặc "Tiết". Vui lòng kiểm tra file!');
-            console.error('❌ Day or Period column not found');
+        if (columnMap.day === undefined) {
+            this.showError('❌ Không tìm thấy cột "Thứ". Vui lòng kiểm tra file!');
+            console.error('❌ Day column not found');
+            return;
+        }
+        
+        if (columnMap.period === undefined) {
+            this.showError('❌ Không tìm thấy cột "Tiết" hoặc "Giờ". Vui lòng kiểm tra file!');
+            console.error('❌ Period column not found');
             return;
         }
         
         console.log('✅ Column mapping complete:', columnMap);
         
-        // ==================== STEP 2: PARSE DATA ROWS ====================
+        // ==================== STEP 2: MERGED CELL HANDLING (FILL DOWN LOGIC) ====================
         const importedClasses = [];
-        let lastValidSubject = '';
+        const seenClasses = new Set(); // For duplicate prevention
+        let lastValidSubject = null;
         
-        // Start from row after header
+        // Process data rows starting after header
         for (let i = headerRowIndex + 1; i < rows.length; i++) {
             const row = rows[i];
             
@@ -1540,70 +1561,73 @@ export const Timetable = {
                 continue;
             }
             
-            // Extract data using mapped column indexes
+            // Extract raw cell values using dynamic column mapping
             const subjectRaw = row[columnMap.subject] || row[columnMap.subjectCode] || '';
             const dayRaw = row[columnMap.day] || '';
             const periodRaw = row[columnMap.period] || '';
-            const roomRaw = row[columnMap.room] || '';
-            const campusRaw = columnMap.campus !== undefined ? (row[columnMap.campus] || '') : '';
+            const roomRaw = columnMap.room !== undefined ? (row[columnMap.room] || '') : '';
             const dateRangeRaw = columnMap.dateRange !== undefined ? (row[columnMap.dateRange] || '') : '';
+            const campusRaw = columnMap.campus !== undefined ? (row[columnMap.campus] || '') : '';
             
-            console.log(`Row ${i}:`, { subjectRaw, dayRaw, periodRaw, roomRaw, campusRaw, dateRangeRaw });
-            
-            // ===== HANDLE MERGED CELLS: Update lastValidSubject =====
+            // ===== MERGED CELL HANDLING: Fill Down Logic =====
+            // If Subject cell is NOT empty, update lastValidSubject
             if (subjectRaw && String(subjectRaw).trim()) {
                 const subjectStr = String(subjectRaw).trim();
                 
-                // Extract subject name (after "-" if exists)
+                // Extract subject name (handle "Code - Name" format)
                 const dashIndex = subjectStr.indexOf('-');
-                if (dashIndex !== -1) {
+                if (dashIndex !== -1 && dashIndex < subjectStr.length - 1) {
                     lastValidSubject = subjectStr.substring(dashIndex + 1).trim();
                 } else {
                     lastValidSubject = subjectStr;
                 }
-                console.log(`  ✅ New subject detected: "${lastValidSubject}"`);
+                console.log(`Row ${i}: ✅ New subject detected: "${lastValidSubject}"`);
             }
             
-            // Skip if no period or day data (not a valid class entry)
-            if (!periodRaw || !dayRaw) {
-                console.log('  ⏭️ Skipping - no period or day data');
+            // ===== CONSTRAINT: Only use lastValidSubject if Period has data =====
+            // This prevents reading empty footer lines
+            if (!periodRaw || !String(periodRaw).trim()) {
+                console.log(`Row ${i}: ⏭️ Skipping - no period data`);
                 continue;
             }
             
-            // Use lastValidSubject if current subject is empty (merged cell)
+            // If Subject is empty, use lastValidSubject (merged cell scenario)
             const currentSubject = lastValidSubject;
             if (!currentSubject) {
-                console.log('  ⏭️ Skipping - no subject available');
+                console.log(`Row ${i}: ⏭️ Skipping - no valid subject available`);
                 continue;
             }
             
+            // Skip if no day data
+            if (!dayRaw || !String(dayRaw).trim()) {
+                console.log(`Row ${i}: ⏭️ Skipping - no day data`);
+                continue;
+            }
+            
+            // ==================== STEP 3: STRICT PARSING (SANITIZE DATA) ====================
             try {
-                // Parse Day: "Thứ Hai" -> "2", "Chủ Nhật" -> "CN"
+                // === PARSE PERIOD: Use Regex /(\d+)\s*\(/g ===
+                const periodInfo = this.parseAdvancedPeriod(periodRaw);
+                
+                // === PARSE DAY: Convert "Thứ Hai" -> 2, "Chủ Nhật" -> CN ===
                 const day = this.parseDayString(dayRaw);
                 
-                // Parse Period: Extract start and end using regex
-                const periodInfo = this.parsePeriodString(periodRaw);
+                // === PARSE DATE RANGE: Use Regex /(\d{1,2}\/\d{1,2}\/\d{4})/g ===
+                const dateInfo = this.parseAdvancedDateRange(dateRangeRaw);
                 
-                // Parse Room - default to "Online" if empty
+                // === PARSE ROOM ===
                 const room = (roomRaw && String(roomRaw).trim()) ? String(roomRaw).trim() : 'Online';
                 
-                // Parse Campus/Location - extract from campus column or detect from room
-                let campus = 'CS1'; // Default campus
+                // === PARSE CAMPUS ===
+                let campus = 'CS1'; // Default
                 if (campusRaw && String(campusRaw).trim()) {
                     campus = String(campusRaw).trim();
                 } else if (room && room.toLowerCase().includes('cs')) {
-                    // Try to extract campus from room name (e.g., "CS2-A101")
                     const campusMatch = room.match(/cs\d+/i);
                     if (campusMatch) {
                         campus = campusMatch[0].toUpperCase();
                     }
                 }
-                
-                // Parse Date Range
-                const dateInfo = this.parseDateRange(dateRangeRaw);
-                
-                // Use session from period info (already calculated in parsePeriodString)
-                const session = periodInfo.session;
                 
                 // Calculate time range
                 const endPeriod = periodInfo.startPeriod + periodInfo.numPeriods - 1;
@@ -1611,13 +1635,38 @@ export const Timetable = {
                 const endTime = this.periodTimes[endPeriod]?.end || '23:59';
                 const timeRange = `${startTime} - ${endTime}`;
                 
+                // ==================== STEP 4: DUPLICATE PREVENTION ====================
+                // Generate unique ID: ${Subject}-${Day}-${StartPeriod}
+                const uniqueId = `${currentSubject}-${day}-${periodInfo.startPeriod}`;
+                
+                // Check against seenClasses set
+                if (seenClasses.has(uniqueId)) {
+                    console.log(`Row ${i}: ⚠️ Duplicate detected, skipping: ${uniqueId}`);
+                    continue;
+                }
+                
+                // Check against existing timetable
+                const existsInTimetable = this.currentTimetable.some(existingClass =>
+                    existingClass.subject === currentSubject &&
+                    existingClass.day === day &&
+                    existingClass.startPeriod === periodInfo.startPeriod
+                );
+                
+                if (existsInTimetable) {
+                    console.log(`Row ${i}: ⚠️ Already exists in timetable, skipping: ${uniqueId}`);
+                    continue;
+                }
+                
+                // Add to seenClasses set
+                seenClasses.add(uniqueId);
+                
                 // Create class object
                 const classData = {
                     subject: currentSubject,
                     room: room,
                     campus: campus,
                     day: day,
-                    session: session,
+                    session: periodInfo.session,
                     startPeriod: periodInfo.startPeriod,
                     numPeriods: periodInfo.numPeriods,
                     timeRange: timeRange,
@@ -1626,25 +1675,11 @@ export const Timetable = {
                     dateRangeDisplay: dateInfo.display
                 };
                 
-                // 🔥 DUPLICATION PREVENTION: Check if this class already exists
-                const existingIndex = importedClasses.findIndex(existing => 
-                    existing.subject === classData.subject &&
-                    existing.day === classData.day &&
-                    existing.startPeriod === classData.startPeriod
-                );
-                
-                if (existingIndex !== -1) {
-                    // Update existing class instead of creating duplicate
-                    importedClasses[existingIndex] = classData;
-                    console.log('  ⚠️ Duplicate class detected - updating existing entry:', classData.subject);
-                } else {
-                    // Add new class
-                    importedClasses.push(classData);
-                    console.log('  ✅ Parsed class:', classData);
-                }
+                importedClasses.push(classData);
+                console.log(`Row ${i}: ✅ Parsed class:`, classData);
                 
             } catch (error) {
-                console.warn(`  ⚠️ Skipping row ${i} - Parse error:`, error.message);
+                console.warn(`Row ${i}: ⚠️ Parse error, skipping:`, error.message);
                 continue;
             }
         }
@@ -1661,6 +1696,126 @@ export const Timetable = {
         
         // Show preview
         this.showPreview(importedClasses.length);
+    },
+    
+    // ==================== ADVANCED PERIOD PARSER ====================
+    parseAdvancedPeriod(periodStr) {
+        const str = String(periodStr).trim();
+        console.log(`    🔍 Parsing period: "${str}"`);
+        
+        // REGEX: Find numbers before "(" - e.g., "10 (15h10)" -> 10
+        const matches = str.match(/(\d+)\s*\(/g);
+        
+        if (matches && matches.length >= 1) {
+            // Extract period numbers (not time values inside parentheses)
+            const periods = matches.map(match => parseInt(match.match(/\d+/)[0]));
+            
+            const startPeriod = periods[0];
+            const endPeriod = periods.length > 1 ? periods[periods.length - 1] : startPeriod;
+            const numPeriods = endPeriod - startPeriod + 1;
+            
+            // Determine session
+            let session = 'morning';
+            if (startPeriod <= 6) {
+                session = 'morning';
+            } else if (startPeriod > 6 && startPeriod <= 12) {
+                session = 'afternoon';
+            } else {
+                session = 'evening';
+            }
+            
+            console.log(`    ✅ Parsed (regex): Start=${startPeriod}, End=${endPeriod}, Count=${numPeriods}, Session=${session}`);
+            
+            return { startPeriod, numPeriods, session };
+        }
+        
+        // FALLBACK: Simple format "1-3" or "10"
+        const numbers = str.match(/\d+/g);
+        if (numbers && numbers.length >= 2) {
+            const startPeriod = parseInt(numbers[0]);
+            const endPeriod = parseInt(numbers[1]);
+            const numPeriods = endPeriod - startPeriod + 1;
+            
+            let session = 'morning';
+            if (startPeriod <= 6) session = 'morning';
+            else if (startPeriod > 6 && startPeriod <= 12) session = 'afternoon';
+            else session = 'evening';
+            
+            console.log(`    ✅ Parsed (fallback): Start=${startPeriod}, End=${endPeriod}, Count=${numPeriods}`);
+            return { startPeriod, numPeriods, session };
+        }
+        
+        // SINGLE PERIOD
+        if (numbers && numbers.length === 1) {
+            const startPeriod = parseInt(numbers[0]);
+            let session = 'morning';
+            if (startPeriod <= 6) session = 'morning';
+            else if (startPeriod > 6 && startPeriod <= 12) session = 'afternoon';
+            else session = 'evening';
+            
+            console.log(`    ✅ Parsed (single): Period=${startPeriod}`);
+            return { startPeriod, numPeriods: 1, session };
+        }
+        
+        throw new Error(`Cannot parse period: ${periodStr}`);
+    },
+    
+    // ==================== ADVANCED DATE RANGE PARSER ====================
+    parseAdvancedDateRange(dateRangeStr) {
+        if (!dateRangeStr || !String(dateRangeStr).trim()) {
+            return { startDate: null, endDate: null, display: '' };
+        }
+        
+        try {
+            const original = String(dateRangeStr);
+            console.log(`    🔍 Parsing date: "${original}"`);
+            
+            // Clean formatting: remove newlines, arrows, extra whitespace
+            const cleaned = original.replace(/[\n\r\s>-]/g, '').trim();
+            
+            // REGEX: Extract dates in DD/MM/YYYY format
+            const dates = cleaned.match(/(\d{1,2}\/\d{1,2}\/\d{4})/g);
+            
+            if (dates && dates.length >= 1) {
+                // Parse start date
+                const startParts = dates[0].split('/');
+                const startDay = parseInt(startParts[0]);
+                const startMonth = parseInt(startParts[1]);
+                const startYear = parseInt(startParts[2]);
+                
+                // Parse end date (or use start date if only one)
+                const endParts = dates[dates.length - 1].split('/');
+                const endDay = parseInt(endParts[0]);
+                const endMonth = parseInt(endParts[1]);
+                const endYear = parseInt(endParts[2]);
+                
+                // Ensure valid Date objects
+                const startDate = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
+                const endDate = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 999);
+                
+                // Validate dates
+                if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                    throw new Error('Invalid date values');
+                }
+                
+                const display = `${String(startDay).padStart(2, '0')}/${String(startMonth).padStart(2, '0')} - ${String(endDay).padStart(2, '0')}/${String(endMonth).padStart(2, '0')}`;
+                
+                console.log(`    ✅ Parsed dates: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+                
+                return {
+                    startDate: startDate.toISOString(),
+                    endDate: endDate.toISOString(),
+                    display: display
+                };
+            }
+            
+            console.log('    ⚠️ No date match found');
+            return { startDate: null, endDate: null, display: '' };
+            
+        } catch (error) {
+            console.error('    ❌ Date parse error:', error.message);
+            return { startDate: null, endDate: null, display: '' };
+        }
     },
 
     parseDayString(dayStr) {
