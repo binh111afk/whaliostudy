@@ -358,7 +358,7 @@ const activitySchema = new mongoose.Schema({
     timestamp: { type: Number, default: Date.now }
 });
 
-// Timetable Schema
+// Timetable Schema - CÓ TUẦN HỌC
 const timetableSchema = new mongoose.Schema({
     username: { type: String, required: true, ref: 'User', index: true },
     subject: { type: String, required: true },
@@ -369,9 +369,30 @@ const timetableSchema = new mongoose.Schema({
     startPeriod: { type: Number, required: true },
     numPeriods: { type: Number, required: true },
     timeRange: { type: String },
+
+    // 🔥 MỚI: Lưu danh sách tuần học cụ thể
+    weeks: {
+        type: [Number],
+        default: [], // Rỗng = áp dụng cho TẤT CẢ các tuần
+        validate: {
+            validator: function (arr) {
+                return arr.every(w => w >= 1 && w <= 52);
+            },
+            message: 'Tuần phải từ 1-52'
+        }
+    },
+
+    // Giữ lại để tương thích với code cũ
+    startDate: { type: Date },
+    endDate: { type: Date },
+    dateRangeDisplay: { type: String },
+
     createdAt: { type: Date, default: Date.now },
     updatedAt: Date
 });
+
+// Index để query nhanh theo tuần
+timetableSchema.index({ username: 1, weeks: 1 });
 
 // Event Schema
 const eventSchema = new mongoose.Schema({
@@ -452,10 +473,10 @@ const storage = new CloudinaryStorage({
         // Xử lý tên file tiếng Việt
         const decodedName = decodeFileName(file.originalname);
         const safeName = normalizeFileName(decodedName);
-        
+
         // Lưu lại tên gốc
         file.decodedOriginalName = decodedName;
-        
+
         return {
             folder: 'whalio-documents',
             resource_type: 'auto', // Tự động nhận diện (Ảnh/Video/File)
@@ -470,15 +491,15 @@ const upload = multer({
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
     fileFilter: (req, file, cb) => {
         console.log('📂 Đang xử lý file:', file.originalname);
-        
+
         const ext = path.extname(file.originalname).toLowerCase();
         const allowedExtensions = [
             '.pdf', '.doc', '.docx', '.txt', '.rtf',
             '.jpg', '.jpeg', '.png', '.gif',
-            '.xls', '.xlsx', '.ppt', '.pptx', 
+            '.xls', '.xlsx', '.ppt', '.pptx',
             '.zip', '.rar'
         ];
-        
+
         const allowedMimes = [
             'application/pdf',
             'application/msword',
@@ -1510,7 +1531,7 @@ app.post('/api/delete-reply', async (req, res) => {
 // 9. Timetable APIs
 app.get('/api/timetable', async (req, res) => {
     try {
-        const username = req.query.username;
+        const { username, week } = req.query;
 
         if (!username) {
             return res.json({ success: false, message: 'Missing username' });
@@ -1521,8 +1542,29 @@ app.get('/api/timetable', async (req, res) => {
             return res.json({ success: false, message: 'User not found' });
         }
 
-        const userClasses = await Timetable.find({ username }).lean();
-        console.log(`📅 Loaded ${userClasses.length} classes for ${username}`);
+        let query = { username };
+
+        // 🔥 LỌC THEO TUẦN NẾU CÓ THAM SỐ
+        if (week) {
+            const weekNum = parseInt(week);
+
+            if (isNaN(weekNum) || weekNum < 1 || weekNum > 52) {
+                return res.json({ success: false, message: 'Invalid week number' });
+            }
+
+            // Tìm môn học:
+            // - weeks = [] (rỗng = áp dụng mọi tuần) HOẶC
+            // - weeks chứa tuần này
+            query.$or = [
+                { weeks: { $size: 0 } },  // Mảng rỗng
+                { weeks: weekNum }         // Chứa tuần này
+            ];
+
+            console.log(`📅 Filtering for week ${weekNum}`);
+        }
+
+        const userClasses = await Timetable.find(query).lean();
+        console.log(`📅 Loaded ${userClasses.length} classes for ${username}${week ? ` (week ${week})` : ''}`);
         res.json({ success: true, timetable: userClasses });
     } catch (err) {
         console.error('Error loading timetable:', err);
@@ -1532,7 +1574,7 @@ app.get('/api/timetable', async (req, res) => {
 
 app.post('/api/timetable', async (req, res) => {
     try {
-        const { username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange } = req.body;
+        const { username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange, weeks, startDate, endDate, dateRangeDisplay } = req.body;
 
         if (!username) {
             return res.json({ success: false, message: '❌ Missing username' });
@@ -1556,7 +1598,11 @@ app.post('/api/timetable', async (req, res) => {
             session,
             startPeriod: parseInt(startPeriod),
             numPeriods: parseInt(numPeriods),
-            timeRange
+            timeRange,
+            weeks: weeks || [], // 🔥 MỚI
+            startDate: startDate || null,
+            endDate: endDate || null,
+            dateRangeDisplay: dateRangeDisplay || ''
         });
 
         await newClass.save();
@@ -1612,9 +1658,9 @@ app.delete('/api/timetable/clear', async (req, res) => {
         const result = await Timetable.deleteMany({ username: username });
 
         console.log(`🗑️ Cleared ${result.deletedCount} timetable entries for user: ${username}`);
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             message: `Đã xóa ${result.deletedCount} lớp học`,
             deletedCount: result.deletedCount
         });
@@ -1649,6 +1695,10 @@ app.post('/api/timetable/update', async (req, res) => {
         classToUpdate.startPeriod = parseInt(startPeriod);
         classToUpdate.numPeriods = parseInt(numPeriods);
         classToUpdate.timeRange = timeRange;
+        classToUpdate.weeks = weeks || []; // 🔥 MỚI
+        classToUpdate.startDate = startDate || null;
+        classToUpdate.endDate = endDate || null;
+        classToUpdate.dateRangeDisplay = dateRangeDisplay || '';
         classToUpdate.updatedAt = new Date();
 
         await classToUpdate.save();
