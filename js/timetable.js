@@ -231,7 +231,7 @@ export const Timetable = {
         console.log('📅 Week dates rendered in headers');
     },
 
-    // ==================== LOGIC LỌC TUẦN CHUẨN XÁC ====================
+    // ==================== LOGIC LỌC TUẦN CHUẨN XÁC (ĐÃ SỬA LỖI NGHIÊM TRỌNG) ====================
     isClassInWeek(classObj) {
         // 1. Nếu không có bộ lọc tuần (đang xem tất cả) -> Hiện hết
         if (!this.currentWeekStart) return true;
@@ -251,17 +251,44 @@ export const Timetable = {
         }
 
         // 4. Xử lý môn học CÓ NGÀY THÁNG (Import hoặc Thêm tay có chọn ngày)
+        // 🔥 CRITICAL FIX: Normalize tất cả Date objects về cùng múi giờ và chuẩn hóa giờ
         const clsStart = new Date(classObj.startDate);
-        const clsEnd = new Date(classObj.endDate);
+        clsStart.setHours(0, 0, 0, 0); // Reset về đầu ngày để so sánh chính xác
 
-        // LOGIC CHẶT CHẼ:
-        // Môn học chỉ hiện khi thời gian học GIAO NHAU với tuần đang xem
-        // (Ngày kết thúc môn >= Đầu tuần) VÀ (Ngày bắt đầu môn <= Cuối tuần)
-        if (clsEnd >= weekStart && clsStart <= weekEnd) {
-            return true;
+        const clsEnd = new Date(classObj.endDate);
+        clsEnd.setHours(0, 0, 0, 0); // Reset về đầu ngày (không dùng 23:59:59)
+
+        // Tạo lại weekStart và weekEnd với giờ chuẩn hóa để so sánh
+        const weekStartNormalized = new Date(this.currentWeekStart);
+        weekStartNormalized.setHours(0, 0, 0, 0);
+
+        const weekEndNormalized = new Date(this.currentWeekStart);
+        weekEndNormalized.setDate(weekEndNormalized.getDate() + 6);
+        weekEndNormalized.setHours(0, 0, 0, 0);
+
+        // LOGIC CHẶT CHẼ (ĐÃ SỬA):
+        // Môn học chỉ hiện khi có ít nhất 1 ngày giao nhau giữa 2 khoảng thời gian
+        // 
+        // ✅ ĐÚNG: Khoảng [19/1, 25/1] và khoảng [26/1, 1/2] KHÔNG giao nhau
+        //    - clsEnd (25/1) < weekStartNormalized (26/1) -> FALSE
+        // 
+        // ✅ ĐÚNG: Khoảng [19/1, 25/1] và khoảng [20/1, 27/1] CÓ giao nhau
+        //    - clsEnd (25/1) >= weekStartNormalized (20/1) -> TRUE
+        //    - clsStart (19/1) <= weekEndNormalized (27/1) -> TRUE
+        //
+        // Công thức: clsEnd >= weekStart AND clsStart <= weekEnd
+        const hasOverlap = clsEnd >= weekStartNormalized && clsStart <= weekEndNormalized;
+
+        // Debug log để kiểm tra
+        if (classObj.subject) {
+            console.log(`🔍 [${classObj.subject}]`, {
+                classRange: `${clsStart.toLocaleDateString('vi-VN')} - ${clsEnd.toLocaleDateString('vi-VN')}`,
+                weekRange: `${weekStartNormalized.toLocaleDateString('vi-VN')} - ${weekEndNormalized.toLocaleDateString('vi-VN')}`,
+                result: hasOverlap ? '✅ HIỆN' : '❌ ẨN'
+            });
         }
 
-        return false; // Không thuộc tuần này -> Ẩn
+        return hasOverlap;
     },
 
     injectStyles() {
