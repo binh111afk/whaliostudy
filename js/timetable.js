@@ -189,40 +189,37 @@ export const Timetable = {
         console.log('📅 Week dates rendered in headers');
     },
 
+    // ==================== LOGIC LỌC TUẦN CHUẨN XÁC ====================
     isClassInWeek(classObj) {
-        // CRITICAL FIX: If class has no date range, show it in all weeks (manual classes)
-        if (!classObj.startDate || !classObj.endDate) {
-            return true;
-        }
+        // 1. Nếu không có bộ lọc tuần (đang xem tất cả) -> Hiện hết
+        if (!this.currentWeekStart) return true;
 
-        if (!this.currentWeekStart) {
-            console.warn('⚠️ currentWeekStart is null, showing all classes');
-            return true;
-        }
-
-        // Calculate week boundaries
-        // weekStart: Monday 00:00:00
-        // weekEnd: Sunday 23:59:59
+        // 2. Tính toán ngày đầu và ngày cuối của TUẦN ĐANG XEM
         const weekStart = new Date(this.currentWeekStart);
-        weekStart.setHours(0, 0, 0, 0);
+        weekStart.setHours(0, 0, 0, 0); // Đầu ngày Thứ 2
         
         const weekEnd = new Date(this.currentWeekStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
-        weekEnd.setHours(23, 59, 59, 999);
+        weekEnd.setHours(23, 59, 59, 999); // Cuối ngày Chủ Nhật
 
+        // 3. Xử lý môn học KHÔNG CÓ NGÀY THÁNG (Thêm tay không chọn ngày)
+        // Mặc định: Nếu không chọn ngày -> Hiện ở TẤT CẢ các tuần
+        if (!classObj.startDate || !classObj.endDate) {
+            return true; 
+        }
+
+        // 4. Xử lý môn học CÓ NGÀY THÁNG (Import hoặc Thêm tay có chọn ngày)
         const clsStart = new Date(classObj.startDate);
         const clsEnd = new Date(classObj.endDate);
 
-        // STRICT WEEK FILTERING
-        // Show class ONLY IF it overlaps with the current week
-        // If class ends BEFORE this week starts → HIDE
-        // OR class starts AFTER this week ends → HIDE
-        if (clsEnd < weekStart || clsStart > weekEnd) {
-            return false; // Not in this week
+        // LOGIC CHẶT CHẼ:
+        // Môn học chỉ hiện khi thời gian học GIAO NHAU với tuần đang xem
+        // (Ngày kết thúc môn >= Đầu tuần) VÀ (Ngày bắt đầu môn <= Cuối tuần)
+        if (clsEnd >= weekStart && clsStart <= weekEnd) {
+            return true;
         }
 
-        // Class overlaps with current week
-        return true;
+        return false; // Không thuộc tuần này -> Ẩn
     },
 
     injectStyles() {
@@ -1760,47 +1757,44 @@ export const Timetable = {
         throw new Error(`Cannot parse period: ${periodStr}`);
     },
     
-    // ==================== ADVANCED DATE RANGE PARSER ====================
+    // ==================== BÓC TÁCH NGÀY THÁNG TỪ FILE EXCEL ====================
     parseAdvancedDateRange(dateRangeStr) {
         if (!dateRangeStr || !String(dateRangeStr).trim()) {
             return { startDate: null, endDate: null, display: '' };
         }
         
         try {
-            const original = String(dateRangeStr);
-            console.log(`    🔍 Parsing date: "${original}"`);
+            // 1. Làm sạch chuỗi (Xóa dấu xuống dòng, mũi tên, khoảng trắng thừa)
+            const cleaned = String(dateRangeStr)
+                .replace(/[\n\r]/g, ' ') // Đổi xuống dòng thành khoảng trắng
+                .replace(/-+>/g, ' ')    // Đổi mũi tên -> thành khoảng trắng
+                .replace(/[>]/g, ' ')    // Xóa dấu >
+                .trim();
             
-            // Clean formatting: remove newlines, arrows, extra whitespace
-            const cleaned = original.replace(/[\n\r\s>-]/g, '').trim();
-            
-            // REGEX: Extract dates in DD/MM/YYYY format
-            const dates = cleaned.match(/(\d{1,2}\/\d{1,2}\/\d{4})/g);
+            // 2. Dùng Regex tìm tất cả các ngày dạng DD/MM/YYYY
+            const dates = cleaned.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/g);
             
             if (dates && dates.length >= 1) {
-                // Parse start date
-                const startParts = dates[0].split('/');
-                const startDay = parseInt(startParts[0]);
-                const startMonth = parseInt(startParts[1]);
-                const startYear = parseInt(startParts[2]);
+                // Lấy ngày đầu tiên tìm được làm Ngày Bắt Đầu
+                const startParts = dates[0].split(/[/-]/);
+                const startDate = new Date(
+                    parseInt(startParts[2]), // Năm
+                    parseInt(startParts[1]) - 1, // Tháng (0-11)
+                    parseInt(startParts[0]), // Ngày
+                    0, 0, 0, 0
+                );
                 
-                // Parse end date (or use start date if only one)
-                const endParts = dates[dates.length - 1].split('/');
-                const endDay = parseInt(endParts[0]);
-                const endMonth = parseInt(endParts[1]);
-                const endYear = parseInt(endParts[2]);
+                // Lấy ngày cuối cùng tìm được làm Ngày Kết Thúc
+                const endParts = dates[dates.length - 1].split(/[/-]/);
+                const endDate = new Date(
+                    parseInt(endParts[2]),
+                    parseInt(endParts[1]) - 1,
+                    parseInt(endParts[0]),
+                    23, 59, 59, 999
+                );
                 
-                // Ensure valid Date objects
-                const startDate = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
-                const endDate = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 999);
-                
-                // Validate dates
-                if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-                    throw new Error('Invalid date values');
-                }
-                
-                const display = `${String(startDay).padStart(2, '0')}/${String(startMonth).padStart(2, '0')} - ${String(endDay).padStart(2, '0')}/${String(endMonth).padStart(2, '0')}`;
-                
-                console.log(`    ✅ Parsed dates: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+                // Tạo chuỗi hiển thị đẹp (DD/MM)
+                const display = `${String(startParts[0]).padStart(2, '0')}/${String(startParts[1]).padStart(2, '0')} - ${String(endParts[0]).padStart(2, '0')}/${String(endParts[1]).padStart(2, '0')}`;
                 
                 return {
                     startDate: startDate.toISOString(),
@@ -1809,11 +1803,9 @@ export const Timetable = {
                 };
             }
             
-            console.log('    ⚠️ No date match found');
             return { startDate: null, endDate: null, display: '' };
-            
         } catch (error) {
-            console.error('    ❌ Date parse error:', error.message);
+            console.warn('Lỗi đọc ngày tháng:', error);
             return { startDate: null, endDate: null, display: '' };
         }
     },
