@@ -524,8 +524,6 @@ export const Timetable = {
             const currentUser = AppState.currentUser || JSON.parse(localStorage.getItem('currentUser') || '{}');
             const username = currentUser.username;
 
-            console.log('🔍 Fetching timetable for user:', username);
-
             if (!username) {
                 console.warn('⚠️ No user logged in');
                 this.currentTimetable = [];
@@ -533,24 +531,14 @@ export const Timetable = {
                 return;
             }
 
-            // 🔥 TÍNH TUẦN HIỆN TẠI (Tuần 1 = Tuần bắt đầu học kỳ)
-            // Giả sử học kỳ bắt đầu ngày 13/01/2025
-            const semesterStart = new Date('2025-01-13');
-            const today = new Date();
-            const diffTime = today - semesterStart;
-            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            const currentWeek = Math.floor(diffDays / 7) + 1; // Tuần 1, 2, 3...
-
-            console.log(`📅 Current week of semester: ${currentWeek}`);
-
-            // Gửi request có kèm tham số week
-            const response = await fetch(`/api/timetable?username=${username}&week=${currentWeek}`);
+            // 🔥 KHÔNG GỬI THAM SỐ TUẦN - Lấy tất cả môn học
+            const response = await fetch(`/api/timetable?username=${username}`);
             const data = await response.json();
 
             if (data.success) {
                 this.currentTimetable = data.timetable || [];
-                console.log(`✅ Timetable loaded: ${this.currentTimetable.length} classes for week ${currentWeek}`);
-                this.renderTimetable();
+                console.log(`✅ Timetable loaded: ${this.currentTimetable.length} classes`);
+                this.renderTimetable(); // Lọc theo ngày sẽ xử lý trong isClassInWeek()
                 this.highlightCurrentDay();
             } else {
                 console.warn('⚠️ Timetable load failed:', data.message);
