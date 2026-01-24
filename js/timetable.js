@@ -1400,9 +1400,9 @@ export const Timetable = {
     },
 
     processExcelData(rows) {
-        console.log('🚀 Bắt đầu xử lý Excel (Chế độ Cấp Cứu)...');
+        console.log('🚀 Bắt đầu xử lý Excel (Chế độ Deep Scan)...');
         
-        // --- 1. TÌM TIÊU ĐỀ ---
+        // 1. TÌM TIÊU ĐỀ
         let headerRow = -1;
         const colMap = { subject: -1, day: -1, period: -1, date: -1, room: -1 };
         
@@ -1423,8 +1423,6 @@ export const Timetable = {
 
         const importedClasses = [];
         const seenIds = new Set();
-        
-        // Biến nhớ (Fill-down)
         let lastSubject = null;
         let lastDateRange = null;
 
@@ -1432,30 +1430,28 @@ export const Timetable = {
             const row = rows[i];
             if (!row) continue;
 
-            // Lấy dữ liệu thô
+            // Lấy dữ liệu cơ bản
             const subjectRaw = colMap.subject > -1 ? (row[colMap.subject] || '') : '';
             const dayRaw = colMap.day > -1 ? (row[colMap.day] || '') : '';
             const periodRaw = colMap.period > -1 ? (row[colMap.period] || '') : '';
             const roomRaw = colMap.room > -1 ? (row[colMap.room] || '') : '';
-            
-            // Lấy ngày từ cột dự đoán
             let dateRaw = colMap.date > -1 ? (row[colMap.date] || '') : '';
             
             let currentSubject = String(subjectRaw).trim();
             let currentDateRaw = String(dateRaw).trim();
 
-            // --- LOGIC FILL-DOWN ---
+            // Logic Reset & Fill-down
             if (currentSubject) {
                 if (currentSubject !== lastSubject) {
                     lastSubject = currentSubject;
-                    lastDateRange = null; 
+                    lastDateRange = null; // Môn mới -> Xóa ngày cũ
                 }
                 if (currentDateRaw) lastDateRange = currentDateRaw;
             } else if (periodRaw && lastSubject) {
                 currentSubject = lastSubject;
             }
 
-            // Tự điền từ dòng trên nếu dòng này trống
+            // Tự điền từ dòng trên
             if (!currentDateRaw && currentSubject === lastSubject && lastDateRange) {
                 currentDateRaw = lastDateRange;
             }
@@ -1463,43 +1459,37 @@ export const Timetable = {
             if (!currentSubject || !dayRaw || !periodRaw) continue;
 
             try {
-                // Parse dữ liệu cơ bản
                 const day = this.parseDayString(dayRaw);
                 const periodInfo = this.parseAdvancedPeriod(periodRaw);
                 
-                // --- 🔥 LOGIC QUAN TRỌNG: CẤP CỨU TÌM NGÀY 🔥 ---
-                // Bước 1: Thử đọc ngày ở cột chính/fill-down
+                // --- 🔥 TÍNH NĂNG MỚI: CẤP CỨU TÌM NGÀY 🔥 ---
+                // 1. Thử đọc cột ngày chính
                 let dateInfo = this.parseAdvancedDateRange(currentDateRaw);
 
-                // Bước 2: Nếu thất bại (startDate là null) -> Kích hoạt QUÉT TOÀN DÒNG
+                // 2. Nếu thất bại (null) -> Quét toàn bộ dòng để tìm ngày
                 if (!dateInfo.startDate) {
-                    // console.warn(`⚠️ Dòng ${i+1}: Không đọc được ngày từ cột chính ("${currentDateRaw}"). Đang quét lại cả dòng...`);
-                    
+                    // console.log(`⚠️ Dòng ${i+1}: Mất ngày. Đang quét lại toàn dòng...`);
                     for (const cell of row) {
                         const cellStr = String(cell || '');
-                        // Bỏ qua nếu ô này quá ngắn hoặc là tên môn học
+                        // Bỏ qua ô quá ngắn hoặc là tên môn
                         if (cellStr.length < 5 || cellStr === currentSubject) continue;
-
+                        
+                        // Thử parse ô này xem có phải ngày không
                         const fallbackInfo = this.parseAdvancedDateRange(cellStr);
                         if (fallbackInfo.startDate) {
-                            console.log(`   🚑 CẤP CỨU THÀNH CÔNG: Tìm thấy ngày ở cột khác: "${cellStr}"`);
-                            dateInfo = fallbackInfo; // Lấy kết quả quét được
-                            break; // Dừng quét
+                            console.log(`   🚑 CẤP CỨU THÀNH CÔNG (Dòng ${i+1}): Tìm thấy ngày ở cột khác: "${cellStr}"`);
+                            dateInfo = fallbackInfo;
+                            break; // Tìm thấy rồi thì dừng
                         }
                     }
                 }
                 // ----------------------------------------------------
 
-                // --- DEBUG RIÊNG CHO MÔN KỸ NĂNG ---
-                if (currentSubject.toLowerCase().includes('kỹ năng')) {
-                    console.log(`🕵️‍♂️ KẾT QUẢ CUỐI CÙNG (Kỹ Năng): ${dateInfo.startDate ? '✅ ' + dateInfo.display : '❌ Vẫn mất ngày'}`);
-                }
-
                 const uniqueId = `${currentSubject}-${day}-${periodInfo.startPeriod}`;
                 if (seenIds.has(uniqueId)) continue;
                 seenIds.add(uniqueId);
 
-                // Làm sạch tên môn
+                // Clean tên môn
                 let cleanSubject = currentSubject;
                 if (cleanSubject.includes('-\n')) cleanSubject = cleanSubject.split('-\n')[1];
                 else if (cleanSubject.includes('\n')) cleanSubject = cleanSubject.split('\n')[1] || cleanSubject;
@@ -1517,7 +1507,7 @@ export const Timetable = {
                 });
 
             } catch (err) {
-                // console.warn(`Bỏ qua dòng ${i+1}: ${err.message}`);
+                // console.warn('Lỗi dòng:', i, err);
             }
         }
 
