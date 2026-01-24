@@ -1400,129 +1400,158 @@ export const Timetable = {
     },
 
     processExcelData(rows) {
-        console.log('🔄 Đang xử lý Excel với thuật toán Fill-Down (Python Logic)...');
+        console.log('🔄 Đang xử lý Excel (Phiên bản mở khóa tiêu đề)...');
         
-        // --- BƯỚC 1: DÒ TÌM TIÊU ĐỀ CỘT ---
+        // 1. Dò tìm dòng tiêu đề (Logic linh hoạt hơn)
         let headerRowIndex = -1;
         const colMap = { subject: -1, day: -1, period: -1, room: -1, date: -1, campus: -1 };
         
-        for (let i = 0; i < Math.min(15, rows.length); i++) {
+        for (let i = 0; i < Math.min(20, rows.length); i++) {
              const row = rows[i];
-             if (!row) continue;
+             if (!row || row.length === 0) continue;
              
              // Chuyển nội dung về chữ thường để tìm từ khóa
              const cells = row.map(c => String(c || '').toLowerCase().trim());
              
-             // Logic tìm cột
-             if (colMap.subject === -1 && (cells.includes('tên lhp') || cells.includes('môn học') || cells.includes('tên học phần'))) {
-                 colMap.subject = cells.findIndex(c => c.includes('tên') || c.includes('môn'));
+             // --- FIX LỖI Ở ĐÂY: Dùng findIndex trực tiếp, không qua if chặn ---
+             
+             // Tìm cột Tên Môn (Chấp nhận: "Mã LHP/ Tên LHP", "Môn học", "Tên học phần"...)
+             if (colMap.subject === -1) {
+                 colMap.subject = cells.findIndex(c => c.includes('tên lhp') || c.includes('môn học') || c.includes('học phần') || c.includes('tên lớp'));
              }
-             if (colMap.day === -1 && (cells.includes('thứ') || cells.includes('thứ/'))) { // Tránh nhầm "Thứ tự"
-                 colMap.day = cells.findIndex(c => c === 'thứ' || c.startsWith('thứ/'));
+             
+             // Tìm cột Thứ (Chấp nhận: "Thứ")
+             if (colMap.day === -1) {
+                 colMap.day = cells.findIndex(c => c === 'thứ' || c.startsWith('thứ') || c.includes('thứ/'));
              }
-             if (colMap.period === -1 && (cells.includes('tiết') || cells.includes('giờ'))) {
+             
+             // Tìm cột Tiết (Chấp nhận: "Tiết", "Giờ", "Tiết bắt đầu")
+             if (colMap.period === -1) {
                  colMap.period = cells.findIndex(c => c.includes('tiết') || c.includes('giờ'));
              }
-             if (colMap.date === -1 && (cells.includes('thời gian') || cells.includes('ngày') || cells.includes('tuần'))) {
-                 colMap.date = cells.findIndex(c => c.includes('thời') || c.includes('ngày') || c.includes('tuần'));
+             
+             // Tìm cột Ngày (Chấp nhận: "Thời gian", "Từ ngày", "Ngày học")
+             if (colMap.date === -1) {
+                 colMap.date = cells.findIndex(c => c.includes('thời gian') || c.includes('từ ngày') || c.includes('ngày') || c.includes('tuần'));
              }
-             if (colMap.room === -1 && cells.includes('phòng')) {
-                 colMap.room = cells.indexOf('phòng');
+             
+             // Tìm cột Phòng
+             if (colMap.room === -1) {
+                 colMap.room = cells.findIndex(c => c.includes('phòng'));
+             }
+
+             // Tìm cột Cơ sở (nếu có)
+             if (colMap.campus === -1) {
+                 colMap.campus = cells.findIndex(c => c.includes('cơ sở') || c.includes('địa điểm'));
              }
              
              // Nếu tìm đủ 3 cột quan trọng nhất -> Chốt đây là dòng tiêu đề
              if (colMap.subject > -1 && colMap.day > -1 && colMap.period > -1) { 
                  headerRowIndex = i; 
-                 console.log('✅ Tìm thấy dòng tiêu đề tại dòng:', i + 1);
+                 console.log('✅ Đã tìm thấy tiêu đề tại dòng:', i + 1, colMap);
                  break; 
              }
         }
 
         if (headerRowIndex === -1) { 
-            this.showError('Không tìm thấy dòng tiêu đề (Tên môn, Thứ, Tiết)!'); 
+            this.showError('Không tìm thấy dòng tiêu đề (Tên môn, Thứ, Tiết)! Hãy thử xóa bớt các dòng trống ở đầu file Excel.'); 
             return; 
         }
 
         const importedClasses = [];
         const seenIds = new Set();
 
-        // --- BIẾN NHỚ ĐỂ XỬ LÝ Ô GỘP (QUAN TRỌNG) ---
+        // Biến nhớ để xử lý ô gộp (Fill-Down)
         let lastSubject = null;
-        let lastDateRange = null; // Dùng để nhớ ngày của dòng trên
+        let lastDateRange = null;
 
-        // --- BƯỚC 2: DUYỆT DATA ---
+        // 2. Duyệt dữ liệu
         for (let i = headerRowIndex + 1; i < rows.length; i++) {
             const row = rows[i];
-            if (!row || row.length === 0) continue;
+            // Không bỏ qua dòng trống ngay lập tức, vì có thể dòng đó chứa thông tin gộp
+            // if (!row || row.length === 0) continue; 
 
-            // Lấy dữ liệu thô từ cột tương ứng
+            // Lấy dữ liệu thô
             const subjectRaw = colMap.subject > -1 ? row[colMap.subject] : '';
             const dayRaw = colMap.day > -1 ? row[colMap.day] : '';
             const periodRaw = colMap.period > -1 ? row[colMap.period] : '';
             const dateRaw = colMap.date > -1 ? row[colMap.date] : '';
             const roomRaw = colMap.room > -1 ? row[colMap.room] : '';
+            const campusRaw = colMap.campus > -1 ? row[colMap.campus] : '';
 
-            // --- LOGIC FILL-DOWN (TỰ ĐIỀN) ---
+            // --- LOGIC TỰ ĐIỀN (FIX LỖI MẤT NGÀY) ---
             let currentSubject = subjectRaw ? String(subjectRaw).trim() : null;
             let currentDateRaw = dateRaw ? String(dateRaw).trim() : null;
 
-            // 1. Xử lý Tên môn (Nếu trống -> Lấy dòng trên)
+            // Xử lý tên môn bị ngắt dòng (Trường hợp "Xác suất..." ở dòng trên, "giáo dục" ở dòng dưới)
+            // Nếu dòng này có tên môn nhưng không có thứ/tiết -> Có thể là phần đuôi của tên môn dòng trên
+            if (currentSubject && !dayRaw && !periodRaw) {
+               // Bỏ qua dòng rác này, hoặc nối vào tên môn cũ (nhưng logic nối hơi phức tạp, bỏ qua cho an toàn)
+               continue; 
+            }
+
+            // Fill-down Tên môn
             if (currentSubject) {
-                // Nếu có tên môn mới -> Cập nhật biến nhớ
+                // Nếu tên môn mới -> Cập nhật
                 lastSubject = currentSubject;
-                
-                // Nếu dòng này có ngày -> Cập nhật biến nhớ ngày
-                // Nếu dòng này KHÔNG có ngày -> Reset biến nhớ ngày (để tránh lấy ngày của môn trước điền cho môn sau)
-                if (currentDateRaw) {
-                    lastDateRange = currentDateRaw;
-                } else {
-                    lastDateRange = null; 
-                }
+                // Nếu có ngày mới -> Cập nhật ngày
+                if (currentDateRaw) lastDateRange = currentDateRaw;
+                else lastDateRange = null; // Reset nếu môn mới không có ngày (đề phòng)
             } else if (periodRaw && lastSubject) {
-                // Tên môn trống nhưng có giờ học -> Đây là ô gộp -> Lấy tên môn dòng trên
+                // Tên môn trống nhưng có giờ học -> Lấy tên môn dòng trên
                 currentSubject = lastSubject;
             }
 
-            // 2. Xử lý Ngày tháng (Nếu trống -> Lấy ngày của dòng trên CÙNG MỘT MÔN)
+            // Fill-down Ngày tháng
             if (currentDateRaw) {
                 lastDateRange = currentDateRaw;
             } else if (currentSubject === lastSubject && lastDateRange) {
-                // Nếu tên môn giống dòng trên VÀ dòng này trống ngày -> Tự điền ngày
-                currentDateRaw = lastDateRange; 
-                console.log(`   ↳ Dòng ${i + 1}: Tự điền ngày từ dòng trên: ${lastDateRange}`);
+                // Cùng môn, dòng này trống ngày -> Lấy ngày dòng trên
+                currentDateRaw = lastDateRange;
             }
 
-            // Bỏ qua nếu thiếu thông tin quan trọng
+            // Bắt buộc phải có Tên môn, Thứ, Tiết thì mới là 1 lớp học
             if (!currentSubject || !dayRaw || !periodRaw) continue;
 
             try {
                 // Parse dữ liệu
                 const day = this.parseDayString(dayRaw);
                 const periodInfo = this.parseAdvancedPeriod(periodRaw);
-                
-                // Parse ngày với hàm mới (đã fix lỗi Regex)
                 const dateInfo = this.parseAdvancedDateRange(currentDateRaw);
 
-                // Tạo ID duy nhất để tránh trùng
-                const uniqueId = `${currentSubject}-${day}-${periodInfo.startPeriod}`;
+                // Tạo ID duy nhất
+                const uniqueId = `${currentSubject}-${day}-${periodInfo.startPeriod}-${periodInfo.numPeriods}`;
                 if (seenIds.has(uniqueId)) continue;
                 seenIds.add(uniqueId);
 
+                // Làm sạch tên môn (Bỏ mã môn đầu dòng nếu có)
+                // Ví dụ: "2521COMP182702-\nXác suất..." -> "Xác suất..."
+                let cleanSubject = currentSubject;
+                if (cleanSubject.includes('-\n')) {
+                    cleanSubject = cleanSubject.split('-\n')[1] || cleanSubject;
+                } else if (cleanSubject.includes('\n')) {
+                     // Nếu chỉ có xuống dòng, lấy phần dài nhất hoặc phần sau
+                     const parts = cleanSubject.split('\n');
+                     // Thường tên môn nằm sau mã môn
+                     cleanSubject = parts.length > 1 ? parts[1] : parts[0];
+                }
+
                 importedClasses.push({
-                    subject: currentSubject,
+                    subject: cleanSubject.trim(), // Tên môn đã làm sạch
                     day: day,
                     session: periodInfo.session,
                     startPeriod: periodInfo.startPeriod,
                     numPeriods: periodInfo.numPeriods,
                     room: roomRaw || 'Online', 
-                    campus: 'CS1', // Mặc định hoặc bạn có thể thêm logic lấy cột Cở sở
+                    campus: campusRaw || 'CS1',
                     startDate: dateInfo.startDate,
                     endDate: dateInfo.endDate,
                     dateRangeDisplay: dateInfo.display
                 });
 
             } catch (err) {
-                console.warn(`Bỏ qua dòng ${i + 1}:`, err.message);
+                // Bỏ qua lỗi nhỏ để đọc tiếp các dòng khác
+                console.warn(`⚠️ Bỏ qua dòng ${i + 1}:`, err.message);
             }
         }
 
@@ -1530,7 +1559,7 @@ export const Timetable = {
             this.importedData = importedClasses;
             this.showPreview(importedClasses.length);
         } else {
-            this.showError('Không đọc được dữ liệu nào! Hãy kiểm tra lại file Excel.');
+            this.showError('Không đọc được lớp học nào! File Excel có thể bị sai cấu trúc.');
         }
     },
 
