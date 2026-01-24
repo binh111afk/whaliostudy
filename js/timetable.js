@@ -1479,35 +1479,35 @@ export const Timetable = {
             const roomRaw = colMap.room > -1 ? row[colMap.room] : '';
             const campusRaw = colMap.campus > -1 ? row[colMap.campus] : '';
 
-            // --- LOGIC TỰ ĐIỀN (FIX LỖI MẤT NGÀY) ---
+            // --- LOGIC TỰ ĐIỀN CHUẨN (FIX LỖI MÔN SAU LẤY NGÀY MÔN TRƯỚC) ---
             let currentSubject = subjectRaw ? String(subjectRaw).trim() : null;
             let currentDateRaw = dateRaw ? String(dateRaw).trim() : null;
 
-            // Xử lý tên môn bị ngắt dòng (Trường hợp "Xác suất..." ở dòng trên, "giáo dục" ở dòng dưới)
-            // Nếu dòng này có tên môn nhưng không có thứ/tiết -> Có thể là phần đuôi của tên môn dòng trên
-            if (currentSubject && !dayRaw && !periodRaw) {
-               // Bỏ qua dòng rác này, hoặc nối vào tên môn cũ (nhưng logic nối hơi phức tạp, bỏ qua cho an toàn)
-               continue; 
-            }
-
-            // Fill-down Tên môn
+            // Xử lý tên môn
             if (currentSubject) {
-                // Nếu tên môn mới -> Cập nhật
-                lastSubject = currentSubject;
-                // Nếu có ngày mới -> Cập nhật ngày
-                if (currentDateRaw) lastDateRange = currentDateRaw;
-                else lastDateRange = null; // Reset nếu môn mới không có ngày (đề phòng)
+                // 🔥 QUAN TRỌNG: Nếu gặp tên môn MỚI khác với tên môn cũ
+                if (currentSubject !== lastSubject) {
+                    lastSubject = currentSubject;
+                    // Reset ngày cũ ngay lập tức để không bị lấy nhầm cho môn mới
+                    lastDateRange = null; 
+                }
+                
+                // Nếu dòng này có ngày -> Cập nhật ngày mới
+                if (currentDateRaw) {
+                    lastDateRange = currentDateRaw;
+                }
             } else if (periodRaw && lastSubject) {
-                // Tên môn trống nhưng có giờ học -> Lấy tên môn dòng trên
+                // Tên môn trống nhưng có giờ học -> Đây là dòng con của môn trên -> Lấy tên môn trên
                 currentSubject = lastSubject;
             }
 
-            // Fill-down Ngày tháng
+            // Xử lý ngày tháng (Chỉ điền nếu là dòng con của cùng một môn)
             if (currentDateRaw) {
                 lastDateRange = currentDateRaw;
             } else if (currentSubject === lastSubject && lastDateRange) {
                 // Cùng môn, dòng này trống ngày -> Lấy ngày dòng trên
                 currentDateRaw = lastDateRange;
+                console.log(`   ↳ Dòng ${i+1}: Tự điền ngày cho môn ${currentSubject}: ${lastDateRange}`);
             }
 
             // Bắt buộc phải có Tên môn, Thứ, Tiết thì mới là 1 lớp học
