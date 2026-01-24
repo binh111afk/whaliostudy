@@ -2108,94 +2108,108 @@ export const Timetable = {
     // ==================== XÓA TẤT CẢ (Đã Fix lỗi F5) ====================
     // ==================== XÓA TẤT CẢ (PHIÊN BẢN SIÊU TỐC) ====================
     async deleteAllClasses() {
-        // 1. KIỂM TRA THỰC TẾ TRÊN MÀN HÌNH (QUAN TRỌNG NHẤT)
-        // Thay vì tin vào biến, ta đếm thẳng số thẻ lớp học đang hiện trên web
-        const uiCards = document.querySelectorAll('.class-card');
-        const hasStateData = AppState.currentUser && AppState.currentUser.timetable && AppState.currentUser.timetable.length > 0;
-        
-        // Chỉ khi nào cả Màn hình trống VÀ Bộ nhớ trống thì mới báo là không có gì để xóa
-        if (uiCards.length === 0 && !hasStateData) {
-            Swal.fire('Thông báo', 'Thời khóa biểu đã trống sẵn rồi!', 'info');
+        // 1. Lấy danh sách ID các lớp cần xóa
+        // Lấy từ State để đảm bảo đủ ID (dữ liệu hiển thị có thể thiếu ID)
+        let classesToDelete = [];
+        if (AppState.currentUser && AppState.currentUser.timetable) {
+            classesToDelete = [...AppState.currentUser.timetable];
+        }
+
+        // Nếu danh sách rỗng, kiểm tra tiếp trên màn hình cho chắc
+        if (classesToDelete.length === 0 && this.currentTimetable.length > 0) {
+            classesToDelete = [...this.currentTimetable];
+        }
+
+        if (classesToDelete.length === 0) {
+            Swal.fire('Thông báo', 'Không có dữ liệu để xóa!', 'info');
             return;
         }
 
-        // 2. XÁC NHẬN MỘT LẦN DUY NHẤT
+        // 2. Hỏi xác nhận
         const result = await Swal.fire({
-            title: 'Xóa sạch?',
-            text: `Bạn muốn xóa toàn bộ thời khóa biểu ngay bây giờ?`,
+            title: 'Xóa sạch (Server)?',
+            text: `Hành động này sẽ xóa vĩnh viễn ${classesToDelete.length} lớp học trên máy chủ.`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
-            confirmButtonText: 'Xóa ngay',
-            cancelButtonText: 'Hủy',
-            focusCancel: true
+            confirmButtonText: 'Xóa vĩnh viễn',
+            cancelButtonText: 'Hủy'
         });
 
         if (result.isConfirmed) {
-            const username = AppState.currentUser ? AppState.currentUser.username : null;
-            // Backup ID để xóa server sau này
-            const classesToDelete = AppState.currentUser?.timetable || []; 
-
-            // -----------------------------------------------------------
-            // 🚀 BƯỚC 1: HỦY DIỆT GIAO DIỆN (FORCE DELETE DOM)
-            // -----------------------------------------------------------
-            
-            // Cách tàn bạo nhất: Tìm mọi thẻ class-card và xóa thẳng khỏi HTML
-            // Không cần chờ hàm render chạy, xóa ngay lập tức cho người dùng thấy
-            document.querySelectorAll('.class-card').forEach(el => el.remove());
-
-            // -----------------------------------------------------------
-            // 🧹 BƯỚC 2: DỌN DẸP BỘ NHỚ (LOCAL & RAM)
-            // -----------------------------------------------------------
-            
-            this.currentTimetable = [];
-            this.importedData = [];
-            
-            if (AppState.currentUser) {
-                AppState.currentUser.timetable = [];
-                // Lưu ngay mảng rỗng xuống LocalStorage
-                // Để nếu user F5 ngay lúc này thì cũng không còn gì hiện lên
-                AppState.saveUser(AppState.currentUser).catch(console.error);
-            }
-
-            // Gọi hàm vẽ lại bảng (để xóa các dòng kẻ thừa nếu có)
-            // Kiểm tra tên hàm cho chắc chắn
-            if (typeof this.render === 'function') this.render();
-            else if (typeof this.renderTimetable === 'function') this.renderTimetable();
-
-            // -----------------------------------------------------------
-            // ✅ BƯỚC 3: BÁO THÀNH CÔNG NGAY (KHÔNG CHỜ SERVER)
-            // -----------------------------------------------------------
+            // Hiện Loading xoay vòng (Bắt người dùng chờ để đảm bảo đồng bộ)
             Swal.fire({
-                icon: 'success',
-                title: 'Đã xóa!',
-                showConfirmButton: false,
-                timer: 1000
+                title: 'Đang đồng bộ xóa...',
+                html: 'Vui lòng không tắt trình duyệt.<br>Đang xóa dữ liệu trên máy chủ.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
             });
 
-            // -----------------------------------------------------------
-            // 🐢 BƯỚC 4: XÓA SERVER NGẦM (BACKGROUND)
-            // -----------------------------------------------------------
-            if (username) {
-                // Gọi API xóa (Chạy ngầm, không await để tránh đơ giao diện)
-                // Ưu tiên 1: Gọi API xóa tất cả (nhanh hơn)
-                fetch('/api/timetable/clear', { 
-                    method: 'POST', // hoặc DELETE
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: username })
-                }).catch(() => {
-                    // Ưu tiên 2: Nếu không có API clear, xóa từng cái (fallback)
-                    if (classesToDelete.length > 0) {
-                        classesToDelete.forEach(cls => {
-                            if (cls.id) {
-                                fetch('/api/timetable/delete', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ username: username, id: cls.id })
-                                }).catch(e => console.warn(e));
-                            }
-                        });
-                    }
+            try {
+                const username = AppState.currentUser.username;
+                
+                // 🚀 BƯỚC 1: GỬI LỆNH XÓA LÊN SERVER (VÀ BẮT BUỘC CHỜ XONG)
+                // Dùng Promise.all để xóa song song nhưng phải đợi tất cả xong mới đi tiếp
+                const deletePromises = classesToDelete.map(cls => {
+                    // Nếu lớp không có ID (lớp ảo/lỗi) thì bỏ qua
+                    if (!cls.id) return Promise.resolve();
+
+                    return fetch('/api/timetable/delete', {
+                        method: 'POST', // hoặc DELETE tùy backend
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            username: username, 
+                            id: cls.id 
+                        })
+                    }).then(res => {
+                        if (!res.ok) throw new Error(`Lỗi xóa ID: ${cls.id}`);
+                        return res.json();
+                    });
+                });
+
+                // Chờ cho đến khi Server báo "OK" hết tất cả
+                await Promise.all(deletePromises);
+
+                // 🚀 BƯỚC 2: SAU KHI SERVER SẠCH -> XÓA LOCAL
+                this.currentTimetable = [];
+                this.importedData = [];
+                
+                if (AppState.currentUser) {
+                    AppState.currentUser.timetable = [];
+                    // Lưu đè mảng rỗng xuống LocalStorage
+                    await AppState.saveUser(AppState.currentUser); 
+                }
+
+                // 🚀 BƯỚC 3: DỌN DẸP GIAO DIỆN
+                // Xóa cứng các thẻ HTML
+                document.querySelectorAll('.class-card').forEach(el => el.remove());
+                
+                // Gọi hàm render để vẽ lại lưới trống
+                if (typeof this.render === 'function') this.render();
+                else if (typeof this.renderTimetable === 'function') this.renderTimetable();
+
+                // Báo thành công
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Đã xóa sạch!',
+                    text: 'Dữ liệu trên Server và Máy đã được đồng bộ.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+
+            } catch (error) {
+                console.error('Lỗi xóa server:', error);
+                // Nếu lỗi Server, vẫn cho xóa Local để người dùng đỡ ức chế, nhưng cảnh báo
+                AppState.currentUser.timetable = [];
+                await AppState.saveUser(AppState.currentUser);
+                this.renderTimetable();
+                
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Đã xóa cục bộ',
+                    text: 'Đã xóa trên máy bạn, nhưng Server báo lỗi. Nếu F5 lại có thể sẽ hiện lại.',
                 });
             }
         }
