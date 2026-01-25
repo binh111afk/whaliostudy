@@ -8501,3 +8501,145 @@ input, textarea, select {
     -webkit-touch-callout: default !important;
 }
 
+/* ==================== TIMETABLE RESPONSIVE FIX ==================== */
+/* Responsive cho timetable header và buttons trên mobile */
+@media (max-width: 768px) {
+    /* Timetable header: stack vertically on mobile */
+    .timetable-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+        padding: 15px !important;
+    }
+    
+    .timetable-header h1 {
+        font-size: 16px !important;
+        margin: 0 !important;
+    }
+    
+    /* Week navigator: smaller and centered */
+    #week-navigator {
+        width: 100%;
+        justify-content: center !important;
+        padding: 4px 10px !important;
+        gap: 10px !important;
+    }
+    
+    #week-navigator button {
+        font-size: 16px !important;
+        padding: 2px 6px !important;
+    }
+    
+    #current-week-display {
+        font-size: 12px !important;
+        min-width: 110px !important;
+    }
+    
+    /* Action buttons: stack in a row, smaller size */
+    .timetable-header > div:last-child {
+        width: 100%;
+        margin-left: 0 !important;
+        justify-content: space-between;
+        gap: 6px !important;
+    }
+    
+    /* All buttons in header: smaller */
+    #btn-delete-all,
+    .btn-open-import-v2,
+    .btn-add-class {
+        padding: 6px 8px !important;
+        font-size: 11px !important;
+        gap: 4px !important;
+        flex: 1;
+    }
+    
+    /* Icons in buttons: smaller */
+    #btn-delete-all svg,
+    .btn-open-import-v2 svg,
+    .btn-add-class svg {
+        width: 14px !important;
+        height: 14px !important;
+    }
+    
+    /* Hide text on very small screens, keep only icons */
+    @media (max-width: 400px) {
+        #btn-delete-all,
+        .btn-open-import-v2,
+        .btn-add-class {
+            font-size: 0 !important;
+            padding: 8px !important;
+        }
+        
+        #btn-delete-all svg,
+        .btn-open-import-v2 svg,
+        .btn-add-class svg {
+            width: 16px !important;
+            height: 16px !important;
+            margin: 0 !important;
+        }
+    }
+    
+    /* Timetable wrapper: ensure proper scrolling */
+    .timetable-wrapper {
+        border-radius: 8px !important;
+        margin-bottom: 15px !important;
+    }
+    
+    /* Table: smaller cells on mobile */
+    .timetable-table {
+        min-width: 650px !important;
+    }
+    
+    .timetable-table th,
+    .timetable-table td {
+        padding: 4px !important;
+        font-size: 11px !important;
+    }
+    
+    .timetable-table th {
+        font-size: 10px !important;
+        padding: 6px 4px !important;
+    }
+    
+    .header-date {
+        font-size: 9px !important;
+        margin-top: 1px !important;
+    }
+    
+    .session-col {
+        min-width: 50px !important;
+        font-size: 10px !important;
+    }
+    
+    /* Class cards: more compact */
+    .class-card {
+        padding: 4px !important;
+        font-size: 10px !important;
+        border-radius: 4px !important;
+    }
+    
+    .class-subject {
+        font-size: 11px !important;
+        margin-bottom: 2px !important;
+    }
+    
+    .class-room,
+    .class-time {
+        font-size: 9px !important;
+        margin: 1px 0 !important;
+    }
+    
+    /* Delete button in cells */
+    .btn-delete-class {
+        top: 2px !important;
+        right: 2px !important;
+        padding: 2px !important;
+        font-size: 10px !important;
+    }
+    
+    /* Timetable container padding */
+    .timetable-container {
+        padding: 15px 10px !important;
+    }
+}
+
