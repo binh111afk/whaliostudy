@@ -1437,12 +1437,15 @@ footer {
     overflow-x: auto;
     scroll-behavior: smooth;
     padding: 10px 0;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge */
 }
 
 .flashcard-carousel::-webkit-scrollbar {
-    display: none; /* Chrome/Safari/Opera */
+    display: none;
+    /* Chrome/Safari/Opera */
 }
 
 /* Scroll Buttons */
@@ -2629,7 +2632,7 @@ main {
     .form-grid-2 {
         grid-template-columns: 1fr;
     }
-    
+
     .modal-box {
         max-width: 95% !important;
         margin: 10px;
@@ -4831,28 +4834,36 @@ main {
 /* ==================== TIMETABLE STYLES (COMPACT & SCROLLABLE) ==================== */
 
 /* Wrapper to prevent layout overflow */
+/* 1. Giới hạn khung bao ngoài và cho phép cuộn */
 .timetable-wrapper {
     width: 100%;
-    overflow-x: auto; /* Allow horizontal scrolling */
+    /* Chỉ chiếm 100% chiều rộng màn hình */
+    overflow-x: auto;
+    /* Cho phép cuộn ngang nếu bảng quá to */
     -webkit-overflow-scrolling: touch;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    border: 1px solid #e5e7eb;
-    margin-bottom: 20px;
+    /* Cuộn mượt hơn trên iOS */
+    border-radius: 8px !important;
+    margin-bottom: 15px !important;
+    background: #fff;
+    /* Đảm bảo nền trắng để không bị lẫn background */
 }
 
-/* Table styles - compact and scrollable */
+/* 2. Điều chỉnh bảng bên trong */
 .timetable-table {
     width: 100%;
-    min-width: 800px; /* Force table to maintain shape, user scrolls if screen is small */
+    /* Chiếm hết khung */
+    min-width: 600px !important;
+    /* Giữ độ rộng tối thiểu để chữ không bị co quá nhỏ */
     border-collapse: collapse;
+    /* Gọn đường viền */
 }
 
 .timetable-table th,
 .timetable-table td {
-    padding: 8px; /* Reduce padding for compact view */
-    font-size: 13px; /* Compact font */
+    padding: 8px;
+    /* Reduce padding for compact view */
+    font-size: 13px;
+    /* Compact font */
     border: 1px solid #e5e7eb !important;
     text-align: center;
     vertical-align: top;
@@ -4899,7 +4910,7 @@ main {
 
 .class-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .class-subject {
@@ -4959,13 +4970,13 @@ main {
     .timetable-table {
         min-width: 600px;
     }
-    
+
     .timetable-table th,
     .timetable-table td {
         padding: 6px;
         font-size: 12px;
     }
-    
+
     .class-card {
         padding: 4px;
         font-size: 11px;
@@ -6712,7 +6723,8 @@ body.full-mode .main-content {
 /* ==================== FIX HIỂN THỊ NÚT XÓA ADMIN ==================== */
 
 /* Đảm bảo thẻ Card có vị trí tương đối */
-.doc-card, .lib-card {
+.doc-card,
+.lib-card {
     position: relative !important;
 }
 
@@ -6725,17 +6737,19 @@ body.full-mode .main-content {
     height: 30px;
     background: #fff;
     border: 1px solid #fee2e2;
-    color: #ef4444; /* Màu đỏ */
+    color: #ef4444;
+    /* Màu đỏ */
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    z-index: 100 !important; /* Luôn nổi lên trên cùng */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-    
+    z-index: 100 !important;
+    /* Luôn nổi lên trên cùng */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+
     /* QUAN TRỌNG: Luôn hiển thị, không ẩn */
-    opacity: 1 !important; 
+    opacity: 1 !important;
     visibility: visible !important;
     transform: scale(1) !important;
 }
@@ -6920,6 +6934,7 @@ body.full-mode .main-content {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -7010,6 +7025,7 @@ body.full-mode .main-content {
 
 /* Responsive for Timetable */
 @media (max-width: 768px) {
+
     /* Fix .timetable-header - Column layout with full-width button */
     .timetable-header {
         flex-direction: column;
@@ -7360,6 +7376,7 @@ body.full-mode .main-content {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -7555,11 +7572,11 @@ body.full-mode .main-content {
     .analytics-box {
         padding: 16px;
     }
-    
+
     .analytics-box canvas {
         max-height: 180px;
     }
-    
+
     .chart-title {
         font-size: 12px;
     }
@@ -7606,6 +7623,7 @@ body.full-mode .main-content {
         opacity: 0;
         transform: translateY(50px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -7838,21 +7856,26 @@ body.full-mode .main-content {
 /* TABLET & SMALLER LAPTOPS (Max-width: 1024px) */
 @media (max-width: 1024px) {
     .container {
-        grid-template-columns: 250px 1fr; /* Hide Right Sidebar or stack it */
+        grid-template-columns: 250px 1fr;
+        /* Hide Right Sidebar or stack it */
     }
+
     .sidebar-right {
-        display: none; /* Temporarily hide on tablet or move to bottom */
+        display: none;
+        /* Temporarily hide on tablet or move to bottom */
     }
 }
 
 /* MOBILE DEVICES (Max-width: 768px) */
 @media (max-width: 768px) {
+
     /* 1. Global Layout */
     .container {
         display: flex;
         flex-direction: column;
         height: auto;
-        padding-bottom: 70px; /* Space for Bottom Nav */
+        padding-bottom: 70px;
+        /* Space for Bottom Nav */
     }
 
     /* 2. Transform Left Sidebar to Bottom Nav */
@@ -7869,12 +7892,13 @@ body.full-mode .main-content {
         background: white;
         border-top: 1px solid #eee;
         z-index: 1000;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
     }
-    
-    .sidebar-left .user-mini-profile, 
+
+    .sidebar-left .user-mini-profile,
     .sidebar-left .social-links {
-        display: none; /* Hide profile & social links in bottom nav */
+        display: none;
+        /* Hide profile & social links in bottom nav */
     }
 
     .sidebar-left .nav-menu {
@@ -7893,7 +7917,7 @@ body.full-mode .main-content {
         gap: 2px;
         text-align: center;
     }
-    
+
     .sidebar-left .nav-menu a svg {
         width: 20px;
         height: 20px;
@@ -7901,8 +7925,8 @@ body.full-mode .main-content {
     }
 
     /* 3. Main Content */
-    #main-dashboard, 
-    #documents-section, 
+    #main-dashboard,
+    #documents-section,
     #community-section,
     #timetable-section {
         width: 100%;
@@ -7924,14 +7948,24 @@ body.full-mode .main-content {
     header {
         padding: 0 15px;
     }
-    .nav-center { display: none; } /* Hide center menu on mobile */
-    .nav-search input { width: 120px; } /* Shrink search bar */
+
+    .nav-center {
+        display: none;
+    }
+
+    /* Hide center menu on mobile */
+    .nav-search input {
+        width: 120px;
+    }
+
+    /* Shrink search bar */
 
     /* Grids (Courses, Docs, Exams) */
-    .courses-grid, 
-    .documents-grid, 
+    .courses-grid,
+    .documents-grid,
     .exams-grid {
-        grid-template-columns: 1fr; /* 1 column per row */
+        grid-template-columns: 1fr;
+        /* 1 column per row */
         gap: 15px;
     }
 
@@ -7944,26 +7978,34 @@ body.full-mode .main-content {
 
     /* Timetable */
     .timetable-wrapper {
-        overflow-x: auto; /* Scroll horizontally */
+        overflow-x: auto;
+        /* Scroll horizontally */
     }
+
     .timetable-table {
-        min-width: 600px; /* Force scroll if too small */
+        min-width: 600px;
+        /* Force scroll if too small */
     }
 
     /* Flashcards */
     .flashcard-carousel {
         padding-bottom: 10px;
     }
+
     .btn-scroll-deck {
-        display: none; /* Hide arrows on mobile, rely on touch swipe */
+        display: none;
+        /* Hide arrows on mobile, rely on touch swipe */
     }
-    
+
     /* Stats Grid */
     .stats-grid {
-        grid-template-columns: 1fr 1fr; /* 2 cols */
+        grid-template-columns: 1fr 1fr;
+        /* 2 cols */
     }
+
     .stat-item.stat-streak {
-        grid-column: span 2; /* Streak takes full width */
+        grid-column: span 2;
+        /* Streak takes full width */
     }
 }
 
@@ -8006,8 +8048,10 @@ body.full-mode .main-content {
 
 /* ==================== TABLET & MOBILE (< 1024px) ==================== */
 @media (max-width: 1024px) {
+
     /* Global overflow fix */
-    body, html {
+    body,
+    html {
         overflow-x: hidden;
     }
 
@@ -8027,19 +8071,22 @@ body.full-mode .main-content {
     .sidebar-left {
         position: fixed;
         top: 0;
-        left: -300px; /* Hide off-screen */
+        left: -300px;
+        /* Hide off-screen */
         width: 280px;
         height: 100vh;
         z-index: 5000;
         background: white;
-        transition: left 0.3s ease-in-out; /* Smooth slide */
+        transition: left 0.3s ease-in-out;
+        /* Smooth slide */
         box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
         overflow-y: auto;
         padding: 20px 0;
     }
 
     .sidebar-left.active {
-        left: 0 !important; /* Slide in */
+        left: 0 !important;
+        /* Slide in */
     }
 
     /* 3. Right Sidebar - Move to Bottom */
@@ -8080,8 +8127,10 @@ body.full-mode .main-content {
 
 /* ==================== MOBILE SPECIFIC (< 768px) ==================== */
 @media (max-width: 768px) {
+
     /* Prevent horizontal scroll */
-    body, html {
+    body,
+    html {
         overflow-x: hidden;
         width: 100%;
     }
@@ -8400,19 +8449,23 @@ body.full-mode .main-content {
 /* but positioned off-screen until .active is applied */
 
 @media (max-width: 1024px) {
+
     /* 1. FORCE SIDEBAR VISIBILITY STRUCTURE */
     .sidebar-left {
-        display: flex !important;           /* Override any 'none' */
+        display: flex !important;
+        /* Override any 'none' */
         flex-direction: column !important;
         position: fixed !important;
         top: 0 !important;
-        left: -320px !important;            /* Start off-screen */
+        left: -320px !important;
+        /* Start off-screen */
         width: 280px !important;
         height: 100vh !important;
         background: #ffffff !important;
-        z-index: 9999 !important;           /* On top of everything */
+        z-index: 9999 !important;
+        /* On top of everything */
         transition: left 0.3s ease-in-out !important;
-        box-shadow: 2px 0 15px rgba(0,0,0,0.1) !important;
+        box-shadow: 2px 0 15px rgba(0, 0, 0, 0.1) !important;
         padding-top: 20px !important;
         padding-bottom: 20px !important;
         visibility: visible !important;
@@ -8422,7 +8475,8 @@ body.full-mode .main-content {
 
     /* 2. ACTIVE STATE - SLIDE IN */
     .sidebar-left.active {
-        left: 0 !important;                 /* Slide to view */
+        left: 0 !important;
+        /* Slide to view */
         display: flex !important;
     }
 
@@ -8430,9 +8484,9 @@ body.full-mode .main-content {
     #mobile-overlay {
         display: none !important;
         position: fixed !important;
-        top: 0 !important; 
-        left: 0 !important; 
-        right: 0 !important; 
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
         bottom: 0 !important;
         width: 100% !important;
         height: 100% !important;
@@ -8441,7 +8495,7 @@ body.full-mode .main-content {
         opacity: 0;
         transition: opacity 0.3s ease;
     }
-    
+
     #mobile-overlay.active {
         display: block !important;
         opacity: 1 !important;
@@ -8483,20 +8537,26 @@ body.full-mode .main-content {
 
 .password-wrapper input {
     position: relative;
-    z-index: 2; /* Đẩy ô nhập liệu lên cao hơn nền */
+    z-index: 2;
+    /* Đẩy ô nhập liệu lên cao hơn nền */
 }
 
 .toggle-pass {
-    z-index: 3; /* Icon mắt phải cao hơn input để bấm được */
-    width: 30px; /* Giới hạn chiều rộng icon để không che hết ô input */
+    z-index: 3;
+    /* Icon mắt phải cao hơn input để bấm được */
+    width: 30px;
+    /* Giới hạn chiều rộng icon để không che hết ô input */
     height: 30px;
     justify-content: center;
     align-items: center;
 }
 
 /* --- BẮT BUỘC HIỆN BÀN PHÍM CHO INPUT --- */
-input, textarea, select {
-    -webkit-user-select: text !important; /* Quan trọng cho iPhone/iPad */
+input,
+textarea,
+select {
+    -webkit-user-select: text !important;
+    /* Quan trọng cho iPhone/iPad */
     user-select: text !important;
     -webkit-touch-callout: default !important;
 }
@@ -8513,7 +8573,7 @@ input, textarea, select {
     background: white;
     border-radius: 12px;
     margin-bottom: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .timetable-title {
@@ -8526,7 +8586,7 @@ input, textarea, select {
 
 /* Week Navigator */
 .week-navigator {
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     border-radius: 50px;
     padding: 5px 15px;
     display: flex;
@@ -8608,6 +8668,7 @@ input, textarea, select {
 
 /* Responsive cho timetable header và buttons trên mobile */
 @media (max-width: 768px) {
+
     /* Timetable header: stack vertically on mobile */
     .timetable-header {
         flex-direction: column;
@@ -8615,11 +8676,11 @@ input, textarea, select {
         gap: 12px;
         padding: 12px;
     }
-    
+
     .timetable-title {
         font-size: 16px;
     }
-    
+
     /* Week navigator: smaller and full width */
     .week-navigator {
         width: 100%;
@@ -8627,17 +8688,17 @@ input, textarea, select {
         padding: 4px 10px;
         gap: 10px;
     }
-    
+
     .week-nav-btn {
         font-size: 14px;
         padding: 2px 6px;
     }
-    
+
     #current-week-display {
         font-size: 12px;
         min-width: 100px;
     }
-    
+
     /* Action buttons: full width row */
     .timetable-actions {
         width: 100%;
@@ -8645,7 +8706,7 @@ input, textarea, select {
         justify-content: space-between;
         gap: 6px;
     }
-    
+
     /* All buttons: smaller */
     #btn-delete-all,
     .btn-open-import-v2,
@@ -8655,7 +8716,7 @@ input, textarea, select {
         gap: 4px;
         flex: 1;
     }
-    
+
     /* Icons in buttons: smaller */
     #btn-delete-all svg,
     .btn-open-import-v2 svg,
@@ -8670,87 +8731,117 @@ input, textarea, select {
     .btn-text {
         display: none;
     }
-    
+
     #btn-delete-all,
     .btn-open-import-v2,
     .btn-add-class {
         padding: 8px;
         justify-content: center;
     }
-    
+
     #btn-delete-all svg,
     .btn-open-import-v2 svg,
     .btn-add-class svg {
         width: 18px;
         height: 18px;
     }
-    
+
     .timetable-title {
         font-size: 14px;
     }
 }
-    
-    /* Timetable wrapper: ensure proper scrolling */
-    .timetable-wrapper {
-        border-radius: 8px !important;
-        margin-bottom: 15px !important;
-    }
-    
-    /* Table: smaller cells on mobile */
-    .timetable-table {
-        min-width: 650px !important;
-    }
-    
-    .timetable-table th,
-    .timetable-table td {
-        padding: 4px !important;
-        font-size: 11px !important;
-    }
-    
-    .timetable-table th {
-        font-size: 10px !important;
-        padding: 6px 4px !important;
-    }
-    
-    .header-date {
-        font-size: 9px !important;
-        margin-top: 1px !important;
-    }
-    
-    .session-col {
-        min-width: 50px !important;
-        font-size: 10px !important;
-    }
-    
-    /* Class cards: more compact */
-    .class-card {
-        padding: 4px !important;
-        font-size: 10px !important;
-        border-radius: 4px !important;
-    }
-    
-    .class-subject {
-        font-size: 11px !important;
-        margin-bottom: 2px !important;
-    }
-    
-    .class-room,
-    .class-time {
-        font-size: 9px !important;
-        margin: 1px 0 !important;
-    }
-    
-    /* Delete button in cells */
-    .btn-delete-class {
-        top: 2px !important;
-        right: 2px !important;
-        padding: 2px !important;
-        font-size: 10px !important;
-    }
-    
-    /* Timetable container padding */
-    .timetable-container {
-        padding: 15px 10px !important;
-    }
+
+/* Timetable wrapper: ensure proper scrolling */
+.timetable-wrapper {
+    border-radius: 8px !important;
+    margin-bottom: 15px !important;
 }
 
+/* Table: smaller cells on mobile */
+.timetable-table {
+    min-width: 650px !important;
+}
+
+.timetable-table th,
+.timetable-table td {
+    padding: 4px !important;
+    font-size: 11px !important;
+}
+
+.timetable-table th {
+    font-size: 10px !important;
+    padding: 6px 4px !important;
+}
+
+.header-date {
+    font-size: 9px !important;
+    margin-top: 1px !important;
+}
+
+.session-col {
+    min-width: 50px !important;
+    font-size: 10px !important;
+}
+
+/* Class cards: more compact */
+.class-card {
+    padding: 4px !important;
+    font-size: 10px !important;
+    border-radius: 4px !important;
+}
+
+.class-subject {
+    font-size: 11px !important;
+    margin-bottom: 2px !important;
+}
+
+.class-room,
+.class-time {
+    font-size: 9px !important;
+    margin: 1px 0 !important;
+}
+
+/* Delete button in cells */
+.btn-delete-class {
+    top: 2px !important;
+    right: 2px !important;
+    padding: 2px !important;
+    font-size: 10px !important;
+}
+
+/* Timetable container padding */
+.timetable-container {
+    padding: 15px 10px !important;
+}
+
+
+@media (max-width: 768px) {
+
+    /* Giảm padding của các ô header và ô thường */
+    .timetable-table th,
+    .timetable-table td {
+        padding: 2px !important;
+        /* Giảm từ 4px xuống 2px */
+        font-size: 10px !important;
+        /* Chữ nhỏ lại xíu cho gọn */
+    }
+
+    /* Thẻ hiển thị môn học (Class cards) */
+    .class-card {
+        padding: 3px !important;
+        font-size: 9px !important;
+        /* Tên môn học nhỏ hơn chút */
+        line-height: 1.2;
+    }
+
+    /* Cố định cột "Tiết" (Cột đầu tiên) để khi cuộn vẫn thấy tiết */
+    .timetable-table td:first-child,
+    .timetable-table th:first-child {
+        position: sticky;
+        left: 0;
+        background-color: #f3f4f6;
+        /* Màu nền để che chữ khi cuộn qua */
+        z-index: 10;
+        border-right: 1px solid #e5e7eb;
+    }
+}
