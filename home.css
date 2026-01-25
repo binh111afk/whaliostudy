@@ -4831,32 +4831,30 @@ main {
     background-color: #ffe4e6;
 }
 
-/* ==================== TIMETABLE STYLES (BASE - DESKTOP/LAPTOP) ==================== */
+/* ==================== TIMETABLE STYLES (CLEAN & RESPONSIVE) ==================== */
 
-/* Wrapper - Desktop base styles */
+/* Wrapper - Container for horizontal scroll */
 .timetable-wrapper {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    border: 1px solid #e5e7eb;
+    border-radius: 8px;
     margin-bottom: 20px;
 }
 
-/* Table - Desktop base styles */
+/* Table - Desktop/Laptop Base Styles */
 .timetable-table {
     width: 100%;
-    min-width: 900px;
+    min-width: 800px;  /* Desktop: prevent squishing */
     border-collapse: collapse;
+    background: white;
 }
 
 .timetable-table th,
 .timetable-table td {
     padding: 12px 8px;
     font-size: 13px;
-    border: 1px solid #e5e7eb !important;
+    border: 1px solid #e5e7eb;
     text-align: center;
     vertical-align: top;
 }
@@ -4898,13 +4896,14 @@ main {
     border-radius: 8px;
     position: relative;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s;
     margin-bottom: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 .class-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
 }
 
 .class-subject {
@@ -4959,21 +4958,65 @@ main {
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
-/* Responsive adjustments */
+/* ==================== MOBILE RESPONSIVE (< 768px) ==================== */
 @media (max-width: 768px) {
+    /* Table minimum width for mobile */
     .timetable-table {
-        min-width: 600px;
+        min-width: 600px;  /* Mobile: smaller but readable */
     }
 
+    /* Drastically reduce sizes for mobile friendliness */
     .timetable-table th,
     .timetable-table td {
-        padding: 6px;
-        font-size: 12px;
+        padding: 2px;  /* Tight padding */
+        font-size: 10px;  /* Small font */
+        line-height: 1.2;  /* Tight line height */
     }
 
+    .timetable-table th {
+        padding: 4px 2px;
+    }
+
+    .timetable-cell {
+        min-height: 70px;
+    }
+
+    .timetable-cell-content {
+        gap: 3px;
+        padding: 3px;
+    }
+
+    /* Class cards - compact and clean */
     .class-card {
-        padding: 4px;
+        padding: 4px 6px;
+        margin-bottom: 3px;
+        font-size: 10px;
+        border-radius: 4px;
+        box-shadow: none;  /* Remove heavy shadows */
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .class-subject {
         font-size: 11px;
+        margin-bottom: 2px;
+        line-height: 1.2;
+    }
+
+    .class-time,
+    .class-room {
+        font-size: 9px;
+        line-height: 1.2;
+        margin: 1px 0;
+    }
+
+    .session-col {
+        min-width: 50px;
+        font-size: 10px;
+    }
+
+    .header-date {
+        font-size: 9px !important;
+        margin-top: 1px !important;
     }
 }
 
@@ -6754,413 +6797,6 @@ body.full-mode .main-content {
     transform: scale(1.1) !important;
 }
 
-/* =========================================
-   TIMETABLE (Thời Khóa Biểu) STYLES
-   ========================================= */
-
-.timetable-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 30px 20px;
-}
-
-.timetable-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-}
-
-.timetable-header h1 {
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--primary-color);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.btn-add-class {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 24px;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: var(--radius-md);
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    transition: var(--transition);
-    box-shadow: var(--shadow-sm);
-}
-
-.btn-add-class:hover {
-    background: var(--primary-dark);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-.timetable-grid {
-    background: white;
-    border-radius: var(--radius-lg);
-    padding: 20px;
-    box-shadow: var(--shadow-md);
-    overflow-x: auto;
-}
-
-.timetable-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 800px;
-}
-
-.timetable-table thead th {
-    background: var(--primary-light);
-    color: var(--primary-color);
-    font-weight: 700;
-    padding: 16px 10px;
-    text-align: center;
-    font-size: 14px;
-    border: 1px solid var(--border-color);
-}
-
-.timetable-table tbody td {
-    border: 1px solid var(--border-color);
-    padding: 12px;
-    vertical-align: top;
-    min-height: 100px;
-    background: #fafbfc;
-}
-
-.session-label {
-    font-weight: 700;
-    color: var(--primary-color);
-    text-align: center;
-    background: var(--primary-light) !important;
-    font-size: 14px;
-}
-
-.timetable-cell {
-    position: relative;
-    min-height: 120px;
-}
-
-.class-card {
-    padding: 12px;
-    border-radius: 10px;
-    margin-bottom: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    position: relative;
-    border-left: 4px solid rgba(0, 0, 0, 0.2);
-    transition: var(--transition);
-}
-
-.class-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-}
-
-.class-subject {
-    font-weight: 700;
-    font-size: 14px;
-    color: #1f2937;
-    margin-bottom: 6px;
-}
-
-.class-time {
-    font-size: 12px;
-    color: #6b7280;
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.class-time::before {
-    content: '🕐';
-    font-size: 11px;
-}
-
-.class-room {
-    font-size: 12px;
-    color: #374151;
-    font-weight: 600;
-}
-
-.btn-delete-class {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 24px;
-    height: 24px;
-    background: white;
-    border: 1px solid #fee2e2;
-    color: #ef4444;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transition: var(--transition);
-    padding: 0;
-}
-
-.class-card:hover .btn-delete-class {
-    opacity: 1;
-}
-
-.btn-delete-class:hover {
-    background: #ef4444;
-    color: white;
-    transform: scale(1.1);
-}
-
-/* Modal Styles for Create Class */
-#createClassModal .modal-box {
-    animation: fadeInUp 0.3s ease;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-#calculatedTime {
-    font-size: 16px;
-    font-weight: 600;
-    color: #6366f1;
-    padding: 10px;
-    background: #f0f2f5;
-    border-radius: 8px;
-    text-align: center;
-}
-
-.btn-submit-create-class {
-    width: 100%;
-    background: #6366f1;
-    color: white;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 10px;
-    transition: var(--transition);
-}
-
-.btn-submit-create-class:hover {
-    background: #4f46e5;
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-}
-
-/* Timetable Table Structure */
-.timetable-wrapper {
-    overflow-x: auto;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.timetable-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-    min-width: 900px;
-}
-
-.timetable-table thead th {
-    background: var(--primary-light);
-    color: var(--primary-color);
-    font-weight: 700;
-    padding: 14px 10px;
-    text-align: center;
-    font-size: 14px;
-    border: 1px solid #e5e7eb;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-
-.timetable-table tbody td {
-    border: 1px solid #e5e7eb;
-    padding: 10px;
-    text-align: center;
-    vertical-align: top;
-    min-height: 150px;
-    background: #fafbfc;
-    position: relative;
-}
-
-.session-col {
-    background: #f9fafb !important;
-    font-weight: 700;
-    color: var(--primary-color);
-    width: 80px;
-    vertical-align: middle !important;
-    font-size: 14px;
-}
-
-.timetable-cell-content {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-height: 120px;
-}
-
-/* Responsive for Timetable */
-@media (max-width: 768px) {
-
-    /* Fix .timetable-header - Column layout with full-width button */
-    .timetable-header {
-        flex-direction: column;
-        gap: 15px;
-        align-items: center;
-    }
-
-    .timetable-header h1 {
-        font-size: 22px;
-        width: 100%;
-        text-align: center;
-    }
-
-    .btn-add-class {
-        width: 100%;
-        justify-content: center;
-    }
-
-    /* ========== TIMETABLE ON TABLET (768px) - Keep normal size ========== */
-    .timetable-wrapper {
-        width: 100% !important;
-        max-width: 100% !important;
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        box-sizing: border-box !important;
-    }
-
-    .timetable-table {
-        min-width: 700px !important;
-    }
-}
-
-/* ========== ONLY MOBILE PHONES (< 600px) - Compact mode ========== */
-@media (max-width: 600px) {
-    
-    /* WRAPPER: Must contain overflow, NOT the body */
-    .timetable-wrapper {
-        width: 100% !important;
-        max-width: 100% !important;
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        padding: 0 !important;
-        margin: 0 0 10px 0 !important;
-        box-sizing: border-box !important;
-    }
-
-    /* TABLE: Fixed min-width to prevent squishing */
-    .timetable-table {
-        min-width: 600px !important;
-        width: auto !important;
-        border-collapse: collapse !important;
-    }
-
-    /* SIZE REDUCTION - Mobile Optimization */
-    .timetable-table thead th {
-        padding: 3px 2px !important;
-        font-size: 10px !important;
-        line-height: 1.2 !important;
-        position: sticky;
-        top: 0;
-        z-index: 20;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        border: 1px solid #e5e7eb !important;
-    }
-
-    .timetable-table thead th:first-child {
-        position: sticky;
-        left: 0;
-        z-index: 30;
-        background: #f9fafb !important;
-        color: #374151 !important;
-    }
-
-    .timetable-table tbody td {
-        padding: 3px !important;
-        font-size: 10px !important;
-        line-height: 1.3 !important;
-        border: 1px solid #e5e7eb !important;
-    }
-
-    .timetable-table tbody td.session-col {
-        position: sticky;
-        left: 0;
-        z-index: 10;
-        background: #f9fafb !important;
-        border-right: 2px solid #e5e7eb !important;
-        font-weight: 600 !important;
-        padding: 5px 3px !important;
-    }
-
-    /* Header dates - compact */
-    .header-date {
-        font-size: 9px !important;
-        margin-top: 1px !important;
-        line-height: 1.1 !important;
-    }
-
-    /* Cell content - reduced padding */
-    .timetable-cell {
-        min-height: 70px !important;
-        padding: 3px !important;
-    }
-
-    .timetable-cell-content {
-        min-height: 70px !important;
-        gap: 3px !important;
-        padding: 3px !important;
-    }
-
-    /* Class cards - compact */
-    .class-card {
-        padding: 4px 6px !important;
-        margin-bottom: 3px !important;
-        font-size: 10px !important;
-        border-radius: 4px !important;
-    }
-
-    .class-subject {
-        font-size: 11px !important;
-        margin-bottom: 2px !important;
-        line-height: 1.2 !important;
-        font-weight: 600 !important;
-    }
-
-    .class-time,
-    .class-room {
-        font-size: 9px !important;
-        line-height: 1.2 !important;
-        margin: 1px 0 !important;
-    }
-
-    .btn-delete-class {
-        width: 18px !important;
-        height: 18px !important;
-        font-size: 9px !important;
-        opacity: 1 !important;
-        top: 2px !important;
-        right: 2px !important;
-    }
-}
-
 .swal2-container {
     z-index: 99999 !important;
 }
@@ -8853,75 +8489,42 @@ select {
     padding: 15px 10px !important;
 }
 
+/* Timetable header responsive */
+.timetable-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
 
-/* --- COPY ĐÈ VÀO CUỐI FILE home.css --- */
+.timetable-header h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 
 @media (max-width: 768px) {
-    /* 1. XỬ LÝ VỠ LAYOUT: Khung bao phải chặn việc bảng tràn ra ngoài */
-    .timetable-wrapper {
-        width: 100% !important;          /* Bắt buộc chỉ rộng bằng màn hình */
-        max-width: 100vw !important;     /* Không bao giờ vượt quá viewport */
-        overflow-x: auto !important;     /* Bắt buộc hiện thanh cuộn ngang */
-        display: block !important;       /* Đảm bảo tính chất khối */
-        -webkit-overflow-scrolling: touch; /* Cuộn mượt trên iPhone */
-        background: #fff;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Bóng nhẹ cho đẹp */
+    .timetable-container {
+        padding: 15px 10px !important;
     }
 
-    /* 2. XỬ LÝ BẢNG: Giữ độ rộng để hiển thị đủ thông tin */
-    .timetable-table {
-        min-width: 600px !important;     /* Đủ rộng để không bị nát chữ */
-        width: 100% !important;
-        margin-bottom: 0 !important;     /* Bỏ margin thừa */
-        border: none !important;
+    .timetable-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: center;
     }
 
-    /* 3. XỬ LÝ "HƠI TO": Thu nhỏ mọi thứ lại */
-    .timetable-table th,
-    .timetable-table td {
-        padding: 4px 2px !important;     /* Giảm padding tối đa (trên dưới 4, trái phải 2) */
-        font-size: 10px !important;      /* Chữ nhỏ gọn */
-        height: auto !important;         /* Chiều cao tự co giãn theo nội dung */
+    .timetable-header h1 {
+        font-size: 22px;
+        width: 100%;
+        text-align: center;
     }
 
-    /* Header (Thứ 2, Thứ 3...) */
-    .header-date {
-        font-size: 9px !important;
-        display: block;
-        margin-top: 2px;
-        color: #666;
-    }
-
-    /* Cột Tiết (1, 2, 3...) */
-    .session-col {
-        width: 30px !important;          /* Thu nhỏ cột tiết */
-        min-width: 30px !important;
-        font-weight: bold;
-        background-color: #f9fafb;       /* Màu nền nhẹ để phân biệt */
-    }
-
-    /* Thẻ môn học (Class Card) */
-    .class-card {
-        padding: 4px !important;
-        margin: 1px !important;          /* Giảm khoảng cách giữa các thẻ */
-        border-radius: 4px !important;
-        font-size: 9px !important;       /* Chữ trong thẻ nhỏ lại */
-        line-height: 1.3 !important;
-        box-shadow: none !important;     /* Bỏ bóng rườm rà trên mobile */
-        border: 1px solid rgba(0,0,0,0.05); /* Viền nhẹ thay cho bóng */
-    }
-
-    .class-subject {
-        font-size: 10px !important;
-        font-weight: 700 !important;
-        margin-bottom: 2px !important;
-        white-space: normal !important;  /* Cho phép xuống dòng nếu tên môn dài */
-    }
-    
-    .class-room, .class-code {
-        font-size: 8px !important;       /* Thông tin phụ cực nhỏ */
-        opacity: 0.9;
+    .btn-add-class {
+        width: 100%;
+        justify-content: center;
     }
 }
