@@ -7010,14 +7010,17 @@ body.full-mode .main-content {
 
 /* Responsive for Timetable */
 @media (max-width: 768px) {
+    /* Fix .timetable-header - Column layout with full-width button */
     .timetable-header {
         flex-direction: column;
         gap: 15px;
-        align-items: flex-start;
+        align-items: center;
     }
 
     .timetable-header h1 {
         font-size: 22px;
+        width: 100%;
+        text-align: center;
     }
 
     .btn-add-class {
@@ -7025,26 +7028,81 @@ body.full-mode .main-content {
         justify-content: center;
     }
 
+    /* Fix .timetable-wrapper - Scrollable container with max height */
     .timetable-wrapper {
         padding: 0;
-        overflow-x: scroll;
+        overflow: auto;
+        max-height: 75vh;
+        position: relative;
     }
 
+    /* Sticky Headers Implementation */
     .timetable-table {
         font-size: 12px;
+        position: relative;
+    }
+
+    /* Top Header Row - Sticks to top when scrolling down */
+    .timetable-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: var(--primary-light);
+        border: 1px solid #e5e7eb;
+    }
+
+    /* Top-Left Corner Cell - Intersection of sticky header and column */
+    .timetable-table thead th:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 30;
+        background: var(--primary-light);
+    }
+
+    /* Left Session Column - Sticks to left when scrolling right */
+    .timetable-table tbody td.session-col {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        background: #f9fafb !important;
+        border-right: 2px solid #e5e7eb;
+    }
+
+    /* Normal cells - Base z-index */
+    .timetable-table tbody td {
+        z-index: 1;
+    }
+
+    /* Compact Cells - Reduce padding and min-height */
+    .timetable-cell {
+        min-height: auto;
+        padding: 4px;
+    }
+
+    .timetable-cell-content {
+        min-height: 100px;
     }
 
     .class-card {
-        padding: 8px;
+        padding: 6px 8px;
+        margin-bottom: 6px;
     }
 
     .class-subject {
         font-size: 12px;
+        margin-bottom: 4px;
     }
 
     .class-time,
     .class-room {
-        font-size: 11px;
+        font-size: 10px;
+    }
+
+    .btn-delete-class {
+        width: 20px;
+        height: 20px;
+        font-size: 10px;
+        opacity: 1;
     }
 }
 
