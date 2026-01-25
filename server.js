@@ -563,33 +563,28 @@ function getWeekNumber(d) {
 function getWeeksBetween(startDateStr, endDateStr) {
     if (!startDateStr || !endDateStr) return [];
     
-    try {
-        const weeks = new Set();
-        const start = new Date(startDateStr);
-        const end = new Date(endDateStr);
-        
-        // Reset giờ
-        start.setHours(0,0,0,0);
-        end.setHours(23,59,59,999);
+    // Dùng Set để tự động loại bỏ các số tuần trùng nhau
+    const weeks = new Set();
+    const start = new Date(startDateStr);
+    const end = new Date(endDateStr);
+    
+    start.setHours(0,0,0,0);
+    end.setHours(23,59,59,999);
 
-        if (start > end) return [];
+    if (start > end) return [];
 
-        let current = new Date(start);
+    let current = new Date(start);
+    
+    // 🔥 QUAN TRỌNG: Duyệt từng ngày một (thay vì nhảy 7 ngày)
+    while (current <= end) {
+        const weekNum = getWeekNumber(current);
+        weeks.add(weekNum);
         
-        // Loop từng ngày
-        while (current <= end) {
-            const weekNum = getWeekNumber(current);
-            weeks.add(weekNum);
-            current.setDate(current.getDate() + 1);
-        }
-        
-        const result = Array.from(weeks).sort((a, b) => a - b);
-        console.log(`🧮 Calculated weeks for ${startDateStr} - ${endDateStr}:`, result); // Log để debug
-        return result;
-    } catch (e) {
-        console.error("Week calc error:", e);
-        return [];
+        // Cộng 1 ngày
+        current.setDate(current.getDate() + 1);
     }
+    
+    return Array.from(weeks).sort((a, b) => a - b);
 }
 
 // ==================== API ROUTES ====================

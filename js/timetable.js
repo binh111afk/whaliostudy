@@ -231,37 +231,40 @@ export const Timetable = {
         console.log('📅 Week dates rendered in headers');
     },
 
-    // ==================== LOGIC LỌC TUẦN CHUẨN XÁC (PHIÊN BẢN "VÒNG KIM CÔ") ====================
+    // ==================== LOGIC LỌC TUẦN: PHIÊN BẢN "VÒNG KIM CÔ" ====================
     isClassInWeek(classObj) {
         // 1. Nếu chưa chọn tuần (View All) -> Hiện hết
         if (!this.currentWeekStart) return true;
 
-        // Xác định khoảng thời gian của TUẦN ĐANG XEM (View)
-        const viewWeekStart = new Date(this.currentWeekStart);
-        viewWeekStart.setHours(0, 0, 0, 0);
-        
-        const viewWeekEnd = new Date(viewWeekStart);
-        viewWeekEnd.setDate(viewWeekEnd.getDate() + 6);
-        viewWeekEnd.setHours(23, 59, 59, 999);
-
-        // 2. LỚP BẢO VỆ "VÒNG KIM CÔ" (Quan trọng nhất)
-        // Nếu môn học có ghi ngày bắt đầu/kết thúc cụ thể
+        // --- LỚP BẢO VỆ "VÒNG KIM CÔ" (CHẶN ĐỨNG LỖI HIỆN QUÁ HẠN) ---
+        // Nguyên tắc: Nếu môn có ngày bắt đầu/kết thúc, kiểm tra xem tuần hiện tại có nằm trong đó không.
         if (classObj.startDate && classObj.endDate) {
             const clsStart = new Date(classObj.startDate);
-            clsStart.setHours(0, 0, 0, 0);
+            clsStart.setHours(0, 0, 0, 0); // Đầu ngày
             
             const clsEnd = new Date(classObj.endDate);
-            clsEnd.setHours(23, 59, 59, 999);
+            clsEnd.setHours(23, 59, 59, 999); // Cuối ngày
 
-            // Kiểm tra: Nếu tuần đang xem nằm HOÀN TOÀN ngoài phạm vi môn học -> ẨN LUÔN
-            // (Tuần xem bắt đầu sau khi môn đã kết thúc HOẶC Tuần xem kết thúc trước khi môn bắt đầu)
+            // Xác định ngày đầu tuần và cuối tuần đang xem trên giao diện
+            const viewWeekStart = new Date(this.currentWeekStart);
+            viewWeekStart.setHours(0, 0, 0, 0);
+            
+            const viewWeekEnd = new Date(viewWeekStart);
+            viewWeekEnd.setDate(viewWeekEnd.getDate() + 6);
+            viewWeekEnd.setHours(23, 59, 59, 999);
+
+            // LOGIC CHẶN: 
+            // Nếu "Tuần xem" bắt đầu sau khi "Môn học" kết thúc 
+            // HOẶC "Tuần xem" kết thúc trước khi "Môn học" bắt đầu
+            // -> ẨN NGAY LẬP TỨC (return false)
             if (viewWeekStart > clsEnd || viewWeekEnd < clsStart) {
-                console.log(`⛔ ${classObj.subject}: Out of date range`);
                 return false; 
             }
         }
+        // -------------------------------------------------------------
 
-        // 3. Nếu lọt qua "Vòng kim cô", mới kiểm tra tiếp mảng weeks (để xử lý các tuần nghỉ xen kẽ nếu có)
+        // 2. Nếu lọt qua vòng bảo vệ trên, mới kiểm tra tiếp mảng weeks
+        // (Để xử lý trường hợp môn học nằm trong khoảng thời gian nhưng nghỉ vào tuần cụ thể)
         const currentViewDate = new Date(this.currentWeekStart);
         currentViewDate.setHours(12, 0, 0, 0); 
         const currentWeekNum = this.getWeekNumber(currentViewDate);
@@ -270,12 +273,12 @@ export const Timetable = {
             return classObj.weeks.includes(currentWeekNum);
         }
 
-        // 4. Nếu không có mảng weeks (dữ liệu cũ), nhưng đã qua được bước 2 (ngày tháng hợp lệ) -> Hiện
+        // 3. Fallback: Nếu không có mảng weeks, nhưng đã qua được vòng bảo vệ ngày tháng -> Hiện
         if (classObj.startDate && classObj.endDate) {
             return true;
         }
 
-        // 5. Mặc định ẩn
+        // 4. Mặc định ẩn nếu không đủ dữ liệu
         return false; 
     },
 
