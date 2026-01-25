@@ -8502,54 +8502,157 @@ input, textarea, select {
 }
 
 /* ==================== TIMETABLE RESPONSIVE FIX ==================== */
+/* Base styles for timetable header */
+.timetable-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.timetable-title {
+    font-size: 20px;
+    margin: 0;
+    white-space: nowrap;
+    color: #111827;
+    font-weight: 700;
+}
+
+/* Week Navigator */
+.week-navigator {
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    border-radius: 50px;
+    padding: 5px 15px;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    background: #ffffff;
+}
+
+.week-nav-btn {
+    border: none;
+    background: none;
+    font-size: 18px;
+    color: #6b7280;
+    cursor: pointer;
+    transition: 0.2s;
+    padding: 4px 8px;
+}
+
+#current-week-display {
+    font-weight: 600;
+    color: #374151;
+    font-size: 14px;
+    min-width: 140px;
+    text-align: center;
+}
+
+/* Action Buttons Container */
+.timetable-actions {
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
+}
+
+/* Button Styles */
+#btn-delete-all {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    transition: all 0.2s;
+    font-size: 13px;
+}
+
+.btn-open-import-v2 {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    transition: all 0.2s;
+    font-size: 13px;
+}
+
+.btn-add-class {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    transition: all 0.2s;
+    font-size: 13px;
+}
+
 /* Responsive cho timetable header và buttons trên mobile */
 @media (max-width: 768px) {
     /* Timetable header: stack vertically on mobile */
     .timetable-header {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 12px !important;
-        padding: 15px !important;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px;
     }
     
-    .timetable-header h1 {
-        font-size: 16px !important;
-        margin: 0 !important;
+    .timetable-title {
+        font-size: 16px;
     }
     
-    /* Week navigator: smaller and centered */
-    #week-navigator {
+    /* Week navigator: smaller and full width */
+    .week-navigator {
         width: 100%;
-        justify-content: center !important;
-        padding: 4px 10px !important;
-        gap: 10px !important;
+        justify-content: center;
+        padding: 4px 10px;
+        gap: 10px;
     }
     
-    #week-navigator button {
-        font-size: 16px !important;
-        padding: 2px 6px !important;
+    .week-nav-btn {
+        font-size: 14px;
+        padding: 2px 6px;
     }
     
     #current-week-display {
-        font-size: 12px !important;
-        min-width: 110px !important;
+        font-size: 12px;
+        min-width: 100px;
     }
     
-    /* Action buttons: stack in a row, smaller size */
-    .timetable-header > div:last-child {
+    /* Action buttons: full width row */
+    .timetable-actions {
         width: 100%;
-        margin-left: 0 !important;
+        margin-left: 0;
         justify-content: space-between;
-        gap: 6px !important;
+        gap: 6px;
     }
     
-    /* All buttons in header: smaller */
+    /* All buttons: smaller */
     #btn-delete-all,
     .btn-open-import-v2,
     .btn-add-class {
-        padding: 6px 8px !important;
-        font-size: 11px !important;
-        gap: 4px !important;
+        padding: 6px 8px;
+        font-size: 11px;
+        gap: 4px;
         flex: 1;
     }
     
@@ -8557,27 +8660,35 @@ input, textarea, select {
     #btn-delete-all svg,
     .btn-open-import-v2 svg,
     .btn-add-class svg {
-        width: 14px !important;
-        height: 14px !important;
+        width: 14px;
+        height: 14px;
+    }
+}
+
+/* Very small screens: hide button text, show only icons */
+@media (max-width: 480px) {
+    .btn-text {
+        display: none;
     }
     
-    /* Hide text on very small screens, keep only icons */
-    @media (max-width: 400px) {
-        #btn-delete-all,
-        .btn-open-import-v2,
-        .btn-add-class {
-            font-size: 0 !important;
-            padding: 8px !important;
-        }
-        
-        #btn-delete-all svg,
-        .btn-open-import-v2 svg,
-        .btn-add-class svg {
-            width: 16px !important;
-            height: 16px !important;
-            margin: 0 !important;
-        }
+    #btn-delete-all,
+    .btn-open-import-v2,
+    .btn-add-class {
+        padding: 8px;
+        justify-content: center;
     }
+    
+    #btn-delete-all svg,
+    .btn-open-import-v2 svg,
+    .btn-add-class svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .timetable-title {
+        font-size: 14px;
+    }
+}
     
     /* Timetable wrapper: ensure proper scrolling */
     .timetable-wrapper {
