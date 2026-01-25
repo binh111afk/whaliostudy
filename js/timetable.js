@@ -232,61 +232,72 @@ export const Timetable = {
     },
 
     // ==================== LOGIC LỌC TUẦN CHUẨN XÁC (FIXED: So sánh DATE thuần túy) ====================
+    // ==================== LOGIC LỌC TUẦN CHUẨN XÁC (FIXED) ====================
     isClassInWeek(classObj) {
-        // 1. Nếu không có bộ lọc tuần (đang xem tất cả) -> Hiện hết
+        // 1. Nếu chưa chọn tuần (View All) -> Hiện hết
         if (!this.currentWeekStart) return true;
 
-        // 3. Xử lý môn học KHÔNG CÓ NGÀY THÁNG (Thêm tay không chọn ngày)
-        // Mặc định: Nếu không chọn ngày -> Hiện ở TẤT CẢ các tuần
-        if (!classObj.startDate || !classObj.endDate) {
-            return true;
+        // 2. Tính số tuần hiện tại của giao diện (Week Number 1-52)
+        // Cộng thêm 12h để tránh lỗi lệch múi giờ khi tính toán
+        const currentViewDate = new Date(this.currentWeekStart);
+        currentViewDate.setHours(12, 0, 0, 0); 
+        const currentWeekNum = this.getWeekNumber(currentViewDate);
+
+        // 3. ƯU TIÊN 1: Kiểm tra mảng 'weeks' cụ thể (Chính xác nhất)
+        // Nếu DB có lưu [1, 2, 3...] thì chỉ hiện đúng những tuần đó
+        if (Array.isArray(classObj.weeks) && classObj.weeks.length > 0) {
+            return classObj.weeks.includes(currentWeekNum);
         }
 
-        // 4. Xử lý môn học CÓ NGÀY THÁNG (Import hoặc Thêm tay có chọn ngày)
-        // 🔥 CRITICAL FIX: Chuyển về DATE ONLY (không có time component)
-        // Tạo Date object chỉ với năm/tháng/ngày để loại bỏ hoàn toàn time component
-        
-        const clsStartDate = new Date(classObj.startDate);
-        const clsStart = new Date(clsStartDate.getFullYear(), clsStartDate.getMonth(), clsStartDate.getDate());
-        
-        const clsEndDate = new Date(classObj.endDate);
-        const clsEnd = new Date(clsEndDate.getFullYear(), clsEndDate.getMonth(), clsEndDate.getDate());
-        
-        // Tính toán tuần đang xem (cũng chỉ lấy DATE component)
-        const weekStartDate = new Date(this.currentWeekStart);
-        const weekStart = new Date(weekStartDate.getFullYear(), weekStartDate.getMonth(), weekStartDate.getDate());
-        
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
+        // 4. ƯU TIÊN 2: Kiểm tra theo khoảng ngày (Date Range) - Fallback
+        if (classObj.startDate && classObj.endDate) {
+            const clsStart = new Date(classObj.startDate);
+            clsStart.setHours(0, 0, 0, 0); // Đầu ngày
+            
+            const clsEnd = new Date(classObj.endDate);
+            clsEnd.setHours(23, 59, 59, 999); // Cuối ngày
 
-        // LOGIC CHẶT CHẼ:
-        // Môn học hiện khi có GÌA NHAU giữa 2 khoảng thời gian
-        // 
-        // VÍ DỤ 1: Môn học [19/1, 24/1] vs Tuần [26/1, 1/2]
-        //    → clsEnd (24/1) < weekStart (26/1) → KHÔNG giao nhau → ẨN ✅
-        //
-        // VÍ DỤ 2: Môn học [19/1, 26/1] vs Tuần [26/1, 1/2]  
-        //    → clsEnd (26/1) >= weekStart (26/1) AND clsStart (19/1) <= weekEnd (1/2) → CÓ giao nhau → HIỆN ✅
-        //
-        // VÍ DỤ 3: Môn học [19/1, 25/1] vs Tuần [20/1, 27/1]
-        //    → clsEnd (25/1) >= weekStart (20/1) AND clsStart (19/1) <= weekEnd (27/1) → CÓ giao nhau → HIỆN ✅
+            const weekStart = new Date(this.currentWeekStart);
+            weekStart.setHours(0, 0, 0, 0);
+            
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6); // Chủ nhật
+            weekEnd.setHours(23, 59, 59, 999);
+
+            // Logic: Khoảng thời gian môn học giao nhau với tuần hiện tại
+            return clsStart <= weekEnd && clsEnd >= weekStart;
+        }
+
+        // 5. QUAN TRỌNG: Nếu không có weeks VÀ không có ngày tháng
+        // -> Trả về FALSE để ẩn đi (thay vì hiện vĩnh viễn như code cũ)
+        return false; 
+    },
+
+    // Helper 1: Lấy số tuần của năm (1-52)
+    getWeekNumber(d) {
+        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+        var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    },
+
+    // Helper 2: Tạo mảng các tuần từ ngày Start -> End
+    getWeeksBetween(startDateStr, endDateStr) {
+        if (!startDateStr || !endDateStr) return [];
+        const weeks = [];
+        const start = new Date(startDateStr);
+        const end = new Date(endDateStr);
         
-        const hasOverlap = clsEnd >= weekStart && clsStart <= weekEnd;
-
-        // Debug log chi tiết
-        console.log(`🔍 [${classObj.subject}]`, {
-            classStart: clsStart.toLocaleDateString('vi-VN'),
-            classEnd: clsEnd.toLocaleDateString('vi-VN'),
-            weekStart: weekStart.toLocaleDateString('vi-VN'),
-            weekEnd: weekEnd.toLocaleDateString('vi-VN'),
-            comparison: {
-                'clsEnd >= weekStart': clsEnd >= weekStart,
-                'clsStart <= weekEnd': clsStart <= weekEnd
-            },
-            result: hasOverlap ? '✅ HIỆN' : '❌ ẨN'
-        });
-
-        return hasOverlap;
+        let current = new Date(start);
+        while (current <= end) {
+            const weekNum = this.getWeekNumber(current);
+            if (!weeks.includes(weekNum)) {
+                weeks.push(weekNum);
+            }
+            // Nhảy tới tuần tiếp theo (cộng 7 ngày)
+            current.setDate(current.getDate() + 7);
+        }
+        return weeks.sort((a, b) => a - b);
     },
 
     injectStyles() {
@@ -1459,247 +1470,195 @@ export const Timetable = {
     },
 
     processExcelData(rows) {
-        console.log('🚀 Bắt đầu xử lý Excel (Chế độ Deep Scan)...');
-
-        // 1. TÌM TIÊU ĐỀ
+        console.log('🚀 Đang xử lý file Excel...');
+        
+        // 1. Map cột tự động (Dựa trên từ khóa)
         let headerRow = -1;
-        const colMap = {
-            subject: -1,
-            day: -1,
-            period: -1,
-            date: -1,
-            room: -1,
-            weeks: -1  // 🔥 MỚI: Cột tuần học
-        };
+        const colMap = { subject: -1, day: -1, period: -1, date: -1, room: -1 };
 
+        // Quét 20 dòng đầu để tìm header
         for (let i = 0; i < Math.min(20, rows.length); i++) {
             const row = rows[i] || [];
             const cells = row.map(c => String(c || '').toLowerCase().trim());
-
-            if (colMap.subject === -1) colMap.subject = cells.findIndex(c => c.includes('tên') || c.includes('môn') || c.includes('học phần'));
+            
+            if (colMap.subject === -1) colMap.subject = cells.findIndex(c => c.includes('tên lhp') || c.includes('môn'));
             if (colMap.day === -1) colMap.day = cells.findIndex(c => c.includes('thứ'));
             if (colMap.period === -1) colMap.period = cells.findIndex(c => c.includes('tiết') || c.includes('giờ'));
-            if (colMap.date === -1) colMap.date = cells.findIndex(c => c.includes('ngày') || c.includes('thời gian') || c.includes('tuần'));
+            if (colMap.date === -1) colMap.date = cells.findIndex(c => c.includes('ngày') || c.includes('thời gian'));
             if (colMap.room === -1) colMap.room = cells.findIndex(c => c.includes('phòng'));
-            if (colMap.weeks === -1) colMap.weeks = cells.findIndex(c => c.includes('tuần học') || c.includes('tuần')); // 🔥 MỚI
 
+            // Nếu tìm thấy Tên môn và Thứ thì chốt đây là dòng header
             if (colMap.subject > -1 && colMap.day > -1) { headerRow = i; break; }
         }
 
-        if (headerRow === -1) { this.showError('Không tìm thấy tiêu đề!'); return; }
+        if (headerRow === -1) { 
+            // Nếu không tìm thấy header, thử gán cứng (Backup cho file của bạn)
+            // Dựa trên file bạn gửi: STT(1), Tên(2), GV(3), STC(4), Mã(5), Thứ(6), Tiết(7), Phòng(8), Ngày(9)
+            colMap.subject = 2; colMap.day = 6; colMap.period = 7; colMap.room = 8; colMap.date = 9;
+            headerRow = 0; // Giả định
+        }
 
         const importedClasses = [];
-        const seenIds = new Set();
-        let lastSubject = null;
-        let lastDateRange = null;
+        let lastSubject = null; // Biến nhớ để xử lý Merge Cell
 
+        // 2. Duyệt từng dòng dữ liệu
         for (let i = headerRow + 1; i < rows.length; i++) {
             const row = rows[i];
             if (!row) continue;
 
-            // Lấy dữ liệu cơ bản
-            const subjectRaw = colMap.subject > -1 ? (row[colMap.subject] || '') : '';
-            const dayRaw = colMap.day > -1 ? (row[colMap.day] || '') : '';
-            const periodRaw = colMap.period > -1 ? (row[colMap.period] || '') : '';
-            const roomRaw = colMap.room > -1 ? (row[colMap.room] || '') : '';
-            let dateRaw = colMap.date > -1 ? (row[colMap.date] || '') : '';
-            const weeksRaw = colMap.weeks > -1 ? (row[colMap.weeks] || '') : '';
-            let currentSubject = String(subjectRaw).trim();
-            let currentDateRaw = String(dateRaw).trim();
+            let subjectRaw = row[colMap.subject];
+            let dayRaw = row[colMap.day];
+            let periodRaw = row[colMap.period];
+            let dateRaw = row[colMap.date];
+            let roomRaw = row[colMap.room];
 
-            // Logic Reset & Fill-down
-            if (currentSubject) {
-                if (currentSubject !== lastSubject) {
-                    lastSubject = currentSubject;
-                    lastDateRange = null; // Môn mới -> Xóa ngày cũ
-                }
-                if (currentDateRaw) lastDateRange = currentDateRaw;
-            } else if (periodRaw && lastSubject) {
-                currentSubject = lastSubject;
+            // LOGIC FILL-DOWN: Nếu ô Tên môn trống nhưng có Giờ học -> Lấy tên môn dòng trên
+            if ((!subjectRaw || String(subjectRaw).trim() === '') && dayRaw && lastSubject) {
+                subjectRaw = lastSubject;
+            } else if (subjectRaw) {
+                lastSubject = subjectRaw; // Cập nhật biến nhớ
             }
 
-            // Tự điền từ dòng trên
-            if (!currentDateRaw && currentSubject === lastSubject && lastDateRange) {
-                currentDateRaw = lastDateRange;
-            }
-
-            if (!currentSubject || !dayRaw || !periodRaw) continue;
+            // Nếu thiếu thông tin quan trọng thì bỏ qua
+            if (!subjectRaw || !dayRaw || !periodRaw) continue;
 
             try {
-                const day = this.parseDayString(dayRaw);
-                const periodInfo = this.parseAdvancedPeriod(periodRaw);
+                // Gọi các hàm xử lý mới
+                const day = this.parseDayString(dayRaw); // Hàm này giữ nguyên như cũ
+                const periodInfo = this.parseAdvancedPeriod(periodRaw); // <--- LOGIC MỚI
+                const dateInfo = this.parseAdvancedDateRange(dateRaw);   // <--- LOGIC MỚI
 
-                // --- 🔥 TÍNH NĂNG MỚI: CẤP CỨU TÌM NGÀY 🔥 ---
-                // 1. Thử đọc cột ngày chính
-                let dateInfo = this.parseAdvancedDateRange(currentDateRaw);
-
-                // 2. Nếu thất bại (null) -> Quét toàn bộ dòng để tìm ngày
-                if (!dateInfo.startDate) {
-                    // console.log(`⚠️ Dòng ${i+1}: Mất ngày. Đang quét lại toàn dòng...`);
-                    for (const cell of row) {
-                        const cellStr = String(cell || '');
-                        // Bỏ qua ô quá ngắn hoặc là tên môn
-                        if (cellStr.length < 5 || cellStr === currentSubject) continue;
-
-                        // Thử parse ô này xem có phải ngày không
-                        const fallbackInfo = this.parseAdvancedDateRange(cellStr);
-                        if (fallbackInfo.startDate) {
-                            console.log(`   🚑 CẤP CỨU THÀNH CÔNG (Dòng ${i + 1}): Tìm thấy ngày ở cột khác: "${cellStr}"`);
-                            dateInfo = fallbackInfo;
-                            break; // Tìm thấy rồi thì dừng
-                        }
-                    }
-                }
-                // ----------------------------------------------------
-
-                const uniqueId = `${currentSubject}-${day}-${periodInfo.startPeriod}`;
-                if (seenIds.has(uniqueId)) continue;
-                seenIds.add(uniqueId);
-
-                // Clean tên môn
-                let cleanSubject = currentSubject;
-                if (cleanSubject.includes('-\n')) cleanSubject = cleanSubject.split('-\n')[1];
-                else if (cleanSubject.includes('\n')) cleanSubject = cleanSubject.split('\n')[1] || cleanSubject;
-
-                const weeks = this.parseWeeks(weeksRaw);
+                // Làm sạch tên môn
+                let cleanSubject = String(subjectRaw);
+                if (cleanSubject.includes('\n')) cleanSubject = cleanSubject.split('\n')[1] || cleanSubject;
+                if (cleanSubject.includes('-')) cleanSubject = cleanSubject.split('-')[1] || cleanSubject;
 
                 importedClasses.push({
+                    id: Date.now() + Math.random(), // Tạo ID tạm
                     subject: cleanSubject.trim(),
                     day: day,
                     session: periodInfo.session,
                     startPeriod: periodInfo.startPeriod,
                     numPeriods: periodInfo.numPeriods,
                     room: roomRaw || 'Online',
-                    startDate: dateInfo.startDate,
-                    endDate: dateInfo.endDate,
+                    startDate: dateInfo.startDate, // Lưu ngày bắt đầu chuẩn
+                    endDate: dateInfo.endDate,     // Lưu ngày kết thúc chuẩn
                     dateRangeDisplay: dateInfo.display,
-                    weeks: weeks // 🔥 MỚI: Thêm mảng tuần học
+                    weeks: [], // Để trống, ta dùng logic ngày tháng để lọc
                 });
 
-                // Debug log
-                if (weeks.length > 0) {
-                    console.log(`   📅 Tuần học: ${weeks.join(', ')}`);
-                }
-
             } catch (err) {
-                // console.warn('Lỗi dòng:', i, err);
+                console.warn(`Lỗi dòng ${i}:`, err.message);
             }
         }
 
         if (importedClasses.length > 0) {
             this.importedData = importedClasses;
-            this.showPreview(importedClasses.length);
+            // Gọi hàm hiển thị bảng xem trước (giữ nguyên logic cũ của bạn)
+            if(this.showPreview) this.showPreview(importedClasses.length);
+            else console.log("Imported:", importedClasses);
         } else {
-            this.showError('Không đọc được dữ liệu nào!');
+            alert('Không đọc được dữ liệu nào! Hãy kiểm tra lại file Excel.');
         }
+    },
+
+    // Helper: Tìm tiết học dựa trên giờ (VD: 15h10 -> Tiết 10)
+    // Bạn nhớ thêm hàm này vào trong object Timetable nhé
+    findPeriodByTime(hour, minute) {
+        const timeVal = hour * 60 + minute; 
+        for (const [period, time] of Object.entries(this.periodTimes)) {
+            const [h, m] = time.start.split(':').map(Number);
+            const startVal = h * 60 + m;
+            // Cho phép lệch tối đa 10 phút
+            if (Math.abs(timeVal - startVal) <= 10) {
+                return parseInt(period);
+            }
+        }
+        return null;
     },
 
     // ==================== ADVANCED PERIOD PARSER ====================
     parseAdvancedPeriod(periodStr) {
         const str = String(periodStr).trim();
-        console.log(`    🔍 Parsing period: "${str}"`);
+        
+        // --- Case 1: Format chứa giờ (VD: "(15h10)->12") ---
+        // Regex này bắt: 15h10 hoặc (15h10)
+        const timeMatch = str.match(/(\d{1,2})h(\d{2})/);
+        // Regex này bắt số sau dấu > hoặc - (VD: >12 hoặc -12)
+        const endPeriodMatch = str.match(/[>\-](\d+)/);
 
-        // REGEX: Find numbers before "(" - e.g., "10 (15h10)" -> 10
-        const matches = str.match(/(\d+)\s*\(/g);
+        if (timeMatch) {
+            const hour = parseInt(timeMatch[1]);
+            const minute = parseInt(timeMatch[2]);
+            
+            // Tìm tiết bắt đầu từ giờ
+            const startPeriod = this.findPeriodByTime(hour, minute);
+            
+            if (startPeriod) {
+                let endPeriod = startPeriod;
+                if (endPeriodMatch) {
+                    endPeriod = parseInt(endPeriodMatch[1]);
+                }
+                
+                const numPeriods = Math.max(1, endPeriod - startPeriod + 1);
+                
+                // Xác định buổi học
+                let session = 'morning';
+                if (startPeriod > 12) session = 'evening';
+                else if (startPeriod > 6) session = 'afternoon';
 
-        if (matches && matches.length >= 1) {
-            // Extract period numbers (not time values inside parentheses)
-            const periods = matches.map(match => parseInt(match.match(/\d+/)[0]));
-
-            const startPeriod = periods[0];
-            const endPeriod = periods.length > 1 ? periods[periods.length - 1] : startPeriod;
-            const numPeriods = endPeriod - startPeriod + 1;
-
-            // Determine session
-            let session = 'morning';
-            if (startPeriod <= 6) {
-                session = 'morning';
-            } else if (startPeriod > 6 && startPeriod <= 12) {
-                session = 'afternoon';
-            } else {
-                session = 'evening';
+                return { startPeriod, numPeriods, session };
             }
-
-            console.log(`    ✅ Parsed (regex): Start=${startPeriod}, End=${endPeriod}, Count=${numPeriods}, Session=${session}`);
-
-            return { startPeriod, numPeriods, session };
         }
 
-        // FALLBACK: Simple format "1-3" or "10"
+        // --- Case 2: Format chuẩn số (VD: "1-3" hoặc "10") ---
         const numbers = str.match(/\d+/g);
-        if (numbers && numbers.length >= 2) {
-            const startPeriod = parseInt(numbers[0]);
-            const endPeriod = parseInt(numbers[1]);
-            const numPeriods = endPeriod - startPeriod + 1;
-
-            let session = 'morning';
-            if (startPeriod <= 6) session = 'morning';
-            else if (startPeriod > 6 && startPeriod <= 12) session = 'afternoon';
-            else session = 'evening';
-
-            console.log(`    ✅ Parsed (fallback): Start=${startPeriod}, End=${endPeriod}, Count=${numPeriods}`);
-            return { startPeriod, numPeriods, session };
+        if (numbers) {
+            const start = parseInt(numbers[0]);
+            const end = numbers.length > 1 ? parseInt(numbers[1]) : start;
+            
+            return { 
+                startPeriod: start, 
+                numPeriods: end - start + 1, 
+                session: start > 12 ? 'evening' : (start > 6 ? 'afternoon' : 'morning') 
+            };
         }
 
-        // SINGLE PERIOD
-        if (numbers && numbers.length === 1) {
-            const startPeriod = parseInt(numbers[0]);
-            let session = 'morning';
-            if (startPeriod <= 6) session = 'morning';
-            else if (startPeriod > 6 && startPeriod <= 12) session = 'afternoon';
-            else session = 'evening';
-
-            console.log(`    ✅ Parsed (single): Period=${startPeriod}`);
-            return { startPeriod, numPeriods: 1, session };
-        }
-
-        throw new Error(`Cannot parse period: ${periodStr}`);
+        throw new Error(`Không đọc được tiết học: ${periodStr}`);
     },
 
     // ==================== PARSE NGÀY (CHUẨN PYTHON 100%) ====================
+    // Hàm mới để xử lý ngày tháng từ Excel
     parseAdvancedDateRange(dateRangeStr) {
         if (!dateRangeStr) return { startDate: null, endDate: null, display: '' };
+        
+        // 1. Vệ sinh chuỗi: Xóa hết chữ cái, xuống dòng, dấu >
+        // Input: "19/01/2026-\n>13/04/2026"  =>  Thành: "19/01/2026-13/04/2026"
+        const cleanStr = String(dateRangeStr).replace(/[a-zA-Z\n\r\s>]/g, '');
+        
+        // 2. Trích xuất ngày theo format dd/mm/yyyy
+        const regex = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/g;
+        const matches = [...cleanStr.matchAll(regex)];
 
-        try {
-            // Bước 1: Làm sạch chuỗi (Chỉ giữ lại số, dấu /, -, ., và dấu gạch nối giữa 2 ngày)
-            // Xóa: xuống dòng, dấu >, chữ cái thừa
-            let cleanStr = String(dateRangeStr).replace(/[a-zA-Z\n\r\s>]/g, '');
+        if (matches.length >= 1) {
+            // Helper convert string sang Date object
+            const toDate = (m) => new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
+            
+            const start = toDate(matches[0]);
+            // Nếu có 2 ngày thì lấy ngày 2 làm kết thúc, nếu không thì lấy chính ngày đầu
+            const end = matches.length > 1 ? toDate(matches[matches.length - 1]) : new Date(start);
 
-            // Bước 2: Regex tìm ngày (Hỗ trợ dd/mm/yyyy và dd/mm/yy)
-            // Tìm nhóm số: 1-2 số + dấu + 1-2 số + dấu + 2 hoặc 4 số
-            const regex = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/g;
-            const matches = cleanStr.match(regex);
+            // Set giờ để so sánh chính xác
+            start.setHours(0,0,0,0);
+            end.setHours(23,59,59,999);
 
-            if (matches && matches.length >= 1) {
-                // Hàm convert ngày an toàn
-                const parse = (dStr) => {
-                    // Tách bằng bất kỳ ký tự nào không phải số
-                    const parts = dStr.split(/[^\d]/);
-                    let y = parseInt(parts[2]);
-                    // Nếu năm chỉ có 2 số (vd: 26) -> cộng thêm 2000 -> 2026
-                    if (y < 100) y += 2000;
-                    return new Date(y, parseInt(parts[1]) - 1, parseInt(parts[0]));
-                };
-
-                const start = parse(matches[0]);
-                // Nếu chỉ có 1 ngày -> Ngày kết thúc = Ngày bắt đầu
-                const end = matches.length > 1 ? parse(matches[matches.length - 1]) : new Date(start);
-
-                // Set giờ chuẩn
-                start.setHours(0, 0, 0, 0);
-                end.setHours(23, 59, 59, 999);
-
-                return {
-                    startDate: start.toISOString(),
-                    endDate: end.toISOString(),
-                    display: `${String(start.getDate()).padStart(2, '0')}/${String(start.getMonth() + 1).padStart(2, '0')} - ${String(end.getDate()).padStart(2, '0')}/${String(end.getMonth() + 1).padStart(2, '0')}`
-                };
-            }
-            return { startDate: null, endDate: null, display: '' };
-        } catch (e) {
-            console.error('Lỗi đọc ngày:', dateRangeStr, e);
-            return { startDate: null, endDate: null, display: '' };
+            return {
+                startDate: start.toISOString(),
+                endDate: end.toISOString(),
+                display: `${start.getDate()}/${start.getMonth()+1} - ${end.getDate()}/${end.getMonth()+1}`
+            };
         }
+        return { startDate: null, endDate: null, display: '' };
     },
 
     parseDayString(dayStr) {

@@ -549,6 +549,33 @@ async function logActivity(username, action, target, link, type) {
     }
 }
 
+// --- Dán đoạn này vào server.js để Server tính toán được tuần học ---
+
+function getWeekNumber(d) {
+    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function getWeeksBetween(startDateStr, endDateStr) {
+    if (!startDateStr || !endDateStr) return [];
+    const weeks = [];
+    const start = new Date(startDateStr);
+    const end = new Date(endDateStr);
+    
+    let current = new Date(start);
+    while (current <= end) {
+        const weekNum = getWeekNumber(current);
+        if (!weeks.includes(weekNum)) {
+            weeks.push(weekNum);
+        }
+        // Nhảy tới tuần tiếp theo (cộng 7 ngày)
+        current.setDate(current.getDate() + 7);
+    }
+    return weeks.sort((a, b) => a - b);
+}
+
 // ==================== API ROUTES ====================
 
 // 1. Authentication APIs
@@ -1599,10 +1626,11 @@ app.post('/api/timetable', async (req, res) => {
             startPeriod: parseInt(startPeriod),
             numPeriods: parseInt(numPeriods),
             timeRange,
-            weeks: weeks || [], // 🔥 MỚI
+            // 🔥 ĐÃ SỬA: Gọi hàm trực tiếp, bỏ 'this.' và ưu tiên dữ liệu gửi lên nếu có
+            weeks: (weeks && weeks.length > 0) ? weeks : getWeeksBetween(startDate, endDate), 
             startDate: startDate || null,
             endDate: endDate || null,
-            dateRangeDisplay: dateRangeDisplay || ''
+            dateRangeDisplay: startDate && endDate ? `${new Date(startDate).getDate()}/${new Date(startDate).getMonth() + 1} - ${new Date(endDate).getDate()}/${new Date(endDate).getMonth() + 1}` : '',
         });
 
         await newClass.save();
@@ -1695,7 +1723,7 @@ app.post('/api/timetable/update', async (req, res) => {
         classToUpdate.startPeriod = parseInt(startPeriod);
         classToUpdate.numPeriods = parseInt(numPeriods);
         classToUpdate.timeRange = timeRange;
-        classToUpdate.weeks = weeks || []; // 🔥 MỚI
+        classToUpdate.weeks = (weeks && weeks.length > 0) ? weeks : getWeeksBetween(startDate, endDate);
         classToUpdate.startDate = startDate || null;
         classToUpdate.endDate = endDate || null;
         classToUpdate.dateRangeDisplay = dateRangeDisplay || '';
