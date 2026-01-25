@@ -1,4 +1,4 @@
-const CACHE_NAME = 'whalio-cache-v3'; // Lên đời v3 để xóa cache cũ
+const CACHE_NAME = 'whalio-cache-v9999'; // Update version to force cache refresh
 
 const STATIC_CACHE_URLS = [
     './index.html',

@@ -2559,27 +2559,35 @@
     <script>
         // Kiểm tra xem trình duyệt có hỗ trợ Service Worker không
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                // Lấy tất cả các Service Worker đang chạy
-                navigator.serviceWorker.getRegistrations().then((registrations) => {
-                    for (let registration of registrations) {
-                        // CƯỠNG CHẾ HỦY ĐĂNG KÝ (Unregister)
-                        // Để loại bỏ phiên bản cũ dính lỗi localhost
-                        registration.unregister().then((boolean) => {
-                            console.log('⚠️ Đã xóa Service Worker cũ để update code mới:', boolean);
-                        });
-                    }
+            window.addEventListener('load', async () => {
+                
+                // BƯỚC 1: XÓA TẤT CẢ CACHE (Force refresh CSS)
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(cacheNames.map(name => caches.delete(name)));
+                    console.log('🗑️ Đã xóa toàn bộ cache cũ:', cacheNames);
+                }
+                
+                // BƯỚC 2: Xóa tất cả Service Worker cũ
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let registration of registrations) {
+                    await registration.unregister();
+                    console.log('⚠️ Đã xóa Service Worker cũ');
+                }
 
-                    // Sau khi xóa xong thì mới đăng ký lại cái mới
-                    // Thêm ?v=9999 để trình duyệt hiểu đây là phiên bản mới
-                    navigator.serviceWorker.register('./service-worker.js?v=9999')
-                        .then((registration) => {
-                            console.log('✅ Đã cài đặt Service Worker mới:', registration.scope);
-                        })
-                        .catch((error) => {
-                            console.error('❌ Lỗi cài đặt Service Worker:', error);
-                        });
-                });
+                // BƯỚC 3: Đăng ký Service Worker mới với version mới
+                navigator.serviceWorker.register('./service-worker.js?v=9999')
+                    .then((registration) => {
+                        console.log('✅ Đã cài đặt Service Worker mới:', registration.scope);
+                        // Force reload để áp dụng CSS mới
+                        if (!sessionStorage.getItem('reloaded')) {
+                            sessionStorage.setItem('reloaded', 'true');
+                            window.location.reload(true);
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('❌ Lỗi cài đặt Service Worker:', error);
+                    });
             });
         }
     </script>
