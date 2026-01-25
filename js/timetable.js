@@ -231,14 +231,15 @@ export const Timetable = {
         console.log('📅 Week dates rendered in headers');
     },
 
+    // ==================== LOGIC HIỂN THỊ TUẦN (CHUẨN 100%) ====================
     isClassInWeek(classObj) {
-        // [Case 0] Nếu đang chọn "Xem tất cả" → Luôn hiện
+        // [Case 0] Nếu không có tuần được chọn → Hiện tất cả
         if (!this.currentWeekStart) {
-            console.log(`📋 Class "${classObj.subject}": No week filter, showing all`);
+            console.log(`📋 "${classObj.subject}": No week filter → SHOW ALL`);
             return true;
         }
 
-        // --- CHUẨN BỊ DỮ LIỆU SO SÁNH ---
+        // Xác định phạm vi tuần đang xem (Thứ 2 00:00 → Chủ Nhật 23:59)
         const viewStart = new Date(this.currentWeekStart);
         viewStart.setHours(0, 0, 0, 0);
 
@@ -246,8 +247,9 @@ export const Timetable = {
         viewEnd.setDate(viewEnd.getDate() + 6);
         viewEnd.setHours(23, 59, 59, 999);
 
-        console.log(`📅 View Week: ${viewStart.toDateString()} - ${viewEnd.toDateString()}`);
+        console.log(`📅 View: ${viewStart.toLocaleDateString('vi-VN')} - ${viewEnd.toLocaleDateString('vi-VN')}`);
 
+        // Xác định phạm vi môn học
         let clsStart = null;
         let clsEnd = null;
 
@@ -258,63 +260,59 @@ export const Timetable = {
             clsEnd = new Date(classObj.endDate);
             clsEnd.setHours(23, 59, 59, 999);
 
-            console.log(`📚 Class "${classObj.subject}": ${clsStart.toDateString()} - ${clsEnd.toDateString()}`);
+            console.log(`📚 "${classObj.subject}": ${clsStart.toLocaleDateString('vi-VN')} - ${clsEnd.toLocaleDateString('vi-VN')}`);
         }
 
-        // ==================== LỚP 1: HARD CHECK (NGÀY THÁNG) ====================
+        // ========== LỚP 1: HARD CHECK (NGÀY THÁNG) ==========
         if (clsStart && clsEnd) {
-            const isBeforeStart = viewEnd < clsStart;
-            const isAfterEnd = viewStart > clsEnd;
-
-            if (isBeforeStart) {
-                console.log(`❌ "${classObj.subject}": Week ENDS before class starts`);
+            // Nếu tuần xem kết thúc TRƯỚC khi môn bắt đầu → ẨN
+            if (viewEnd < clsStart) {
+                console.log(`❌ "${classObj.subject}": Week ends BEFORE class starts → HIDE`);
                 return false;
             }
 
-            if (isAfterEnd) {
-                console.log(`❌ "${classObj.subject}": Week STARTS after class ends`);
+            // Nếu tuần xem bắt đầu SAU khi môn kết thúc → ẨN
+            if (viewStart > clsEnd) {
+                console.log(`❌ "${classObj.subject}": Week starts AFTER class ends → HIDE`);
                 return false;
             }
 
             console.log(`✅ "${classObj.subject}": Passed Layer 1 (Date Range)`);
         }
 
-        // ==================== LỚP 2: SOFT CHECK (SỐ TUẦN) ====================
+        // ========== LỚP 2: SOFT CHECK (SỐ TUẦN) ==========
+        // Lấy số tuần hiện tại (dùng Thứ 5 để tính chuẩn ISO)
         const checkDate = new Date(viewStart);
         checkDate.setDate(checkDate.getDate() + 3); // Thứ 5
         const currentWeekNum = this.getWeekNumber(checkDate);
 
         console.log(`🔢 Current week number: ${currentWeekNum}`);
 
-        // 🔥 CRITICAL FIX: Tính lại weeks nếu rỗng
+        // Kiểm tra mảng weeks
         let weeks = classObj.weeks;
+
+        // 🔥 CRITICAL: Tính lại nếu rỗng
         if ((!weeks || weeks.length === 0) && clsStart && clsEnd) {
             console.warn(`⚠️ "${classObj.subject}": Empty weeks array, recalculating...`);
             weeks = this.getWeeksBetween(classObj.startDate, classObj.endDate);
-            console.log(`✅ Recalculated weeks: [${weeks.join(', ')}]`);
+            console.log(`✅ Recalculated: [${weeks.join(', ')}]`);
         }
 
-        // Nếu có mảng weeks hợp lệ, kiểm tra
+        // Nếu có mảng weeks hợp lệ
         if (Array.isArray(weeks) && weeks.length > 0) {
             const isInWeeks = weeks.includes(currentWeekNum);
-            console.log(`🔍 "${classObj.subject}": weeks=[${weeks.join(', ')}], current=${currentWeekNum}, match=${isInWeeks}`);
-
-            if (!isInWeeks) {
-                console.log(`❌ "${classObj.subject}": Week ${currentWeekNum} NOT in allowed weeks`);
-                return false;
-            }
-
-            console.log(`✅ "${classObj.subject}": Week ${currentWeekNum} IS in allowed weeks`);
-            return true;
+            console.log(`🔍 "${classObj.subject}": weeks=[${weeks.join(', ')}], current=${currentWeekNum}, match=${isInWeeks ? '✅' : '❌'}`);
+            return isInWeeks;
         }
 
-        // [Fallback] Nếu vẫn không có weeks sau khi tính lại
+        // [Fallback] Nếu không có weeks nhưng có date range → SHOW
         if (clsStart && clsEnd) {
-            console.log(`✅ "${classObj.subject}": No weeks data, but passed date range → SHOW`);
+            console.log(`⚠️ "${classObj.subject}": No weeks data, passed Layer 1 → SHOW`);
             return true;
         }
 
-        console.log(`❌ "${classObj.subject}": No data available → HIDE (safe default)`);
+        // Mặc định: ẨN (an toàn)
+        console.log(`❌ "${classObj.subject}": No data → HIDE (safe default)`);
         return false;
     },
 
@@ -327,6 +325,7 @@ export const Timetable = {
     },
 
     // Hàm tính mảng tuần (giống backend)
+    // Hàm tính mảng tuần (Day-by-Day)
     getWeeksBetween(startDateStr, endDateStr) {
         if (!startDateStr || !endDateStr) return [];
 
@@ -340,11 +339,14 @@ export const Timetable = {
         if (start > end) return [];
 
         let current = new Date(start);
+        let iterations = 0;
+        const maxIterations = 400;
 
-        while (current <= end) {
+        while (current <= end && iterations < maxIterations) {
             const weekNum = this.getWeekNumber(current);
             weeks.add(weekNum);
             current.setDate(current.getDate() + 1);
+            iterations++;
         }
 
         return Array.from(weeks).sort((a, b) => a - b);

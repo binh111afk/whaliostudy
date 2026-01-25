@@ -549,50 +549,61 @@ async function logActivity(username, action, target, link, type) {
     }
 }
 
-// ==================== LOGIC TÍNH TUẦN CHUẨN (ENGINEER STANDARD) ====================
+// ==================== LOGIC TÍNH TUẦN CHUẨN (ISO-8601) ====================
 
-// 1. Hàm tính số thứ tự tuần theo chuẩn ISO-8601
-function getWeekNumber(d) {
-    // Copy ngày để không ảnh hưởng biến gốc
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    // Đặt ngày sang Thứ 5 gần nhất để tính chuẩn theo ISO
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    // Tính số tuần: (Khoảng cách từ đầu năm / 86400000ms) / 7 ngày
-    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+/**
+ * Tính số tuần trong năm theo chuẩn ISO-8601
+ * @param {Date} date - Ngày cần tính
+ * @returns {number} - Số tuần (1-53)
+ */
+function getWeekNumber(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7; // Chủ Nhật = 7
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum); // Đặt về Thứ 5 của tuần
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+
+    console.log(`🔢 getWeekNumber(${date.toISOString().split('T')[0]}) = Week ${weekNo}`);
+    return weekNo;
 }
 
-// 2. Hàm lấy danh sách tuần (Quét từng ngày - Độ chính xác 100%)
+/**
+ * Lấy mảng các tuần từ startDate đến endDate (Day-by-Day Iteration)
+ * @param {string} startDateStr - Ngày bắt đầu (ISO format)
+ * @param {string} endDateStr - Ngày kết thúc (ISO format)
+ * @returns {number[]} - Mảng số tuần [1, 2, 3, ...]
+ */
 function getWeeksBetween(startDateStr, endDateStr) {
-    if (!startDateStr || !endDateStr) return [];
-    
-    // Sử dụng Set để tự động loại bỏ các số tuần trùng lặp
+    if (!startDateStr || !endDateStr) {
+        console.warn('⚠️ getWeeksBetween: Missing dates, returning []');
+        return [];
+    }
+
     const weeks = new Set();
-    
     const start = new Date(startDateStr);
     const end = new Date(endDateStr);
-    
-    // Reset giờ về 0h sáng và 23h59 tối để so sánh trọn vẹn
+
     start.setHours(0, 0, 0, 0);
     end.setHours(23, 59, 59, 999);
 
-    if (start > end) return [];
+    if (start > end) {
+        console.warn(`⚠️ getWeeksBetween: Start (${start.toISOString()}) > End (${end.toISOString()}), returning []`);
+        return [];
+    }
 
-    // Bắt đầu vòng lặp
     let current = new Date(start);
-    
-    // 🔥 QUAN TRỌNG: Duyệt qua từng ngày một cho đến khi hết hạn
-    while (current <= end) {
+    let iterations = 0;
+    const maxIterations = 400; // Safety limit (400 days ≈ 1 year)
+
+    while (current <= end && iterations < maxIterations) {
         const weekNum = getWeekNumber(current);
         weeks.add(weekNum);
-        
-        // Cộng thêm 1 ngày
-        current.setDate(current.getDate() + 1);
+        current.setDate(current.getDate() + 1); // +1 day
+        iterations++;
     }
-    
-    // Chuyển Set thành Array và sắp xếp tăng dần [1, 2, 3...]
+
     const result = Array.from(weeks).sort((a, b) => a - b);
-    console.log(`🧮 Tính toán tuần cho ${startDateStr} -> ${endDateStr}: [${result.join(', ')}]`);
+    console.log(`✅ getWeeksBetween(${startDateStr.split('T')[0]} → ${endDateStr.split('T')[0]}): [${result.join(', ')}] (${iterations} days scanned)`);
     return result;
 }
 
@@ -1576,52 +1587,60 @@ app.post('/api/delete-reply', async (req, res) => {
 });
 
 // 9. Timetable APIs
-app.get('/api/timetable', async (req, res) => {
+app.post('/api/timetable', async (req, res) => {
     try {
-        const { username, week } = req.query;
+        const { username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange, startDate, endDate, dateRangeDisplay } = req.body;
 
         if (!username) {
-            return res.json({ success: false, message: 'Missing username' });
+            return res.json({ success: false, message: '❌ Missing username' });
+        }
+
+        if (!subject || !room || !day || !session || !startPeriod || !numPeriods) {
+            return res.json({ success: false, message: '❌ Thiếu thông tin bắt buộc' });
         }
 
         const user = await User.findOne({ username });
         if (!user) {
-            return res.json({ success: false, message: 'User not found' });
+            return res.json({ success: false, message: '❌ Người dùng không tồn tại' });
         }
 
-        let query = { username };
-
-        // 🔥 LỌC THEO TUẦN NẾU CÓ THAM SỐ
-        if (week) {
-            const weekNum = parseInt(week);
-
-            if (isNaN(weekNum) || weekNum < 1 || weekNum > 52) {
-                return res.json({ success: false, message: 'Invalid week number' });
-            }
-
-            // Tìm môn học:
-            // - weeks = [] (rỗng = áp dụng mọi tuần) HOẶC
-            // - weeks chứa tuần này
-            query.$or = [
-                { weeks: { $size: 0 } },  // Mảng rỗng
-                { weeks: weekNum }         // Chứa tuần này
-            ];
-
-            console.log(`📅 Filtering for week ${weekNum}`);
+        // 🔥 CRITICAL: Tính mảng weeks từ startDate/endDate
+        let calculatedWeeks = [];
+        if (startDate && endDate) {
+            calculatedWeeks = getWeeksBetween(startDate, endDate);
+            console.log(`📊 Calculated weeks for "${subject}": [${calculatedWeeks.join(', ')}]`);
+        } else {
+            console.warn(`⚠️ Class "${subject}" has NO startDate/endDate, weeks will be empty`);
         }
 
-        const userClasses = await Timetable.find(query).lean();
-        console.log(`📅 Loaded ${userClasses.length} classes for ${username}${week ? ` (week ${week})` : ''}`);
-        res.json({ success: true, timetable: userClasses });
+        const newClass = new Timetable({
+            username,
+            subject: subject.trim(),
+            room: room.trim(),
+            campus: campus || 'Cơ sở chính',
+            day,
+            session,
+            startPeriod: parseInt(startPeriod),
+            numPeriods: parseInt(numPeriods),
+            timeRange,
+            weeks: calculatedWeeks, // 🔥 LƯU MẢNG TUẦN
+            startDate: startDate || null,
+            endDate: endDate || null,
+            dateRangeDisplay: dateRangeDisplay || '',
+        });
+
+        await newClass.save();
+        console.log(`✅ Created class: "${subject}" | Weeks: [${calculatedWeeks.join(', ')}]`);
+        res.json({ success: true, message: 'Thêm lớp học thành công!', class: newClass });
     } catch (err) {
-        console.error('Error loading timetable:', err);
-        res.json({ success: false, message: 'Server error', timetable: [] });
+        console.error('❌ Create class error:', err);
+        res.json({ success: false, message: 'Lỗi server: ' + err.message });
     }
 });
 
 app.get('/api/timetable', async (req, res) => {
     try {
-        const { username, week } = req.query;
+        const { username } = req.query;
 
         if (!username) {
             return res.json({ success: false, message: 'Missing username' });
@@ -1632,40 +1651,23 @@ app.get('/api/timetable', async (req, res) => {
             return res.json({ success: false, message: 'User not found' });
         }
 
-        let query = { username };
+        // 🔥 LẤY TẤT CẢ CLASSES (không lọc tuần ở backend)
+        let userClasses = await Timetable.find({ username }).lean();
 
-        // 🔥 LỌC THEO TUẦN NẾU CÓ THAM SỐ
-        if (week) {
-            const weekNum = parseInt(week);
-
-            if (isNaN(weekNum) || weekNum < 1 || weekNum > 52) {
-                return res.json({ success: false, message: 'Invalid week number' });
-            }
-
-            query.$or = [
-                { weeks: { $size: 0 } },
-                { weeks: weekNum }
-            ];
-
-            console.log(`📅 Filtering for week ${weekNum}`);
-        }
-
-        let userClasses = await Timetable.find(query).lean();
-
-        // 🔥 QUAN TRỌNG: Tính lại mảng weeks nếu rỗng
+        // 🔥 CRITICAL FIX: Tính lại weeks nếu rỗng
         userClasses = userClasses.map(cls => {
             if ((!cls.weeks || cls.weeks.length === 0) && cls.startDate && cls.endDate) {
-                console.log(`⚠️ Class "${cls.subject}" has empty weeks array, recalculating...`);
+                console.warn(`⚠️ Class "${cls.subject}" has empty weeks, recalculating...`);
                 cls.weeks = getWeeksBetween(cls.startDate, cls.endDate);
-                console.log(`✅ Recalculated weeks for "${cls.subject}": [${cls.weeks.join(', ')}]`);
+                console.log(`✅ Recalculated weeks: [${cls.weeks.join(', ')}]`);
             }
             return cls;
         });
 
-        console.log(`📅 Loaded ${userClasses.length} classes for ${username}${week ? ` (week ${week})` : ''}`);
+        console.log(`📅 Loaded ${userClasses.length} classes for ${username}`);
         res.json({ success: true, timetable: userClasses });
     } catch (err) {
-        console.error('Error loading timetable:', err);
+        console.error('❌ Load timetable error:', err);
         res.json({ success: false, message: 'Server error', timetable: [] });
     }
 });
@@ -1743,10 +1745,11 @@ app.post('/api/timetable/update', async (req, res) => {
             return res.json({ success: false, message: '❌ Bạn không có quyền sửa lớp này' });
         }
 
-        // 🔥 LOGIC MỚI: Tính lại mảng weeks khi có thay đổi ngày
+        // 🔥 CRITICAL: Tính lại mảng weeks khi update
         let calculatedWeeks = [];
         if (startDate && endDate) {
             calculatedWeeks = getWeeksBetween(startDate, endDate);
+            console.log(`📊 Recalculated weeks for "${subject}": [${calculatedWeeks.join(', ')}]`);
         }
 
         classToUpdate.subject = subject.trim();
@@ -1757,18 +1760,18 @@ app.post('/api/timetable/update', async (req, res) => {
         classToUpdate.startPeriod = parseInt(startPeriod);
         classToUpdate.numPeriods = parseInt(numPeriods);
         classToUpdate.timeRange = timeRange;
-        classToUpdate.weeks = calculatedWeeks; // Cập nhật mảng tuần mới
+        classToUpdate.weeks = calculatedWeeks; // 🔥 CẬP NHẬT MẢNG TUẦN
         classToUpdate.startDate = startDate || null;
         classToUpdate.endDate = endDate || null;
         classToUpdate.dateRangeDisplay = dateRangeDisplay || '';
         classToUpdate.updatedAt = new Date();
 
         await classToUpdate.save();
-        console.log(`✏️ Updated class ${classId} by ${username} | Weeks: [${calculatedWeeks.join(', ')}]`);
+        console.log(`✅ Updated class "${subject}" | Weeks: [${calculatedWeeks.join(', ')}]`);
         res.json({ success: true, message: 'Cập nhật thành công!' });
     } catch (err) {
-        console.error('Error updating class:', err);
-        res.json({ success: false, message: 'Server error' });
+        console.error('❌ Update class error:', err);
+        res.json({ success: false, message: 'Server error: ' + err.message });
     }
 });
 
