@@ -7044,81 +7044,110 @@ body.full-mode .main-content {
         justify-content: center;
     }
 
-    /* Fix .timetable-wrapper - Scrollable container with max height */
+    /* ========== CRITICAL: TIMETABLE MOBILE FIX ========== */
+    /* WRAPPER: Must contain overflow, NOT the body */
     .timetable-wrapper {
-        padding: 0;
-        overflow: auto;
-        max-height: 75vh;
-        position: relative;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding: 0 !important;
+        margin: 0 0 10px 0 !important;
+        box-sizing: border-box !important;
     }
 
-    /* Sticky Headers Implementation */
+    /* TABLE: Fixed min-width to prevent squishing */
     .timetable-table {
-        font-size: 12px;
-        position: relative;
+        min-width: 600px !important;
+        width: auto !important;
+        border-collapse: collapse !important;
     }
 
-    /* Top Header Row - Sticks to top when scrolling down */
+    /* DRASTIC SIZE REDUCTION - Mobile Optimization */
     .timetable-table thead th {
+        padding: 2px 1px !important;
+        font-size: 9px !important;
+        line-height: 1.1 !important;
         position: sticky;
         top: 0;
         z-index: 20;
-        background: var(--primary-light);
-        border: 1px solid #e5e7eb;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border: 1px solid #e5e7eb !important;
     }
 
-    /* Top-Left Corner Cell - Intersection of sticky header and column */
     .timetable-table thead th:first-child {
         position: sticky;
         left: 0;
         z-index: 30;
-        background: var(--primary-light);
+        background: #f9fafb !important;
+        color: #374151 !important;
     }
 
-    /* Left Session Column - Sticks to left when scrolling right */
+    .timetable-table tbody td {
+        padding: 2px !important;
+        font-size: 9px !important;
+        line-height: 1.2 !important;
+        border: 1px solid #e5e7eb !important;
+    }
+
     .timetable-table tbody td.session-col {
         position: sticky;
         left: 0;
         z-index: 10;
         background: #f9fafb !important;
-        border-right: 2px solid #e5e7eb;
+        border-right: 2px solid #e5e7eb !important;
+        font-weight: 600 !important;
+        padding: 4px 2px !important;
     }
 
-    /* Normal cells - Base z-index */
-    .timetable-table tbody td {
-        z-index: 1;
+    /* Header dates - ultra compact */
+    .header-date {
+        font-size: 8px !important;
+        margin-top: 1px !important;
+        line-height: 1 !important;
     }
 
-    /* Compact Cells - Reduce padding and min-height */
+    /* Cell content - minimal padding */
     .timetable-cell {
-        min-height: auto;
-        padding: 4px;
+        min-height: 60px !important;
+        padding: 2px !important;
     }
 
     .timetable-cell-content {
-        min-height: 100px;
+        min-height: 60px !important;
+        gap: 2px !important;
+        padding: 2px !important;
     }
 
+    /* Class cards - ultra compact */
     .class-card {
-        padding: 6px 8px;
-        margin-bottom: 6px;
+        padding: 3px 4px !important;
+        margin-bottom: 2px !important;
+        font-size: 9px !important;
+        border-radius: 3px !important;
     }
 
     .class-subject {
-        font-size: 12px;
-        margin-bottom: 4px;
+        font-size: 10px !important;
+        margin-bottom: 1px !important;
+        line-height: 1.1 !important;
+        font-weight: 600 !important;
     }
 
     .class-time,
     .class-room {
-        font-size: 10px;
+        font-size: 8px !important;
+        line-height: 1.1 !important;
+        margin: 1px 0 !important;
     }
 
     .btn-delete-class {
-        width: 20px;
-        height: 20px;
-        font-size: 10px;
-        opacity: 1;
+        width: 16px !important;
+        height: 16px !important;
+        font-size: 8px !important;
+        opacity: 1 !important;
+        top: 1px !important;
+        right: 1px !important;
     }
 }
 
@@ -8815,33 +8844,74 @@ select {
 }
 
 
-@media (max-width: 768px) {
+/* --- COPY ĐÈ VÀO CUỐI FILE home.css --- */
 
-    /* Giảm padding của các ô header và ô thường */
+@media (max-width: 768px) {
+    /* 1. XỬ LÝ VỠ LAYOUT: Khung bao phải chặn việc bảng tràn ra ngoài */
+    .timetable-wrapper {
+        width: 100% !important;          /* Bắt buộc chỉ rộng bằng màn hình */
+        max-width: 100vw !important;     /* Không bao giờ vượt quá viewport */
+        overflow-x: auto !important;     /* Bắt buộc hiện thanh cuộn ngang */
+        display: block !important;       /* Đảm bảo tính chất khối */
+        -webkit-overflow-scrolling: touch; /* Cuộn mượt trên iPhone */
+        background: #fff;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Bóng nhẹ cho đẹp */
+    }
+
+    /* 2. XỬ LÝ BẢNG: Giữ độ rộng để hiển thị đủ thông tin */
+    .timetable-table {
+        min-width: 600px !important;     /* Đủ rộng để không bị nát chữ */
+        width: 100% !important;
+        margin-bottom: 0 !important;     /* Bỏ margin thừa */
+        border: none !important;
+    }
+
+    /* 3. XỬ LÝ "HƠI TO": Thu nhỏ mọi thứ lại */
     .timetable-table th,
     .timetable-table td {
-        padding: 2px !important;
-        /* Giảm từ 4px xuống 2px */
-        font-size: 10px !important;
-        /* Chữ nhỏ lại xíu cho gọn */
+        padding: 4px 2px !important;     /* Giảm padding tối đa (trên dưới 4, trái phải 2) */
+        font-size: 10px !important;      /* Chữ nhỏ gọn */
+        height: auto !important;         /* Chiều cao tự co giãn theo nội dung */
     }
 
-    /* Thẻ hiển thị môn học (Class cards) */
-    .class-card {
-        padding: 3px !important;
+    /* Header (Thứ 2, Thứ 3...) */
+    .header-date {
         font-size: 9px !important;
-        /* Tên môn học nhỏ hơn chút */
-        line-height: 1.2;
+        display: block;
+        margin-top: 2px;
+        color: #666;
     }
 
-    /* Cố định cột "Tiết" (Cột đầu tiên) để khi cuộn vẫn thấy tiết */
-    .timetable-table td:first-child,
-    .timetable-table th:first-child {
-        position: sticky;
-        left: 0;
-        background-color: #f3f4f6;
-        /* Màu nền để che chữ khi cuộn qua */
-        z-index: 10;
-        border-right: 1px solid #e5e7eb;
+    /* Cột Tiết (1, 2, 3...) */
+    .session-col {
+        width: 30px !important;          /* Thu nhỏ cột tiết */
+        min-width: 30px !important;
+        font-weight: bold;
+        background-color: #f9fafb;       /* Màu nền nhẹ để phân biệt */
+    }
+
+    /* Thẻ môn học (Class Card) */
+    .class-card {
+        padding: 4px !important;
+        margin: 1px !important;          /* Giảm khoảng cách giữa các thẻ */
+        border-radius: 4px !important;
+        font-size: 9px !important;       /* Chữ trong thẻ nhỏ lại */
+        line-height: 1.3 !important;
+        box-shadow: none !important;     /* Bỏ bóng rườm rà trên mobile */
+        border: 1px solid rgba(0,0,0,0.05); /* Viền nhẹ thay cho bóng */
+    }
+
+    .class-subject {
+        font-size: 10px !important;
+        font-weight: 700 !important;
+        margin-bottom: 2px !important;
+        white-space: normal !important;  /* Cho phép xuống dòng nếu tên môn dài */
+    }
+    
+    .class-room, .class-code {
+        font-size: 8px !important;       /* Thông tin phụ cực nhỏ */
+        opacity: 0.9;
     }
 }

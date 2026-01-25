@@ -2571,8 +2571,8 @@
                     }
 
                     // Sau khi xóa xong thì mới đăng ký lại cái mới
-                    // Thêm ?v=2 để trình duyệt hiểu đây là phiên bản mới
-                    navigator.serviceWorker.register('./service-worker.js?v=3')
+                    // Thêm ?v=9999 để trình duyệt hiểu đây là phiên bản mới
+                    navigator.serviceWorker.register('./service-worker.js?v=9999')
                         .then((registration) => {
                             console.log('✅ Đã cài đặt Service Worker mới:', registration.scope);
                         })
