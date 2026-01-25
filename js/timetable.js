@@ -234,43 +234,39 @@ export const Timetable = {
     // ==================== LOGIC LỌC TUẦN CHUẨN XÁC (FIXED: So sánh DATE thuần túy) ====================
     // ==================== LOGIC LỌC TUẦN CHUẨN XÁC (FIXED) ====================
     isClassInWeek(classObj) {
-        // 1. Nếu chưa chọn tuần (View All) -> Hiện hết
         if (!this.currentWeekStart) return true;
 
-        // 2. Tính số tuần hiện tại của giao diện (Week Number 1-52)
-        // Cộng thêm 12h để tránh lỗi lệch múi giờ khi tính toán
         const currentViewDate = new Date(this.currentWeekStart);
         currentViewDate.setHours(12, 0, 0, 0); 
         const currentWeekNum = this.getWeekNumber(currentViewDate);
 
-        // 3. ƯU TIÊN 1: Kiểm tra mảng 'weeks' cụ thể (Chính xác nhất)
-        // Nếu DB có lưu [1, 2, 3...] thì chỉ hiện đúng những tuần đó
+        // ƯU TIÊN 1: Check mảng weeks (Dữ liệu từ Server đã sửa ở Bước 1)
         if (Array.isArray(classObj.weeks) && classObj.weeks.length > 0) {
             return classObj.weeks.includes(currentWeekNum);
         }
 
-        // 4. ƯU TIÊN 2: Kiểm tra theo khoảng ngày (Date Range) - Fallback
+        // ƯU TIÊN 2: Check ngày tháng (Fallback)
         if (classObj.startDate && classObj.endDate) {
             const clsStart = new Date(classObj.startDate);
-            clsStart.setHours(0, 0, 0, 0); // Đầu ngày
+            clsStart.setHours(0, 0, 0, 0);
             
             const clsEnd = new Date(classObj.endDate);
-            clsEnd.setHours(23, 59, 59, 999); // Cuối ngày
+            clsEnd.setHours(23, 59, 59, 999);
 
             const weekStart = new Date(this.currentWeekStart);
             weekStart.setHours(0, 0, 0, 0);
             
             const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekEnd.getDate() + 6); // Chủ nhật
+            weekEnd.setDate(weekEnd.getDate() + 6);
             weekEnd.setHours(23, 59, 59, 999);
 
-            // Logic: Khoảng thời gian môn học giao nhau với tuần hiện tại
+            // Kiểm tra giao nhau:
+            // Ngày bắt đầu môn <= Ngày cuối tuần VIEW
+            // VÀ Ngày kết thúc môn >= Ngày đầu tuần VIEW
             return clsStart <= weekEnd && clsEnd >= weekStart;
         }
 
-        // 5. QUAN TRỌNG: Nếu không có weeks VÀ không có ngày tháng
-        // -> Trả về FALSE để ẩn đi (thay vì hiện vĩnh viễn như code cũ)
-        return false; 
+        return false; // <--- QUAN TRỌNG: Mặc định là ẩn
     },
 
     // Helper 1: Lấy số tuần của năm (1-52)

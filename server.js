@@ -560,20 +560,33 @@ function getWeekNumber(d) {
 
 function getWeeksBetween(startDateStr, endDateStr) {
     if (!startDateStr || !endDateStr) return [];
-    const weeks = [];
+    
+    // Dùng Set để tự động loại bỏ các số tuần trùng nhau
+    const weeks = new Set();
+    
     const start = new Date(startDateStr);
     const end = new Date(endDateStr);
     
+    // Reset giờ về 0 để so sánh ngày chuẩn xác
+    start.setHours(0,0,0,0);
+    end.setHours(23,59,59,999);
+
+    if (start > end) return [];
+
     let current = new Date(start);
+    
+    // Vòng lặp: Duyệt qua TỪNG NGÀY một
+    // Tuy chậm hơn xíu nhưng đảm bảo chính xác tuyệt đối 100%
     while (current <= end) {
         const weekNum = getWeekNumber(current);
-        if (!weeks.includes(weekNum)) {
-            weeks.push(weekNum);
-        }
-        // Nhảy tới tuần tiếp theo (cộng 7 ngày)
-        current.setDate(current.getDate() + 7);
+        weeks.add(weekNum);
+        
+        // Cộng thêm 1 ngày
+        current.setDate(current.getDate() + 1);
     }
-    return weeks.sort((a, b) => a - b);
+    
+    // Chuyển Set về Array và sắp xếp tăng dần
+    return Array.from(weeks).sort((a, b) => a - b);
 }
 
 // ==================== API ROUTES ====================
