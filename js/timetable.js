@@ -231,21 +231,21 @@ export const Timetable = {
         console.log('📅 Week dates rendered in headers');
     },
 
-    // ==================== LOGIC LỌC TUẦN CHUẨN XÁC (FIXED: So sánh DATE thuần túy) ====================
-    // ==================== LOGIC LỌC TUẦN CHUẨN XÁC (FIXED) ====================
+    // ==================== LOGIC LỌC TUẦN CHUẨN XÁC (PHIÊN BẢN "VÒNG KIM CÔ") ====================
     isClassInWeek(classObj) {
+        // 1. Nếu chưa chọn tuần (View All) -> Hiện hết
         if (!this.currentWeekStart) return true;
 
-        const currentViewDate = new Date(this.currentWeekStart);
-        currentViewDate.setHours(12, 0, 0, 0); 
-        const currentWeekNum = this.getWeekNumber(currentViewDate);
+        // Xác định khoảng thời gian của TUẦN ĐANG XEM (View)
+        const viewWeekStart = new Date(this.currentWeekStart);
+        viewWeekStart.setHours(0, 0, 0, 0);
+        
+        const viewWeekEnd = new Date(viewWeekStart);
+        viewWeekEnd.setDate(viewWeekEnd.getDate() + 6);
+        viewWeekEnd.setHours(23, 59, 59, 999);
 
-        // ƯU TIÊN 1: Check mảng weeks (Dữ liệu từ Server đã sửa ở Bước 1)
-        if (Array.isArray(classObj.weeks) && classObj.weeks.length > 0) {
-            return classObj.weeks.includes(currentWeekNum);
-        }
-
-        // ƯU TIÊN 2: Check ngày tháng (Fallback)
+        // 2. LỚP BẢO VỆ "VÒNG KIM CÔ" (Quan trọng nhất)
+        // Nếu môn học có ghi ngày bắt đầu/kết thúc cụ thể
         if (classObj.startDate && classObj.endDate) {
             const clsStart = new Date(classObj.startDate);
             clsStart.setHours(0, 0, 0, 0);
@@ -253,20 +253,30 @@ export const Timetable = {
             const clsEnd = new Date(classObj.endDate);
             clsEnd.setHours(23, 59, 59, 999);
 
-            const weekStart = new Date(this.currentWeekStart);
-            weekStart.setHours(0, 0, 0, 0);
-            
-            const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekEnd.getDate() + 6);
-            weekEnd.setHours(23, 59, 59, 999);
-
-            // Kiểm tra giao nhau:
-            // Ngày bắt đầu môn <= Ngày cuối tuần VIEW
-            // VÀ Ngày kết thúc môn >= Ngày đầu tuần VIEW
-            return clsStart <= weekEnd && clsEnd >= weekStart;
+            // Kiểm tra: Nếu tuần đang xem nằm HOÀN TOÀN ngoài phạm vi môn học -> ẨN LUÔN
+            // (Tuần xem bắt đầu sau khi môn đã kết thúc HOẶC Tuần xem kết thúc trước khi môn bắt đầu)
+            if (viewWeekStart > clsEnd || viewWeekEnd < clsStart) {
+                console.log(`⛔ ${classObj.subject}: Out of date range`);
+                return false; 
+            }
         }
 
-        return false; // <--- QUAN TRỌNG: Mặc định là ẩn
+        // 3. Nếu lọt qua "Vòng kim cô", mới kiểm tra tiếp mảng weeks (để xử lý các tuần nghỉ xen kẽ nếu có)
+        const currentViewDate = new Date(this.currentWeekStart);
+        currentViewDate.setHours(12, 0, 0, 0); 
+        const currentWeekNum = this.getWeekNumber(currentViewDate);
+
+        if (Array.isArray(classObj.weeks) && classObj.weeks.length > 0) {
+            return classObj.weeks.includes(currentWeekNum);
+        }
+
+        // 4. Nếu không có mảng weeks (dữ liệu cũ), nhưng đã qua được bước 2 (ngày tháng hợp lệ) -> Hiện
+        if (classObj.startDate && classObj.endDate) {
+            return true;
+        }
+
+        // 5. Mặc định ẩn
+        return false; 
     },
 
     // Helper 1: Lấy số tuần của năm (1-52)

@@ -558,35 +558,38 @@ function getWeekNumber(d) {
     return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
+// --- Sửa trong server.js ---
+
 function getWeeksBetween(startDateStr, endDateStr) {
     if (!startDateStr || !endDateStr) return [];
     
-    // Dùng Set để tự động loại bỏ các số tuần trùng nhau
-    const weeks = new Set();
-    
-    const start = new Date(startDateStr);
-    const end = new Date(endDateStr);
-    
-    // Reset giờ về 0 để so sánh ngày chuẩn xác
-    start.setHours(0,0,0,0);
-    end.setHours(23,59,59,999);
-
-    if (start > end) return [];
-
-    let current = new Date(start);
-    
-    // Vòng lặp: Duyệt qua TỪNG NGÀY một
-    // Tuy chậm hơn xíu nhưng đảm bảo chính xác tuyệt đối 100%
-    while (current <= end) {
-        const weekNum = getWeekNumber(current);
-        weeks.add(weekNum);
+    try {
+        const weeks = new Set();
+        const start = new Date(startDateStr);
+        const end = new Date(endDateStr);
         
-        // Cộng thêm 1 ngày
-        current.setDate(current.getDate() + 1);
+        // Reset giờ
+        start.setHours(0,0,0,0);
+        end.setHours(23,59,59,999);
+
+        if (start > end) return [];
+
+        let current = new Date(start);
+        
+        // Loop từng ngày
+        while (current <= end) {
+            const weekNum = getWeekNumber(current);
+            weeks.add(weekNum);
+            current.setDate(current.getDate() + 1);
+        }
+        
+        const result = Array.from(weeks).sort((a, b) => a - b);
+        console.log(`🧮 Calculated weeks for ${startDateStr} - ${endDateStr}:`, result); // Log để debug
+        return result;
+    } catch (e) {
+        console.error("Week calc error:", e);
+        return [];
     }
-    
-    // Chuyển Set về Array và sắp xếp tăng dần
-    return Array.from(weeks).sort((a, b) => a - b);
 }
 
 // ==================== API ROUTES ====================
