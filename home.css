@@ -8421,3 +8421,25 @@ body.full-mode .main-content {
     }
 }
 
+/* --- FIX LỖI KHÔNG BẤM ĐƯỢC Ô MẬT KHẨU --- */
+
+.password-wrapper input {
+    position: relative;
+    z-index: 2; /* Đẩy ô nhập liệu lên cao hơn nền */
+}
+
+.toggle-pass {
+    z-index: 3; /* Icon mắt phải cao hơn input để bấm được */
+    width: 30px; /* Giới hạn chiều rộng icon để không che hết ô input */
+    height: 30px;
+    justify-content: center;
+    align-items: center;
+}
+
+/* --- BẮT BUỘC HIỆN BÀN PHÍM CHO INPUT --- */
+input, textarea, select {
+    -webkit-user-select: text !important; /* Quan trọng cho iPhone/iPad */
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
+}
+
