@@ -234,18 +234,22 @@ export const Timetable = {
     // ==================== LOGIC HIỂN THỊ TUẦN (MÔ HÌNH 2 LỚP BẢO VỆ) ====================
     isClassInWeek(classObj) {
         // [Case 0] Nếu đang chọn "Xem tất cả" (không có currentWeekStart) -> Luôn hiện
-        if (!this.currentWeekStart) return true;
+        if (!this.currentWeekStart) {
+            console.log(`📋 Class "${classObj.subject}": No week filter, showing all`);
+            return true;
+        }
 
         // --- CHUẨN BỊ DỮ LIỆU SO SÁNH ---
-        // 1. Xác định phạm vi của "Tuần đang xem trên màn hình"
         const viewStart = new Date(this.currentWeekStart);
-        viewStart.setHours(0, 0, 0, 0); // 00:00:00 Thứ 2
+        viewStart.setHours(0, 0, 0, 0);
 
         const viewEnd = new Date(viewStart);
         viewEnd.setDate(viewEnd.getDate() + 6);
-        viewEnd.setHours(23, 59, 59, 999); // 23:59:59 Chủ Nhật
+        viewEnd.setHours(23, 59, 59, 999);
 
-        // 2. Xác định phạm vi của "Môn học"
+        console.log(`📅 View Week: ${viewStart.toDateString()} - ${viewEnd.toDateString()}`);
+
+        // Xác định phạm vi của môn học
         let clsStart = null;
         let clsEnd = null;
 
@@ -255,37 +259,60 @@ export const Timetable = {
 
             clsEnd = new Date(classObj.endDate);
             clsEnd.setHours(23, 59, 59, 999);
+
+            console.log(`📚 Class "${classObj.subject}": ${clsStart.toDateString()} - ${clsEnd.toDateString()}`);
         }
 
         // ==================== Lớp Bảo Vệ 1: HARD CHECK (NGÀY THÁNG) ====================
-        // Nếu môn học có hạn sử dụng, kiểm tra xem tuần này có lọt ra ngoài không.
-        // Logic: (Tuần xem kết thúc trước khi môn bắt đầu) HOẶC (Tuần xem bắt đầu sau khi môn kết thúc)
         if (clsStart && clsEnd) {
-            if (viewEnd < clsStart || viewStart > clsEnd) {
-                // Môn học đã kết thúc hoặc chưa diễn ra -> ẨN
+            // Kiểm tra xem tuần hiện tại có giao với khoảng ngày của môn học không
+            const isBeforeStart = viewEnd < clsStart;
+            const isAfterEnd = viewStart > clsEnd;
+
+            if (isBeforeStart) {
+                console.log(`❌ Class "${classObj.subject}": View week ENDS before class starts`);
                 return false;
             }
+
+            if (isAfterEnd) {
+                console.log(`❌ Class "${classObj.subject}": View week STARTS after class ends`);
+                return false;
+            }
+
+            console.log(`✅ Class "${classObj.subject}": Passed Layer 1 (Date Range Check)`);
         }
 
         // ==================== Lớp Bảo Vệ 2: SOFT CHECK (Số TUẦN) ====================
-        // Nếu qua được lớp 1, kiểm tra tiếp xem tuần này có nằm trong danh sách "weeks" không
-        // (Dành cho trường hợp môn học nằm trong khoảng ngày nhưng nghỉ giữa chừng)
-
-        // Lấy đại diện 1 ngày giữa tuần để tính số tuần (Thứ 5)
+        // Lấy số tuần hiện tại (dùng ngày Thứ 5 của tuần để tính)
         const checkDate = new Date(viewStart);
-        checkDate.setDate(checkDate.getDate() + 3);
+        checkDate.setDate(checkDate.getDate() + 3); // Thứ 5 (Monday + 3 days)
         const currentWeekNum = this.getWeekNumber(checkDate);
 
-        if (Array.isArray(classObj.weeks) && classObj.weeks.length > 0) {
-            return classObj.weeks.includes(currentWeekNum);
-        }
+        console.log(`🔢 Current week number: ${currentWeekNum}`);
 
-        // [Fallback] Nếu không có dữ liệu weeks (data cũ) nhưng đã qua được Lớp 1 -> HIỆN
-        if (clsStart && clsEnd) {
+        // Nếu có mảng weeks và không rỗng, kiểm tra xem tuần này có trong danh sách không
+        if (Array.isArray(classObj.weeks) && classObj.weeks.length > 0) {
+            const isInWeeks = classObj.weeks.includes(currentWeekNum);
+            console.log(`🔍 Class "${classObj.subject}": weeks=${JSON.stringify(classObj.weeks)}, current=${currentWeekNum}, match=${isInWeeks}`);
+
+            if (!isInWeeks) {
+                console.log(`❌ Class "${classObj.subject}": Week ${currentWeekNum} NOT in allowed weeks`);
+                return false;
+            }
+
+            console.log(`✅ Class "${classObj.subject}": Week ${currentWeekNum} IS in allowed weeks`);
             return true;
         }
 
-        // Mặc định ẩn để an toàn
+        // [Fallback] Nếu không có weeks array hoặc rỗng:
+        // - Nếu có startDate/endDate và đã pass Layer 1 → HIỆN
+        // - Nếu không có gì cả → ẨN (an toàn)
+        if (clsStart && clsEnd) {
+            console.log(`✅ Class "${classObj.subject}": No weeks data, but passed date range check → SHOW`);
+            return true;
+        }
+
+        console.log(`❌ Class "${classObj.subject}": No date range, no weeks data → HIDE`);
         return false;
     },
 
