@@ -549,42 +549,51 @@ async function logActivity(username, action, target, link, type) {
     }
 }
 
-// --- Dán đoạn này vào server.js để Server tính toán được tuần học ---
+// ==================== LOGIC TÍNH TUẦN CHUẨN (ENGINEER STANDARD) ====================
 
+// 1. Hàm tính số thứ tự tuần theo chuẩn ISO-8601
 function getWeekNumber(d) {
+    // Copy ngày để không ảnh hưởng biến gốc
     d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    // Đặt ngày sang Thứ 5 gần nhất để tính chuẩn theo ISO
     d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
     var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    // Tính số tuần: (Khoảng cách từ đầu năm / 86400000ms) / 7 ngày
     return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
-// --- Sửa trong server.js ---
-
+// 2. Hàm lấy danh sách tuần (Quét từng ngày - Độ chính xác 100%)
 function getWeeksBetween(startDateStr, endDateStr) {
     if (!startDateStr || !endDateStr) return [];
     
-    // Dùng Set để tự động loại bỏ các số tuần trùng nhau
+    // Sử dụng Set để tự động loại bỏ các số tuần trùng lặp
     const weeks = new Set();
+    
     const start = new Date(startDateStr);
     const end = new Date(endDateStr);
     
-    start.setHours(0,0,0,0);
-    end.setHours(23,59,59,999);
+    // Reset giờ về 0h sáng và 23h59 tối để so sánh trọn vẹn
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
 
     if (start > end) return [];
 
+    // Bắt đầu vòng lặp
     let current = new Date(start);
     
-    // 🔥 QUAN TRỌNG: Duyệt từng ngày một (thay vì nhảy 7 ngày)
+    // 🔥 QUAN TRỌNG: Duyệt qua từng ngày một cho đến khi hết hạn
     while (current <= end) {
         const weekNum = getWeekNumber(current);
         weeks.add(weekNum);
         
-        // Cộng 1 ngày
+        // Cộng thêm 1 ngày
         current.setDate(current.getDate() + 1);
     }
     
-    return Array.from(weeks).sort((a, b) => a - b);
+    // Chuyển Set thành Array và sắp xếp tăng dần [1, 2, 3...]
+    const result = Array.from(weeks).sort((a, b) => a - b);
+    console.log(`🧮 Tính toán tuần cho ${startDateStr} -> ${endDateStr}: [${result.join(', ')}]`);
+    return result;
 }
 
 // ==================== API ROUTES ====================

@@ -231,55 +231,62 @@ export const Timetable = {
         console.log('📅 Week dates rendered in headers');
     },
 
-    // ==================== LOGIC LỌC TUẦN: PHIÊN BẢN "VÒNG KIM CÔ" ====================
+    // ==================== LOGIC HIỂN THỊ TUẦN (MÔ HÌNH 2 LỚP BẢO VỆ) ====================
     isClassInWeek(classObj) {
-        // 1. Nếu chưa chọn tuần (View All) -> Hiện hết
+        // [Case 0] Nếu đang chọn "Xem tất cả" (không có currentWeekStart) -> Luôn hiện
         if (!this.currentWeekStart) return true;
 
-        // --- LỚP BẢO VỆ "VÒNG KIM CÔ" (CHẶN ĐỨNG LỖI HIỆN QUÁ HẠN) ---
-        // Nguyên tắc: Nếu môn có ngày bắt đầu/kết thúc, kiểm tra xem tuần hiện tại có nằm trong đó không.
+        // --- CHUẨN BỊ DỮ LIỆU SO SÁNH ---
+        // 1. Xác định phạm vi của "Tuần đang xem trên màn hình"
+        const viewStart = new Date(this.currentWeekStart);
+        viewStart.setHours(0, 0, 0, 0); // 00:00:00 Thứ 2
+        
+        const viewEnd = new Date(viewStart);
+        viewEnd.setDate(viewEnd.getDate() + 6);
+        viewEnd.setHours(23, 59, 59, 999); // 23:59:59 Chủ Nhật
+
+        // 2. Xác định phạm vi của "Môn học"
+        let clsStart = null;
+        let clsEnd = null;
+        
         if (classObj.startDate && classObj.endDate) {
-            const clsStart = new Date(classObj.startDate);
-            clsStart.setHours(0, 0, 0, 0); // Đầu ngày
+            clsStart = new Date(classObj.startDate);
+            clsStart.setHours(0, 0, 0, 0);
             
-            const clsEnd = new Date(classObj.endDate);
-            clsEnd.setHours(23, 59, 59, 999); // Cuối ngày
+            clsEnd = new Date(classObj.endDate);
+            clsEnd.setHours(23, 59, 59, 999);
+        }
 
-            // Xác định ngày đầu tuần và cuối tuần đang xem trên giao diện
-            const viewWeekStart = new Date(this.currentWeekStart);
-            viewWeekStart.setHours(0, 0, 0, 0);
-            
-            const viewWeekEnd = new Date(viewWeekStart);
-            viewWeekEnd.setDate(viewWeekEnd.getDate() + 6);
-            viewWeekEnd.setHours(23, 59, 59, 999);
-
-            // LOGIC CHẶN: 
-            // Nếu "Tuần xem" bắt đầu sau khi "Môn học" kết thúc 
-            // HOẶC "Tuần xem" kết thúc trước khi "Môn học" bắt đầu
-            // -> ẨN NGAY LẬP TỨC (return false)
-            if (viewWeekStart > clsEnd || viewWeekEnd < clsStart) {
+        // ==================== LỚP BẢO VỆ 1: HARD CHECK (NGÀY THÁNG) ====================
+        // Nếu môn học có hạn sử dụng, kiểm tra xem tuần này có lọt ra ngoài không.
+        // Logic: (Tuần xem kết thúc trước khi môn bắt đầu) HOẶC (Tuần xem bắt đầu sau khi môn kết thúc)
+        if (clsStart && clsEnd) {
+            if (viewEnd < clsStart || viewStart > clsEnd) {
+                // Môn học đã kết thúc hoặc chưa diễn ra -> ẨN
                 return false; 
             }
         }
-        // -------------------------------------------------------------
 
-        // 2. Nếu lọt qua vòng bảo vệ trên, mới kiểm tra tiếp mảng weeks
-        // (Để xử lý trường hợp môn học nằm trong khoảng thời gian nhưng nghỉ vào tuần cụ thể)
-        const currentViewDate = new Date(this.currentWeekStart);
-        currentViewDate.setHours(12, 0, 0, 0); 
-        const currentWeekNum = this.getWeekNumber(currentViewDate);
+        // ==================== LỚP BẢO VỆ 2: SOFT CHECK (SỐ TUẦN) ====================
+        // Nếu qua được lớp 1, kiểm tra tiếp xem tuần này có nằm trong danh sách "weeks" không
+        // (Dành cho trường hợp môn học nằm trong khoảng ngày nhưng nghỉ giữa chừng)
+        
+        // Lấy đại diện 1 ngày giữa tuần để tính số tuần (Thứ 5)
+        const checkDate = new Date(viewStart);
+        checkDate.setDate(checkDate.getDate() + 3); 
+        const currentWeekNum = this.getWeekNumber(checkDate);
 
         if (Array.isArray(classObj.weeks) && classObj.weeks.length > 0) {
             return classObj.weeks.includes(currentWeekNum);
         }
 
-        // 3. Fallback: Nếu không có mảng weeks, nhưng đã qua được vòng bảo vệ ngày tháng -> Hiện
-        if (classObj.startDate && classObj.endDate) {
+        // [Fallback] Nếu không có dữ liệu weeks (data cũ) nhưng đã qua được Lớp 1 -> HIỆN
+        if (clsStart && clsEnd) {
             return true;
         }
 
-        // 4. Mặc định ẩn nếu không đủ dữ liệu
-        return false; 
+        // Mặc định ẩn để an toàn
+        return false;
     },
 
     // Helper 1: Lấy số tuần của năm (1-52)
