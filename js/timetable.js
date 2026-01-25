@@ -240,7 +240,7 @@ export const Timetable = {
         // 1. Xác định phạm vi của "Tuần đang xem trên màn hình"
         const viewStart = new Date(this.currentWeekStart);
         viewStart.setHours(0, 0, 0, 0); // 00:00:00 Thứ 2
-        
+
         const viewEnd = new Date(viewStart);
         viewEnd.setDate(viewEnd.getDate() + 6);
         viewEnd.setHours(23, 59, 59, 999); // 23:59:59 Chủ Nhật
@@ -248,32 +248,32 @@ export const Timetable = {
         // 2. Xác định phạm vi của "Môn học"
         let clsStart = null;
         let clsEnd = null;
-        
+
         if (classObj.startDate && classObj.endDate) {
             clsStart = new Date(classObj.startDate);
             clsStart.setHours(0, 0, 0, 0);
-            
+
             clsEnd = new Date(classObj.endDate);
             clsEnd.setHours(23, 59, 59, 999);
         }
 
-        // ==================== LỚP BẢO VỆ 1: HARD CHECK (NGÀY THÁNG) ====================
+        // ==================== Lớp Bảo Vệ 1: HARD CHECK (NGÀY THÁNG) ====================
         // Nếu môn học có hạn sử dụng, kiểm tra xem tuần này có lọt ra ngoài không.
         // Logic: (Tuần xem kết thúc trước khi môn bắt đầu) HOẶC (Tuần xem bắt đầu sau khi môn kết thúc)
         if (clsStart && clsEnd) {
             if (viewEnd < clsStart || viewStart > clsEnd) {
                 // Môn học đã kết thúc hoặc chưa diễn ra -> ẨN
-                return false; 
+                return false;
             }
         }
 
-        // ==================== LỚP BẢO VỆ 2: SOFT CHECK (SỐ TUẦN) ====================
+        // ==================== Lớp Bảo Vệ 2: SOFT CHECK (Số TUẦN) ====================
         // Nếu qua được lớp 1, kiểm tra tiếp xem tuần này có nằm trong danh sách "weeks" không
         // (Dành cho trường hợp môn học nằm trong khoảng ngày nhưng nghỉ giữa chừng)
-        
+
         // Lấy đại diện 1 ngày giữa tuần để tính số tuần (Thứ 5)
         const checkDate = new Date(viewStart);
-        checkDate.setDate(checkDate.getDate() + 3); 
+        checkDate.setDate(checkDate.getDate() + 3);
         const currentWeekNum = this.getWeekNumber(checkDate);
 
         if (Array.isArray(classObj.weeks) && classObj.weeks.length > 0) {
@@ -298,22 +298,23 @@ export const Timetable = {
     },
 
     // Helper 2: Tạo mảng các tuần từ ngày Start -> End
+    // Helper 2: Tạo mảng các tuần từ ngày Start -> End
     getWeeksBetween(startDateStr, endDateStr) {
         if (!startDateStr || !endDateStr) return [];
-        const weeks = [];
+        const weeks = new Set();
         const start = new Date(startDateStr);
         const end = new Date(endDateStr);
-        
+
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+
         let current = new Date(start);
         while (current <= end) {
             const weekNum = this.getWeekNumber(current);
-            if (!weeks.includes(weekNum)) {
-                weeks.push(weekNum);
-            }
-            // Nhảy tới tuần tiếp theo (cộng 7 ngày)
-            current.setDate(current.getDate() + 7);
+            weeks.add(weekNum);
+            current.setDate(current.getDate() + 1);
         }
-        return weeks.sort((a, b) => a - b);
+        return Array.from(weeks).sort((a, b) => a - b);
     },
 
     injectStyles() {
@@ -1487,7 +1488,7 @@ export const Timetable = {
 
     processExcelData(rows) {
         console.log('🚀 Đang xử lý file Excel...');
-        
+
         // 1. Map cột tự động (Dựa trên từ khóa)
         let headerRow = -1;
         const colMap = { subject: -1, day: -1, period: -1, date: -1, room: -1 };
@@ -1496,7 +1497,7 @@ export const Timetable = {
         for (let i = 0; i < Math.min(20, rows.length); i++) {
             const row = rows[i] || [];
             const cells = row.map(c => String(c || '').toLowerCase().trim());
-            
+
             if (colMap.subject === -1) colMap.subject = cells.findIndex(c => c.includes('tên lhp') || c.includes('môn'));
             if (colMap.day === -1) colMap.day = cells.findIndex(c => c.includes('thứ'));
             if (colMap.period === -1) colMap.period = cells.findIndex(c => c.includes('tiết') || c.includes('giờ'));
@@ -1507,7 +1508,7 @@ export const Timetable = {
             if (colMap.subject > -1 && colMap.day > -1) { headerRow = i; break; }
         }
 
-        if (headerRow === -1) { 
+        if (headerRow === -1) {
             // Nếu không tìm thấy header, thử gán cứng (Backup cho file của bạn)
             // Dựa trên file bạn gửi: STT(1), Tên(2), GV(3), STC(4), Mã(5), Thứ(6), Tiết(7), Phòng(8), Ngày(9)
             colMap.subject = 2; colMap.day = 6; colMap.period = 7; colMap.room = 8; colMap.date = 9;
@@ -1571,7 +1572,7 @@ export const Timetable = {
         if (importedClasses.length > 0) {
             this.importedData = importedClasses;
             // Gọi hàm hiển thị bảng xem trước (giữ nguyên logic cũ của bạn)
-            if(this.showPreview) this.showPreview(importedClasses.length);
+            if (this.showPreview) this.showPreview(importedClasses.length);
             else console.log("Imported:", importedClasses);
         } else {
             alert('Không đọc được dữ liệu nào! Hãy kiểm tra lại file Excel.');
@@ -1581,7 +1582,7 @@ export const Timetable = {
     // Helper: Tìm tiết học dựa trên giờ (VD: 15h10 -> Tiết 10)
     // Bạn nhớ thêm hàm này vào trong object Timetable nhé
     findPeriodByTime(hour, minute) {
-        const timeVal = hour * 60 + minute; 
+        const timeVal = hour * 60 + minute;
         for (const [period, time] of Object.entries(this.periodTimes)) {
             const [h, m] = time.start.split(':').map(Number);
             const startVal = h * 60 + m;
@@ -1596,7 +1597,7 @@ export const Timetable = {
     // ==================== ADVANCED PERIOD PARSER ====================
     parseAdvancedPeriod(periodStr) {
         const str = String(periodStr).trim();
-        
+
         // --- Case 1: Format chứa giờ (VD: "(15h10)->12") ---
         // Regex này bắt: 15h10 hoặc (15h10)
         const timeMatch = str.match(/(\d{1,2})h(\d{2})/);
@@ -1606,18 +1607,18 @@ export const Timetable = {
         if (timeMatch) {
             const hour = parseInt(timeMatch[1]);
             const minute = parseInt(timeMatch[2]);
-            
+
             // Tìm tiết bắt đầu từ giờ
             const startPeriod = this.findPeriodByTime(hour, minute);
-            
+
             if (startPeriod) {
                 let endPeriod = startPeriod;
                 if (endPeriodMatch) {
                     endPeriod = parseInt(endPeriodMatch[1]);
                 }
-                
+
                 const numPeriods = Math.max(1, endPeriod - startPeriod + 1);
-                
+
                 // Xác định buổi học
                 let session = 'morning';
                 if (startPeriod > 12) session = 'evening';
@@ -1632,11 +1633,11 @@ export const Timetable = {
         if (numbers) {
             const start = parseInt(numbers[0]);
             const end = numbers.length > 1 ? parseInt(numbers[1]) : start;
-            
-            return { 
-                startPeriod: start, 
-                numPeriods: end - start + 1, 
-                session: start > 12 ? 'evening' : (start > 6 ? 'afternoon' : 'morning') 
+
+            return {
+                startPeriod: start,
+                numPeriods: end - start + 1,
+                session: start > 12 ? 'evening' : (start > 6 ? 'afternoon' : 'morning')
             };
         }
 
@@ -1647,11 +1648,11 @@ export const Timetable = {
     // Hàm mới để xử lý ngày tháng từ Excel
     parseAdvancedDateRange(dateRangeStr) {
         if (!dateRangeStr) return { startDate: null, endDate: null, display: '' };
-        
+
         // 1. Vệ sinh chuỗi: Xóa hết chữ cái, xuống dòng, dấu >
         // Input: "19/01/2026-\n>13/04/2026"  =>  Thành: "19/01/2026-13/04/2026"
         const cleanStr = String(dateRangeStr).replace(/[a-zA-Z\n\r\s>]/g, '');
-        
+
         // 2. Trích xuất ngày theo format dd/mm/yyyy
         const regex = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/g;
         const matches = [...cleanStr.matchAll(regex)];
@@ -1659,19 +1660,19 @@ export const Timetable = {
         if (matches.length >= 1) {
             // Helper convert string sang Date object
             const toDate = (m) => new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
-            
+
             const start = toDate(matches[0]);
             // Nếu có 2 ngày thì lấy ngày 2 làm kết thúc, nếu không thì lấy chính ngày đầu
             const end = matches.length > 1 ? toDate(matches[matches.length - 1]) : new Date(start);
 
             // Set giờ để so sánh chính xác
-            start.setHours(0,0,0,0);
-            end.setHours(23,59,59,999);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
 
             return {
                 startDate: start.toISOString(),
                 endDate: end.toISOString(),
-                display: `${start.getDate()}/${start.getMonth()+1} - ${end.getDate()}/${end.getMonth()+1}`
+                display: `${start.getDate()}/${start.getMonth() + 1} - ${end.getDate()}/${end.getMonth() + 1}`
             };
         }
         return { startDate: null, endDate: null, display: '' };

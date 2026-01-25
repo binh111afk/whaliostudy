@@ -1621,7 +1621,7 @@ app.get('/api/timetable', async (req, res) => {
 
 app.post('/api/timetable', async (req, res) => {
     try {
-        const { username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange, weeks, startDate, endDate, dateRangeDisplay } = req.body;
+        const { username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange, startDate, endDate, dateRangeDisplay } = req.body;
 
         if (!username) {
             return res.json({ success: false, message: '❌ Missing username' });
@@ -1636,6 +1636,12 @@ app.post('/api/timetable', async (req, res) => {
             return res.json({ success: false, message: '❌ Người dùng không tồn tại - Vui lòng đăng nhập lại' });
         }
 
+        // 🔥 LOGIC MỚI: Tính mảng weeks từ startDate/endDate
+        let calculatedWeeks = [];
+        if (startDate && endDate) {
+            calculatedWeeks = getWeeksBetween(startDate, endDate);
+        }
+
         const newClass = new Timetable({
             username,
             subject: subject.trim(),
@@ -1646,15 +1652,14 @@ app.post('/api/timetable', async (req, res) => {
             startPeriod: parseInt(startPeriod),
             numPeriods: parseInt(numPeriods),
             timeRange,
-            // 🔥 ĐÃ SỬA: Gọi hàm trực tiếp, bỏ 'this.' và ưu tiên dữ liệu gửi lên nếu có
-            weeks: (weeks && weeks.length > 0) ? weeks : getWeeksBetween(startDate, endDate), 
+            weeks: calculatedWeeks, // Lưu mảng tuần đã tính chính xác
             startDate: startDate || null,
             endDate: endDate || null,
-            dateRangeDisplay: startDate && endDate ? `${new Date(startDate).getDate()}/${new Date(startDate).getMonth() + 1} - ${new Date(endDate).getDate()}/${new Date(endDate).getMonth() + 1}` : '',
+            dateRangeDisplay: dateRangeDisplay || '',
         });
 
         await newClass.save();
-        console.log(`✅ Added class: ${subject} for ${username}`);
+        console.log(`✅ Added class: ${subject} for ${username} | Weeks: [${calculatedWeeks.join(', ')}]`);
         res.json({ success: true, message: 'Thêm lớp học thành công!', class: newClass });
     } catch (err) {
         console.error('Error creating class:', err);
@@ -1720,7 +1725,7 @@ app.delete('/api/timetable/clear', async (req, res) => {
 
 app.post('/api/timetable/update', async (req, res) => {
     try {
-        const { classId, username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange } = req.body;
+        const { classId, username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange, startDate, endDate, dateRangeDisplay } = req.body;
 
         if (!classId || !username) {
             return res.json({ success: false, message: '❌ Thiếu thông tin định danh' });
@@ -1735,6 +1740,12 @@ app.post('/api/timetable/update', async (req, res) => {
             return res.json({ success: false, message: '❌ Bạn không có quyền sửa lớp này' });
         }
 
+        // 🔥 LOGIC MỚI: Tính lại mảng weeks khi có thay đổi ngày
+        let calculatedWeeks = [];
+        if (startDate && endDate) {
+            calculatedWeeks = getWeeksBetween(startDate, endDate);
+        }
+
         classToUpdate.subject = subject.trim();
         classToUpdate.room = room.trim();
         classToUpdate.campus = campus || 'Cơ sở chính';
@@ -1743,14 +1754,14 @@ app.post('/api/timetable/update', async (req, res) => {
         classToUpdate.startPeriod = parseInt(startPeriod);
         classToUpdate.numPeriods = parseInt(numPeriods);
         classToUpdate.timeRange = timeRange;
-        classToUpdate.weeks = (weeks && weeks.length > 0) ? weeks : getWeeksBetween(startDate, endDate);
+        classToUpdate.weeks = calculatedWeeks; // Cập nhật mảng tuần mới
         classToUpdate.startDate = startDate || null;
         classToUpdate.endDate = endDate || null;
         classToUpdate.dateRangeDisplay = dateRangeDisplay || '';
         classToUpdate.updatedAt = new Date();
 
         await classToUpdate.save();
-        console.log(`✏️ Updated class ${classId} by ${username}`);
+        console.log(`✏️ Updated class ${classId} by ${username} | Weeks: [${calculatedWeeks.join(', ')}]`);
         res.json({ success: true, message: 'Cập nhật thành công!' });
     } catch (err) {
         console.error('Error updating class:', err);
