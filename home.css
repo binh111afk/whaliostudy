@@ -8528,3 +8528,72 @@ select {
         justify-content: center;
     }
 }
+
+/* --- DÁN VÀO CUỐI FILE home.css --- */
+
+/* 1. KHUNG BAO NGOÀI (QUẢN LÝ CUỘN) */
+.timetable-wrapper {
+    width: 100%;
+    overflow-x: auto; /* Cho phép cuộn ngang */
+    -webkit-overflow-scrolling: touch;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    border: 1px solid #e5e7eb;
+}
+
+/* 2. BẢNG BÊN TRONG (CỐ ĐỊNH KÍCH THƯỚC) */
+.timetable-table {
+    width: 100%;
+    min-width: 800px; /* Laptop: Giữ rộng để không nát chữ */
+    border-collapse: collapse;
+}
+
+/* Style cho Laptop */
+.timetable-table th, 
+.timetable-table td {
+    padding: 8px;
+    border: 1px solid #e5e7eb;
+    vertical-align: top;
+    font-size: 13px;
+}
+
+/* 3. MOBILE: THU NHỎ & GỌN GÀNG */
+@media (max-width: 768px) {
+    .timetable-wrapper {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+
+    .timetable-table {
+        min-width: 600px; /* Mobile: Cho phép nhỏ hơn xíu */
+    }
+
+    /* Giảm kích thước chữ và ô */
+    .timetable-table th, 
+    .timetable-table td {
+        padding: 4px 2px !important;
+        font-size: 10px !important;
+    }
+
+    /* Các thẻ class-card (môn học) */
+    .class-card {
+        padding: 4px !important;
+        font-size: 10px !important;
+        margin: 1px !important;
+    }
+    
+    .class-subject {
+        font-size: 10px !important;
+        font-weight: bold;
+        display: block;
+    }
+    
+    /* Ẩn bớt thông tin thừa hoặc làm nhỏ lại */
+    .class-room, .class-code {
+        font-size: 9px !important;
+        opacity: 0.8;
+    }
+}
