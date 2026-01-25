@@ -4831,39 +4831,31 @@ main {
     background-color: #ffe4e6;
 }
 
-/* ==================== TIMETABLE STYLES (COMPACT & SCROLLABLE) ==================== */
+/* ==================== TIMETABLE STYLES (BASE - DESKTOP/LAPTOP) ==================== */
 
-/* Wrapper to prevent layout overflow */
-/* 1. Giới hạn khung bao ngoài và cho phép cuộn */
+/* Wrapper - Desktop base styles */
 .timetable-wrapper {
     width: 100%;
-    /* Chỉ chiếm 100% chiều rộng màn hình */
     overflow-x: auto;
-    /* Cho phép cuộn ngang nếu bảng quá to */
     -webkit-overflow-scrolling: touch;
-    /* Cuộn mượt hơn trên iOS */
-    border-radius: 8px !important;
-    margin-bottom: 15px !important;
-    background: #fff;
-    /* Đảm bảo nền trắng để không bị lẫn background */
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    margin-bottom: 20px;
 }
 
-/* 2. Điều chỉnh bảng bên trong */
+/* Table - Desktop base styles */
 .timetable-table {
     width: 100%;
-    /* Chiếm hết khung */
-    min-width: 600px !important;
-    /* Giữ độ rộng tối thiểu để chữ không bị co quá nhỏ */
+    min-width: 900px;
     border-collapse: collapse;
-    /* Gọn đường viền */
 }
 
 .timetable-table th,
 .timetable-table td {
-    padding: 8px;
-    /* Reduce padding for compact view */
+    padding: 12px 8px;
     font-size: 13px;
-    /* Compact font */
     border: 1px solid #e5e7eb !important;
     text-align: center;
     vertical-align: top;
@@ -4876,54 +4868,56 @@ main {
     position: sticky;
     top: 0;
     z-index: 10;
+    padding: 14px 8px;
 }
 
 .session-col {
     background: #f9fafb;
     font-weight: 600;
     color: #374151;
-    min-width: 80px;
+    min-width: 90px;
 }
 
 .timetable-cell {
     background: #ffffff;
-    min-height: 100px;
+    min-height: 120px;
     position: relative;
 }
 
 .timetable-cell-content {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 4px;
+    gap: 8px;
+    padding: 6px;
 }
 
-/* Compact class card */
+/* Class card - Desktop */
 .class-card {
-    padding: 6px;
-    font-size: 12px;
-    border-radius: 6px;
+    padding: 10px;
+    font-size: 13px;
+    border-radius: 8px;
     position: relative;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
+    margin-bottom: 6px;
 }
 
 .class-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .class-subject {
-    font-weight: 600;
-    margin-bottom: 3px;
-    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    font-size: 14px;
 }
 
 .class-room,
 .class-time {
-    font-size: 11px;
-    opacity: 0.85;
-    margin: 2px 0;
+    font-size: 12px;
+    opacity: 0.9;
+    margin: 3px 0;
 }
 
 .btn-delete-class {
