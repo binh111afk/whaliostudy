@@ -358,7 +358,7 @@ export const Timetable = {
         const styleTag = document.createElement('style');
         styleTag.id = 'timetable-injected-styles';
         styleTag.textContent = `
-            /* --- CẤU TRÚC BẢNG TỔNG THỂ --- */
+            /* --- CẤU TRÚC BẢNG --- */
             .timetable-wrapper {
                 width: 100%;
                 background: #ffffff;
@@ -371,7 +371,7 @@ export const Timetable = {
 
             .timetable-table {
                 width: 100%;
-                min-width: 1400px;
+                min-width: 1200px;
                 table-layout: auto;
                 border-collapse: separate; 
                 border-spacing: 0;
@@ -393,11 +393,11 @@ export const Timetable = {
             .timetable-table thead th {
                 background-color: #6366f1;
                 color: #ffffff;
-                padding: 14px 12px;
-                font-size: 13px;
+                padding: 12px 8px;
+                font-size: 12px;
                 font-weight: 600;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
+                letter-spacing: 0.3px;
                 position: sticky;
                 top: 0;
                 z-index: 20;
@@ -406,15 +406,15 @@ export const Timetable = {
 
             /* CỘT SÁNG/CHIỀU/TỐI */
             .timetable-table .session-col {
-                width: 80px;
-                min-width: 80px;
+                width: 70px;
+                min-width: 70px;
                 background-color: #f8fafc;
                 color: #475569;
                 font-weight: 700;
                 text-align: center;
                 vertical-align: middle;
                 text-transform: uppercase;
-                font-size: 12px;
+                font-size: 11px;
                 position: sticky;
                 left: 0;
                 z-index: 10;
@@ -424,9 +424,9 @@ export const Timetable = {
             /* --- Ô CHỨA MÔN HỌC --- */
             .timetable-cell {
                 background-color: #ffffff;
-                min-height: 140px;
+                min-height: 100px;
                 vertical-align: top;
-                padding: 10px;
+                padding: 6px;
                 width: auto;
             }
 
@@ -434,75 +434,75 @@ export const Timetable = {
                 height: 100%;
                 display: flex;
                 flex-direction: column;
-                gap: 10px;
+                gap: 6px;
             }
 
-            /* --- THẺ MÔN HỌC --- */
+            /* --- THẺ MÔN HỌC (COMPACT) --- */
             .class-card {
-                padding: 14px 12px;
-                border-radius: 8px;
+                padding: 8px 10px;
+                border-radius: 6px;
                 position: relative;
                 cursor: pointer;
                 transition: all 0.2s ease;
-                border-left: 4px solid rgba(0,0,0,0.2);
-                box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+                border-left: 3px solid rgba(0,0,0,0.15);
+                box-shadow: 0 1px 3px rgba(0,0,0,0.06);
                 display: block;
-                min-height: 110px;
+                min-height: 85px;
                 width: 100%;
             }
 
             .class-card:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
                 z-index: 5;
             }
 
-            /* Tên môn học */
+            /* Tên môn học - COMPACT */
             .class-subject {
                 font-weight: 700;
-                font-size: 15px;
+                font-size: 13px;
                 color: #1e40af;
-                margin-bottom: 12px;
-                line-height: 1.4;
+                margin-bottom: 8px;
+                line-height: 1.3;
                 word-wrap: break-word;
                 display: block;
                 text-align: left;
             }
 
-            /* Nhóm thông tin chi tiết */
+            /* Nhóm thông tin chi tiết - COMPACT */
             .class-info-group {
                 display: flex;
                 flex-direction: column;
-                gap: 6px;
+                gap: 4px;
                 width: 100%;
             }
 
-            /* Dòng thông tin (PHÒNG, CƠ SỞ, GIỜ, THỜI GIAN) */
+            /* Dòng thông tin - COMPACT */
             .class-detail {
                 display: flex;
                 align-items: baseline;
                 justify-content: flex-start;
-                font-size: 13px;
+                font-size: 11px;
                 color: #334155;
-                gap: 6px;
+                gap: 4px;
                 width: 100%;
             }
             
-            /* Nhãn (PHÒNG:, CƠ SỞ:, GIỜ:) */
+            /* Nhãn - COMPACT */
             .class-detail-label {
                 font-weight: 700;
                 color: #475569;
                 text-transform: uppercase;
-                font-size: 11px;
-                min-width: 70px;
+                font-size: 10px;
+                min-width: 55px;
                 flex-shrink: 0;
             }
             
-            /* Giá trị (A234, CS1, 06:30...) */
+            /* Giá trị - COMPACT */
             .class-detail-value {
                 font-weight: 600;
                 color: #1e293b;
-                font-size: 13px;
+                font-size: 11px;
                 flex: 1;
                 word-wrap: break-word;
             }
@@ -510,10 +510,10 @@ export const Timetable = {
             /* Nút chỉnh sửa */
             .btn-edit-class {
                 position: absolute;
-                top: 6px;
-                right: 34px;
-                width: 22px;
-                height: 22px;
+                top: 4px;
+                right: 28px;
+                width: 20px;
+                height: 20px;
                 background: white;
                 border: 1px solid #cbd5e1;
                 color: #6366f1;
@@ -524,16 +524,16 @@ export const Timetable = {
                 cursor: pointer;
                 opacity: 0;
                 transition: all 0.2s;
-                font-size: 12px;
+                font-size: 11px;
             }
 
             /* Nút xóa */
             .btn-delete-class {
                 position: absolute;
-                top: 6px;
-                right: 6px;
-                width: 22px;
-                height: 22px;
+                top: 4px;
+                right: 4px;
+                width: 20px;
+                height: 20px;
                 background: white;
                 border: 1px solid #fecaca;
                 color: #ef4444;
@@ -544,7 +544,7 @@ export const Timetable = {
                 cursor: pointer;
                 opacity: 0;
                 transition: all 0.2s;
-                font-size: 12px;
+                font-size: 11px;
             }
 
             .class-card:hover .btn-delete-class,
@@ -576,15 +576,15 @@ export const Timetable = {
             .timetable-table thead th.is-today::after {
                 content: "HÔM NAY";
                 display: block;
-                font-size: 9px;
+                font-size: 8px;
                 font-weight: 700;
                 color: #ffffff;
                 background: #dc2626;
-                padding: 3px 8px;
-                border-radius: 10px;
-                margin-top: 4px;
+                padding: 2px 6px;
+                border-radius: 8px;
+                margin-top: 3px;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
+                letter-spacing: 0.3px;
             }
 
             /* Animation */
