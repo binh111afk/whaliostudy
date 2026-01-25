@@ -358,22 +358,21 @@ export const Timetable = {
         const styleTag = document.createElement('style');
         styleTag.id = 'timetable-injected-styles';
         styleTag.textContent = `
-            /* --- 1. CẤU TRÚC BẢNG (KÉO DÃN BỀ NGANG) --- */
+            /* --- CẤU TRÚC BẢNG TỔNG THỂ --- */
             .timetable-wrapper {
                 width: 100%;
                 background: #ffffff;
                 border-radius: 12px;
                 box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-                overflow-x: auto; /* Thanh cuộn ngang hoạt động ở đây */
+                overflow-x: auto;
                 border: 1px solid #e2e8f0;
                 margin-bottom: 30px;
-                padding-bottom: 5px; /* Để thanh cuộn không dính sát bảng */
             }
 
             .timetable-table {
-                width: 100% !important;
-                min-width: 1600px; /* 🔥 ÉP RỘNG RA 1600px: Mỗi cột sẽ rất thoáng */
-                table-layout: fixed;
+                width: 100%;
+                min-width: 1400px;
+                table-layout: auto;
                 border-collapse: separate; 
                 border-spacing: 0;
             }
@@ -386,225 +385,220 @@ export const Timetable = {
             }
             
             .timetable-table th:last-child,
-            .timetable-table td:last-child { border-right: none; }
+            .timetable-table td:last-child { 
+                border-right: none; 
+            }
 
             /* --- HEADER --- */
             .timetable-table thead th {
-                background-color: #1e293b;
-                color: #f8fafc;
-                padding: 16px 10px;
-                font-size: 14px;
-                font-weight: 700;
+                background-color: #6366f1;
+                color: #ffffff;
+                padding: 14px 12px;
+                font-size: 13px;
+                font-weight: 600;
                 text-transform: uppercase;
-                letter-spacing: 1px;
+                letter-spacing: 0.5px;
                 position: sticky;
                 top: 0;
                 z-index: 20;
+                text-align: center;
             }
 
-            /* CỘT SÁNG/CHIỀU */
+            /* CỘT SÁNG/CHIỀU/TỐI */
             .timetable-table .session-col {
-                width: 90px;
+                width: 80px;
+                min-width: 80px;
                 background-color: #f8fafc;
                 color: #475569;
-                font-weight: 800;
+                font-weight: 700;
                 text-align: center;
                 vertical-align: middle;
                 text-transform: uppercase;
-                font-size: 13px;
+                font-size: 12px;
                 position: sticky;
                 left: 0;
                 z-index: 10;
                 border-right: 2px solid #e2e8f0;
-                box-shadow: 2px 0 5px rgba(0,0,0,0.05); /* Bóng nhẹ để tách biệt khi cuộn */
             }
 
             /* --- Ô CHỨA MÔN HỌC --- */
             .timetable-cell {
                 background-color: #ffffff;
-                min-height: 120px; /* Chiều cao vừa phải */
+                min-height: 140px;
                 vertical-align: top;
-                padding: 8px; /* Tăng padding để thẻ không dính lề */
+                padding: 10px;
+                width: auto;
             }
 
             .timetable-cell-content {
                 height: 100%;
                 display: flex;
                 flex-direction: column;
-                gap: 8px;
+                gap: 10px;
             }
 
             /* --- THẺ MÔN HỌC --- */
-            .class-card {                 /* <--- THÊM DÒNG NÀY VÀO */
-                padding: 12px 3px;       /* Bây giờ padding mới có tác dụng */
-                border-radius: 10px;
+            .class-card {
+                padding: 14px 12px;
+                border-radius: 8px;
                 position: relative;
                 cursor: pointer;
-                transition: transform 0.2s;
-                border: none; 
-                border-left: 4px solid rgba(0,0,0,0.15);
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
-                background-clip: padding-box;
-                
-                /* Flexbox để căn giữa tiêu đề */
-                display: flex;
-                flex-direction: column;
-                align-items: center;     
-                justify-content: center; 
-                text-align: center;      
-                min-height: 100px;       
-                height: 100%;
+                transition: all 0.2s ease;
+                border-left: 4px solid rgba(0,0,0,0.2);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+                display: block;
+                min-height: 110px;
+                width: 100%;
             }
 
             .class-card:hover {
-                transform: translateY(-3px);
-                box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1);
+                transform: translateY(-2px);
+                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
                 z-index: 5;
             }
 
+            /* Tên môn học */
             .class-subject {
-                font-weight: 900;          /* Đậm nhất có thể */
-                font-size: 14px;           /* To hơn chút nữa */
-                letter-spacing: 0.5px;     /* Giãn chữ ra một chút cho thoáng */
-                margin-bottom: 10px;
-                line-height: 1.3;
-                width: 100%;
-                
-                /* 🔥 WOW FACTOR 1: MÀU CHUYỂN SẮC (Xanh đậm -> Tím nhạt) */
-                background: linear-gradient(135deg, #1e3a8a 0%, #4f46e5 100%);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                background-clip: text;
-                
-                /* 🔥 WOW FACTOR 2: BÓNG TRẮNG VIỀN MỊN (Giúp chữ nổi lên trên nền màu) */
-                filter: drop-shadow(0 2px 0px rgba(255, 255, 255, 0.9));
-
-                /* Logic xuống dòng giữ nguyên */
-                white-space: normal;      
+                font-weight: 700;
+                font-size: 15px;
+                color: #1e40af;
+                margin-bottom: 12px;
+                line-height: 1.4;
                 word-wrap: break-word;
+                display: block;
+                text-align: left;
             }
 
+            /* Nhóm thông tin chi tiết */
             .class-info-group {
                 display: flex;
                 flex-direction: column;
-                align-items: flex-start; /* 🔥 QUAN TRỌNG: Nội dung bên trong căn trái để thẳng hàng */
-                width: fit-content;      /* Co lại vừa khít nội dung */
-                margin: 5px auto 0;      /* Căn giữa khối này trong thẻ + cách tiêu đề 5px */
-                padding: 0 5px;          /* Đệm chút lề 2 bên */
+                gap: 6px;
+                width: 100%;
             }
 
-            /* --- DÒNG THÔNG TIN (PHÒNG - GIỜ) --- */
-            /* Flexbox giúp Label và Value nằm ngang hàng thẳng tắp */
+            /* Dòng thông tin (PHÒNG, CƠ SỞ, GIỜ, THỜI GIAN) */
             .class-detail {
-                display: flex; 
-                align-items: baseline; 
-                justify-content: flex-start; /* 🔥 SỬA LẠI: Bỏ center, dùng flex-start */
-                font-size: 15px;             /* 🔥 Tăng cỡ chữ lên cho dễ đọc */
-                margin-bottom: 6px;
+                display: flex;
+                align-items: baseline;
+                justify-content: flex-start;
+                font-size: 13px;
                 color: #334155;
+                gap: 6px;
                 width: 100%;
             }
             
-            /* Nhãn (PHÒNG, GIỜ) */
+            /* Nhãn (PHÒNG:, CƠ SỞ:, GIỜ:) */
             .class-detail-label {
-                font-weight: 800;
-                color: #1e3a8a; /* Xanh đậm */
+                font-weight: 700;
+                color: #475569;
                 text-transform: uppercase;
-                font-size: 12px;
-                
-                /* Cố định chiều rộng nhãn để các dòng thẳng hàng */
-                min-width: 65px; 
-                margin-right: 4px;
-                text-align: left;
+                font-size: 11px;
+                min-width: 70px;
+                flex-shrink: 0;
             }
             
-            /* Nội dung (A234, 06:30...) */
+            /* Giá trị (A234, CS1, 06:30...) */
             .class-detail-value {
                 font-weight: 600;
-                color: #000;
-                white-space: nowrap; /* 🔥 QUAN TRỌNG: Cấm xuống dòng */
-                font-size: 14px;
+                color: #1e293b;
+                font-size: 13px;
+                flex: 1;
+                word-wrap: break-word;
             }
 
-            /* Nút xóa */
-            .btn-delete-class {
+            /* Nút chỉnh sửa */
+            .btn-edit-class {
                 position: absolute;
-                top: 8px;
-                right: 8px;
-                width: 24px;
-                height: 24px;
+                top: 6px;
+                right: 34px;
+                width: 22px;
+                height: 22px;
                 background: white;
-                border: 1px solid #fee2e2;
-                color: #ef4444;
-                border-radius: 6px;
+                border: 1px solid #cbd5e1;
+                color: #6366f1;
+                border-radius: 4px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 cursor: pointer;
                 opacity: 0;
-                transition: 0.2s;
+                transition: all 0.2s;
+                font-size: 12px;
             }
 
-            .btn-edit-class {
+            /* Nút xóa */
+            .btn-delete-class {
                 position: absolute;
-                top: 8px;
-                right: 38px; /* Nằm bên trái nút xóa (8px + 24px + 6px gap) */
-                width: 24px;
-                height: 24px;
+                top: 6px;
+                right: 6px;
+                width: 22px;
+                height: 22px;
                 background: white;
-                border: 1px solid #e0e7ff;
-                color: #4f46e5; /* Màu xanh tím */
-                border-radius: 6px;
+                border: 1px solid #fecaca;
+                color: #ef4444;
+                border-radius: 4px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 cursor: pointer;
-                opacity: 0; /* Ẩn mặc định */
-                transition: 0.2s;
+                opacity: 0;
+                transition: all 0.2s;
+                font-size: 12px;
             }
 
             .class-card:hover .btn-delete-class,
             .class-card:hover .btn-edit-class { 
-                opacity: 1; /* Hiện khi di chuột vào thẻ */
+                opacity: 1;
             }
             
-            .btn-edit-class:hover { background: #4f46e5; color: white; }
-
-            .class-card:hover .btn-delete-class { opacity: 1; }
-            .btn-delete-class:hover { background: #ef4444; color: white; }
-
-            /* --- HIGHLIGHT CURRENT DAY --- */
-            .is-today {
-                position: relative;
-                z-index: 10;
-                border: 2px solid #8b5cf6 !important;
+            .btn-edit-class:hover { 
+                background: #6366f1; 
+                color: white; 
+                border-color: #6366f1;
             }
 
-            /* Add "Hôm nay" badge to the header of current day */
+            .btn-delete-class:hover { 
+                background: #ef4444; 
+                color: white; 
+                border-color: #ef4444;
+            }
+
+            /* --- HIGHLIGHT HÔM NAY --- */
+            .is-today {
+                background-color: #fef3c7 !important;
+            }
+
+            .timetable-table thead th.is-today {
+                background-color: #f59e0b !important;
+            }
+
             .timetable-table thead th.is-today::after {
-                content: "Hôm nay";
+                content: "HÔM NAY";
                 display: block;
-                font-size: 10px;
+                font-size: 9px;
                 font-weight: 700;
                 color: #ffffff;
-                background: #8b5cf6;
-                padding: 4px 12px;
-                border-radius: 12px;
-                margin-top: 6px;
+                background: #dc2626;
+                padding: 3px 8px;
+                border-radius: 10px;
+                margin-top: 4px;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
-                box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
             }
 
-            /* Enhance current day cells with subtle animation */
+            /* Animation */
+            @keyframes pulse-today {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.95; }
+            }
+
             .timetable-table tbody td.is-today {
                 animation: pulse-today 3s ease-in-out infinite;
             }
-
-            
         `;
         document.head.appendChild(styleTag);
-        console.log('✅ Đã nạp CSS: Bảng rộng 1600px + Thanh cuộn ngang');
+        console.log('✅ Timetable CSS loaded successfully');
     },
 
     async loadTimetable() {
