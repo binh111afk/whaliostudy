@@ -453,7 +453,7 @@ td.timetable-cell {
 
 /* === CLASS CARD === */
 .class-card {
-    padding: 12px 14px;
+    padding: 14px 16px;
     border-radius: 8px;
     position: relative;
     cursor: pointer;
@@ -474,7 +474,7 @@ td.timetable-cell {
 /* === CLASS SUBJECT (Tên môn học) === */
 .class-subject {
     font-weight: 700;
-    font-size: 16px;
+    font-size: 17px;
     color: #1e40af;
     margin-bottom: 10px;
     line-height: 1.3;
@@ -495,9 +495,9 @@ td.timetable-cell {
 .class-detail {
     display: flex;
     align-items: center;
-    font-size: 11px;
+    font-size: 12px;
     color: #334155;
-    gap: 4px;
+    gap: 5px;
     flex: 0 0 auto;
 }
 
@@ -506,7 +506,7 @@ td.timetable-cell {
     font-weight: 700;
     color: #1e293b;
     text-transform: uppercase;
-    font-size: 9px;
+    font-size: 10px;
     min-width: auto;
     flex-shrink: 0;
 }
@@ -515,7 +515,7 @@ td.timetable-cell {
 .class-detail-value {
     font-weight: 600;
     color: #1e293b;
-    font-size: 11px;
+    font-size: 12px;
     flex: 0 1 auto;
 }
 
