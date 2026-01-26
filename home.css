@@ -4835,51 +4835,103 @@ main {
 
 /* Wrapper - Container for horizontal scroll */
 .timetable-wrapper {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    border-radius: 8px;
+    width: 100% !important;
+    max-width: calc(100vw - 320px) !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    
+    /* Các style làm đẹp giữ nguyên */
+    border-radius: 12px;
     margin-bottom: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    background: white;
+    padding-bottom: 10px; /* Tăng padding dưới một chút để thanh cuộn dễ bấm */
+}
+
+/* Tùy chỉnh thanh cuộn cho đẹp (Webkit browsers: Chrome, Edge, Safari) */
+.timetable-wrapper::-webkit-scrollbar {
+    height: 10px; /* Độ cao thanh cuộn ngang */
+}
+
+.timetable-wrapper::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 8px;
+}
+
+.timetable-wrapper::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 8px;
+    border: 2px solid #f1f5f9;
+}
+
+.timetable-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 
 /* Table - Desktop/Laptop Base Styles */
 .timetable-table {
     width: 100%;
-    min-width: 800px;  /* Desktop: prevent squishing */
-    border-collapse: collapse;
+    /* QUAN TRỌNG: Tăng min-width lên lớn hơn màn hình (VD: 1400px hoặc 1600px) 
+       để ép bảng phải dãn rộng ra và xuất hiện thanh cuộn */
+    min-width: 1400px !important; 
+    table-layout: auto !important;
+    border-collapse: separate; /* Dùng separate để border-radius hoạt động tốt hơn */
+    border-spacing: 0;
     background: white;
 }
 
 .timetable-table th,
 .timetable-table td {
-    padding: 12px 8px;
-    font-size: 13px;
-    border: 1px solid #e5e7eb;
+    padding: 24px 20px !important; /* Tăng padding cho thoáng */
+    font-size: 14px;
+    border: 1px solid #e2e8f0;
     text-align: center;
     vertical-align: top;
+    min-width: 180px !important;
+    width: auto !important;
 }
 
 .timetable-table th {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    font-weight: 600;
+    /* Trừ cột buổi ra, các cột thứ (2-CN) sẽ rộng tối thiểu 180px */
+    min-width: 180px !important; 
+    background: #f8fafc;
+    color: #334155;
+    font-weight: 700;
     position: sticky;
     top: 0;
     z-index: 10;
-    padding: 14px 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e2e8f0;
 }
 
 .session-col {
-    background: #f9fafb;
-    font-weight: 600;
-    color: #374151;
-    min-width: 90px;
+    font-weight: 800 !important;
+    width: 120px;
+    min-width: 120px; /* Cố định chiều rộng cột buổi */
+    max-width: 120px;
+    
+    /* Sticky: Giữ cột này đứng yên khi cuộn ngang */
+    position: sticky;
+    left: 0;
+    z-index: 20; /* Cao hơn các cột khác để đè lên khi cuộn */
+    border-right: 2px solid #e2e8f0; /* Đường viền rõ hơn */
+    
+    /* Căn giữa chữ SÁNG/CHIỀU/TỐI */
+    vertical-align: middle !important; 
+    font-size: 16px !important;
 }
 
-.timetable-cell {
+.timetable-table .timetable-cell,
+td.timetable-cell {
     background: #ffffff;
-    min-height: 120px;
-    position: relative;
+    min-height: 250px !important; /* Tăng chiều cao tối thiểu cho ô để dễ nhìn */
+    height: auto !important;
+    transition: background 0.2s;
+}
+
+.timetable-cell:hover {
+    background: #f8fafc; /* Hover nhẹ vào ô */
 }
 
 .timetable-cell-content {
@@ -4887,6 +4939,7 @@ main {
     flex-direction: column;
     gap: 8px;
     padding: 6px;
+    min-height: 250px !important;
 }
 
 /* Class card - Desktop */
@@ -4978,7 +5031,7 @@ main {
     }
 
     .timetable-cell {
-        min-height: 70px;
+        min-height: 100px !important;
     }
 
     .timetable-cell-content {
@@ -8311,6 +8364,12 @@ select {
     font-size: 13px;
 }
 
+#btn-delete-all:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
 .btn-open-import-v2 {
     background: #10b981;
     color: white;
@@ -8324,6 +8383,12 @@ select {
     font-weight: 600;
     transition: all 0.2s;
     font-size: 13px;
+}
+
+.btn-open-import-v2:hover {
+    background: #059669;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 .btn-add-class {
@@ -8426,11 +8491,6 @@ select {
     }
 }
 
-/* Timetable wrapper: ensure proper scrolling */
-.timetable-wrapper {
-    border-radius: 8px !important;
-    margin-bottom: 15px !important;
-}
 
 /* Table: smaller cells on mobile */
 .timetable-table {

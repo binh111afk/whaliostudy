@@ -223,8 +223,8 @@ export const Timetable = {
                 const day = currentDate.getDate().toString().padStart(2, '0');
                 const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
 
-                // Update innerHTML to preserve the dd/mm format
-                dateElement.innerHTML = `${day}/${month}`;
+                // Update textContent instead of innerHTML to preserve existing styles
+                dateElement.textContent = `${day}/${month}`;
             }
         });
 
@@ -359,237 +359,258 @@ export const Timetable = {
         styleTag.id = 'timetable-injected-styles';
         styleTag.textContent = `
             /* === TIMETABLE STRUCTURE === */
-            .timetable-wrapper {
-                width: 100%;
-                background: #ffffff;
-                border-radius: 12px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                overflow-x: auto;
-                border: 1px solid #e2e8f0;
-                margin-bottom: 30px;
-            }
+.timetable-wrapper {
+    width: 100% !important;
+    max-width: calc(100vw - 320px) !important;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 30px;
+}
 
-            .timetable-table {
-                width: 100%;
-                min-width: 1000px;
-                table-layout: auto;
-                border-collapse: separate;
-                border-spacing: 0;
-            }
+.timetable-table {
+    width: 100%;
+    min-width: 1400px !important;
+    table-layout: auto !important;
+    border-collapse: separate;
+    border-spacing: 0;
+}
 
-            .timetable-table th,
-            .timetable-table td {
-                border-bottom: 1px solid #e2e8f0;
-                border-right: 1px solid #e2e8f0;
-                padding: 0;
-            }
+.timetable-table th,
+.timetable-table td {
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    padding: 24px 20px !important;
+    min-width: 200px !important;
+    width: auto !important;
+}
 
-            .timetable-table th:last-child,
-            .timetable-table td:last-child {
-                border-right: none;
-            }
+.timetable-table th:last-child,
+.timetable-table td:last-child {
+    border-right: none;
+}
 
-            /* === TABLE HEADER === */
-            .timetable-table thead th {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: #ffffff;
-                padding: 12px 8px;
-                font-size: 11px;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                position: sticky;
-                top: 0;
-                z-index: 20;
-                text-align: center;
-            }
+/* === TABLE HEADER === */
+.timetable-table thead th {
+    background: #1e293b;
+    color: #ffffff;
+    padding: 20px 16px;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    text-align: center;
+}
 
-            /* === SESSION COLUMN (SÁNG/CHIỀU/TỐI) === */
-            .timetable-table .session-col {
-                width: 65px;
-                min-width: 65px;
-                background-color: #f8fafc;
-                color: #64748b;
-                font-weight: 800;
-                text-align: center;
-                vertical-align: middle;
-                text-transform: uppercase;
-                font-size: 10px;
-                position: sticky;
-                left: 0;
-                z-index: 10;
-                border-right: 2px solid #e2e8f0;
-            }
+/* === HEADER DATE === */
+.header-date {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #fbbf24 !important;
+    margin-top: 5px !important;
+    text-transform: none !important;
+}
 
-            /* === TIMETABLE CELL === */
-            .timetable-cell {
-                background-color: #fefefe;
-                min-height: 110px;
-                vertical-align: top;
-                padding: 8px;
-            }
+/* === SESSION COLUMN (BUỔI/SÁNG/CHIỀU/TỐI) === */
+.timetable-table .session-col {
+    width: 120px;
+    min-width: 120px;
+    background-color: #1e293b;
+    color: #ffffff;
+    font-weight: 700;
+    text-align: center;
+    vertical-align: middle;
+    text-transform: uppercase;
+    font-size: 14px;
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    border-right: 2px solid #e2e8f0;
+}
 
-            .timetable-cell-content {
-                height: 100%;
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-            }
+/* === TIMETABLE CELL === */
+.timetable-table .timetable-cell,
+td.timetable-cell {
+    background-color: #fefefe !important;
+    min-height: 250px !important;
+    height: auto !important;
+    vertical-align: top !important;
+    padding: 18px !important;
+}
 
-            /* === CLASS CARD === */
-            .class-card {
-                padding: 10px 12px;
-                border-radius: 8px;
-                position: relative;
-                cursor: pointer;
-                transition: all 0.15s ease;
-                border-left: 4px solid;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-                display: block;
-                width: 100%;
-            }
+.timetable-cell-content {
+    min-height: 250px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+}
 
-            .class-card:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
-                z-index: 5;
-            }
+/* === CLASS CARD === */
+.class-card {
+    padding: 12px 14px;
+    border-radius: 8px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background-color: #fce7f3;
+    border-left: 4px solid #ec4899;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    display: block;
+    width: 100%;
+}
 
-            /* === CLASS SUBJECT (Tên môn học) === */
-            .class-subject {
-                font-weight: 700;
-                font-size: 14px;
-                color: #1e40af;
-                margin-bottom: 10px;
-                line-height: 1.3;
-                word-wrap: break-word;
-                display: block;
-            }
+.class-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+    z-index: 5;
+}
 
-            /* === CLASS INFO GROUP === */
-            .class-info-group {
-                display: flex;
-                flex-direction: column;
-                gap: 5px;
-                width: 100%;
-            }
+/* === CLASS SUBJECT (Tên môn học) === */
+.class-subject {
+    font-weight: 700;
+    font-size: 14px;
+    color: #1e40af;
+    margin-bottom: 10px;
+    line-height: 1.3;
+    word-wrap: break-word;
+    display: block;
+}
 
-            /* === CLASS DETAIL ROW === */
-            .class-detail {
-                display: flex;
-                align-items: center;
-                font-size: 12px;
-                color: #334155;
-                gap: 6px;
-            }
+/* === CLASS INFO GROUP === */
+.class-info-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
 
-            /* === DETAIL LABEL === */
-            .class-detail-label {
-                font-weight: 700;
-                color: #64748b;
-                text-transform: uppercase;
-                font-size: 10px;
-                min-width: 50px;
-                flex-shrink: 0;
-            }
+/* === CLASS DETAIL ROW === */
+.class-detail {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: #334155;
+    gap: 8px;
+}
 
-            /* === DETAIL VALUE === */
-            .class-detail-value {
-                font-weight: 600;
-                color: #1e293b;
-                font-size: 12px;
-                flex: 1;
-            }
+/* === DETAIL LABEL === */
+.class-detail-label {
+    font-weight: 700;
+    color: #1e293b;
+    text-transform: uppercase;
+    font-size: 11px;
+    min-width: 60px;
+    flex-shrink: 0;
+}
 
-            /* === EDIT BUTTON === */
-            .btn-edit-class {
-                position: absolute;
-                top: 5px;
-                right: 30px;
-                width: 20px;
-                height: 20px;
-                background: #ffffff;
-                border: 1px solid #cbd5e1;
-                color: #6366f1;
-                border-radius: 4px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                opacity: 0;
-                transition: all 0.2s;
-                font-size: 11px;
-            }
+/* === DETAIL VALUE === */
+.class-detail-value {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 13px;
+    flex: 1;
+}
 
-            /* === DELETE BUTTON === */
-            .btn-delete-class {
-                position: absolute;
-                top: 5px;
-                right: 5px;
-                width: 20px;
-                height: 20px;
-                background: #ffffff;
-                border: 1px solid #fecaca;
-                color: #ef4444;
-                border-radius: 4px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                opacity: 0;
-                transition: all 0.2s;
-                font-size: 11px;
-            }
+/* === EDIT BUTTON === */
+.btn-edit-class {
+    position: absolute;
+    top: 6px;
+    right: 32px;
+    width: 22px;
+    height: 22px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #6366f1;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s;
+    font-size: 12px;
+}
 
-            .class-card:hover .btn-delete-class,
-            .class-card:hover .btn-edit-class {
-                opacity: 1;
-            }
+/* === DELETE BUTTON === */
+.btn-delete-class {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    background: #ffffff;
+    border: 1px solid #fecaca;
+    color: #ef4444;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s;
+    font-size: 12px;
+}
 
-            .btn-edit-class:hover {
-                background: #6366f1;
-                color: #ffffff;
-                border-color: #6366f1;
-            }
+.class-card:hover .btn-delete-class,
+.class-card:hover .btn-edit-class {
+    opacity: 1;
+}
 
-            .btn-delete-class:hover {
-                background: #ef4444;
-                color: #ffffff;
-                border-color: #ef4444;
-            }
+.btn-edit-class:hover {
+    background: #6366f1;
+    color: #ffffff;
+    border-color: #6366f1;
+}
 
-            /* === TODAY HIGHLIGHT === */
-            .is-today {
-                background-color: #fef3c7 !important;
-            }
+.btn-delete-class:hover {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+}
 
-            .timetable-table thead th.is-today {
-                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
-            }
+/* === TODAY HIGHLIGHT === */
+.is-today {
+    background-color: transparent !important;
+}
 
-            .timetable-table thead th.is-today::after {
-                content: "HÔM NAY";
-                display: block;
-                font-size: 8px;
-                font-weight: 800;
-                color: #ffffff;
-                background: #dc2626;
-                padding: 2px 8px;
-                border-radius: 10px;
-                margin-top: 4px;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
-            }
+.timetable-table thead th.is-today {
+    background: #1e293b !important;
+}
 
-            @keyframes pulse-today {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.96; }
-            }
+.timetable-table thead th.is-today::after {
+    content: "HÔM NAY";
+    display: block;
+    font-size: 9px;
+    font-weight: 800;
+    color: #ffffff;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 3px 10px;
+    border-radius: 10px;
+    margin-top: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 15px rgba(102, 126, 234, 0.6), 0 0 30px rgba(118, 75, 162, 0.4);
+    animation: glow-pulse 2s ease-in-out infinite;
+}
 
-            .timetable-table tbody td.is-today {
-                animation: pulse-today 3s ease-in-out infinite;
-            }
+@keyframes glow-pulse {
+    0%, 100% { 
+        box-shadow: 0 0 15px rgba(102, 126, 234, 0.6), 0 0 30px rgba(118, 75, 162, 0.4);
+    }
+    50% { 
+        box-shadow: 0 0 20px rgba(102, 126, 234, 0.8), 0 0 40px rgba(118, 75, 162, 0.6);
+    }
+}
+
+.timetable-table tbody td.is-today {
+    background-color: transparent !important;
+}
         `;
         document.head.appendChild(styleTag);
         console.log('✅ Timetable CSS loaded successfully');
@@ -669,13 +690,13 @@ export const Timetable = {
                         <thead>
                             <tr>
                                 <th class="session-col">Buổi</th>
-                                <th data-day="2">THỨ 2<div class="header-date" id="date-2" style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">--/--</div></th>
-                                <th data-day="3">THỨ 3<div class="header-date" id="date-3" style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">--/--</div></th>
-                                <th data-day="4">THỨ 4<div class="header-date" id="date-4" style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">--/--</div></th>
-                                <th data-day="5">THỨ 5<div class="header-date" id="date-5" style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">--/--</div></th>
-                                <th data-day="6">THỨ 6<div class="header-date" id="date-6" style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">--/--</div></th>
-                                <th data-day="7">THỨ 7<div class="header-date" id="date-7" style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">--/--</div></th>
-                                <th data-day="CN">CN<div class="header-date" id="date-CN" style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">--/--</div></th>
+                                <th data-day="2">THỨ 2<div class="header-date" id="date-2" style="font-size: 13px; font-weight: 700; color: #fbbf24; margin-top: 5px;">--/--</div></th>
+                                <th data-day="3">THỨ 3<div class="header-date" id="date-3" style="font-size: 13px; font-weight: 700; color: #fbbf24; margin-top: 5px;">--/--</div></th>
+                                <th data-day="4">THỨ 4<div class="header-date" id="date-4" style="font-size: 13px; font-weight: 700; color: #fbbf24; margin-top: 5px;">--/--</div></th>
+                                <th data-day="5">THỨ 5<div class="header-date" id="date-5" style="font-size: 13px; font-weight: 700; color: #fbbf24; margin-top: 5px;">--/--</div></th>
+                                <th data-day="6">THỨ 6<div class="header-date" id="date-6" style="font-size: 13px; font-weight: 700; color: #fbbf24; margin-top: 5px;">--/--</div></th>
+                                <th data-day="7">THỨ 7<div class="header-date" id="date-7" style="font-size: 13px; font-weight: 700; color: #fbbf24; margin-top: 5px;">--/--</div></th>
+                                <th data-day="CN">CN<div class="header-date" id="date-CN" style="font-size: 13px; font-weight: 700; color: #fbbf24; margin-top: 5px;">--/--</div></th>
                             </tr>
                         </thead>
                         <tbody id="timetable-body"></tbody>
@@ -743,7 +764,7 @@ export const Timetable = {
                     return isMatch;
                 });
 
-                html += `<td class="timetable-cell">`;
+                html += `<td class="timetable-cell" style="min-height: 250px !important; height: auto !important; vertical-align: top !important; padding: 18px !important;">`;
 
                 if (classes.length > 0) {
                     console.log(`📍 Rendering ${classes.length} class(es) for Day ${day}, ${session.label}`);
