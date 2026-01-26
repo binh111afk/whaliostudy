@@ -479,6 +479,8 @@ td.timetable-cell {
     margin-bottom: 10px;
     line-height: 1.3;
     word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
     display: block;
 }
 
@@ -668,7 +670,10 @@ td.timetable-cell {
         margin-bottom: 3px !important;
         line-height: 1.2 !important;
         word-wrap: break-word !important;
+        word-break: break-word !important;
         overflow-wrap: break-word !important;
+        white-space: normal !important;
+        max-width: 100% !important;
     }
 
     .class-info-group {
@@ -689,7 +694,10 @@ td.timetable-cell {
     .class-detail-value {
         font-size: 8px !important;
         word-wrap: break-word !important;
+        word-break: break-word !important;
         overflow-wrap: break-word !important;
+        white-space: normal !important;
+        max-width: 100% !important;
     }
 
     .header-date {
@@ -865,7 +873,7 @@ td.timetable-cell {
                     return isMatch;
                 });
 
-                html += `<td class="timetable-cell" style="min-height: 250px !important; height: auto !important; vertical-align: top !important; padding: 18px !important;">`;
+                html += `<td class="timetable-cell">`;
 
                 if (classes.length > 0) {
                     console.log(`📍 Rendering ${classes.length} class(es) for Day ${day}, ${session.label}`);
