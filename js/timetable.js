@@ -474,7 +474,7 @@ td.timetable-cell {
 /* === CLASS SUBJECT (Tên môn học) === */
 .class-subject {
     font-weight: 700;
-    font-size: 14px;
+    font-size: 16px;
     color: #1e40af;
     margin-bottom: 10px;
     line-height: 1.3;
@@ -485,8 +485,9 @@ td.timetable-cell {
 /* === CLASS INFO GROUP === */
 .class-info-group {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px 12px;
     width: 100%;
 }
 
@@ -494,9 +495,10 @@ td.timetable-cell {
 .class-detail {
     display: flex;
     align-items: center;
-    font-size: 13px;
+    font-size: 11px;
     color: #334155;
-    gap: 8px;
+    gap: 4px;
+    flex: 0 0 auto;
 }
 
 /* === DETAIL LABEL === */
@@ -504,8 +506,8 @@ td.timetable-cell {
     font-weight: 700;
     color: #1e293b;
     text-transform: uppercase;
-    font-size: 11px;
-    min-width: 60px;
+    font-size: 9px;
+    min-width: auto;
     flex-shrink: 0;
 }
 
@@ -513,8 +515,8 @@ td.timetable-cell {
 .class-detail-value {
     font-weight: 600;
     color: #1e293b;
-    font-size: 13px;
-    flex: 1;
+    font-size: 11px;
+    flex: 0 1 auto;
 }
 
 /* === EDIT BUTTON === */
