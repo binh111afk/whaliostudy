@@ -613,6 +613,78 @@ td.timetable-cell {
 .timetable-table tbody td.is-today {
     background-color: transparent !important;
 }
+
+/* === MOBILE RESPONSIVE === */
+@media (max-width: 768px) {
+    .timetable-wrapper {
+        max-width: 100vw !important;
+        width: 100% !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+    }
+
+    .timetable-table {
+        min-width: 800px !important;
+    }
+
+    .timetable-table th,
+    .timetable-table td {
+        padding: 4px 3px !important;
+        min-width: 100px !important;
+    }
+
+    .timetable-table thead th {
+        font-size: 11px !important;
+        padding: 8px 4px !important;
+    }
+
+    .session-col {
+        width: 60px !important;
+        min-width: 60px !important;
+        font-size: 10px !important;
+    }
+
+    .timetable-cell {
+        min-height: 120px !important;
+        padding: 4px !important;
+    }
+
+    .timetable-cell-content {
+        min-height: 120px !important;
+        gap: 4px !important;
+        padding: 2px !important;
+    }
+
+    .class-card {
+        padding: 6px 8px !important;
+    }
+
+    .class-subject {
+        font-size: 12px !important;
+        margin-bottom: 4px !important;
+    }
+
+    .class-info-group {
+        gap: 4px 6px !important;
+    }
+
+    .class-detail {
+        font-size: 9px !important;
+    }
+
+    .class-detail-label {
+        font-size: 8px !important;
+    }
+
+    .class-detail-value {
+        font-size: 9px !important;
+    }
+
+    .header-date {
+        font-size: 9px !important;
+        margin-top: 2px !important;
+    }
+}
         `;
         document.head.appendChild(styleTag);
         console.log('✅ Timetable CSS loaded successfully');

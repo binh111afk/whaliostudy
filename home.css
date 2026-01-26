@@ -5013,9 +5013,17 @@ td.timetable-cell {
 
 /* ==================== MOBILE RESPONSIVE (< 768px) ==================== */
 @media (max-width: 768px) {
+    /* Wrapper chiếm toàn bộ màn hình trên mobile */
+    .timetable-wrapper {
+        max-width: 100vw !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        width: 100% !important;
+    }
+
     /* Table minimum width for mobile */
     .timetable-table {
-        min-width: 600px;  /* Mobile: smaller but readable */
+        min-width: 800px !important;  /* Mobile: smaller but readable */
     }
 
     /* Drastically reduce sizes for mobile friendliness */
@@ -5028,6 +5036,7 @@ td.timetable-cell {
 
     .timetable-table th {
         padding: 4px 2px;
+        font-size: 11px !important;
     }
 
     .timetable-cell {
@@ -5037,6 +5046,7 @@ td.timetable-cell {
     .timetable-cell-content {
         gap: 3px;
         padding: 3px;
+        min-height: 100px !important;
     }
 
     /* Class cards - compact and clean */
@@ -5050,9 +5060,22 @@ td.timetable-cell {
     }
 
     .class-subject {
-        font-size: 11px;
+        font-size: 11px !important;
         margin-bottom: 2px;
         line-height: 1.2;
+    }
+
+    .class-detail {
+        font-size: 8px !important;
+        gap: 2px !important;
+    }
+
+    .class-detail-label {
+        font-size: 7px !important;
+    }
+
+    .class-detail-value {
+        font-size: 8px !important;
     }
 
     .class-time,
