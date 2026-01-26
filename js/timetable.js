@@ -624,65 +624,92 @@ td.timetable-cell {
     }
 
     .timetable-table {
-        min-width: 800px !important;
+        min-width: 600px !important;
     }
 
     .timetable-table th,
     .timetable-table td {
-        padding: 4px 3px !important;
-        min-width: 100px !important;
+        padding: 3px 2px !important;
+        min-width: 80px !important;
+        font-size: 9px !important;
     }
 
     .timetable-table thead th {
-        font-size: 11px !important;
-        padding: 8px 4px !important;
+        font-size: 10px !important;
+        padding: 6px 3px !important;
+        line-height: 1.2 !important;
     }
 
     .session-col {
-        width: 60px !important;
-        min-width: 60px !important;
-        font-size: 10px !important;
+        width: 45px !important;
+        min-width: 45px !important;
+        font-size: 9px !important;
+        padding: 2px !important;
     }
 
     .timetable-cell {
-        min-height: 120px !important;
-        padding: 4px !important;
+        min-height: 140px !important;
+        padding: 3px !important;
     }
 
     .timetable-cell-content {
-        min-height: 120px !important;
-        gap: 4px !important;
+        min-height: 140px !important;
+        gap: 3px !important;
         padding: 2px !important;
     }
 
     .class-card {
-        padding: 6px 8px !important;
+        padding: 5px 6px !important;
+        margin-bottom: 2px !important;
     }
 
     .class-subject {
-        font-size: 12px !important;
-        margin-bottom: 4px !important;
+        font-size: 10px !important;
+        margin-bottom: 3px !important;
+        line-height: 1.2 !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
     }
 
     .class-info-group {
-        gap: 4px 6px !important;
+        gap: 2px 4px !important;
+        flex-wrap: wrap !important;
     }
 
     .class-detail {
-        font-size: 9px !important;
+        font-size: 8px !important;
+        gap: 2px !important;
+        line-height: 1.1 !important;
     }
 
     .class-detail-label {
-        font-size: 8px !important;
+        font-size: 7px !important;
     }
 
     .class-detail-value {
-        font-size: 9px !important;
+        font-size: 8px !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
     }
 
     .header-date {
-        font-size: 9px !important;
+        font-size: 8px !important;
         margin-top: 2px !important;
+    }
+
+    .btn-edit-class,
+    .btn-delete-class {
+        width: 18px !important;
+        height: 18px !important;
+        top: 3px !important;
+    }
+
+    .btn-edit-class {
+        right: 24px !important;
+    }
+
+    .btn-delete-class {
+        right: 3px !important;
     }
 }
         `;
