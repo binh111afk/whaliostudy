@@ -1596,6 +1596,9 @@ td.timetable-cell {
                 if (cleanSubject.includes('\n')) cleanSubject = cleanSubject.split('\n')[1] || cleanSubject;
                 if (cleanSubject.includes('-')) cleanSubject = cleanSubject.split('-')[1] || cleanSubject;
 
+                // Parse campus từ room number
+                const campus = this.parseCampusFromRoom(roomRaw);
+
                 importedClasses.push({
                     id: Date.now() + Math.random(), // Tạo ID tạm
                     subject: cleanSubject.trim(),
@@ -1604,6 +1607,7 @@ td.timetable-cell {
                     startPeriod: periodInfo.startPeriod,
                     numPeriods: periodInfo.numPeriods,
                     room: roomRaw || 'Online',
+                    campus: campus,
                     startDate: dateInfo.startDate, // Lưu ngày bắt đầu chuẩn
                     endDate: dateInfo.endDate,     // Lưu ngày kết thúc chuẩn
                     dateRangeDisplay: dateInfo.display,
@@ -1638,6 +1642,37 @@ td.timetable-cell {
             }
         }
         return null;
+    },
+
+    // Helper: Parse campus từ room number
+    parseCampusFromRoom(roomStr) {
+        if (!roomStr) return 'ADV';
+        
+        const room = String(roomStr).trim().toUpperCase();
+        
+        // Kiểm tra CVT.LTR -> Ngoài trường
+        if (room.includes('CVT.LTR') || room.includes('CVT')) {
+            return 'Ngoài trường';
+        }
+        
+        // Tách phần prefix trước dấu chấm đầu tiên
+        const parts = room.split('.');
+        if (parts.length >= 2) {
+            const prefix = parts[0].trim();
+            
+            // Kiểm tra nếu prefix chỉ là một chữ cái (như B, A, C) -> ADV
+            if (prefix.length === 1 && /^[A-Z]$/.test(prefix)) {
+                return 'ADV';
+            }
+            
+            // Nếu prefix có nhiều hơn 1 ký tự -> đó là tên cơ sở
+            if (prefix.length > 1) {
+                return prefix;
+            }
+        }
+        
+        // Nếu không có dấu chấm hoặc format không khớp -> ADV
+        return 'ADV';
     },
 
     // ==================== ADVANCED PERIOD PARSER ====================
