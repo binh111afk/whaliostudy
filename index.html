@@ -2240,11 +2240,10 @@
                         <input type="text" id="noteContent" class="form-input" placeholder="Nội dung ghi chú (VD: Nộp bài tập)">
                     </div>
                     <div class="form-group" style="margin-bottom: 12px;">
-                        <label class="form-label" style="font-size: 12px; display: flex; align-items: center; gap: 8px;">
-                            ⏰ Hạn chót (Tùy chọn) 
-                            <span style="font-size: 10px; color: #9ca3af;">← Click để chọn ngày giờ</span>
+                        <label class="form-label" style="font-size: 12px;">
+                            📅 Hạn chót (Tùy chọn)
                         </label>
-                        <input type="datetime-local" id="noteDeadline" class="form-input" style="cursor: pointer;">
+                        <input type="date" id="noteDeadline" class="form-input" style="cursor: pointer;">
                     </div>
                     <button type="button" onclick="Timetable.addNote()" 
                         style="width: 100%; background: #10b981; color: white; padding: 10px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">

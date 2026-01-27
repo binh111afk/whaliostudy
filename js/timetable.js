@@ -2309,9 +2309,14 @@ export const Timetable = {
         console.log('📝 Content value:', content);
         console.log('📝 Deadline input value:', deadlineInput, '| Type:', typeof deadlineInput, '| Length:', deadlineInput?.length);
         
-        // 🔥 FIX: Đảm bảo deadline được convert đúng
-        const deadline = deadlineInput && deadlineInput.trim() !== '' ? deadlineInput : null;
-        console.log('📝 Processed deadline:', deadline);
+        // 🔥 FIX: Nếu có ngày, thêm thời gian 23:59 (cuối ngày)
+        let deadline = null;
+        if (deadlineInput && deadlineInput.trim() !== '') {
+            // Input date trả về format YYYY-MM-DD, thêm thời gian 23:59
+            deadline = deadlineInput + 'T23:59';
+            console.log('📝 Converted deadline:', deadline);
+        }
+        console.log('📝 Final deadline:', deadline);
 
         if (!content) {
             Swal.fire('Lỗi', 'Vui lòng nhập nội dung ghi chú!', 'warning');
