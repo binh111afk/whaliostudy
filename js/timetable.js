@@ -2283,11 +2283,20 @@ export const Timetable = {
     },
 
     async addNote() {
-        const content = document.getElementById('noteContent')?.value?.trim();
-        const deadlineInput = document.getElementById('noteDeadline')?.value;
+        console.log('🚀 addNote() called!');
+        
+        const contentInput = document.getElementById('noteContent');
+        const deadlineInputEl = document.getElementById('noteDeadline');
+        
+        console.log('📝 Content element:', contentInput);
+        console.log('📝 Deadline element:', deadlineInputEl);
+        
+        const content = contentInput?.value?.trim();
+        const deadlineInput = deadlineInputEl?.value;
         
         // 🔥 DEBUG: Log deadline value
-        console.log('📝 Adding note with deadline input:', deadlineInput);
+        console.log('📝 Content value:', content);
+        console.log('📝 Deadline input value:', deadlineInput, '| Type:', typeof deadlineInput, '| Length:', deadlineInput?.length);
         
         // 🔥 FIX: Đảm bảo deadline được convert đúng
         const deadline = deadlineInput && deadlineInput.trim() !== '' ? deadlineInput : null;
