@@ -2483,12 +2483,14 @@ export const Timetable = {
             cls.notes.forEach(note => {
                 if (note.isDone) return; // Bỏ qua task đã xong
                 
-                const deadline = note.deadline ? new Date(note.deadline) : null;
-                const isOverdue = deadline && deadline < now;
+                // 🔥 FIX: Đảm bảo deadline là Date object hoặc null
+                const deadlineDate = note.deadline ? new Date(note.deadline) : null;
+                const isOverdue = deadlineDate && deadlineDate < now;
                 
                 // 🔥 FIX: Hiển thị TẤT CẢ ghi chú chưa xong (không chỉ trong 7 ngày)
                 allNotes.push({
                     ...note,
+                    deadline: deadlineDate, // 🔥 FIX: Lưu Date object thay vì string gốc
                     subject: cls.subject,
                     classId: cls._id || cls.id,
                     isOverdue
