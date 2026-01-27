@@ -1062,6 +1062,79 @@ footer {
     border-radius: 10px;
 }
 
+/* 🔥 MỚI: Smart Reminders Widget */
+.smart-reminders-widget {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #fcd34d;
+}
+
+.reminders-badge {
+    background: #ef4444;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    min-width: 20px;
+    text-align: center;
+}
+
+.reminders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.reminder-item {
+    background: white;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border-left: 3px solid #10b981;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.reminder-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.reminder-item--overdue {
+    border-left-color: #ef4444;
+    background: #fef2f2;
+}
+
+.reminder-subject {
+    font-size: 10px;
+    font-weight: 600;
+    color: #6366f1;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.reminder-content {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1f2937;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.reminder-deadline {
+    font-size: 11px;
+    color: #6b7280;
+}
+
+.reminder-deadline--overdue {
+    color: #ef4444;
+    font-weight: 600;
+}
+
 /* 1. Storage Styles */
 .storage-status {
     margin-bottom: 16px;

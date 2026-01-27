@@ -828,6 +828,22 @@
 
         <aside class="sidebar-right">
 
+            <!-- 🔥 MỚI: Smart Reminders Widget -->
+            <div class="widget-box smart-reminders-widget">
+                <div class="widget-header">
+                    <h3>
+                        <span style="margin-right: 4px;">📝</span>
+                        Nhắc Nhở
+                    </h3>
+                    <span id="reminders-count" class="reminders-badge" style="display: none;">0</span>
+                </div>
+                <div id="reminders-list" class="reminders-list">
+                    <p style="text-align: center; color: #9ca3af; font-size: 12px; padding: 16px;">
+                        Chưa có ghi chú nào
+                    </p>
+                </div>
+            </div>
+
             <div class="widget-box upcoming-event">
                 <div class="widget-header">
                     <h3>
@@ -2114,6 +2130,12 @@
                     <input type="text" id="classSubject" class="form-input" placeholder="Ví dụ: Toán cao cấp" required>
                 </div>
 
+                <!-- 🔥 MỚI: Tên giáo viên -->
+                <div class="form-group">
+                    <label class="form-label">👨‍🏫 Giáo viên (Tùy chọn)</label>
+                    <input type="text" id="classTeacher" class="form-input" placeholder="Ví dụ: ThS. Nguyễn Văn A">
+                </div>
+
                 <!-- Row 2: Phòng học | Thứ -->
                 <div class="form-grid-2">
                     <div class="form-group">
@@ -2204,6 +2226,46 @@
                     💾 Lưu Lớp Học
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- 🔥 MỚI: Class Notes Modal -->
+    <div class="modal-overlay" id="classNotesModal" style="display: none;">
+        <div class="modal-box" style="max-width: 500px; max-height: 85vh; display: flex; flex-direction: column;">
+            <button class="btn-close-modal" onclick="Timetable.closeNotesModal()">✕</button>
+            <div class="modal-header">
+                <h2>📝 Ghi chú & Nhắc nhở</h2>
+                <p id="notesModalSubject" style="color: #6366f1; font-weight: 600;"></p>
+            </div>
+            
+            <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
+                <!-- Add Note Form -->
+                <div style="background: #f8fafc; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+                    <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #374151;">➕ Thêm ghi chú mới</h4>
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <input type="text" id="noteContent" class="form-input" placeholder="Nội dung ghi chú (VD: Nộp bài tập)">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label" style="font-size: 12px;">⏰ Hạn chót (Tùy chọn)</label>
+                        <input type="datetime-local" id="noteDeadline" class="form-input">
+                    </div>
+                    <button type="button" onclick="Timetable.addNote()" 
+                        style="width: 100%; background: #10b981; color: white; padding: 10px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        ✓ Thêm Ghi chú
+                    </button>
+                </div>
+
+                <!-- Notes List -->
+                <div id="notesListContainer">
+                    <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #374151;">📋 Danh sách ghi chú</h4>
+                    <div id="notesList" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Notes will be rendered here -->
+                    </div>
+                    <p id="noNotesMessage" style="text-align: center; color: #9ca3af; font-size: 13px; padding: 20px 0;">
+                        Chưa có ghi chú nào
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 

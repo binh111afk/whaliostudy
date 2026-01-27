@@ -609,49 +609,71 @@ export const Timetable = {
     color: #374151;
 }
 
-/* === EDIT BUTTON === */
-.btn-edit-class {
+/* === NOTES BADGE === */
+.class-notes-badge {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 5;
+    animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* === CARD ACTIONS === */
+.class-card-actions {
     position: absolute;
     top: 6px;
-    right: 30px;
+    right: 6px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.class-card:hover .class-card-actions {
+    opacity: 1;
+}
+
+.class-card-actions button {
     width: 22px;
     height: 22px;
     background: #ffffff;
     border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 12px;
+}
+
+.btn-notes-class {
+    color: #10b981;
+    border-color: #d1fae5;
+}
+
+.btn-notes-class:hover {
+    background: #10b981;
+    color: #ffffff;
+    border-color: #10b981;
+}
+
+/* === EDIT BUTTON === */
+.btn-edit-class {
     color: #6366f1;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transition: all 0.2s ease;
-    font-size: 12px;
-}
-
-/* === DELETE BUTTON === */
-.btn-delete-class {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 22px;
-    height: 22px;
-    background: #ffffff;
-    border: 1px solid #fecaca;
-    color: #ef4444;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transition: all 0.2s ease;
-    font-size: 12px;
-}
-
-.class-card:hover .btn-delete-class,
-.class-card:hover .btn-edit-class {
-    opacity: 1;
+    border-color: #e0e7ff;
 }
 
 .btn-edit-class:hover {
@@ -660,10 +682,109 @@ export const Timetable = {
     border-color: #6366f1;
 }
 
+/* === DELETE BUTTON === */
+.btn-delete-class {
+    color: #ef4444;
+    border-color: #fecaca;
+}
+
 .btn-delete-class:hover {
     background: #ef4444;
     color: #ffffff;
     border-color: #ef4444;
+}
+
+/* === TEACHER DISPLAY === */
+.class-detail--teacher {
+    font-weight: 600;
+    color: #4f46e5;
+    font-size: 11px;
+}
+
+/* === NOTE ITEM STYLES === */
+.note-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.note-item:hover {
+    border-color: #6366f1;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.note-item--done {
+    background: #f9fafb;
+    opacity: 0.7;
+}
+
+.note-item--overdue {
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+
+.note-checkbox {
+    flex-shrink: 0;
+}
+
+.note-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #10b981;
+}
+
+.note-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.note-text {
+    font-size: 13px;
+    color: #1f2937;
+    line-height: 1.4;
+}
+
+.note-text--done {
+    text-decoration: line-through;
+    color: #9ca3af;
+}
+
+.note-deadline {
+    font-size: 11px;
+    color: #6b7280;
+}
+
+.note-deadline--overdue {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.note-delete-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    color: #d1d5db;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.note-delete-btn:hover {
+    background: #fef2f2;
+    color: #ef4444;
 }
 
 /* === TODAY HIGHLIGHT === */
@@ -1109,9 +1230,11 @@ export const Timetable = {
 
             if (data.success) {
                 this.currentTimetable = data.timetable || [];
+                this.classes = this.currentTimetable; // 🔥 Lưu vào classes để notes có thể truy cập
                 console.log(`✅ Timetable loaded: ${this.currentTimetable.length} classes`);
                 this.renderTimetable(); // Lọc theo ngày sẽ xử lý trong isClassInWeek()
                 this.highlightCurrentDay();
+                this.renderRemindersWidget(); // 🔥 MỚI: Render widget nhắc nhở
             } else {
                 console.warn('⚠️ Timetable load failed:', data.message);
                 this.currentTimetable = [];
@@ -1470,6 +1593,11 @@ export const Timetable = {
         const endTime = this.periodTimes[endPeriod]?.end || '23:59';
         const timeRange = cls.timeRange || `${startTime} - ${endTime}`;
 
+        // 🔥 MỚI: Đếm số ghi chú chưa xong
+        const notes = cls.notes || [];
+        const pendingNotes = notes.filter(n => !n.isDone).length;
+        const hasNotes = pendingNotes > 0;
+
         // Determine class status and apply appropriate CSS class
         let statusClass = '';
         let statusText = '';
@@ -1498,11 +1626,18 @@ export const Timetable = {
         // Use CSS variable for background color instead of inline style
         return `
             <div class="class-card ${cardStateClass}" style="--card-bg: ${bgColor}; background-color: var(--card-bg);" data-class-id="${classId}">
+                ${hasNotes ? `<span class="class-notes-badge" title="${pendingNotes} ghi chú chưa xong">📝${pendingNotes}</span>` : ''}
                 <div class="class-subject" title="${this.escapeHtml(cls.subject)}">
                     ${this.escapeHtml(cls.subject)}
                 </div>
                 
                 <div class="class-info-group">
+                    ${cls.teacher ? `
+                    <div class="class-detail class-detail--teacher">
+                        <span class="class-detail-label">👨‍🏫</span> 
+                        <span class="class-detail-value">${this.escapeHtml(cls.teacher)}</span>
+                    </div>
+                    ` : ''}
                     <div class="class-detail">
                         <span class="class-detail-label">Phòng:</span> 
                         <span class="class-detail-value">${this.escapeHtml(cls.room)}</span>
@@ -1529,15 +1664,19 @@ export const Timetable = {
                 </div>
                 ` : ''}
 
-                <button class="btn-edit-class" data-class-id="${classId}" title="Sửa môn này">
-                   <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                </button>
-
-                <button class="btn-delete-class" data-class-id="${classId}" title="Xóa môn này">
-                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                    </svg>
-                </button>
+                <div class="class-card-actions">
+                    <button class="btn-notes-class" data-class-id="${classId}" title="Ghi chú">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </button>
+                    <button class="btn-edit-class" data-class-id="${classId}" title="Sửa môn này">
+                       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    </button>
+                    <button class="btn-delete-class" data-class-id="${classId}" title="Xóa môn này">
+                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         `;
     },
@@ -1572,6 +1711,13 @@ export const Timetable = {
                 const btn = e.target.closest('.btn-edit-class');
                 const classId = btn.dataset.classId;
                 this.openEditModal(classId);
+            }
+
+            // 🔥 MỚI: Notes button click
+            if (e.target.closest('.btn-notes-class')) {
+                const btn = e.target.closest('.btn-notes-class');
+                const classId = btn.dataset.classId;
+                this.openNotesModal(classId);
             }
 
             // Delete class button
@@ -1626,6 +1772,10 @@ export const Timetable = {
         document.getElementById('classSession').value = cls.session;
         document.getElementById('classStartPeriod').value = cls.startPeriod;
         document.getElementById('classNumPeriods').value = cls.numPeriods;
+        
+        // 🔥 MỚI: Điền tên giáo viên
+        const teacherInput = document.getElementById('classTeacher');
+        if (teacherInput) teacherInput.value = cls.teacher || '';
 
         // CRITICAL FIX: Populate date fields if available
         const startDateInput = document.getElementById('classStartDate');
@@ -1673,6 +1823,10 @@ export const Timetable = {
         document.getElementById('classSession').value = 'morning';
         document.getElementById('classStartPeriod').value = '1';
         document.getElementById('classNumPeriods').value = '2';
+        
+        // 🔥 MỚI: Reset teacher field
+        const teacherInput = document.getElementById('classTeacher');
+        if (teacherInput) teacherInput.value = '';
 
         // --- TỰ ĐỘNG ĐIỀN NGÀY CỦA TUẦN HIỆN TẠI ---
         if (this.currentWeekStart) {
@@ -1747,6 +1901,10 @@ export const Timetable = {
         const session = document.getElementById('classSession').value;
         const startPeriod = parseInt(document.getElementById('classStartPeriod').value);
         const numPeriods = parseInt(document.getElementById('classNumPeriods').value);
+        
+        // 🔥 MỚI: Lấy tên giáo viên
+        const teacherElement = document.getElementById('classTeacher');
+        const teacher = teacherElement ? teacherElement.value.trim() : '';
 
         // Validate
         if (!subject || !room) {
@@ -1812,7 +1970,8 @@ export const Timetable = {
             session,
             startPeriod,
             numPeriods,
-            timeRange
+            timeRange,
+            teacher // 🔥 MỚI: Gửi tên giáo viên
         };
 
         // Add date range if provided
@@ -1943,6 +2102,339 @@ export const Timetable = {
         }
     },
 
+    // ==================== 🔥 MỚI: NOTES MANAGEMENT ====================
+    currentNotesClassId: null,
+
+    openNotesModal(classId) {
+        console.log('📝 Opening Notes Modal for class:', classId);
+        
+        // Tìm class trong dữ liệu
+        const cls = this.classes.find(c => (c._id || c.id) === classId);
+        if (!cls) {
+            console.error('❌ Class not found:', classId);
+            return;
+        }
+
+        this.currentNotesClassId = classId;
+
+        const modal = document.getElementById('classNotesModal');
+        const subjectEl = document.getElementById('notesModalSubject');
+        
+        if (modal) {
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('active'), 10);
+        }
+        
+        if (subjectEl) {
+            subjectEl.textContent = cls.subject;
+        }
+
+        // Render danh sách notes
+        this.renderNotesList(cls.notes || []);
+    },
+
+    closeNotesModal() {
+        const modal = document.getElementById('classNotesModal');
+        if (modal) {
+            modal.classList.remove('active');
+            setTimeout(() => modal.style.display = 'none', 300);
+        }
+        this.currentNotesClassId = null;
+        
+        // Reset form
+        const content = document.getElementById('noteContent');
+        const deadline = document.getElementById('noteDeadline');
+        if (content) content.value = '';
+        if (deadline) deadline.value = '';
+    },
+
+    renderNotesList(notes) {
+        const container = document.getElementById('notesList');
+        const noNotesMsg = document.getElementById('noNotesMessage');
+        
+        if (!container) return;
+
+        if (!notes || notes.length === 0) {
+            container.innerHTML = '';
+            if (noNotesMsg) noNotesMsg.style.display = 'block';
+            return;
+        }
+
+        if (noNotesMsg) noNotesMsg.style.display = 'none';
+
+        // Sắp xếp: Chưa xong trước, deadline gần trước
+        const sortedNotes = [...notes].sort((a, b) => {
+            if (a.isDone !== b.isDone) return a.isDone ? 1 : -1;
+            if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline);
+            return 0;
+        });
+
+        container.innerHTML = sortedNotes.map(note => {
+            const deadlineStr = note.deadline 
+                ? new Date(note.deadline).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
+                : '';
+            const isOverdue = note.deadline && !note.isDone && new Date(note.deadline) < new Date();
+            
+            return `
+                <div class="note-item ${note.isDone ? 'note-item--done' : ''} ${isOverdue ? 'note-item--overdue' : ''}" 
+                     data-note-id="${note.id}">
+                    <div class="note-checkbox">
+                        <input type="checkbox" ${note.isDone ? 'checked' : ''} 
+                               onchange="Timetable.toggleNote('${note.id}')" 
+                               title="${note.isDone ? 'Đánh dấu chưa xong' : 'Đánh dấu đã xong'}">
+                    </div>
+                    <div class="note-content">
+                        <span class="note-text ${note.isDone ? 'note-text--done' : ''}">${this.escapeHtml(note.content)}</span>
+                        ${deadlineStr ? `<span class="note-deadline ${isOverdue ? 'note-deadline--overdue' : ''}">⏰ ${deadlineStr}</span>` : ''}
+                    </div>
+                    <button class="note-delete-btn" onclick="Timetable.deleteNote('${note.id}')" title="Xóa ghi chú">
+                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+        }).join('');
+    },
+
+    async addNote() {
+        const content = document.getElementById('noteContent')?.value?.trim();
+        const deadline = document.getElementById('noteDeadline')?.value;
+
+        if (!content) {
+            Swal.fire('Lỗi', 'Vui lòng nhập nội dung ghi chú!', 'warning');
+            return;
+        }
+
+        if (!this.currentNotesClassId) {
+            console.error('❌ No class selected for notes');
+            return;
+        }
+
+        const username = localStorage.getItem('currentUser');
+        if (!username) {
+            Swal.fire('Lỗi', 'Vui lòng đăng nhập!', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/timetable/update-note', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    classId: this.currentNotesClassId,
+                    username: username,
+                    action: 'add',
+                    note: {
+                        id: Date.now().toString(),
+                        content: content,
+                        deadline: deadline || null
+                    }
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                // Cập nhật UI
+                this.renderNotesList(data.notes);
+                
+                // Cập nhật class trong mảng local
+                const cls = this.classes.find(c => (c._id || c.id) === this.currentNotesClassId);
+                if (cls) cls.notes = data.notes;
+                
+                // Reset form
+                document.getElementById('noteContent').value = '';
+                document.getElementById('noteDeadline').value = '';
+                
+                // Render lại bảng để cập nhật badge
+                this.renderTimetable();
+                
+                Swal.fire({ icon: 'success', title: 'Đã thêm ghi chú!', timer: 1500, showConfirmButton: false });
+            } else {
+                Swal.fire('Lỗi', data.message, 'error');
+            }
+        } catch (err) {
+            console.error('❌ Add note error:', err);
+            Swal.fire('Lỗi', 'Không thể thêm ghi chú!', 'error');
+        }
+    },
+
+    async toggleNote(noteId) {
+        if (!this.currentNotesClassId) return;
+        
+        const username = localStorage.getItem('currentUser');
+        if (!username) return;
+
+        try {
+            const response = await fetch('/api/timetable/update-note', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    classId: this.currentNotesClassId,
+                    username: username,
+                    action: 'toggle',
+                    note: { id: noteId }
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                this.renderNotesList(data.notes);
+                
+                const cls = this.classes.find(c => (c._id || c.id) === this.currentNotesClassId);
+                if (cls) cls.notes = data.notes;
+                
+                // Render lại bảng để cập nhật badge
+                this.renderTimetable();
+            }
+        } catch (err) {
+            console.error('❌ Toggle note error:', err);
+        }
+    },
+
+    async deleteNote(noteId) {
+        if (!this.currentNotesClassId) return;
+        
+        const username = localStorage.getItem('currentUser');
+        if (!username) return;
+
+        const confirm = await Swal.fire({
+            title: 'Xác nhận xóa?',
+            text: 'Ghi chú sẽ bị xóa vĩnh viễn!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy'
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        try {
+            const response = await fetch('/api/timetable/update-note', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    classId: this.currentNotesClassId,
+                    username: username,
+                    action: 'delete',
+                    note: { id: noteId }
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                this.renderNotesList(data.notes);
+                
+                const cls = this.classes.find(c => (c._id || c.id) === this.currentNotesClassId);
+                if (cls) cls.notes = data.notes;
+                
+                // Render lại bảng để cập nhật badge
+                this.renderTimetable();
+                
+                Swal.fire({ icon: 'success', title: 'Đã xóa ghi chú!', timer: 1500, showConfirmButton: false });
+            } else {
+                Swal.fire('Lỗi', data.message, 'error');
+            }
+        } catch (err) {
+            console.error('❌ Delete note error:', err);
+            Swal.fire('Lỗi', 'Không thể xóa ghi chú!', 'error');
+        }
+    },
+
+    // 🔥 MỚI: Lấy danh sách tasks sắp đến hạn cho Dashboard Widget
+    getUpcomingTasks() {
+        const allNotes = [];
+        const now = new Date();
+        const next7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+        this.classes.forEach(cls => {
+            if (!cls.notes) return;
+            cls.notes.forEach(note => {
+                if (note.isDone) return; // Bỏ qua task đã xong
+                
+                const deadline = note.deadline ? new Date(note.deadline) : null;
+                const isOverdue = deadline && deadline < now;
+                const isUpcoming = deadline && deadline <= next7Days;
+                
+                if (!deadline || isOverdue || isUpcoming) {
+                    allNotes.push({
+                        ...note,
+                        subject: cls.subject,
+                        classId: cls._id || cls.id,
+                        isOverdue
+                    });
+                }
+            });
+        });
+
+        // Sắp xếp: Quá hạn trước, sau đó theo deadline gần nhất
+        return allNotes.sort((a, b) => {
+            if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
+            if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline);
+            return 0;
+        });
+    },
+
+    // 🔥 MỚI: Render Dashboard Reminders Widget
+    renderRemindersWidget() {
+        const container = document.getElementById('reminders-list');
+        const badge = document.getElementById('reminders-count');
+        
+        if (!container) return;
+        
+        const tasks = this.getUpcomingTasks();
+        
+        // Cập nhật badge
+        if (badge) {
+            if (tasks.length > 0) {
+                badge.textContent = tasks.length;
+                badge.style.display = 'inline-flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        if (tasks.length === 0) {
+            container.innerHTML = `
+                <p style="text-align: center; color: #9ca3af; font-size: 12px; padding: 16px;">
+                    🎉 Không có ghi chú nào cần hoàn thành
+                </p>
+            `;
+            return;
+        }
+
+        // Giới hạn 5 tasks hiển thị trên widget
+        const displayTasks = tasks.slice(0, 5);
+        
+        container.innerHTML = displayTasks.map(task => {
+            const deadlineStr = task.deadline 
+                ? new Date(task.deadline).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
+                : 'Không có hạn';
+            
+            return `
+                <div class="reminder-item ${task.isOverdue ? 'reminder-item--overdue' : ''}" 
+                     onclick="Timetable.openNotesModal('${task.classId}')">
+                    <div class="reminder-subject">${this.escapeHtml(task.subject)}</div>
+                    <div class="reminder-content">${this.escapeHtml(task.content)}</div>
+                    <div class="reminder-deadline ${task.isOverdue ? 'reminder-deadline--overdue' : ''}">
+                        ${task.isOverdue ? '⚠️ Quá hạn: ' : '⏰ '} ${deadlineStr}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Thêm link xem thêm nếu có nhiều hơn 5 tasks
+        if (tasks.length > 5) {
+            container.innerHTML += `
+                <p style="text-align: center; color: #6366f1; font-size: 12px; padding: 8px; cursor: pointer;" 
+                   onclick="PageManager.showSection('timetable-section')">
+                    +${tasks.length - 5} ghi chú khác →
+                </p>
+            `;
+        }
+    },
+
     // ==================== IMPORT FROM EXCEL ====================
 
     openImportModal() {
@@ -2022,7 +2514,7 @@ export const Timetable = {
 
         // 1. Map cột tự động (Dựa trên từ khóa)
         let headerRow = -1;
-        const colMap = { subject: -1, day: -1, period: -1, date: -1, room: -1 };
+        const colMap = { subject: -1, day: -1, period: -1, date: -1, room: -1, teacher: -1 };
 
         // Quét 20 dòng đầu để tìm header
         for (let i = 0; i < Math.min(20, rows.length); i++) {
@@ -2034,6 +2526,8 @@ export const Timetable = {
             if (colMap.period === -1) colMap.period = cells.findIndex(c => c.includes('tiết') || c.includes('giờ'));
             if (colMap.date === -1) colMap.date = cells.findIndex(c => c.includes('ngày') || c.includes('thời gian'));
             if (colMap.room === -1) colMap.room = cells.findIndex(c => c.includes('phòng'));
+            // 🔥 MỚI: Tìm cột Giáo viên
+            if (colMap.teacher === -1) colMap.teacher = cells.findIndex(c => c.includes('gv') || c.includes('giáo viên') || c.includes('giảng viên') || c.includes('lecturer'));
 
             // Nếu tìm thấy Tên môn và Thứ thì chốt đây là dòng header
             if (colMap.subject > -1 && colMap.day > -1) { headerRow = i; break; }
@@ -2042,9 +2536,14 @@ export const Timetable = {
         if (headerRow === -1) {
             // Nếu không tìm thấy header, thử gán cứng (Backup cho file của bạn)
             // Dựa trên file bạn gửi: STT(1), Tên(2), GV(3), STC(4), Mã(5), Thứ(6), Tiết(7), Phòng(8), Ngày(9)
-            colMap.subject = 2; colMap.day = 6; colMap.period = 7; colMap.room = 8; colMap.date = 9;
+            colMap.subject = 2; colMap.teacher = 3; colMap.day = 6; colMap.period = 7; colMap.room = 8; colMap.date = 9;
             headerRow = 0; // Giả định
         }
+
+        // 🔥 Fallback: Nếu không tìm thấy cột teacher, đặt mặc định là cột 3 (GV)
+        if (colMap.teacher === -1) colMap.teacher = 3;
+
+        console.log('📊 Column mapping:', colMap);
 
         const importedClasses = [];
         let lastSubject = null; // Biến nhớ để xử lý Merge Cell
@@ -2059,6 +2558,7 @@ export const Timetable = {
             let periodRaw = row[colMap.period];
             let dateRaw = row[colMap.date];
             let roomRaw = row[colMap.room];
+            let teacherRaw = row[colMap.teacher]; // 🔥 MỚI: Lấy tên giáo viên
 
             // LOGIC FILL-DOWN: Nếu ô Tên môn trống nhưng có Giờ học -> Lấy tên môn dòng trên
             if ((!subjectRaw || String(subjectRaw).trim() === '') && dayRaw && lastSubject) {
@@ -2093,10 +2593,12 @@ export const Timetable = {
                     numPeriods: periodInfo.numPeriods,
                     room: roomRaw || 'Online',
                     campus: campus,
+                    teacher: teacherRaw ? String(teacherRaw).trim() : '', // 🔥 MỚI: Lưu tên giáo viên
                     startDate: dateInfo.startDate, // Lưu ngày bắt đầu chuẩn
                     endDate: dateInfo.endDate,     // Lưu ngày kết thúc chuẩn
                     dateRangeDisplay: dateInfo.display,
                     weeks: [], // Để trống, ta dùng logic ngày tháng để lọc
+                    notes: [], // 🔥 MỚI: Mảng ghi chú rỗng
                 });
 
             } catch (err) {

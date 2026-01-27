@@ -358,7 +358,7 @@ const activitySchema = new mongoose.Schema({
     timestamp: { type: Number, default: Date.now }
 });
 
-// Timetable Schema - CÓ TUẦN HỌC
+// Timetable Schema - CÓ TUẦN HỌC + TEACHER + NOTES
 const timetableSchema = new mongoose.Schema({
     username: { type: String, required: true, ref: 'User', index: true },
     subject: { type: String, required: true },
@@ -370,7 +370,19 @@ const timetableSchema = new mongoose.Schema({
     numPeriods: { type: Number, required: true },
     timeRange: { type: String },
 
-    // 🔥 MỚI: Lưu danh sách tuần học cụ thể
+    // 🔥 MỚI: Tên giáo viên (Optional)
+    teacher: { type: String, default: '' },
+
+    // 🔥 MỚI: Ghi chú và nhắc nhở cho môn học
+    notes: [{
+        id: { type: String, required: true },
+        content: { type: String, required: true },
+        deadline: { type: Date },
+        isDone: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now }
+    }],
+
+    // 🔥 Lưu danh sách tuần học cụ thể
     weeks: {
         type: [Number],
         default: [], // Rỗng = áp dụng cho TẤT CẢ các tuần
@@ -1589,7 +1601,7 @@ app.post('/api/delete-reply', async (req, res) => {
 // 9. Timetable APIs
 app.post('/api/timetable', async (req, res) => {
     try {
-        const { username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange, startDate, endDate, dateRangeDisplay } = req.body;
+        const { username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange, startDate, endDate, dateRangeDisplay, teacher, notes } = req.body;
 
         if (!username) {
             return res.json({ success: false, message: '❌ Missing username' });
@@ -1623,6 +1635,8 @@ app.post('/api/timetable', async (req, res) => {
             startPeriod: parseInt(startPeriod),
             numPeriods: parseInt(numPeriods),
             timeRange,
+            teacher: teacher ? teacher.trim() : '', // 🔥 MỚI: Lưu tên giáo viên
+            notes: notes || [], // 🔥 MỚI: Lưu ghi chú
             weeks: calculatedWeeks, // 🔥 LƯU MẢNG TUẦN
             startDate: startDate || null,
             endDate: endDate || null,
@@ -1630,7 +1644,7 @@ app.post('/api/timetable', async (req, res) => {
         });
 
         await newClass.save();
-        console.log(`✅ Created class: "${subject}" | Weeks: [${calculatedWeeks.join(', ')}]`);
+        console.log(`✅ Created class: "${subject}" | Teacher: "${teacher || 'N/A'}" | Weeks: [${calculatedWeeks.join(', ')}]`);
         res.json({ success: true, message: 'Thêm lớp học thành công!', class: newClass });
     } catch (err) {
         console.error('❌ Create class error:', err);
@@ -1730,7 +1744,7 @@ app.delete('/api/timetable/clear', async (req, res) => {
 
 app.post('/api/timetable/update', async (req, res) => {
     try {
-        const { classId, username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange, startDate, endDate, dateRangeDisplay } = req.body;
+        const { classId, username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange, startDate, endDate, dateRangeDisplay, teacher } = req.body;
 
         if (!classId || !username) {
             return res.json({ success: false, message: '❌ Thiếu thông tin định danh' });
@@ -1760,6 +1774,7 @@ app.post('/api/timetable/update', async (req, res) => {
         classToUpdate.startPeriod = parseInt(startPeriod);
         classToUpdate.numPeriods = parseInt(numPeriods);
         classToUpdate.timeRange = timeRange;
+        classToUpdate.teacher = teacher ? teacher.trim() : ''; // 🔥 MỚI: Cập nhật tên giáo viên
         classToUpdate.weeks = calculatedWeeks; // 🔥 CẬP NHẬT MẢNG TUẦN
         classToUpdate.startDate = startDate || null;
         classToUpdate.endDate = endDate || null;
@@ -1767,10 +1782,110 @@ app.post('/api/timetable/update', async (req, res) => {
         classToUpdate.updatedAt = new Date();
 
         await classToUpdate.save();
-        console.log(`✅ Updated class "${subject}" | Weeks: [${calculatedWeeks.join(', ')}]`);
+        console.log(`✅ Updated class "${subject}" | Teacher: "${teacher || 'N/A'}" | Weeks: [${calculatedWeeks.join(', ')}]`);
         res.json({ success: true, message: 'Cập nhật thành công!' });
     } catch (err) {
         console.error('❌ Update class error:', err);
+        res.json({ success: false, message: 'Server error: ' + err.message });
+    }
+});
+
+// 🔥 MỚI: API quản lý Notes cho Class
+app.post('/api/timetable/update-note', async (req, res) => {
+    try {
+        const { classId, username, action, note } = req.body;
+        // action: 'add' | 'update' | 'delete' | 'toggle'
+        // note: { id, content, deadline, isDone }
+
+        if (!classId || !username || !action) {
+            return res.json({ success: false, message: '❌ Thiếu thông tin bắt buộc' });
+        }
+
+        const classToUpdate = await Timetable.findById(classId);
+        if (!classToUpdate) {
+            return res.json({ success: false, message: '❌ Không tìm thấy lớp học' });
+        }
+
+        if (classToUpdate.username !== username) {
+            return res.json({ success: false, message: '❌ Bạn không có quyền sửa lớp này' });
+        }
+
+        // Đảm bảo notes là mảng
+        if (!classToUpdate.notes) {
+            classToUpdate.notes = [];
+        }
+
+        switch (action) {
+            case 'add':
+                if (!note || !note.content) {
+                    return res.json({ success: false, message: '❌ Nội dung ghi chú không được trống' });
+                }
+                const newNote = {
+                    id: note.id || Date.now().toString(),
+                    content: note.content.trim(),
+                    deadline: note.deadline ? new Date(note.deadline) : null,
+                    isDone: false,
+                    createdAt: new Date()
+                };
+                classToUpdate.notes.push(newNote);
+                console.log(`📝 Added note to "${classToUpdate.subject}": "${newNote.content}"`);
+                break;
+
+            case 'update':
+                if (!note || !note.id) {
+                    return res.json({ success: false, message: '❌ Thiếu ID ghi chú' });
+                }
+                const noteToUpdate = classToUpdate.notes.find(n => n.id === note.id);
+                if (noteToUpdate) {
+                    if (note.content !== undefined) noteToUpdate.content = note.content.trim();
+                    if (note.deadline !== undefined) noteToUpdate.deadline = note.deadline ? new Date(note.deadline) : null;
+                    if (note.isDone !== undefined) noteToUpdate.isDone = note.isDone;
+                    console.log(`✏️ Updated note "${note.id}" in "${classToUpdate.subject}"`);
+                } else {
+                    return res.json({ success: false, message: '❌ Không tìm thấy ghi chú' });
+                }
+                break;
+
+            case 'delete':
+                if (!note || !note.id) {
+                    return res.json({ success: false, message: '❌ Thiếu ID ghi chú' });
+                }
+                const initialLength = classToUpdate.notes.length;
+                classToUpdate.notes = classToUpdate.notes.filter(n => n.id !== note.id);
+                if (classToUpdate.notes.length < initialLength) {
+                    console.log(`🗑️ Deleted note "${note.id}" from "${classToUpdate.subject}"`);
+                } else {
+                    return res.json({ success: false, message: '❌ Không tìm thấy ghi chú' });
+                }
+                break;
+
+            case 'toggle':
+                if (!note || !note.id) {
+                    return res.json({ success: false, message: '❌ Thiếu ID ghi chú' });
+                }
+                const noteToToggle = classToUpdate.notes.find(n => n.id === note.id);
+                if (noteToToggle) {
+                    noteToToggle.isDone = !noteToToggle.isDone;
+                    console.log(`🔄 Toggled note "${note.id}" in "${classToUpdate.subject}" to isDone=${noteToToggle.isDone}`);
+                } else {
+                    return res.json({ success: false, message: '❌ Không tìm thấy ghi chú' });
+                }
+                break;
+
+            default:
+                return res.json({ success: false, message: '❌ Action không hợp lệ' });
+        }
+
+        classToUpdate.updatedAt = new Date();
+        await classToUpdate.save();
+
+        res.json({ 
+            success: true, 
+            message: 'Cập nhật ghi chú thành công!',
+            notes: classToUpdate.notes 
+        });
+    } catch (err) {
+        console.error('❌ Update note error:', err);
         res.json({ success: false, message: 'Server error: ' + err.message });
     }
 });
