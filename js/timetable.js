@@ -697,8 +697,15 @@ export const Timetable = {
     padding: 2px 6px;
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    z-index: 5;
+    z-index: 15;
     animation: pulse-badge 2s infinite;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.class-notes-badge:hover {
+    background: #dc2626;
+    transform: scale(1.15);
 }
 
 @keyframes pulse-badge {
@@ -1710,7 +1717,7 @@ export const Timetable = {
         // Use CSS variable for background color instead of inline style
         return `
             <div class="class-card ${cardStateClass}" style="--card-bg: ${bgColor}; background-color: var(--card-bg);" data-class-id="${classId}">
-                ${hasNotes ? `<span class="class-notes-badge" title="${pendingNotes} ghi chú chưa xong">📝${pendingNotes}</span>` : ''}
+                ${hasNotes ? `<span class="class-notes-badge" title="${pendingNotes} ghi chú chưa xong" onclick="event.stopPropagation(); Timetable.openNotesModal('${classId}')">📝${pendingNotes}</span>` : ''}
                 <div class="class-subject" title="${this.escapeHtml(cls.subject)}">
                     ${this.escapeHtml(cls.subject)}
                 </div>
@@ -2334,8 +2341,9 @@ export const Timetable = {
                 document.getElementById('noteContent').value = '';
                 document.getElementById('noteDeadline').value = '';
                 
-                // Render lại bảng để cập nhật badge
+                // Render lại bảng và widget để cập nhật badge
                 this.renderTimetable();
+                this.renderRemindersWidget(); // 🔥 FIX: Cập nhật sidebar ngay
                 
                 Swal.fire({ icon: 'success', title: 'Đã thêm ghi chú!', timer: 1500, showConfirmButton: false });
             } else {
@@ -2382,8 +2390,9 @@ export const Timetable = {
                 const cls = this.classes.find(c => (c._id || c.id) === this.currentNotesClassId);
                 if (cls) cls.notes = data.notes;
                 
-                // Render lại bảng để cập nhật badge
+                // 🔥 FIX: Render lại cả bảng và widget
                 this.renderTimetable();
+                this.renderRemindersWidget();
             }
         } catch (err) {
             console.error('❌ Toggle note error:', err);
@@ -2439,6 +2448,7 @@ export const Timetable = {
                 
                 // Render lại bảng để cập nhật badge
                 this.renderTimetable();
+                this.renderRemindersWidget(); // 🔥 FIX: Cập nhật sidebar ngay
                 
                 Swal.fire({ icon: 'success', title: 'Đã xóa ghi chú!', timer: 1500, showConfirmButton: false });
             } else {
@@ -2463,16 +2473,14 @@ export const Timetable = {
                 
                 const deadline = note.deadline ? new Date(note.deadline) : null;
                 const isOverdue = deadline && deadline < now;
-                const isUpcoming = deadline && deadline <= next7Days;
                 
-                if (!deadline || isOverdue || isUpcoming) {
-                    allNotes.push({
-                        ...note,
-                        subject: cls.subject,
-                        classId: cls._id || cls.id,
-                        isOverdue
-                    });
-                }
+                // 🔥 FIX: Hiển thị TẤT CẢ ghi chú chưa xong (không chỉ trong 7 ngày)
+                allNotes.push({
+                    ...note,
+                    subject: cls.subject,
+                    classId: cls._id || cls.id,
+                    isOverdue
+                });
             });
         });
 
