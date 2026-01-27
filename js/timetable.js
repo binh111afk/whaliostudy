@@ -2284,7 +2284,14 @@ export const Timetable = {
 
     async addNote() {
         const content = document.getElementById('noteContent')?.value?.trim();
-        const deadline = document.getElementById('noteDeadline')?.value;
+        const deadlineInput = document.getElementById('noteDeadline')?.value;
+        
+        // 🔥 DEBUG: Log deadline value
+        console.log('📝 Adding note with deadline input:', deadlineInput);
+        
+        // 🔥 FIX: Đảm bảo deadline được convert đúng
+        const deadline = deadlineInput && deadlineInput.trim() !== '' ? deadlineInput : null;
+        console.log('📝 Processed deadline:', deadline);
 
         if (!content) {
             Swal.fire('Lỗi', 'Vui lòng nhập nội dung ghi chú!', 'warning');
@@ -2313,6 +2320,13 @@ export const Timetable = {
         }
 
         try {
+            const noteData = {
+                id: Date.now().toString(),
+                content: content,
+                deadline: deadline
+            };
+            console.log('📤 Sending note data to server:', noteData);
+            
             const response = await fetch('/api/timetable/update-note', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2320,15 +2334,13 @@ export const Timetable = {
                     classId: this.currentNotesClassId,
                     username: username,
                     action: 'add',
-                    note: {
-                        id: Date.now().toString(),
-                        content: content,
-                        deadline: deadline || null
-                    }
+                    note: noteData
                 })
             });
 
             const data = await response.json();
+            console.log('📥 Server response:', data);
+            
             if (data.success) {
                 // Cập nhật UI
                 this.renderNotesList(data.notes);
@@ -2523,10 +2535,16 @@ export const Timetable = {
         // Giới hạn 5 tasks hiển thị trên widget
         const displayTasks = tasks.slice(0, 5);
         
+        // 🔥 DEBUG: Log tasks to see deadline values
+        console.log('📋 Reminder tasks:', displayTasks.map(t => ({ content: t.content, deadline: t.deadline })));
+        
         container.innerHTML = displayTasks.map(task => {
             const deadlineStr = task.deadline 
                 ? new Date(task.deadline).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
                 : 'Không có hạn';
+            
+            // 🔥 DEBUG: Log individual task deadline
+            console.log(`Task "${task.content}" deadline:`, task.deadline, '→', deadlineStr);
             
             return `
                 <div class="reminder-item ${task.isOverdue ? 'reminder-item--overdue' : ''}" 

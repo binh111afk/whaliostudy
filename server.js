@@ -1820,6 +1820,10 @@ app.post('/api/timetable/update-note', async (req, res) => {
                 if (!note || !note.content) {
                     return res.json({ success: false, message: '❌ Nội dung ghi chú không được trống' });
                 }
+                
+                // 🔥 DEBUG: Log incoming deadline
+                console.log(`📝 Received deadline from client:`, note.deadline, `(type: ${typeof note.deadline})`);
+                
                 const newNote = {
                     id: note.id || Date.now().toString(),
                     content: note.content.trim(),
@@ -1827,6 +1831,10 @@ app.post('/api/timetable/update-note', async (req, res) => {
                     isDone: false,
                     createdAt: new Date()
                 };
+                
+                // 🔥 DEBUG: Log saved deadline
+                console.log(`📝 Saved deadline:`, newNote.deadline);
+                
                 classToUpdate.notes.push(newNote);
                 console.log(`📝 Added note to "${classToUpdate.subject}": "${newNote.content}"`);
                 break;
