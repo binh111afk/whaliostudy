@@ -2214,6 +2214,17 @@ export const Timetable = {
             subjectEl.textContent = cls.subject;
         }
 
+        // 🔥 DEBUG: Add listener to track datetime changes
+        const deadlineInput = document.getElementById('noteDeadline');
+        if (deadlineInput) {
+            deadlineInput.onchange = (e) => {
+                console.log('📅 Deadline changed to:', e.target.value);
+            };
+            deadlineInput.oninput = (e) => {
+                console.log('📅 Deadline input:', e.target.value);
+            };
+        }
+
         // Render danh sách notes
         this.renderNotesList(cls.notes || []);
     },
