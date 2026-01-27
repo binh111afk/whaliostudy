@@ -2289,7 +2289,17 @@ export const Timetable = {
             return;
         }
 
-        const username = localStorage.getItem('currentUser');
+        // 🔥 FIX: Parse JSON đúng cách để lấy username
+        let username = null;
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            try {
+                const userObj = JSON.parse(savedUser);
+                username = userObj.username;
+            } catch (e) {
+                username = savedUser; // Fallback nếu là string đơn thuần
+            }
+        }
         if (!username) {
             Swal.fire('Lỗi', 'Vui lòng đăng nhập!', 'warning');
             return;
@@ -2340,7 +2350,17 @@ export const Timetable = {
     async toggleNote(noteId) {
         if (!this.currentNotesClassId) return;
         
-        const username = localStorage.getItem('currentUser');
+        // 🔥 FIX: Parse JSON đúng cách để lấy username
+        let username = null;
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            try {
+                const userObj = JSON.parse(savedUser);
+                username = userObj.username;
+            } catch (e) {
+                username = savedUser;
+            }
+        }
         if (!username) return;
 
         try {
@@ -2373,7 +2393,17 @@ export const Timetable = {
     async deleteNote(noteId) {
         if (!this.currentNotesClassId) return;
         
-        const username = localStorage.getItem('currentUser');
+        // 🔥 FIX: Parse JSON đúng cách để lấy username
+        let username = null;
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            try {
+                const userObj = JSON.parse(savedUser);
+                username = userObj.username;
+            } catch (e) {
+                username = savedUser;
+            }
+        }
         if (!username) return;
 
         const confirm = await Swal.fire({
