@@ -231,89 +231,30 @@ export const Timetable = {
         console.log('📅 Week dates rendered in headers');
     },
 
-    // ==================== LOGIC HIỂN THỊ TUẦN (CHUẨN 100%) ====================
+    // ==================== LOGIC HIỂN THỊ TUẦN (REFACTORED - Uses isSubjectActiveInWeek) ====================
+    /**
+     * Determines if a class should be displayed in the currently selected week.
+     * This is the main filtering function called during rendering.
+     * 
+     * Uses the new isSubjectActiveInWeek() helper for clean date-based filtering.
+     */
     isClassInWeek(classObj) {
-        // [Case 0] Nếu không có tuần được chọn → Hiện tất cả
+        // If no week is selected, show all classes
         if (!this.currentWeekStart) {
             console.log(`📋 "${classObj.subject}": No week filter → SHOW ALL`);
             return true;
         }
 
-        // Xác định phạm vi tuần đang xem (Thứ 2 00:00 → Chủ Nhật 23:59)
-        const viewStart = new Date(this.currentWeekStart);
-        viewStart.setHours(0, 0, 0, 0);
+        // Calculate week boundaries (Monday 00:00 to Sunday 23:59)
+        const weekStart = new Date(this.currentWeekStart);
+        weekStart.setHours(0, 0, 0, 0);
 
-        const viewEnd = new Date(viewStart);
-        viewEnd.setDate(viewEnd.getDate() + 6);
-        viewEnd.setHours(23, 59, 59, 999);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
 
-        console.log(`📅 View: ${viewStart.toLocaleDateString('vi-VN')} - ${viewEnd.toLocaleDateString('vi-VN')}`);
-
-        // Xác định phạm vi môn học
-        let clsStart = null;
-        let clsEnd = null;
-
-        if (classObj.startDate && classObj.endDate) {
-            clsStart = new Date(classObj.startDate);
-            clsStart.setHours(0, 0, 0, 0);
-
-            clsEnd = new Date(classObj.endDate);
-            clsEnd.setHours(23, 59, 59, 999);
-
-            console.log(`📚 "${classObj.subject}": ${clsStart.toLocaleDateString('vi-VN')} - ${clsEnd.toLocaleDateString('vi-VN')}`);
-        }
-
-        // ========== LỚP 1: HARD CHECK (NGÀY THÁNG) ==========
-        if (clsStart && clsEnd) {
-            // Nếu tuần xem kết thúc TRƯỚC khi môn bắt đầu → ẨN
-            if (viewEnd < clsStart) {
-                console.log(`❌ "${classObj.subject}": Week ends BEFORE class starts → HIDE`);
-                return false;
-            }
-
-            // Nếu tuần xem bắt đầu SAU khi môn kết thúc → ẨN
-            if (viewStart > clsEnd) {
-                console.log(`❌ "${classObj.subject}": Week starts AFTER class ends → HIDE`);
-                return false;
-            }
-
-            console.log(`✅ "${classObj.subject}": Passed Layer 1 (Date Range)`);
-        }
-
-        // ========== LỚP 2: SOFT CHECK (SỐ TUẦN) ==========
-        // Lấy số tuần hiện tại (dùng Thứ 5 để tính chuẩn ISO)
-        const checkDate = new Date(viewStart);
-        checkDate.setDate(checkDate.getDate() + 3); // Thứ 5
-        const currentWeekNum = this.getWeekNumber(checkDate);
-
-        console.log(`🔢 Current week number: ${currentWeekNum}`);
-
-        // Kiểm tra mảng weeks
-        let weeks = classObj.weeks;
-
-        // 🔥 CRITICAL: Tính lại nếu rỗng
-        if ((!weeks || weeks.length === 0) && clsStart && clsEnd) {
-            console.warn(`⚠️ "${classObj.subject}": Empty weeks array, recalculating...`);
-            weeks = this.getWeeksBetween(classObj.startDate, classObj.endDate);
-            console.log(`✅ Recalculated: [${weeks.join(', ')}]`);
-        }
-
-        // Nếu có mảng weeks hợp lệ
-        if (Array.isArray(weeks) && weeks.length > 0) {
-            const isInWeeks = weeks.includes(currentWeekNum);
-            console.log(`🔍 "${classObj.subject}": weeks=[${weeks.join(', ')}], current=${currentWeekNum}, match=${isInWeeks ? '✅' : '❌'}`);
-            return isInWeeks;
-        }
-
-        // [Fallback] Nếu không có weeks nhưng có date range → SHOW
-        if (clsStart && clsEnd) {
-            console.log(`⚠️ "${classObj.subject}": No weeks data, passed Layer 1 → SHOW`);
-            return true;
-        }
-
-        // Mặc định: ẨN (an toàn)
-        console.log(`❌ "${classObj.subject}": No data → HIDE (safe default)`);
-        return false;
+        // Use the new helper function for clean date-based filtering
+        return this.isSubjectActiveInWeek(classObj, weekStart, weekEnd);
     },
 
     // Helper 1: Lấy số tuần của năm (1-52)
@@ -358,34 +299,120 @@ export const Timetable = {
         const styleTag = document.createElement('style');
         styleTag.id = 'timetable-injected-styles';
         styleTag.textContent = `
-            /* === TIMETABLE STRUCTURE === */
-.timetable-wrapper {
-    width: 100% !important;
-    max-width: calc(100vw - 320px) !important;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    overflow-x: auto !important;
-    overflow-y: visible !important;
-    border: 1px solid #e2e8f0;
-    margin-bottom: 30px;
+/* ==================== TIMETABLE STYLES (MOBILE-FIRST, CLEAN) ==================== */
+/* 
+ * MOBILE-FIRST APPROACH:
+ * 1. Base styles are for mobile (card view)
+ * 2. @media (min-width: 768px) adds tablet/desktop table view
+ * 3. NO !important used - proper CSS specificity instead
+ */
+
+/* === TIMETABLE CONTAINER === */
+.timetable-container {
+    padding: 16px;
+    max-width: 100%;
 }
 
+.timetable-header {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.timetable-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+/* === WEEK NAVIGATION === */
+.week-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.btn-week-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-week-nav:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.week-display {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+    min-width: 120px;
+    text-align: center;
+}
+
+/* === TIMETABLE WRAPPER (Scroll Container) === */
+.timetable-wrapper {
+    width: 100%;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    overflow-x: auto;
+    overflow-y: visible;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 24px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar */
+.timetable-wrapper::-webkit-scrollbar {
+    height: 8px;
+}
+
+.timetable-wrapper::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 8px;
+}
+
+.timetable-wrapper::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 8px;
+}
+
+.timetable-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* === TIMETABLE TABLE === */
 .timetable-table {
     width: 100%;
-    min-width: 1400px !important;
-    table-layout: auto !important;
+    min-width: 900px;
+    table-layout: auto;
     border-collapse: separate;
     border-spacing: 0;
+    background: #ffffff;
 }
 
 .timetable-table th,
 .timetable-table td {
     border-bottom: 1px solid #e2e8f0;
     border-right: 1px solid #e2e8f0;
-    padding: 24px 20px !important;
-    min-width: 200px !important;
-    width: auto !important;
+    padding: 12px 8px;
+    text-align: center;
+    vertical-align: top;
+    min-width: 100px;
 }
 
 .timetable-table th:last-child,
@@ -397,99 +424,134 @@ export const Timetable = {
 .timetable-table thead th {
     background: #1e293b;
     color: #ffffff;
-    padding: 20px 16px;
-    font-size: 16px;
+    padding: 14px 10px;
+    font-size: 13px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
     position: sticky;
     top: 0;
     z-index: 20;
-    text-align: center;
 }
 
-/* === HEADER DATE === */
+/* === HEADER DATE (Ngày/tháng) === */
 .header-date {
-    font-size: 13px !important;
-    font-weight: 700 !important;
-    color: #fbbf24 !important;
-    margin-top: 5px !important;
-    text-transform: none !important;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fbbf24;
+    margin-top: 4px;
+    text-transform: none;
 }
 
-/* === SESSION COLUMN (BUỔI/SÁNG/CHIỀU/TỐI) === */
-.timetable-table .session-col {
-    width: 120px;
-    min-width: 120px;
+/* === SESSION COLUMN (Buổi: Sáng/Chiều/Tối) === */
+.session-col {
+    width: 80px;
+    min-width: 80px;
+    max-width: 80px;
     background-color: #1e293b;
     color: #ffffff;
     font-weight: 700;
     text-align: center;
     vertical-align: middle;
     text-transform: uppercase;
-    font-size: 14px;
+    font-size: 12px;
     position: sticky;
     left: 0;
-    z-index: 10;
-    border-right: 2px solid #e2e8f0;
+    z-index: 15;
+    border-right: 2px solid #334155;
 }
 
 /* === TIMETABLE CELL === */
-.timetable-table .timetable-cell,
-td.timetable-cell {
-    background-color: #fefefe !important;
-    min-height: 250px !important;
-    height: auto !important;
-    vertical-align: top !important;
-    padding: 18px !important;
+.timetable-cell {
+    background-color: #fefefe;
+    min-height: 180px;
+    height: auto;
+    vertical-align: top;
+    padding: 10px;
+    transition: background-color 0.2s ease;
+}
+
+.timetable-cell:hover {
+    background-color: #f8fafc;
 }
 
 .timetable-cell-content {
-    min-height: 250px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 10px !important;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.timetable-cell-empty {
+    min-height: 160px;
 }
 
 /* === CLASS CARD === */
 .class-card {
-    padding: 14px 16px;
+    padding: 12px 14px;
     border-radius: 8px;
     position: relative;
     cursor: pointer;
-    transition: all 0.15s ease;
-    background-color: #fce7f3;
-    border-left: 4px solid #ec4899;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border-left: 4px solid #6366f1;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     display: block;
     width: 100%;
+    background-color: #f0f9ff;
+    text-align: left;
 }
 
 .class-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     z-index: 5;
+}
+
+/* === CLASS CARD STATES === */
+.class-card--active {
+    opacity: 1;
+}
+
+.class-card--upcoming {
+    opacity: 0.7;
+}
+
+.class-card--ended {
+    opacity: 0.5;
+}
+
+/* === STATUS WRAPPER === */
+.class-status-wrapper {
+    text-align: center;
+    margin-top: 8px;
+}
+
+/* === DATE DETAIL (Special styling) === */
+.class-detail--date {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed rgba(0, 0, 0, 0.1);
 }
 
 /* === CLASS SUBJECT (Tên môn học) === */
 .class-subject {
     font-weight: 700;
-    font-size: 17px;
+    font-size: 14px;
     color: #1e40af;
-    margin-bottom: 10px;
-    line-height: 1.3;
+    margin-bottom: 8px;
+    line-height: 1.35;
     word-wrap: break-word;
     word-break: break-word;
     overflow-wrap: break-word;
     display: block;
+    max-width: 100%;
 }
 
 /* === CLASS INFO GROUP === */
 .class-info-group {
     display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 8px 12px;
+    flex-direction: column;
+    gap: 4px;
     width: 100%;
 }
 
@@ -497,19 +559,18 @@ td.timetable-cell {
 .class-detail {
     display: flex;
     align-items: center;
-    font-size: 12px;
-    color: #334155;
-    gap: 5px;
-    flex: 0 0 auto;
+    font-size: 11px;
+    color: #475569;
+    gap: 4px;
+    flex-wrap: wrap;
 }
 
 /* === DETAIL LABEL === */
 .class-detail-label {
     font-weight: 700;
-    color: #1e293b;
+    color: #334155;
     text-transform: uppercase;
-    font-size: 10px;
-    min-width: auto;
+    font-size: 9px;
     flex-shrink: 0;
 }
 
@@ -517,15 +578,42 @@ td.timetable-cell {
 .class-detail-value {
     font-weight: 600;
     color: #1e293b;
-    font-size: 12px;
-    flex: 0 1 auto;
+    font-size: 11px;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+/* === STATUS BADGE === */
+.class-status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-top: 6px;
+}
+
+.class-status-badge--active {
+    background: #34d399;
+    color: #064e3b;
+}
+
+.class-status-badge--upcoming {
+    background: #fbbf24;
+    color: #78350f;
+}
+
+.class-status-badge--ended {
+    background: #d1d5db;
+    color: #374151;
 }
 
 /* === EDIT BUTTON === */
 .btn-edit-class {
     position: absolute;
     top: 6px;
-    right: 32px;
+    right: 30px;
     width: 22px;
     height: 22px;
     background: #ffffff;
@@ -537,7 +625,7 @@ td.timetable-cell {
     justify-content: center;
     cursor: pointer;
     opacity: 0;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     font-size: 12px;
 }
 
@@ -557,7 +645,7 @@ td.timetable-cell {
     justify-content: center;
     cursor: pointer;
     opacity: 0;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     font-size: 12px;
 }
 
@@ -580,149 +668,427 @@ td.timetable-cell {
 
 /* === TODAY HIGHLIGHT === */
 .is-today {
-    background-color: transparent !important;
+    background-color: rgba(99, 102, 241, 0.05);
 }
 
 .timetable-table thead th.is-today {
-    background: #1e293b !important;
+    background: #4f46e5;
 }
 
 .timetable-table thead th.is-today::after {
     content: "HÔM NAY";
     display: block;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 800;
     color: #ffffff;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 3px 10px;
-    border-radius: 10px;
-    margin-top: 5px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    margin-top: 4px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    box-shadow: 0 0 15px rgba(102, 126, 234, 0.6), 0 0 30px rgba(118, 75, 162, 0.4);
+    letter-spacing: 0.3px;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
     animation: glow-pulse 2s ease-in-out infinite;
 }
 
 @keyframes glow-pulse {
     0%, 100% { 
-        box-shadow: 0 0 15px rgba(102, 126, 234, 0.6), 0 0 30px rgba(118, 75, 162, 0.4);
+        box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
     }
     50% { 
-        box-shadow: 0 0 20px rgba(102, 126, 234, 0.8), 0 0 40px rgba(118, 75, 162, 0.6);
+        box-shadow: 0 0 15px rgba(102, 126, 234, 0.7);
     }
 }
 
-.timetable-table tbody td.is-today {
-    background-color: transparent !important;
+/* === ADD CLASS BUTTON === */
+.btn-add-class {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* === MOBILE RESPONSIVE === */
-@media (max-width: 768px) {
-    .timetable-wrapper {
-        max-width: 100vw !important;
-        width: 100% !important;
-        margin: 0 !important;
-        border-radius: 0 !important;
+.btn-add-class:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* === TIMETABLE SECTION === */
+.timetable-section {
+    display: none;
+    width: 100%;
+}
+
+/* === TIMETABLE TITLE === */
+.timetable-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+/* === WEEK NAVIGATOR === */
+.week-navigator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.week-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.week-nav-btn:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #111827;
+}
+
+.week-display {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+    min-width: 120px;
+    text-align: center;
+}
+
+/* === TIMETABLE ACTIONS === */
+.timetable-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-timetable-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #ffffff;
+}
+
+.btn-timetable-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-timetable-danger {
+    background: #ef4444;
+}
+
+.btn-timetable-danger:hover {
+    background: #dc2626;
+}
+
+.btn-timetable-import {
+    background: #10b981;
+}
+
+.btn-timetable-import:hover {
+    background: #059669;
+}
+
+/* === BACK TO DASHBOARD BUTTON === */
+.btn-back-dashboard {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    background: #374151;
+    color: #ffffff;
+    border-radius: 30px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-back-dashboard:hover {
+    background: #1f2937;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
+}
+
+/* ==================== TABLET & DESKTOP (min-width: 768px) ==================== */
+@media (min-width: 768px) {
+    .timetable-container {
+        padding: 24px;
+    }
+
+    .timetable-header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
     }
 
     .timetable-table {
-        min-width: 600px !important;
+        min-width: 1200px;
     }
 
     .timetable-table th,
     .timetable-table td {
-        padding: 3px 2px !important;
-        min-width: 80px !important;
-        font-size: 9px !important;
+        padding: 16px 12px;
+        min-width: 140px;
     }
 
     .timetable-table thead th {
-        font-size: 10px !important;
-        padding: 6px 3px !important;
-        line-height: 1.2 !important;
-    }
-
-    .session-col {
-        width: 45px !important;
-        min-width: 45px !important;
-        font-size: 9px !important;
-        padding: 2px !important;
-    }
-
-    .timetable-cell {
-        min-height: 140px !important;
-        padding: 3px !important;
-    }
-
-    .timetable-cell-content {
-        min-height: 140px !important;
-        gap: 3px !important;
-        padding: 2px !important;
-    }
-
-    .class-card {
-        padding: 5px 6px !important;
-        margin-bottom: 2px !important;
-    }
-
-    .class-subject {
-        font-size: 10px !important;
-        margin-bottom: 3px !important;
-        line-height: 1.2 !important;
-        word-wrap: break-word !important;
-        word-break: break-word !important;
-        overflow-wrap: break-word !important;
-        white-space: normal !important;
-        max-width: 100% !important;
-    }
-
-    .class-info-group {
-        gap: 2px 4px !important;
-        flex-wrap: wrap !important;
-    }
-
-    .class-detail {
-        font-size: 8px !important;
-        gap: 2px !important;
-        line-height: 1.1 !important;
-    }
-
-    .class-detail-label {
-        font-size: 7px !important;
-    }
-
-    .class-detail-value {
-        font-size: 8px !important;
-        word-wrap: break-word !important;
-        word-break: break-word !important;
-        overflow-wrap: break-word !important;
-        white-space: normal !important;
-        max-width: 100% !important;
+        font-size: 14px;
+        padding: 16px 12px;
     }
 
     .header-date {
-        font-size: 8px !important;
-        margin-top: 2px !important;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .session-col {
+        width: 100px;
+        min-width: 100px;
+        font-size: 13px;
+    }
+
+    .timetable-cell {
+        min-height: 220px;
+        padding: 14px;
+    }
+
+    .timetable-cell-content {
+        min-height: 200px;
+        gap: 10px;
+    }
+
+    .class-card {
+        padding: 14px 16px;
+    }
+
+    .class-subject {
+        font-size: 15px;
+        margin-bottom: 10px;
+    }
+
+    .class-info-group {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 6px 12px;
+    }
+
+    .class-detail {
+        font-size: 12px;
+    }
+
+    .class-detail-label {
+        font-size: 10px;
+    }
+
+    .class-detail-value {
+        font-size: 12px;
+    }
+}
+
+/* ==================== LARGE DESKTOP (min-width: 1200px) ==================== */
+@media (min-width: 1200px) {
+    .timetable-wrapper {
+        max-width: calc(100vw - 340px);
+    }
+
+    .timetable-table {
+        min-width: 1400px;
+    }
+
+    .timetable-table th,
+    .timetable-table td {
+        padding: 20px 16px;
+        min-width: 160px;
+    }
+
+    .timetable-cell {
+        min-height: 260px;
+        padding: 16px;
+    }
+
+    .timetable-cell-content {
+        min-height: 240px;
+    }
+
+    .class-subject {
+        font-size: 16px;
+    }
+}
+
+/* ==================== MOBILE CARD VIEW (max-width: 480px) ==================== */
+@media (max-width: 480px) {
+    .timetable-wrapper {
+        border-radius: 8px;
+        margin-bottom: 16px;
+    }
+
+    .timetable-table {
+        min-width: 700px;
+    }
+
+    .timetable-table th,
+    .timetable-table td {
+        padding: 8px 6px;
+        min-width: 85px;
+        font-size: 11px;
+    }
+
+    .timetable-table thead th {
+        font-size: 10px;
+        padding: 10px 6px;
+    }
+
+    .header-date {
+        font-size: 9px;
+        margin-top: 3px;
+    }
+
+    .session-col {
+        width: 55px;
+        min-width: 55px;
+        font-size: 10px;
+    }
+
+    .timetable-cell {
+        min-height: 120px;
+        padding: 6px;
+    }
+
+    .timetable-cell-content {
+        min-height: 100px;
+        gap: 6px;
+    }
+
+    .class-card {
+        padding: 8px 10px;
+        border-radius: 6px;
+        border-left-width: 3px;
+    }
+
+    .class-subject {
+        font-size: 11px;
+        margin-bottom: 6px;
+        line-height: 1.25;
+    }
+
+    .class-info-group {
+        gap: 3px;
+    }
+
+    .class-detail {
+        font-size: 9px;
+        gap: 3px;
+    }
+
+    .class-detail-label {
+        font-size: 8px;
+    }
+
+    .class-detail-value {
+        font-size: 9px;
     }
 
     .btn-edit-class,
     .btn-delete-class {
-        width: 18px !important;
-        height: 18px !important;
-        top: 3px !important;
+        width: 18px;
+        height: 18px;
+        top: 4px;
+        opacity: 1; /* Always visible on mobile for touch */
     }
 
     .btn-edit-class {
-        right: 24px !important;
+        right: 24px;
     }
 
     .btn-delete-class {
-        right: 3px !important;
+        right: 4px;
+    }
+
+    .timetable-table thead th.is-today::after {
+        font-size: 7px;
+        padding: 2px 5px;
+    }
+
+    /* Mobile header adjustments */
+    .timetable-header {
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .timetable-title {
+        font-size: 1.25rem;
+        text-align: center;
+    }
+
+    .week-navigator {
+        gap: 8px;
+    }
+
+    .week-nav-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+    }
+
+    .week-display {
+        font-size: 0.9rem;
+        min-width: 100px;
+    }
+
+    .timetable-actions {
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .btn-timetable-action {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+
+    .btn-timetable-action .btn-text {
+        display: none;
+    }
+
+    .btn-back-dashboard {
+        bottom: 15px;
+        right: 15px;
+        padding: 8px 14px;
+        font-size: 12px;
     }
 }
         `;
         document.head.appendChild(styleTag);
-        console.log('✅ Timetable CSS loaded successfully');
+        console.log('✅ Timetable CSS loaded successfully (Mobile-First, Clean)');
     },
 
     async loadTimetable() {
@@ -844,8 +1210,12 @@ td.timetable-cell {
         let html = '';
         let totalClassesRendered = 0;
 
+        // Track rendered classes to prevent duplicates
+        // Key format: "subject|day|session|startPeriod"
+        const renderedClasses = new Set();
+
         sessions.forEach(session => {
-            html += '<tr>';
+            html += '<tr class="timetable-row">';
 
             // 1. Render Session Label Column
             html += `<td class="session-col">${session.label}</td>`;
@@ -863,29 +1233,33 @@ td.timetable-cell {
                     // Check if class is active in the selected week
                     const weekMatch = this.isClassInWeek(cls);
 
-                    const isMatch = dayMatch && sessionMatch && weekMatch;
-
-                    // Debug logging for each comparison
-                    if (cls) {
-                        console.log(`🔍 Checking "${cls.subject}": day=${cls.day} vs ${day} → ${dayMatch ? '✅' : '❌'}, session=${cls.session} vs ${session.id} → ${sessionMatch ? '✅' : '❌'}, week → ${weekMatch ? '✅' : '❌'}`);
-                    }
-
-                    return isMatch;
+                    return dayMatch && sessionMatch && weekMatch;
                 });
 
-                html += `<td class="timetable-cell">`;
+                html += `<td class="timetable-cell" data-day="${day}" data-session="${session.id}">`;
 
                 if (classes.length > 0) {
-                    console.log(`📍 Rendering ${classes.length} class(es) for Day ${day}, ${session.label}`);
                     html += '<div class="timetable-cell-content">';
+                    
                     classes.forEach(cls => {
+                        // Create unique key to prevent duplicates
+                        const uniqueKey = `${cls.subject}|${cls.day}|${cls.session}|${cls.startPeriod}`;
+                        
+                        // Skip if already rendered
+                        if (renderedClasses.has(uniqueKey)) {
+                            console.log(`⏭️ Skipping duplicate: "${cls.subject}" on day ${day}, ${session.id}`);
+                            return;
+                        }
+                        
+                        renderedClasses.add(uniqueKey);
                         html += this.renderClassCard(cls);
                         totalClassesRendered++;
                     });
+                    
                     html += '</div>';
                 } else {
-                    // Empty cell - still needs min-height for consistent layout
-                    html += '<div class="timetable-cell-content"></div>';
+                    // Empty cell - still needs structure for consistent layout
+                    html += '<div class="timetable-cell-content timetable-cell-empty"></div>';
                 }
 
                 html += '</td>';
@@ -897,15 +1271,12 @@ td.timetable-cell {
         tbody.innerHTML = html;
 
         console.log('✅ Timetable rendered successfully!');
-        console.log(`📊 Stats: ${totalClassesRendered} classes rendered out of ${this.currentTimetable.length} in memory`);
+        console.log(`📊 Stats: ${totalClassesRendered} unique classes rendered (duplicates filtered)`);
 
         // Verification warning
         if (this.currentTimetable.length > 0 && totalClassesRendered === 0) {
             console.warn('⚠️ WARNING: Classes exist but NONE were rendered!');
-            console.warn('🔍 Sample class structure:');
-            if (this.currentTimetable[0]) {
-                console.log(this.currentTimetable[0]);
-            }
+            console.warn('🔍 Check if date ranges match the selected week.');
         }
     },
 
@@ -1099,10 +1470,10 @@ td.timetable-cell {
         const endTime = this.periodTimes[endPeriod]?.end || '23:59';
         const timeRange = cls.timeRange || `${startTime} - ${endTime}`;
 
-        // Check if class is currently active
-        let isActive = true;
-        let statusBadge = '';
-        let cardOpacity = '1';
+        // Determine class status and apply appropriate CSS class
+        let statusClass = '';
+        let statusText = '';
+        let cardStateClass = '';
 
         if (cls.startDate && cls.endDate) {
             const today = new Date();
@@ -1110,46 +1481,53 @@ td.timetable-cell {
             const end = new Date(cls.endDate);
 
             if (today < start) {
-                isActive = false;
-                statusBadge = '<span style="display: inline-block; background: #fbbf24; color: #78350f; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 4px;">⏳ Sắp diễn ra</span>';
-                cardOpacity = '0.6';
+                statusClass = 'class-status-badge--upcoming';
+                statusText = '⏳ Sắp diễn ra';
+                cardStateClass = 'class-card--upcoming';
             } else if (today > end) {
-                isActive = false;
-                statusBadge = '<span style="display: inline-block; background: #d1d5db; color: #374151; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 4px;">✓ Đã kết thúc</span>';
-                cardOpacity = '0.5';
+                statusClass = 'class-status-badge--ended';
+                statusText = '✓ Đã kết thúc';
+                cardStateClass = 'class-card--ended';
             } else {
-                statusBadge = '<span style="display: inline-block; background: #34d399; color: #064e3b; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 4px;">▶ Đang diễn ra</span>';
+                statusClass = 'class-status-badge--active';
+                statusText = '▶ Đang diễn ra';
+                cardStateClass = 'class-card--active';
             }
         }
 
+        // Use CSS variable for background color instead of inline style
         return `
-            <div class="class-card" style="background-color: ${bgColor}; opacity: ${cardOpacity};" data-class-id="${classId}">
+            <div class="class-card ${cardStateClass}" style="--card-bg: ${bgColor}; background-color: var(--card-bg);" data-class-id="${classId}">
                 <div class="class-subject" title="${this.escapeHtml(cls.subject)}">
                     ${this.escapeHtml(cls.subject)}
                 </div>
                 
                 <div class="class-info-group">
                     <div class="class-detail">
-                        <span class="class-detail-label">PHÒNG:</span> 
+                        <span class="class-detail-label">Phòng:</span> 
                         <span class="class-detail-value">${this.escapeHtml(cls.room)}</span>
                     </div>
                     <div class="class-detail">
-                        <span class="class-detail-label">CƠ SỞ:</span> 
-                        <span class="class-detail-value" style="color: #000;">${this.escapeHtml(cls.campus || 'CS1')}</span>
+                        <span class="class-detail-label">Cơ sở:</span> 
+                        <span class="class-detail-value">${this.escapeHtml(cls.campus || 'CS1')}</span>
                     </div>
                     <div class="class-detail">
-                        <span class="class-detail-label">GIỜ:</span> 
+                        <span class="class-detail-label">Giờ:</span> 
                         <span class="class-detail-value">${this.escapeHtml(timeRange)}</span>
                     </div>
                     ${cls.dateRangeDisplay ? `
-                    <div class="class-detail" style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(0,0,0,0.1);">
-                        <span class="class-detail-label">📅 Thời gian:</span> 
-                        <span class="class-detail-value" style="font-size: 12px;">${this.escapeHtml(cls.dateRangeDisplay)}</span>
+                    <div class="class-detail class-detail--date">
+                        <span class="class-detail-label">📅</span> 
+                        <span class="class-detail-value">${this.escapeHtml(cls.dateRangeDisplay)}</span>
                     </div>
                     ` : ''}
                 </div>
                 
-                ${statusBadge ? `<div style="text-align: center; margin-top: 8px;">${statusBadge}</div>` : ''}
+                ${statusText ? `
+                <div class="class-status-wrapper">
+                    <span class="class-status-badge ${statusClass}">${statusText}</span>
+                </div>
+                ` : ''}
 
                 <button class="btn-edit-class" data-class-id="${classId}" title="Sửa môn này">
                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
@@ -1782,88 +2160,273 @@ td.timetable-cell {
         return 'ADV';
     },
 
-    // ==================== ADVANCED PERIOD PARSER ====================
+    // ==================== ADVANCED PERIOD PARSER (REFACTORED) ====================
+    /**
+     * Parse period/time from "weird" CSV format.
+     * 
+     * REGEX EXPLANATION (Step-by-step):
+     * ─────────────────────────────────────────────────────────
+     * Input examples:
+     *   - "(15h10)-\n>12 (17h40)"   → Tiết 10 đến 12 (Chiều)
+     *   - "1 (6h30)-\n>3 (9h00)"    → Tiết 1 đến 3 (Sáng)
+     *   - "10 (15h10)"              → Tiết 10 (Single period)
+     * 
+     * STRATEGY: We use TWO different approaches:
+     * 
+     * Approach 1: Extract TIME (e.g., 15h10)
+     *   Regex: /(\d{1,2})h(\d{2})/
+     *   - (\d{1,2})  → 1-2 digits for hour (6, 15, etc.)
+     *   - h          → Literal 'h' character
+     *   - (\d{2})    → Exactly 2 digits for minutes (30, 10, etc.)
+     *   Then use findPeriodByTime() to convert time → period number
+     * 
+     * Approach 2: Extract END PERIOD number
+     *   Regex: /[>\-](\d+)/
+     *   - [>\-]      → Match either ">" or "-" character
+     *   - (\d+)      → Capture one or more digits after
+     *   This grabs the ending period from patterns like ">12" or "-3"
+     * 
+     * Fallback: Just extract all numbers and use first as start, last as end
+     *   Regex: /\d+/g
+     * ─────────────────────────────────────────────────────────
+     */
     parseAdvancedPeriod(periodStr) {
         const str = String(periodStr).trim();
+        console.log(`    🔍 Period parsing: "${str}"`);
 
-        // --- Case 1: Format chứa giờ (VD: "(15h10)->12") ---
-        // Regex này bắt: 15h10 hoặc (15h10)
-        const timeMatch = str.match(/(\d{1,2})h(\d{2})/);
-        // Regex này bắt số sau dấu > hoặc - (VD: >12 hoặc -12)
-        const endPeriodMatch = str.match(/[>\-](\d+)/);
+        // === Approach 1: Look for time format (e.g., 15h10) ===
+        const timeRegex = /(\d{1,2})h(\d{2})/;
+        const timeMatch = str.match(timeRegex);
+
+        // Look for end period after arrow or dash (e.g., >12, -3)
+        const endPeriodRegex = /[>\-]\s*(\d+)/;
+        const endPeriodMatch = str.match(endPeriodRegex);
 
         if (timeMatch) {
             const hour = parseInt(timeMatch[1]);
             const minute = parseInt(timeMatch[2]);
+            console.log(`      ⏰ Found time: ${hour}h${minute}`);
 
-            // Tìm tiết bắt đầu từ giờ
+            // Convert time to period number
             const startPeriod = this.findPeriodByTime(hour, minute);
 
             if (startPeriod) {
                 let endPeriod = startPeriod;
+
+                // If we found an end period, use it
                 if (endPeriodMatch) {
                     endPeriod = parseInt(endPeriodMatch[1]);
+                    console.log(`      📍 End period from arrow: ${endPeriod}`);
                 }
 
                 const numPeriods = Math.max(1, endPeriod - startPeriod + 1);
 
-                // Xác định buổi học
+                // Determine session based on period number
                 let session = 'morning';
-                if (startPeriod > 12) session = 'evening';
-                else if (startPeriod > 6) session = 'afternoon';
+                if (startPeriod >= 13) {
+                    session = 'evening';
+                } else if (startPeriod >= 7) {
+                    session = 'afternoon';
+                }
+
+                console.log(`      ✅ Result: Period ${startPeriod}-${endPeriod} (${numPeriods} periods), Session: ${session}`);
 
                 return { startPeriod, numPeriods, session };
             }
         }
 
-        // --- Case 2: Format chuẩn số (VD: "1-3" hoặc "10") ---
+        // === Approach 2: Look for period numbers directly ===
+        // Pattern: "10 (15h10) -> 12" - extract 10 and 12
+        const periodBeforeParenRegex = /(\d+)\s*\(/g;
+        const periodMatches = [...str.matchAll(periodBeforeParenRegex)];
+
+        if (periodMatches.length >= 1) {
+            const startPeriod = parseInt(periodMatches[0][1]);
+            let endPeriod = startPeriod;
+
+            // If there's more than one match, get the last one as end
+            if (periodMatches.length >= 2) {
+                endPeriod = parseInt(periodMatches[periodMatches.length - 1][1]);
+            } else if (endPeriodMatch) {
+                // Or use the arrow match if available
+                endPeriod = parseInt(endPeriodMatch[1]);
+            }
+
+            const numPeriods = Math.max(1, endPeriod - startPeriod + 1);
+
+            let session = 'morning';
+            if (startPeriod >= 13) {
+                session = 'evening';
+            } else if (startPeriod >= 7) {
+                session = 'afternoon';
+            }
+
+            console.log(`      ✅ Result (from period numbers): Period ${startPeriod}-${endPeriod}, Session: ${session}`);
+
+            return { startPeriod, numPeriods, session };
+        }
+
+        // === Fallback: Extract any numbers ===
         const numbers = str.match(/\d+/g);
-        if (numbers) {
+        if (numbers && numbers.length >= 1) {
             const start = parseInt(numbers[0]);
-            const end = numbers.length > 1 ? parseInt(numbers[1]) : start;
+            const end = numbers.length > 1 ? parseInt(numbers[numbers.length - 1]) : start;
+
+            // Make sure end is not a time value (e.g., 17 from 17h40)
+            const validEnd = end <= 15 ? end : start;
+
+            const numPeriods = Math.max(1, validEnd - start + 1);
+
+            let session = 'morning';
+            if (start >= 13) {
+                session = 'evening';
+            } else if (start >= 7) {
+                session = 'afternoon';
+            }
+
+            console.log(`      ✅ Result (fallback): Period ${start}-${validEnd}, Session: ${session}`);
 
             return {
                 startPeriod: start,
-                numPeriods: end - start + 1,
-                session: start > 12 ? 'evening' : (start > 6 ? 'afternoon' : 'morning')
+                numPeriods: numPeriods,
+                session: session
             };
         }
 
+        console.log(`      ❌ Failed to parse period: "${periodStr}"`);
         throw new Error(`Không đọc được tiết học: ${periodStr}`);
     },
 
-    // ==================== PARSE NGÀY (CHUẨN PYTHON 100%) ====================
-    // Hàm mới để xử lý ngày tháng từ Excel
+    // ==================== PARSE NGÀY THÁNG (REFACTORED - Handles Multi-line CSV) ====================
+    /**
+     * Parse date range from "weird" CSV format.
+     * 
+     * REGEX EXPLANATION (Step-by-step):
+     * ─────────────────────────────────────────────────────────
+     * Input examples:
+     *   - "19/01/2026-\n>13/04/2026"
+     *   - "23/01/2026->13/03/2026"
+     *   - "05/02/2026-\n>25/04/2026"
+     * 
+     * Step 1: CLEAN the string
+     *   - Remove ALL letters, newlines (\n, \r), spaces, and the arrow character (>)
+     *   - Regex: /[a-zA-Z\n\r\s>]/g
+     *   - Result: "19/01/2026-13/04/2026"
+     * 
+     * Step 2: EXTRACT dates using this pattern:
+     *   /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/g
+     * 
+     *   Breakdown:
+     *   - (\d{1,2})    → Capture 1-2 digits (day: 1-31)
+     *   - [\/\-\.]     → Match separator: slash, dash, or dot
+     *   - (\d{1,2})    → Capture 1-2 digits (month: 1-12)
+     *   - [\/\-\.]     → Match separator again
+     *   - (\d{4})      → Capture exactly 4 digits (year: 2026)
+     * 
+     *   The 'g' flag finds ALL matches, so we get both start AND end dates.
+     * ─────────────────────────────────────────────────────────
+     */
     parseAdvancedDateRange(dateRangeStr) {
         if (!dateRangeStr) return { startDate: null, endDate: null, display: '' };
 
-        // 1. Vệ sinh chuỗi: Xóa hết chữ cái, xuống dòng, dấu >
-        // Input: "19/01/2026-\n>13/04/2026"  =>  Thành: "19/01/2026-13/04/2026"
+        // Step 1: Clean the messy CSV format
+        // Remove: letters, newlines, spaces, and the ">" arrow character
         const cleanStr = String(dateRangeStr).replace(/[a-zA-Z\n\r\s>]/g, '');
+        console.log(`    🧹 Date cleaning: "${dateRangeStr}" → "${cleanStr}"`);
 
-        // 2. Trích xuất ngày theo format dd/mm/yyyy
-        const regex = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/g;
-        const matches = [...cleanStr.matchAll(regex)];
+        // Step 2: Extract all dates using Regex
+        // Pattern matches: dd/mm/yyyy, dd-mm-yyyy, or dd.mm.yyyy
+        const dateRegex = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/g;
+        const matches = [...cleanStr.matchAll(dateRegex)];
 
         if (matches.length >= 1) {
-            // Helper convert string sang Date object
-            const toDate = (m) => new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
+            // Helper: Convert regex match to Date object
+            // match[1] = day, match[2] = month, match[3] = year
+            const toDate = (m) => new Date(
+                parseInt(m[3]),      // year
+                parseInt(m[2]) - 1,  // month (0-indexed)
+                parseInt(m[1])       // day
+            );
 
             const start = toDate(matches[0]);
-            // Nếu có 2 ngày thì lấy ngày 2 làm kết thúc, nếu không thì lấy chính ngày đầu
+            // If we found 2 dates, use the second as end date
+            // Otherwise, use the same date (single-day event)
             const end = matches.length > 1 ? toDate(matches[matches.length - 1]) : new Date(start);
 
-            // Set giờ để so sánh chính xác
-            start.setHours(0, 0, 0, 0);
-            end.setHours(23, 59, 59, 999);
+            // Set time boundaries for accurate comparisons
+            start.setHours(0, 0, 0, 0);       // Start of day
+            end.setHours(23, 59, 59, 999);    // End of day
+
+            const display = `${String(start.getDate()).padStart(2, '0')}/${String(start.getMonth() + 1).padStart(2, '0')} - ${String(end.getDate()).padStart(2, '0')}/${String(end.getMonth() + 1).padStart(2, '0')}`;
+
+            console.log(`    ✅ Date parsed: ${start.toLocaleDateString('vi-VN')} → ${end.toLocaleDateString('vi-VN')}`);
 
             return {
                 startDate: start.toISOString(),
                 endDate: end.toISOString(),
-                display: `${start.getDate()}/${start.getMonth() + 1} - ${end.getDate()}/${end.getMonth() + 1}`
+                display: display
             };
         }
+
+        console.log(`    ⚠️ No valid date found in: "${dateRangeStr}"`);
         return { startDate: null, endDate: null, display: '' };
+    },
+
+    // ==================== HELPER: Check if subject is active in selected week ====================
+    /**
+     * Determines if a subject should be displayed in the currently selected week.
+     * 
+     * LOGIC EXPLANATION:
+     * ─────────────────────────────────────────────────────────
+     * 1. Get the selected week's Monday (start) and Sunday (end)
+     * 2. Get the subject's startDate and endDate
+     * 3. Check for OVERLAP:
+     *    - If week ends BEFORE subject starts → HIDE (not started yet)
+     *    - If week starts AFTER subject ends → HIDE (already finished)
+     *    - Otherwise → SHOW (there's overlap)
+     * ─────────────────────────────────────────────────────────
+     */
+    isSubjectActiveInWeek(subject, weekStartDate, weekEndDate) {
+        // If no week filter is set, show all subjects
+        if (!weekStartDate || !weekEndDate) {
+            return true;
+        }
+
+        // If subject has no date range, show it (legacy data)
+        if (!subject.startDate || !subject.endDate) {
+            console.log(`    ⚠️ "${subject.subject}": No date range → SHOW (legacy)`);
+            return true;
+        }
+
+        // Parse subject dates
+        const subjectStart = new Date(subject.startDate);
+        const subjectEnd = new Date(subject.endDate);
+
+        // Normalize times for comparison
+        subjectStart.setHours(0, 0, 0, 0);
+        subjectEnd.setHours(23, 59, 59, 999);
+
+        const weekStart = new Date(weekStartDate);
+        const weekEnd = new Date(weekEndDate);
+        weekStart.setHours(0, 0, 0, 0);
+        weekEnd.setHours(23, 59, 59, 999);
+
+        // Check for NO overlap (hide conditions)
+        if (weekEnd < subjectStart) {
+            // Week ends before subject starts
+            console.log(`    ❌ "${subject.subject}": Week ends ${weekEnd.toLocaleDateString('vi-VN')} < Subject starts ${subjectStart.toLocaleDateString('vi-VN')} → HIDE`);
+            return false;
+        }
+
+        if (weekStart > subjectEnd) {
+            // Week starts after subject ends
+            console.log(`    ❌ "${subject.subject}": Week starts ${weekStart.toLocaleDateString('vi-VN')} > Subject ends ${subjectEnd.toLocaleDateString('vi-VN')} → HIDE`);
+            return false;
+        }
+
+        // There is overlap → SHOW
+        console.log(`    ✅ "${subject.subject}": Active in week ${weekStart.toLocaleDateString('vi-VN')} - ${weekEnd.toLocaleDateString('vi-VN')}`);
+        return true;
     },
 
     parseDayString(dayStr) {

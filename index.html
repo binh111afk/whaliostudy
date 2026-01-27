@@ -759,7 +759,7 @@
         </section>
 
         <!-- TIMETABLE SECTION -->
-        <section id="timetable-section" style="display: none; width: 100%;">
+        <section id="timetable-section" class="timetable-section">
             <div class="timetable-container">
                 <div class="timetable-header">
                     <!-- Left: Title -->
@@ -767,17 +767,14 @@
 
                     <!-- Center: Week Navigator -->
                     <div id="week-navigator" class="week-navigator">
-                        <button onclick="Timetable.prevWeek()" class="week-nav-btn"
-                            onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#6b7280'">◀</button>
-                        <span id="current-week-display">Đang tải...</span>
-                        <button onclick="Timetable.nextWeek()" class="week-nav-btn"
-                            onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#6b7280'">▶</button>
+                        <button onclick="Timetable.prevWeek()" class="week-nav-btn" aria-label="Tuần trước">◀</button>
+                        <span id="current-week-display" class="week-display">Đang tải...</span>
+                        <button onclick="Timetable.nextWeek()" class="week-nav-btn" aria-label="Tuần sau">▶</button>
                     </div>
 
                     <!-- Right: Action Buttons -->
                     <div class="timetable-actions">
-                        <button id="btn-delete-all" onclick="Timetable.deleteAllClasses()"
-                            onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
+                        <button id="btn-delete-all" class="btn-timetable-action btn-timetable-danger" onclick="Timetable.deleteAllClasses()">
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -785,8 +782,7 @@
                             <span class="btn-text">Delete All</span>
                         </button>
 
-                        <button class="btn-open-import-v2" onclick="Timetable.openImportModal()"
-                            onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                        <button class="btn-timetable-action btn-timetable-import" onclick="Timetable.openImportModal()">
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -794,8 +790,7 @@
                             <span class="btn-text">Import File</span>
                         </button>
 
-                        <button class="btn-add-class" onclick="Timetable.openCreateModal()"
-                            onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+                        <button class="btn-timetable-action btn-add-class" onclick="Timetable.openCreateModal()">
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 4v16m8-8H4" />
@@ -809,34 +804,13 @@
                         <thead>
                             <tr>
                                 <th class="session-col">Buổi</th>
-                                <th data-day="2">THỨ 2<div class="header-date" id="date-2"
-                                        style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">
-                                        --/--</div>
-                                </th>
-                                <th data-day="3">THỨ 3<div class="header-date" id="date-3"
-                                        style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">
-                                        --/--</div>
-                                </th>
-                                <th data-day="4">THỨ 4<div class="header-date" id="date-4"
-                                        style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">
-                                        --/--</div>
-                                </th>
-                                <th data-day="5">THỨ 5<div class="header-date" id="date-5"
-                                        style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">
-                                        --/--</div>
-                                </th>
-                                <th data-day="6">THỨ 6<div class="header-date" id="date-6"
-                                        style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">
-                                        --/--</div>
-                                </th>
-                                <th data-day="7">THỨ 7<div class="header-date" id="date-7"
-                                        style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">
-                                        --/--</div>
-                                </th>
-                                <th data-day="CN">CN<div class="header-date" id="date-CN"
-                                        style="font-size: 11px; font-weight: normal; color: #6b7280; margin-top: 2px;">
-                                        --/--</div>
-                                </th>
+                                <th data-day="2">THỨ 2<div class="header-date" id="date-2">--/--</div></th>
+                                <th data-day="3">THỨ 3<div class="header-date" id="date-3">--/--</div></th>
+                                <th data-day="4">THỨ 4<div class="header-date" id="date-4">--/--</div></th>
+                                <th data-day="5">THỨ 5<div class="header-date" id="date-5">--/--</div></th>
+                                <th data-day="6">THỨ 6<div class="header-date" id="date-6">--/--</div></th>
+                                <th data-day="7">THỨ 7<div class="header-date" id="date-7">--/--</div></th>
+                                <th data-day="CN">CN<div class="header-date" id="date-CN">--/--</div></th>
                             </tr>
                         </thead>
                         <tbody id="timetable-body">
@@ -844,8 +818,7 @@
                         </tbody>
                     </table>
                 </div>
-                <button onclick="PageManager.showDashboard()"
-                    style="position: fixed; bottom: 20px; right: 20px; padding: 10px 20px; background: #374151; color: white; border-radius: 30px; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1000;">
+                <button onclick="PageManager.showDashboard()" class="btn-back-dashboard">
                     ↩ Quay về Dashboard
                 </button>
             </div>
