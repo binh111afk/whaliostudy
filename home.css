@@ -5045,27 +5045,8 @@ td.timetable-cell {
     margin: 3px 0;
 }
 
-.btn-delete-class {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    background: rgba(239, 68, 68, 0.9);
-    border: none;
-    border-radius: 4px;
-    padding: 4px;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.2s;
-    color: white;
-}
-
-.class-card:hover .btn-delete-class {
-    opacity: 1;
-}
-
-.btn-delete-class:hover {
-    background: rgba(220, 38, 38, 1);
-}
+/* REMOVED: Old btn-delete-class CSS - now handled by flex container in timetable.js */
+/* .btn-delete-class styles moved to .class-card-actions container */
 
 /* Add class button in header */
 .btn-add-class {
@@ -8638,14 +8619,6 @@ select {
 .class-time {
     font-size: 9px !important;
     margin: 1px 0 !important;
-}
-
-/* Delete button in cells */
-.btn-delete-class {
-    top: 2px !important;
-    right: 2px !important;
-    padding: 2px !important;
-    font-size: 10px !important;
 }
 
 /* Timetable container padding */

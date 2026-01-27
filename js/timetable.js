@@ -130,10 +130,13 @@ export const Timetable = {
         console.log('📅 Initializing Timetable...');
         this.injectStyles();
 
-        // 🔥 FIX RE-LOGIN: Check if structure exists, inject if missing
-        if (!document.getElementById('timetable-container') && !document.getElementById('timetable-grid')) {
-            console.log('⚠️ Timetable container not found, injecting structure...');
-            this.injectStructure();
+        // 🔥 FIX RE-LOGIN: Ensure timetable-body exists in the section
+        const timetableSection = document.getElementById('timetable-section');
+        const timetableBody = document.getElementById('timetable-body');
+        
+        if (timetableSection && !timetableBody) {
+            console.log('⚠️ timetable-body not found, restoring structure...');
+            this.restoreTimetableStructure(timetableSection);
         }
 
         // Initialize week navigation to current week
@@ -145,59 +148,70 @@ export const Timetable = {
         this.setupEventListeners();
     },
 
-    // 🔥 NEW: Inject timetable HTML structure if missing (for re-login scenarios)
-    injectStructure() {
-        console.log('🏗️ Injecting timetable structure...');
+    // 🔥 FIX: Restore timetable structure inside timetable-section if damaged
+    restoreTimetableStructure(section) {
+        console.log('🏗️ Restoring timetable structure...');
         
-        // Find the main content area to inject into
-        let targetContainer = document.getElementById('timetable-tab') || 
-                              document.querySelector('.tab-content[data-tab="timetable"]') ||
-                              document.querySelector('[data-section="timetable"]');
-        
-        if (!targetContainer) {
-            console.warn('⚠️ No suitable container found for timetable structure');
-            return;
+        // Find the container inside section
+        let container = section.querySelector('.timetable-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'timetable-container';
+            section.appendChild(container);
         }
 
-        // Don't clear everything, just ensure the structure exists
-        if (!document.getElementById('timetable-grid')) {
-            const timetableHTML = `
-                <div id="timetable-container" class="timetable-container">
-                    <div class="timetable-header">
-                        <h2>📅 Thời Khóa Biểu</h2>
-                        <div class="week-navigation">
-                            <button class="btn-week-nav" id="btn-prev-week" title="Tuần trước">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
-                            </button>
-                            <span class="week-display" id="current-week-display">Đang tải...</span>
-                            <button class="btn-week-nav" id="btn-next-week" title="Tuần sau">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
-                            </button>
-                        </div>
+        // Check if timetable-wrapper and tbody exist
+        if (!document.getElementById('timetable-body')) {
+            const wrapperHTML = `
+                <div class="timetable-header">
+                    <h1 class="timetable-title">📅 Thời Khóa Biểu</h1>
+                    <div id="week-navigator" class="week-navigator">
+                        <button onclick="Timetable.prevWeek()" class="week-nav-btn" aria-label="Tuần trước">◀</button>
+                        <span id="current-week-display" class="week-display">Đang tải...</span>
+                        <button onclick="Timetable.nextWeek()" class="week-nav-btn" aria-label="Tuần sau">▶</button>
                     </div>
-                    <div id="timetable-grid" class="timetable-grid">
-                        <div class="timetable-wrapper">
-                            <table class="timetable-table">
-                                <thead>
-                                    <tr>
-                                        <th class="session-col">Buổi</th>
-                                        <th data-day="2">THỨ 2<div class="header-date" id="date-2">--/--</div></th>
-                                        <th data-day="3">THỨ 3<div class="header-date" id="date-3">--/--</div></th>
-                                        <th data-day="4">THỨ 4<div class="header-date" id="date-4">--/--</div></th>
-                                        <th data-day="5">THỨ 5<div class="header-date" id="date-5">--/--</div></th>
-                                        <th data-day="6">THỨ 6<div class="header-date" id="date-6">--/--</div></th>
-                                        <th data-day="7">THỨ 7<div class="header-date" id="date-7">--/--</div></th>
-                                        <th data-day="CN">CN<div class="header-date" id="date-CN">--/--</div></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="timetable-body"></tbody>
-                            </table>
-                        </div>
+                    <div class="timetable-actions">
+                        <button id="btn-delete-all" class="btn-timetable-action btn-timetable-danger" onclick="Timetable.deleteAllClasses()">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            <span class="btn-text">Delete All</span>
+                        </button>
+                        <button class="btn-timetable-action btn-timetable-import" onclick="Timetable.openImportModal()">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                            <span class="btn-text">Import File</span>
+                        </button>
+                        <button class="btn-timetable-action btn-add-class" onclick="Timetable.openCreateModal()">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span class="btn-text">Add Class</span>
+                        </button>
                     </div>
                 </div>
+                <div class="timetable-wrapper">
+                    <table class="timetable-table">
+                        <thead>
+                            <tr>
+                                <th class="session-col">Buổi</th>
+                                <th data-day="2">THỨ 2<div class="header-date" id="date-2">--/--</div></th>
+                                <th data-day="3">THỨ 3<div class="header-date" id="date-3">--/--</div></th>
+                                <th data-day="4">THỨ 4<div class="header-date" id="date-4">--/--</div></th>
+                                <th data-day="5">THỨ 5<div class="header-date" id="date-5">--/--</div></th>
+                                <th data-day="6">THỨ 6<div class="header-date" id="date-6">--/--</div></th>
+                                <th data-day="7">THỨ 7<div class="header-date" id="date-7">--/--</div></th>
+                                <th data-day="CN">CN<div class="header-date" id="date-CN">--/--</div></th>
+                            </tr>
+                        </thead>
+                        <tbody id="timetable-body"></tbody>
+                    </table>
+                </div>
+                <button onclick="PageManager.showDashboard()" class="btn-back-dashboard">↩ Quay về Dashboard</button>
             `;
-            targetContainer.innerHTML = timetableHTML;
-            console.log('✅ Timetable structure injected successfully');
+            container.innerHTML = wrapperHTML;
+            console.log('✅ Timetable structure restored successfully');
         }
     },
 
@@ -1208,20 +1222,20 @@ export const Timetable = {
         font-size: 9px;
     }
 
-    .btn-edit-class,
-    .btn-delete-class {
+    /* Mobile: Always show action buttons for touch */
+    .class-card-actions {
+        opacity: 1 !important;
+        top: 4px;
+        right: 4px;
+        gap: 3px;
+        padding: 1px;
+    }
+
+    .class-card-actions button {
         width: 18px;
         height: 18px;
-        top: 4px;
-        opacity: 1; /* Always visible on mobile for touch */
-    }
-
-    .btn-edit-class {
-        right: 24px;
-    }
-
-    .btn-delete-class {
-        right: 4px;
+        min-width: 18px;
+        min-height: 18px;
     }
 
     .timetable-table thead th.is-today::after {
