@@ -130,6 +130,12 @@ export const Timetable = {
         console.log('📅 Initializing Timetable...');
         this.injectStyles();
 
+        // 🔥 FIX RE-LOGIN: Check if structure exists, inject if missing
+        if (!document.getElementById('timetable-container') && !document.getElementById('timetable-grid')) {
+            console.log('⚠️ Timetable container not found, injecting structure...');
+            this.injectStructure();
+        }
+
         // Initialize week navigation to current week
         this.jumpToToday();
 
@@ -137,6 +143,62 @@ export const Timetable = {
         this.renderTimetable();
         this.highlightCurrentDay();
         this.setupEventListeners();
+    },
+
+    // 🔥 NEW: Inject timetable HTML structure if missing (for re-login scenarios)
+    injectStructure() {
+        console.log('🏗️ Injecting timetable structure...');
+        
+        // Find the main content area to inject into
+        let targetContainer = document.getElementById('timetable-tab') || 
+                              document.querySelector('.tab-content[data-tab="timetable"]') ||
+                              document.querySelector('[data-section="timetable"]');
+        
+        if (!targetContainer) {
+            console.warn('⚠️ No suitable container found for timetable structure');
+            return;
+        }
+
+        // Don't clear everything, just ensure the structure exists
+        if (!document.getElementById('timetable-grid')) {
+            const timetableHTML = `
+                <div id="timetable-container" class="timetable-container">
+                    <div class="timetable-header">
+                        <h2>📅 Thời Khóa Biểu</h2>
+                        <div class="week-navigation">
+                            <button class="btn-week-nav" id="btn-prev-week" title="Tuần trước">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+                            </button>
+                            <span class="week-display" id="current-week-display">Đang tải...</span>
+                            <button class="btn-week-nav" id="btn-next-week" title="Tuần sau">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="timetable-grid" class="timetable-grid">
+                        <div class="timetable-wrapper">
+                            <table class="timetable-table">
+                                <thead>
+                                    <tr>
+                                        <th class="session-col">Buổi</th>
+                                        <th data-day="2">THỨ 2<div class="header-date" id="date-2">--/--</div></th>
+                                        <th data-day="3">THỨ 3<div class="header-date" id="date-3">--/--</div></th>
+                                        <th data-day="4">THỨ 4<div class="header-date" id="date-4">--/--</div></th>
+                                        <th data-day="5">THỨ 5<div class="header-date" id="date-5">--/--</div></th>
+                                        <th data-day="6">THỨ 6<div class="header-date" id="date-6">--/--</div></th>
+                                        <th data-day="7">THỨ 7<div class="header-date" id="date-7">--/--</div></th>
+                                        <th data-day="CN">CN<div class="header-date" id="date-CN">--/--</div></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="timetable-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            targetContainer.innerHTML = timetableHTML;
+            console.log('✅ Timetable structure injected successfully');
+        }
     },
 
     // Week Navigation Helper Methods
@@ -630,15 +692,20 @@ export const Timetable = {
     50% { transform: scale(1.1); }
 }
 
-/* === CARD ACTIONS === */
+/* === CARD ACTIONS (Fixed Overlap) === */
 .class-card-actions {
     position: absolute;
     top: 6px;
     right: 6px;
     display: flex;
+    flex-direction: row;
     gap: 4px;
+    z-index: 10;
     opacity: 0;
     transition: opacity 0.2s ease;
+    background: rgba(255,255,255,0.9);
+    padding: 2px;
+    border-radius: 6px;
 }
 
 .class-card:hover .class-card-actions {
@@ -646,8 +713,10 @@ export const Timetable = {
 }
 
 .class-card-actions button {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
     background: #ffffff;
     border: 1px solid #cbd5e1;
     border-radius: 4px;
@@ -656,7 +725,8 @@ export const Timetable = {
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
-    font-size: 12px;
+    font-size: 11px;
+    flex-shrink: 0;
 }
 
 .btn-notes-class {
@@ -1632,12 +1702,6 @@ export const Timetable = {
                 </div>
                 
                 <div class="class-info-group">
-                    ${cls.teacher ? `
-                    <div class="class-detail class-detail--teacher">
-                        <span class="class-detail-label">👨‍🏫</span> 
-                        <span class="class-detail-value">${this.escapeHtml(cls.teacher)}</span>
-                    </div>
-                    ` : ''}
                     <div class="class-detail">
                         <span class="class-detail-label">Phòng:</span> 
                         <span class="class-detail-value">${this.escapeHtml(cls.room)}</span>
