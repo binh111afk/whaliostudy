@@ -3066,65 +3066,204 @@ export const Timetable = {
      * ═══════════════════════════════════════════════════════════════
      */
     // ==================== PARSE NGÀY THÁNG (ĐÃ FIX BUG THÁNG 4 HIỆN THÁNG 1) ====================
+    /**
+     * 🔥 REWRITTEN: Advanced Date Range Parser
+     * ─────────────────────────────────────────────────────────────────────────
+     * Handles messy, inconsistent date formats from Excel imports:
+     * 
+     * SUPPORTED FORMATS:
+     * 1. ISO 8601:      "2026-04-06" or "2026-04-06->2026-05-12"
+     * 2. VN/UK Format:  "19/01/2026" or "19/01/2026->13/04/2026"
+     * 3. Mixed/Dirty:   "Thứ Hai, ... 2026-04-06" (extracts date from text)
+     * 4. Date Objects:  JavaScript Date (from Excel auto-conversion)
+     * 5. With Newlines: "19/01/2026\n->\n13/04/2026"
+     * 
+     * DISAMBIGUATION LOGIC:
+     * - If first number group has 4 digits → ISO format (YYYY-MM-DD)
+     * - If last number group has 4 digits  → VN format (DD/MM/YYYY)
+     * ─────────────────────────────────────────────────────────────────────────
+     */
     parseAdvancedDateRange(dateRangeStr) {
-        if (!dateRangeStr) return { startDate: null, endDate: null, display: '' };
-
-        const rawInput = String(dateRangeStr);
-        console.log(`    📅 Parsing date range from: "${rawInput.replace(/\n/g, '\\n')}"`);
-
-        // 1. Định nghĩa Regex cho 2 trường hợp phổ biến
-        // Case A: ISO Format (yyyy-mm-dd) -> Năm 4 chữ số đứng đầu (Xuất hiện trong file lỗi của bạn)
-        const isoRegex = /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/g;
+        // ═══════════════════════════════════════════════════════════════════
+        // STEP 1: AGGRESSIVE NORMALIZATION
+        // Handle null, undefined, Date objects, numbers, and strings
+        // ═══════════════════════════════════════════════════════════════════
         
-        // Case B: VN Format (dd/mm/yyyy) -> Năm 4 chữ số đứng cuối
-        const vnRegex = /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/g;
-
-        let dates = [];
-
-        // 2. Thử match ISO trước (Ưu tiên format yyyy-mm-dd nếu có)
-        const isoMatches = [...rawInput.matchAll(isoRegex)];
-        
-        if (isoMatches.length > 0) {
-            console.log('    👉 Detected ISO Format (yyyy-mm-dd)');
-            dates = isoMatches.map(m => {
-                const year = parseInt(m[1], 10);
-                const month = parseInt(m[2], 10) - 1; // Tháng trong JS bắt đầu từ 0
-                const day = parseInt(m[3], 10);
-                return new Date(year, month, day);
-            });
-        } else {
-            // 3. Nếu không phải ISO, thử match VN Format (dd/mm/yyyy)
-            const vnMatches = [...rawInput.matchAll(vnRegex)];
-            if (vnMatches.length > 0) {
-                console.log('    👉 Detected VN Format (dd/mm/yyyy)');
-                dates = vnMatches.map(m => {
-                    const day = parseInt(m[1], 10);
-                    const month = parseInt(m[2], 10) - 1;
-                    const year = parseInt(m[3], 10);
-                    return new Date(year, month, day);
-                });
-            }
-        }
-
-        if (dates.length === 0) {
-            console.log(`    ⚠️ No valid date found in: "${rawInput}"`);
+        // Handle null/undefined
+        if (dateRangeStr === null || dateRangeStr === undefined) {
+            console.log('    ⚠️ Date input is null/undefined → returning null');
             return { startDate: null, endDate: null, display: '' };
         }
 
-        // 4. Sắp xếp ngày tăng dần (để lấy min làm start, max làm end)
-        dates.sort((a, b) => a - b);
+        // Handle JavaScript Date objects (Excel sometimes auto-converts)
+        if (dateRangeStr instanceof Date) {
+            if (isNaN(dateRangeStr.getTime())) {
+                console.log('    ⚠️ Invalid Date object → returning null');
+                return { startDate: null, endDate: null, display: '' };
+            }
+            console.log(`    📅 Input is a Date object: ${dateRangeStr.toISOString()}`);
+            const start = new Date(dateRangeStr);
+            const end = new Date(dateRangeStr);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            const formatDate = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+            return {
+                startDate: start.toISOString(),
+                endDate: end.toISOString(),
+                display: formatDate(start)
+            };
+        }
 
-        // Lấy ngày đầu và ngày cuối
-        const start = dates[0];
-        const end = dates[dates.length - 1];
+        // Handle Excel serial date numbers (days since 1900-01-01)
+        if (typeof dateRangeStr === 'number') {
+            console.log(`    📅 Input is a number (Excel serial): ${dateRangeStr}`);
+            // Excel serial date: days since Jan 1, 1900 (with a bug for 1900 leap year)
+            const excelEpoch = new Date(1899, 11, 30); // Dec 30, 1899
+            const date = new Date(excelEpoch.getTime() + dateRangeStr * 86400000);
+            if (isNaN(date.getTime())) {
+                console.log('    ⚠️ Invalid Excel serial date → returning null');
+                return { startDate: null, endDate: null, display: '' };
+            }
+            const start = new Date(date);
+            const end = new Date(date);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            const formatDate = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+            return {
+                startDate: start.toISOString(),
+                endDate: end.toISOString(),
+                display: formatDate(start)
+            };
+        }
 
-        // Set time boundaries
-        start.setHours(0, 0, 0, 0);       // Đầu ngày
-        end.setHours(23, 59, 59, 999);    // Cuối ngày
+        // Convert to string and clean up
+        const rawInput = String(dateRangeStr).trim();
+        
+        if (!rawInput || rawInput.length === 0) {
+            console.log('    ⚠️ Empty date string → returning null');
+            return { startDate: null, endDate: null, display: '' };
+        }
 
-        // Format hiển thị
+        console.log(`    📅 Parsing date range from: "${rawInput.replace(/\n/g, '\\n')}"`);
+
+        // ═══════════════════════════════════════════════════════════════════
+        // STEP 2: SMART FORMAT DETECTION & PARSING
+        // Detect if ISO (YYYY-MM-DD) or VN (DD/MM/YYYY) based on position of 4-digit year
+        // ═══════════════════════════════════════════════════════════════════
+
+        /**
+         * Helper: Parse a single date string with format auto-detection
+         * Returns a Date object or null if parsing fails
+         */
+        const parseSingleDate = (dateStr) => {
+            if (!dateStr || typeof dateStr !== 'string') return null;
+            
+            const cleaned = dateStr.trim();
+            
+            // Pattern A: ISO Format → YYYY-MM-DD or YYYY/MM/DD
+            // The 4-digit year comes FIRST
+            const isoPattern = /^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/;
+            const isoMatch = cleaned.match(isoPattern);
+            if (isoMatch) {
+                const year = parseInt(isoMatch[1], 10);
+                const month = parseInt(isoMatch[2], 10) - 1; // JS months are 0-indexed
+                const day = parseInt(isoMatch[3], 10);
+                
+                // Validate ranges
+                if (year >= 1900 && year <= 2100 && month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+                    const date = new Date(year, month, day);
+                    // Verify the date is valid (e.g., not Feb 30)
+                    if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+                        console.log(`      → Parsed ISO: ${cleaned} → ${date.toLocaleDateString('vi-VN')}`);
+                        return date;
+                    }
+                }
+            }
+
+            // Pattern B: VN/UK Format → DD/MM/YYYY or DD-MM-YYYY
+            // The 4-digit year comes LAST
+            const vnPattern = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/;
+            const vnMatch = cleaned.match(vnPattern);
+            if (vnMatch) {
+                const day = parseInt(vnMatch[1], 10);
+                const month = parseInt(vnMatch[2], 10) - 1;
+                const year = parseInt(vnMatch[3], 10);
+                
+                if (year >= 1900 && year <= 2100 && month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+                    const date = new Date(year, month, day);
+                    if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+                        console.log(`      → Parsed VN: ${cleaned} → ${date.toLocaleDateString('vi-VN')}`);
+                        return date;
+                    }
+                }
+            }
+
+            return null;
+        };
+
+        // ═══════════════════════════════════════════════════════════════════
+        // STEP 3: EXTRACT ALL DATE-LIKE STRINGS FROM INPUT
+        // Handle ranges with arrows, newlines, and mixed text
+        // ═══════════════════════════════════════════════════════════════════
+
+        // Clean the input: normalize whitespace, arrows, and separators
+        const normalized = rawInput
+            .replace(/\r\n/g, '\n')           // Normalize line endings
+            .replace(/\n/g, ' ')               // Replace newlines with spaces
+            .replace(/\s*->\s*/g, ' -> ')      // Normalize arrow separator
+            .replace(/\s*→\s*/g, ' -> ')       // Handle Unicode arrow
+            .replace(/\s+/g, ' ')              // Collapse multiple spaces
+            .trim();
+
+        console.log(`    🔍 Normalized input: "${normalized}"`);
+
+        // Extract all potential date strings using a universal pattern
+        // This matches both ISO (YYYY-MM-DD) and VN (DD/MM/YYYY) formats
+        const dateExtractPattern = /\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4}/g;
+        const potentialDates = normalized.match(dateExtractPattern) || [];
+
+        console.log(`    🔍 Found ${potentialDates.length} potential date(s): [${potentialDates.join(', ')}]`);
+
+        // ═══════════════════════════════════════════════════════════════════
+        // STEP 4: PARSE AND VALIDATE EACH EXTRACTED DATE
+        // ═══════════════════════════════════════════════════════════════════
+
+        const validDates = [];
+
+        for (const dateCandidate of potentialDates) {
+            const parsed = parseSingleDate(dateCandidate);
+            if (parsed && !isNaN(parsed.getTime())) {
+                validDates.push(parsed);
+            } else {
+                console.log(`      ⚠️ Could not parse: "${dateCandidate}"`);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // STEP 5: HANDLE RESULTS
+        // ═══════════════════════════════════════════════════════════════════
+
+        if (validDates.length === 0) {
+            console.log(`    ❌ No valid dates found in: "${rawInput}"`);
+            return { startDate: null, endDate: null, display: '' };
+        }
+
+        // Sort dates chronologically
+        validDates.sort((a, b) => a.getTime() - b.getTime());
+
+        // Get start (earliest) and end (latest)
+        const start = new Date(validDates[0]);
+        const end = new Date(validDates[validDates.length - 1]);
+
+        // Set time boundaries for accurate comparison
+        start.setHours(0, 0, 0, 0);        // Start of day
+        end.setHours(23, 59, 59, 999);     // End of day
+
+        // Format for display (DD/MM format)
         const formatDate = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
-        const display = `${formatDate(start)} - ${formatDate(end)}`;
+        const display = validDates.length === 1 
+            ? formatDate(start)
+            : `${formatDate(start)} - ${formatDate(end)}`;
 
         console.log(`    ✅ Result: ${start.toLocaleDateString('vi-VN')} → ${end.toLocaleDateString('vi-VN')}`);
 
