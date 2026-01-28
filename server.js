@@ -621,6 +621,11 @@ function getWeeksBetween(startDateStr, endDateStr) {
 
 // ==================== API ROUTES ====================
 
+// Keep-alive route for Render server
+app.get('/ping', (req, res) => {
+    res.status(200).send('OK');
+});
+
 // 1. Authentication APIs
 app.post('/api/login', async (req, res) => {
     try {
