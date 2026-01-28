@@ -2267,14 +2267,33 @@ export const Timetable = {
 
         container.innerHTML = sortedNotes.map(note => {
             // Chỉ hiển thị ngày, không hiển thị giờ
-            const deadlineStr = note.deadline 
-                ? new Date(note.deadline + 'T00:00:00').toLocaleDateString('vi-VN', { 
-                    day: '2-digit', 
-                    month: '2-digit', 
-                    year: 'numeric' 
-                })
-                : '';
-            const isOverdue = note.deadline && !note.isDone && new Date(note.deadline + 'T23:59:59') < new Date();
+            let deadlineStr = '';
+            let isOverdue = false;
+            
+            if (note.deadline) {
+                try {
+                    // Xử lý cả format cũ (có T) và mới (YYYY-MM-DD)
+                    const dateString = note.deadline.includes('T') 
+                        ? note.deadline 
+                        : note.deadline + 'T00:00:00';
+                    
+                    const date = new Date(dateString);
+                    if (!isNaN(date.getTime())) {
+                        deadlineStr = date.toLocaleDateString('vi-VN', { 
+                            day: '2-digit', 
+                            month: '2-digit', 
+                            year: 'numeric' 
+                        });
+                        
+                        // Check overdue: so sánh cuối ngày deadline với hiện tại
+                        const endOfDay = new Date(date);
+                        endOfDay.setHours(23, 59, 59, 999);
+                        isOverdue = !note.isDone && endOfDay < new Date();
+                    }
+                } catch (e) {
+                    console.error('Error parsing deadline:', note.deadline, e);
+                }
+            }
             
             return `
                 <div class="note-item ${note.isDone ? 'note-item--done' : ''} ${isOverdue ? 'note-item--overdue' : ''}" 
@@ -2513,16 +2532,27 @@ export const Timetable = {
             cls.notes.forEach(note => {
                 if (note.isDone) return; // Bỏ qua task đã xong
                 
-                // Parse deadline: nếu là YYYY-MM-DD, thêm time để tránh timezone issue
-                const deadlineDate = note.deadline 
-                    ? new Date(note.deadline + 'T23:59:59') 
-                    : null;
-                const isOverdue = deadlineDate && deadlineDate < now;
+                let isOverdue = false;
+                if (note.deadline) {
+                    try {
+                        // Xử lý cả format cũ (có T) và mới (YYYY-MM-DD)
+                        const dateString = note.deadline.includes('T') 
+                            ? note.deadline 
+                            : note.deadline + 'T23:59:59';
+                        
+                        const deadlineDate = new Date(dateString);
+                        if (!isNaN(deadlineDate.getTime())) {
+                            isOverdue = deadlineDate < now;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing deadline in getUpcomingTasks:', note.deadline, e);
+                    }
+                }
                 
                 // Hiển thị tất cả ghi chú chưa xong
                 allNotes.push({
                     ...note,
-                    deadline: note.deadline, // Giữ nguyên string format YYYY-MM-DD
+                    deadline: note.deadline, // Giữ nguyên string format
                     subject: cls.subject,
                     classId: cls._id || cls.id,
                     isOverdue
@@ -2534,7 +2564,13 @@ export const Timetable = {
         return allNotes.sort((a, b) => {
             if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
             if (a.deadline && b.deadline) {
-                return new Date(a.deadline + 'T23:59:59') - new Date(b.deadline + 'T23:59:59');
+                try {
+                    const dateA = new Date(a.deadline.includes('T') ? a.deadline : a.deadline + 'T23:59:59');
+                    const dateB = new Date(b.deadline.includes('T') ? b.deadline : b.deadline + 'T23:59:59');
+                    return dateA - dateB;
+                } catch (e) {
+                    return 0;
+                }
             }
             return 0;
         });
@@ -2573,14 +2609,27 @@ export const Timetable = {
         
         container.innerHTML = displayTasks.map(task => {
             // Chỉ hiển thị ngày, không hiển thị giờ
-            // Thêm T00:00:00 để tránh timezone shift khi parse
-            const deadlineStr = task.deadline 
-                ? new Date(task.deadline + 'T00:00:00').toLocaleDateString('vi-VN', { 
-                    day: '2-digit', 
-                    month: '2-digit', 
-                    year: 'numeric' 
-                })
-                : 'Không có hạn';
+            let deadlineStr = 'Không có hạn';
+            if (task.deadline) {
+                try {
+                    // Nếu deadline đã có 'T' (có time), parse trực tiếp
+                    // Nếu chỉ có ngày (YYYY-MM-DD), thêm T00:00:00
+                    const dateString = task.deadline.includes('T') 
+                        ? task.deadline 
+                        : task.deadline + 'T00:00:00';
+                    
+                    const date = new Date(dateString);
+                    if (!isNaN(date.getTime())) {
+                        deadlineStr = date.toLocaleDateString('vi-VN', { 
+                            day: '2-digit', 
+                            month: '2-digit', 
+                            year: 'numeric' 
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error parsing deadline:', task.deadline, e);
+                }
+            }
             
             return `
                 <div class="reminder-item ${task.isOverdue ? 'reminder-item--overdue' : ''}" 
