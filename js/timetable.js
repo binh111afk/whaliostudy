@@ -3065,53 +3065,64 @@ export const Timetable = {
      * 
      * ═══════════════════════════════════════════════════════════════
      */
+    // ==================== PARSE NGÀY THÁNG (ĐÃ FIX BUG THÁNG 4 HIỆN THÁNG 1) ====================
     parseAdvancedDateRange(dateRangeStr) {
         if (!dateRangeStr) return { startDate: null, endDate: null, display: '' };
 
         const rawInput = String(dateRangeStr);
         console.log(`    📅 Parsing date range from: "${rawInput.replace(/\n/g, '\\n')}"`);
 
-        // ═══════════════════════════════════════════════════════════════
-        // CORE LOGIC: Tìm TẤT CẢ ngày dạng dd/mm/yyyy hoặc dd-mm-yyyy
-        // Regex này sẽ match trên CHÍNH chuỗi gốc, không cần clean
-        // ═══════════════════════════════════════════════════════════════
-        const dateRegex = /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/g;
-        const allMatches = [...rawInput.matchAll(dateRegex)];
+        // 1. Định nghĩa Regex cho 2 trường hợp phổ biến
+        // Case A: ISO Format (yyyy-mm-dd) -> Năm 4 chữ số đứng đầu (Xuất hiện trong file lỗi của bạn)
+        const isoRegex = /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/g;
+        
+        // Case B: VN Format (dd/mm/yyyy) -> Năm 4 chữ số đứng cuối
+        const vnRegex = /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/g;
 
-        console.log(`    🔍 Found ${allMatches.length} date(s):`, allMatches.map(m => m[0]));
+        let dates = [];
 
-        if (allMatches.length === 0) {
+        // 2. Thử match ISO trước (Ưu tiên format yyyy-mm-dd nếu có)
+        const isoMatches = [...rawInput.matchAll(isoRegex)];
+        
+        if (isoMatches.length > 0) {
+            console.log('    👉 Detected ISO Format (yyyy-mm-dd)');
+            dates = isoMatches.map(m => {
+                const year = parseInt(m[1], 10);
+                const month = parseInt(m[2], 10) - 1; // Tháng trong JS bắt đầu từ 0
+                const day = parseInt(m[3], 10);
+                return new Date(year, month, day);
+            });
+        } else {
+            // 3. Nếu không phải ISO, thử match VN Format (dd/mm/yyyy)
+            const vnMatches = [...rawInput.matchAll(vnRegex)];
+            if (vnMatches.length > 0) {
+                console.log('    👉 Detected VN Format (dd/mm/yyyy)');
+                dates = vnMatches.map(m => {
+                    const day = parseInt(m[1], 10);
+                    const month = parseInt(m[2], 10) - 1;
+                    const year = parseInt(m[3], 10);
+                    return new Date(year, month, day);
+                });
+            }
+        }
+
+        if (dates.length === 0) {
             console.log(`    ⚠️ No valid date found in: "${rawInput}"`);
             return { startDate: null, endDate: null, display: '' };
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // HELPER: Convert regex match array → Date object
-        // match[0] = full string "20/04/2026"
-        // match[1] = day "20", match[2] = month "04", match[3] = year "2026"
-        // ═══════════════════════════════════════════════════════════════
-        const matchToDate = (match) => {
-            const day = parseInt(match[1], 10);
-            const month = parseInt(match[2], 10) - 1; // JavaScript month is 0-indexed
-            const year = parseInt(match[3], 10);
-            
-            console.log(`       → Parsed: day=${day}, month=${month + 1}, year=${year}`);
-            return new Date(year, month, day);
-        };
+        // 4. Sắp xếp ngày tăng dần (để lấy min làm start, max làm end)
+        dates.sort((a, b) => a - b);
 
-        // Lấy ngày ĐẦU TIÊN làm startDate
-        const startMatch = allMatches[0];
-        const start = matchToDate(startMatch);
-        
-        // Lấy ngày CUỐI CÙNG làm endDate (nếu chỉ có 1 ngày thì start = end)
-        const endMatch = allMatches[allMatches.length - 1];
-        const end = matchToDate(endMatch);
+        // Lấy ngày đầu và ngày cuối
+        const start = dates[0];
+        const end = dates[dates.length - 1];
 
-        // Set time boundaries for accurate comparisons
-        start.setHours(0, 0, 0, 0);       // Start of day
-        end.setHours(23, 59, 59, 999);    // End of day
+        // Set time boundaries
+        start.setHours(0, 0, 0, 0);       // Đầu ngày
+        end.setHours(23, 59, 59, 999);    // Cuối ngày
 
-        // Format display string
+        // Format hiển thị
         const formatDate = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
         const display = `${formatDate(start)} - ${formatDate(end)}`;
 
