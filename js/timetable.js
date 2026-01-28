@@ -2266,10 +2266,15 @@ export const Timetable = {
         });
 
         container.innerHTML = sortedNotes.map(note => {
+            // Chỉ hiển thị ngày, không hiển thị giờ
             const deadlineStr = note.deadline 
-                ? new Date(note.deadline).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
+                ? new Date(note.deadline + 'T00:00:00').toLocaleDateString('vi-VN', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric' 
+                })
                 : '';
-            const isOverdue = note.deadline && !note.isDone && new Date(note.deadline) < new Date();
+            const isOverdue = note.deadline && !note.isDone && new Date(note.deadline + 'T23:59:59') < new Date();
             
             return `
                 <div class="note-item ${note.isDone ? 'note-item--done' : ''} ${isOverdue ? 'note-item--overdue' : ''}" 
@@ -2309,11 +2314,11 @@ export const Timetable = {
         console.log('📝 Content value:', content);
         console.log('📝 Deadline input value:', deadlineInput, '| Type:', typeof deadlineInput, '| Length:', deadlineInput?.length);
         
-        // 🔥 FIX: Nếu có ngày, thêm thời gian 23:59 (cuối ngày)
+        // Chỉ lưu ngày, không lưu giờ để tránh vấn đề timezone
         let deadline = null;
         if (deadlineInput && deadlineInput.trim() !== '') {
-            // Input date trả về format YYYY-MM-DD, thêm thời gian 23:59
-            deadline = deadlineInput + 'T23:59';
+            // Lưu nguyên định dạng YYYY-MM-DD để tránh timezone conversion
+            deadline = deadlineInput;
             console.log('📝 Converted deadline:', deadline);
         }
         console.log('📝 Final deadline:', deadline);
@@ -2508,14 +2513,16 @@ export const Timetable = {
             cls.notes.forEach(note => {
                 if (note.isDone) return; // Bỏ qua task đã xong
                 
-                // 🔥 FIX: Đảm bảo deadline là Date object hoặc null
-                const deadlineDate = note.deadline ? new Date(note.deadline) : null;
+                // Parse deadline: nếu là YYYY-MM-DD, thêm time để tránh timezone issue
+                const deadlineDate = note.deadline 
+                    ? new Date(note.deadline + 'T23:59:59') 
+                    : null;
                 const isOverdue = deadlineDate && deadlineDate < now;
                 
-                // 🔥 FIX: Hiển thị TẤT CẢ ghi chú chưa xong (không chỉ trong 7 ngày)
+                // Hiển thị tất cả ghi chú chưa xong
                 allNotes.push({
                     ...note,
-                    deadline: deadlineDate, // 🔥 FIX: Lưu Date object thay vì string gốc
+                    deadline: note.deadline, // Giữ nguyên string format YYYY-MM-DD
                     subject: cls.subject,
                     classId: cls._id || cls.id,
                     isOverdue
@@ -2526,7 +2533,9 @@ export const Timetable = {
         // Sắp xếp: Quá hạn trước, sau đó theo deadline gần nhất
         return allNotes.sort((a, b) => {
             if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
-            if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline);
+            if (a.deadline && b.deadline) {
+                return new Date(a.deadline + 'T23:59:59') - new Date(b.deadline + 'T23:59:59');
+            }
             return 0;
         });
     },
@@ -2562,16 +2571,16 @@ export const Timetable = {
         // Giới hạn 5 tasks hiển thị trên widget
         const displayTasks = tasks.slice(0, 5);
         
-        // 🔥 DEBUG: Log tasks to see deadline values
-        console.log('📋 Reminder tasks:', displayTasks.map(t => ({ content: t.content, deadline: t.deadline })));
-        
         container.innerHTML = displayTasks.map(task => {
+            // Chỉ hiển thị ngày, không hiển thị giờ
+            // Thêm T00:00:00 để tránh timezone shift khi parse
             const deadlineStr = task.deadline 
-                ? new Date(task.deadline).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
+                ? new Date(task.deadline + 'T00:00:00').toLocaleDateString('vi-VN', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric' 
+                })
                 : 'Không có hạn';
-            
-            // 🔥 DEBUG: Log individual task deadline
-            console.log(`Task "${task.content}" deadline:`, task.deadline, '→', deadlineStr);
             
             return `
                 <div class="reminder-item ${task.isOverdue ? 'reminder-item--overdue' : ''}" 
