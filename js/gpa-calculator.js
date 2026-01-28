@@ -875,7 +875,7 @@ function addGPAStyles() {
         .gpa-close-btn { background: none; border: none; cursor: pointer; padding: 8px; border-radius: 8px; color: #6b7280; }
         .gpa-close-btn:hover { background: #f3f4f6; color: #1f2937; }
         .gpa-modal-body { padding: 30px; overflow-y: auto; flex: 1; }
-        .gpa-actions { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .gpa-actions { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; position: sticky; top: 0; z-index: 10; }
         
         /* Buttons */
         .gpa-btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
