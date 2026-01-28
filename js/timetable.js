@@ -3047,50 +3047,81 @@ export const Timetable = {
      *   The 'g' flag finds ALL matches, so we get both start AND end dates.
      * ─────────────────────────────────────────────────────────
      */
+    /**
+     * PARSE DATE RANGE - Chiến thuật "Tìm và Trích xuất"
+     * ═══════════════════════════════════════════════════════════════
+     * 
+     * VẤN ĐỀ CŨ:
+     * - File TKB từ web trường có format không nhất quán
+     * - Có file: "20/04/2026->30/05/2026" (1 dòng)
+     * - Có file: "20/04/2026\n->\n30/05/2026" (nhiều dòng)
+     * - Code cũ clean quá mạnh → mất thông tin → fallback month = 0 → Tháng 1
+     * 
+     * GIẢI PHÁP MỚI:
+     * - KHÔNG clean, KHÔNG phụ thuộc vào ->, \n, khoảng trắng
+     * - Dùng Regex tìm TẤT CẢ chuỗi dạng dd/mm/yyyy trong raw string
+     * - Lấy kết quả ĐẦU TIÊN làm startDate
+     * - Lấy kết quả CUỐI CÙNG làm endDate
+     * 
+     * ═══════════════════════════════════════════════════════════════
+     */
     parseAdvancedDateRange(dateRangeStr) {
         if (!dateRangeStr) return { startDate: null, endDate: null, display: '' };
 
-        // Step 1: Clean the messy CSV format
-        // Remove: letters, newlines, spaces, and the ">" arrow character
-        const cleanStr = String(dateRangeStr).replace(/[a-zA-Z\n\r\s>]/g, '');
-        console.log(`    🧹 Date cleaning: "${dateRangeStr}" → "${cleanStr}"`);
+        const rawInput = String(dateRangeStr);
+        console.log(`    📅 Parsing date range from: "${rawInput.replace(/\n/g, '\\n')}"`);
 
-        // Step 2: Extract all dates using Regex
-        // Pattern matches: dd/mm/yyyy, dd-mm-yyyy, or dd.mm.yyyy
-        const dateRegex = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/g;
-        const matches = [...cleanStr.matchAll(dateRegex)];
+        // ═══════════════════════════════════════════════════════════════
+        // CORE LOGIC: Tìm TẤT CẢ ngày dạng dd/mm/yyyy hoặc dd-mm-yyyy
+        // Regex này sẽ match trên CHÍNH chuỗi gốc, không cần clean
+        // ═══════════════════════════════════════════════════════════════
+        const dateRegex = /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/g;
+        const allMatches = [...rawInput.matchAll(dateRegex)];
 
-        if (matches.length >= 1) {
-            // Helper: Convert regex match to Date object
-            // match[1] = day, match[2] = month, match[3] = year
-            const toDate = (m) => new Date(
-                parseInt(m[3]),      // year
-                parseInt(m[2]) - 1,  // month (0-indexed)
-                parseInt(m[1])       // day
-            );
+        console.log(`    🔍 Found ${allMatches.length} date(s):`, allMatches.map(m => m[0]));
 
-            const start = toDate(matches[0]);
-            // If we found 2 dates, use the second as end date
-            // Otherwise, use the same date (single-day event)
-            const end = matches.length > 1 ? toDate(matches[matches.length - 1]) : new Date(start);
-
-            // Set time boundaries for accurate comparisons
-            start.setHours(0, 0, 0, 0);       // Start of day
-            end.setHours(23, 59, 59, 999);    // End of day
-
-            const display = `${String(start.getDate()).padStart(2, '0')}/${String(start.getMonth() + 1).padStart(2, '0')} - ${String(end.getDate()).padStart(2, '0')}/${String(end.getMonth() + 1).padStart(2, '0')}`;
-
-            console.log(`    ✅ Date parsed: ${start.toLocaleDateString('vi-VN')} → ${end.toLocaleDateString('vi-VN')}`);
-
-            return {
-                startDate: start.toISOString(),
-                endDate: end.toISOString(),
-                display: display
-            };
+        if (allMatches.length === 0) {
+            console.log(`    ⚠️ No valid date found in: "${rawInput}"`);
+            return { startDate: null, endDate: null, display: '' };
         }
 
-        console.log(`    ⚠️ No valid date found in: "${dateRangeStr}"`);
-        return { startDate: null, endDate: null, display: '' };
+        // ═══════════════════════════════════════════════════════════════
+        // HELPER: Convert regex match array → Date object
+        // match[0] = full string "20/04/2026"
+        // match[1] = day "20", match[2] = month "04", match[3] = year "2026"
+        // ═══════════════════════════════════════════════════════════════
+        const matchToDate = (match) => {
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10) - 1; // JavaScript month is 0-indexed
+            const year = parseInt(match[3], 10);
+            
+            console.log(`       → Parsed: day=${day}, month=${month + 1}, year=${year}`);
+            return new Date(year, month, day);
+        };
+
+        // Lấy ngày ĐẦU TIÊN làm startDate
+        const startMatch = allMatches[0];
+        const start = matchToDate(startMatch);
+        
+        // Lấy ngày CUỐI CÙNG làm endDate (nếu chỉ có 1 ngày thì start = end)
+        const endMatch = allMatches[allMatches.length - 1];
+        const end = matchToDate(endMatch);
+
+        // Set time boundaries for accurate comparisons
+        start.setHours(0, 0, 0, 0);       // Start of day
+        end.setHours(23, 59, 59, 999);    // End of day
+
+        // Format display string
+        const formatDate = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const display = `${formatDate(start)} - ${formatDate(end)}`;
+
+        console.log(`    ✅ Result: ${start.toLocaleDateString('vi-VN')} → ${end.toLocaleDateString('vi-VN')}`);
+
+        return {
+            startDate: start.toISOString(),
+            endDate: end.toISOString(),
+            display: display
+        };
     },
 
     // ==================== HELPER: Check if subject is active in selected week ====================
