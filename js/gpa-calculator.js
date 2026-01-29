@@ -1201,20 +1201,24 @@ function addGPAStyles() {
                 width: 100% !important;
             }
             
-            /* ROW 1: Course name - full width */
+            /* ROW 1: Course name + Credits in same row */
             .gpa-table td:first-child {
                 order: 1;
                 margin-bottom: 12px;
+                display: flex;
+                gap: 12px;
+                align-items: flex-end;
             }
             
             .gpa-table td:first-child .subject-input {
-                width: 100%;
+                flex: 1;
                 padding: 14px 12px;
                 font-size: 16px;
                 font-weight: 600;
                 border: 2px solid #d1d5db;
                 border-radius: 10px;
                 background: #f9fafb;
+                min-height: 52px;
             }
             
             .gpa-table td:first-child .subject-input:focus {
@@ -1223,7 +1227,7 @@ function addGPAStyles() {
                 outline: none;
             }
             
-            /* ROW 2: Subject type, Credits in a row */
+            /* ROW 2: Subject type */
             .gpa-table td:nth-child(2) {
                 order: 2;
                 margin-bottom: 12px;
@@ -1238,34 +1242,38 @@ function addGPAStyles() {
                 min-height: 48px;
             }
             
-            /* Credits field */
+            /* Credits field - moved to first row */
             .gpa-table td:nth-child(3) {
-                order: 3;
-                margin-bottom: 12px;
+                order: 1;
+                margin-bottom: 0;
+                flex: 0 0 auto;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
             }
             
             .gpa-table td:nth-child(3)::before {
-                content: "Số tín chỉ: ";
+                content: "Tín chỉ";
                 font-weight: 600;
                 color: #6b7280;
-                font-size: 13px;
-                display: inline-block;
-                margin-right: 8px;
+                font-size: 12px;
+                margin-bottom: 4px;
+                white-space: nowrap;
             }
             
             .gpa-table td:nth-child(3) .subject-input {
-                width: 80px;
-                padding: 10px;
+                width: 70px;
+                padding: 12px 8px;
                 font-size: 16px;
                 text-align: center;
                 border: 2px solid #d1d5db;
                 border-radius: 10px;
-                display: inline-block;
+                min-height: 52px;
             }
             
-            /* ROW 3: Components (Score fields) - styled nicely */
+            /* ROW 3: Components (Score fields) - flex layout */
             .gpa-table td:nth-child(4) {
-                order: 4;
+                order: 3;
                 margin-bottom: 12px;
             }
             
@@ -1279,18 +1287,18 @@ function addGPAStyles() {
             }
             
             .components-container {
-                gap: 10px;
+                gap: 8px;
             }
             
             .component-row {
-                display: grid;
-                grid-template-columns: 1fr 1fr auto;
-                gap: 10px;
-                padding: 12px;
+                display: flex;
+                gap: 8px;
+                padding: 10px;
                 background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
                 border: 1px solid #bae6fd;
-                border-radius: 12px;
+                border-radius: 10px;
                 align-items: center;
+                flex-wrap: nowrap;
             }
             
             .component-row::before {
@@ -1298,13 +1306,14 @@ function addGPAStyles() {
             }
             
             .comp-score-input {
-                width: 100% !important;
+                flex: 1;
                 padding: 12px 8px;
                 font-size: 16px;
-                min-height: 48px;
+                min-height: 44px;
                 border: 2px solid #d1d5db;
                 border-radius: 8px;
                 text-align: center;
+                min-width: 0;
             }
             
             .comp-score-input::placeholder {
@@ -1312,29 +1321,33 @@ function addGPAStyles() {
             }
             
             .comp-weight-input {
-                width: 100% !important;
-                padding: 12px 8px;
+                width: 60px;
+                padding: 12px 6px;
                 font-size: 16px;
-                min-height: 48px;
+                min-height: 44px;
                 border: 2px solid #d1d5db;
                 border-radius: 8px;
                 text-align: center;
+                flex-shrink: 0;
             }
             
             .comp-weight-label {
                 font-weight: 600;
                 color: #6b7280;
                 font-size: 14px;
+                flex-shrink: 0;
+                margin-right: 2px;
             }
             
             .comp-remove-btn {
-                padding: 10px;
+                padding: 8px;
                 border-radius: 8px;
-                min-width: 40px;
-                min-height: 40px;
+                min-width: 36px;
+                height: 36px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                flex-shrink: 0;
             }
             
             .add-component-btn {
@@ -1348,7 +1361,7 @@ function addGPAStyles() {
                 margin-top: 8px;
                 padding: 8px 12px;
                 border-radius: 8px;
-                font-size: 13px;
+                font-si4e: 13px;
             }
             
             /* ROW 4: Results */
@@ -1405,7 +1418,7 @@ function addGPAStyles() {
             
             /* ROW 5: Delete button - bottom right corner */
             .gpa-table td:last-child {
-                order: 6;
+                order: 5;
                 position: absolute;
                 top: 12px;
                 right: 12px;
@@ -1548,9 +1561,8 @@ function addGPAStyles() {
             }
             
             .component-row {
-                grid-template-columns: 1fr 1fr auto;
-                gap: 8px;
-                padding: 10px;
+                gap: 6px;
+                padding: 8px;
             }
             
             .comp-score-input,
