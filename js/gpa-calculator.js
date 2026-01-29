@@ -1205,14 +1205,13 @@ function addGPAStyles() {
             .gpa-table td:first-child {
                 order: 1;
                 margin-bottom: 12px;
-                display: flex;
-                gap: 12px;
-                align-items: flex-end;
+                position: relative;
             }
             
             .gpa-table td:first-child .subject-input {
-                flex: 1;
+                width: 100%;
                 padding: 14px 12px;
+                padding-right: 90px; /* Make space for credits input */
                 font-size: 16px;
                 font-weight: 600;
                 border: 2px solid #d1d5db;
@@ -1242,33 +1241,40 @@ function addGPAStyles() {
                 min-height: 48px;
             }
             
-            /* Credits field - moved to first row */
+            /* Credits field - positioned absolutely in first row */
             .gpa-table td:nth-child(3) {
                 order: 1;
+                position: absolute;
+                top: 16px;
+                right: 16px;
+                width: auto !important;
                 margin-bottom: 0;
-                flex: 0 0 auto;
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
+                z-index: 10;
             }
             
             .gpa-table td:nth-child(3)::before {
                 content: "Tín chỉ";
                 font-weight: 600;
                 color: #6b7280;
-                font-size: 12px;
-                margin-bottom: 4px;
+                font-size: 11px;
+                position: absolute;
+                top: -14px;
+                left: 50%;
+                transform: translateX(-50%);
                 white-space: nowrap;
+                background: white;
+                padding: 0 4px;
             }
             
             .gpa-table td:nth-child(3) .subject-input {
                 width: 70px;
-                padding: 12px 8px;
+                padding: 12px 6px;
                 font-size: 16px;
                 text-align: center;
                 border: 2px solid #d1d5db;
                 border-radius: 10px;
                 min-height: 52px;
+                background: white;
             }
             
             /* ROW 3: Components (Score fields) - flex layout */
@@ -1423,6 +1429,7 @@ function addGPAStyles() {
                 top: 12px;
                 right: 12px;
                 width: auto !important;
+                z-index: 5; /* Lower than credits input */
             }
             
             .delete-btn {
