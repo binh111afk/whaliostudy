@@ -1091,6 +1091,204 @@ function addGPAStyles() {
             .summary-stats { grid-template-columns: repeat(2, 1fr); }
             .gpa-modal-body { padding: 15px; }
             .target-input-wrapper { min-width: 100%; }
+            
+            /* MOBILE RESPONSIVE - Thu nhỏ và sắp xếp lại layout */
+            .gpa-modal-content { 
+                max-width: 95vw; 
+                max-height: 95vh; 
+                margin: 10px;
+            }
+            
+            .gpa-modal-header { 
+                padding: 16px 20px; 
+            }
+            
+            .gpa-modal-header h2 { 
+                font-size: 18px; 
+            }
+            
+            /* Actions: Thu nhỏ nút và xếp 2 cột */
+            .gpa-actions { 
+                padding: 15px 20px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            
+            .gpa-btn { 
+                padding: 8px 12px; 
+                font-size: 12px;
+                justify-content: center;
+            }
+            
+            .gpa-btn svg { 
+                width: 16px; 
+                height: 16px; 
+            }
+            
+            /* Nút Hướng dẫn full width dưới cùng */
+            .gpa-btn-guide { 
+                grid-column: 1 / -1; 
+                margin-top: 8px;
+            }
+            
+            /* Content area padding */
+            .gpa-content-area {
+                padding: 0 15px 20px 15px;
+            }
+            
+            /* Table responsive: Giảm chiều cao để có chỗ cho nút */
+            .gpa-table-container { 
+                max-height: 300px;
+                font-size: 13px;
+            }
+            
+            .gpa-table th { 
+                padding: 10px 6px; 
+                font-size: 11px;
+            }
+            
+            .gpa-table td { 
+                padding: 8px 4px; 
+            }
+            
+            /* Input fields: Mở rộng để dễ nhập */
+            .subject-input { 
+                padding: 10px 8px; 
+                font-size: 14px;
+                min-height: 40px;
+            }
+            
+            .subject-type-select { 
+                padding: 8px; 
+                font-size: 13px;
+                min-height: 40px;
+            }
+            
+            /* Component inputs: Tăng kích thước */
+            .comp-score-input, 
+            .comp-weight-input { 
+                width: 50px; 
+                padding: 8px 4px; 
+                font-size: 14px;
+                min-height: 36px;
+            }
+            
+            .component-row { 
+                padding: 8px; 
+                margin-bottom: 4px;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            .add-component-btn { 
+                padding: 8px; 
+                font-size: 11px; 
+            }
+            
+            /* Results column: Stack vertically */
+            .result-complete { 
+                flex-direction: column; 
+                align-items: flex-start;
+                gap: 6px;
+            }
+            
+            .result-grade { 
+                font-size: 14px; 
+            }
+            
+            .result-gpa { 
+                font-size: 13px; 
+            }
+            
+            .result-targets { 
+                font-size: 12px; 
+            }
+            
+            .targets-title { 
+                font-size: 11px; 
+            }
+            
+            .target-item { 
+                padding: 3px 0; 
+            }
+            
+            .target-grade, .target-score { 
+                font-size: 12px; 
+            }
+            
+            /* Summary card: Compact */
+            .summary-card { 
+                padding: 20px 16px; 
+                border-radius: 16px;
+            }
+            
+            .summary-header h3 { 
+                font-size: 18px; 
+                margin-bottom: 16px;
+            }
+            
+            .gpa-summary .stat-item { 
+                padding: 12px 8px; 
+                min-height: 80px;
+            }
+            
+            .gpa-summary .stat-label { 
+                font-size: 11px; 
+            }
+            
+            .gpa-summary .stat-value { 
+                font-size: 24px; 
+            }
+            
+            .gpa-summary .stat-item.highlight .stat-value { 
+                font-size: 28px; 
+            }
+            
+            /* Target GPA section */
+            .target-gpa-card { 
+                padding: 16px; 
+            }
+            
+            .target-gpa-input-group { 
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .target-input-wrapper { 
+                width: 100%; 
+            }
+            
+            .gpa-btn-predict, 
+            .gpa-btn-reset { 
+                width: 100%;
+                justify-content: center;
+                padding: 10px;
+                font-size: 13px;
+            }
+        }
+        
+        /* Extra small screens */
+        @media (max-width: 480px) {
+            .gpa-actions { 
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+            
+            .gpa-btn { 
+                font-size: 11px;
+                padding: 6px 10px;
+            }
+            
+            .gpa-table-container { 
+                max-height: 250px;
+                font-size: 12px;
+            }
+            
+            .summary-stats { 
+                grid-template-columns: 1fr; 
+                gap: 10px;
+            }
         }
 
         /* Menu chọn loại môn */
