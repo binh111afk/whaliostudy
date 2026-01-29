@@ -1176,10 +1176,16 @@ function addGPAStyles() {
                 gap: 16px;
             }
             
-            /* Each row becomes a card */
+            /* Each row becomes a card - using CSS Grid for layout */
             .gpa-table tbody tr {
-                display: flex;
-                flex-direction: column;
+                display: grid;
+                grid-template-columns: 1fr auto auto;
+                grid-template-areas:
+                    "name credits delete"
+                    "type type type"
+                    "components components components"
+                    "results results results";
+                gap: 10px;
                 background: white;
                 border: 2px solid #e5e7eb;
                 border-radius: 16px;
@@ -1201,23 +1207,20 @@ function addGPAStyles() {
                 width: 100% !important;
             }
             
-            /* ROW 1: Course name + Credits in same row */
+            /* ROW 1: Course name */
             .gpa-table td:first-child {
-                order: 1;
-                margin-bottom: 12px;
-                position: relative;
+                grid-area: name;
             }
             
             .gpa-table td:first-child .subject-input {
                 width: 100%;
-                padding: 14px 12px;
-                padding-right: 90px; /* Make space for credits input */
-                font-size: 16px;
+                padding: 12px;
+                font-size: 15px;
                 font-weight: 600;
                 border: 2px solid #d1d5db;
                 border-radius: 10px;
                 background: #f9fafb;
-                min-height: 52px;
+                min-height: 48px;
             }
             
             .gpa-table td:first-child .subject-input:focus {
@@ -1226,70 +1229,90 @@ function addGPAStyles() {
                 outline: none;
             }
             
-            /* ROW 2: Subject type */
-            .gpa-table td:nth-child(2) {
-                order: 2;
-                margin-bottom: 12px;
-            }
-            
-            .gpa-table td:nth-child(2) .subject-type-select {
-                width: 100%;
-                padding: 12px;
-                font-size: 14px;
-                border: 2px solid #d1d5db;
-                border-radius: 10px;
-                min-height: 48px;
-            }
-            
-            /* Credits field - positioned absolutely in first row */
+            /* ROW 1: Credits - same row as name */
             .gpa-table td:nth-child(3) {
-                order: 1;
-                position: absolute;
-                top: 16px;
-                right: 16px;
-                width: auto !important;
-                margin-bottom: 0;
-                z-index: 10;
+                grid-area: credits;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
             }
             
             .gpa-table td:nth-child(3)::before {
-                content: "Tín chỉ";
+                content: "TC";
                 font-weight: 600;
                 color: #6b7280;
                 font-size: 11px;
-                position: absolute;
-                top: -14px;
-                left: 50%;
-                transform: translateX(-50%);
-                white-space: nowrap;
-                background: white;
-                padding: 0 4px;
+                margin-bottom: 2px;
             }
             
             .gpa-table td:nth-child(3) .subject-input {
-                width: 70px;
-                padding: 12px 6px;
+                width: 50px;
+                padding: 10px 4px;
                 font-size: 16px;
                 text-align: center;
                 border: 2px solid #d1d5db;
                 border-radius: 10px;
-                min-height: 52px;
+                min-height: 48px;
                 background: white;
+            }
+            
+            /* ROW 1: Delete button - same row */
+            .gpa-table td:last-child {
+                grid-area: delete;
+                display: flex;
+                align-items: center;
+            }
+            
+            .delete-btn {
+                padding: 12px;
+                background: #fef2f2;
+                border: 2px solid #fecaca;
+                border-radius: 10px;
+                color: #dc2626;
+                cursor: pointer;
+                transition: all 0.2s;
+                min-height: 48px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .delete-btn:hover {
+                background: #fee2e2;
+                border-color: #f87171;
+            }
+            
+            .delete-btn svg {
+                width: 18px;
+                height: 18px;
+            }
+            
+            /* ROW 2: Subject type */
+            .gpa-table td:nth-child(2) {
+                grid-area: type;
+            }
+            
+            .gpa-table td:nth-child(2) .subject-type-select {
+                width: 100%;
+                padding: 10px 12px;
+                font-size: 14px;
+                border: 2px solid #d1d5db;
+                border-radius: 10px;
+                min-height: 44px;
             }
             
             /* ROW 3: Components (Score fields) - flex layout */
             .gpa-table td:nth-child(4) {
-                order: 3;
-                margin-bottom: 12px;
+                grid-area: components;
             }
             
             .gpa-table td:nth-child(4)::before {
-                content: "Các thành phần điểm:";
+                content: "Thành phần điểm:";
                 font-weight: 600;
                 color: #374151;
-                font-size: 14px;
+                font-size: 13px;
                 display: block;
-                margin-bottom: 10px;
+                margin-bottom: 8px;
             }
             
             .components-container {
@@ -1372,88 +1395,58 @@ function addGPAStyles() {
             
             /* ROW 4: Results */
             .gpa-table td:nth-child(5) {
-                order: 5;
-                margin-bottom: 12px;
-                padding: 12px;
+                grid-area: results;
+                padding: 10px;
                 background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%);
                 border: 1px solid #e9d5ff;
-                border-radius: 12px;
+                border-radius: 10px;
             }
             
             .gpa-table td:nth-child(5)::before {
                 content: "Kết quả:";
                 font-weight: 700;
                 color: #7c3aed;
-                font-size: 13px;
+                font-size: 12px;
                 display: block;
-                margin-bottom: 8px;
+                margin-bottom: 6px;
             }
             
             .result-complete {
                 flex-direction: row;
                 align-items: center;
-                gap: 12px;
+                gap: 10px;
                 flex-wrap: wrap;
             }
             
             .result-grade {
-                font-size: 18px;
-                padding: 6px 12px;
+                font-size: 16px;
+                padding: 4px 10px;
             }
             
             .result-gpa {
-                font-size: 16px;
+                font-size: 14px;
             }
             
             .result-targets {
-                font-size: 14px;
+                font-size: 13px;
             }
             
             .targets-title {
-                font-size: 13px;
-                margin-bottom: 10px;
+                font-size: 12px;
+                margin-bottom: 6px;
             }
             
             .target-item {
-                padding: 6px 0;
+                padding: 4px 0;
             }
             
             .target-grade, .target-score {
-                font-size: 14px;
-            }
-            
-            /* ROW 5: Delete button - bottom right corner */
-            .gpa-table td:last-child {
-                order: 5;
-                position: absolute;
-                top: 12px;
-                right: 12px;
-                width: auto !important;
-                z-index: 5; /* Lower than credits input */
-            }
-            
-            .delete-btn {
-                padding: 10px;
-                background: #fef2f2;
-                border: 2px solid #fecaca;
-                border-radius: 10px;
-                color: #dc2626;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-            
-            .delete-btn:hover {
-                background: #fee2e2;
-                border-color: #f87171;
-            }
-            
-            .delete-btn svg {
-                width: 18px;
-                height: 18px;
+                font-size: 13px;
             }
             
             /* Empty row styling */
             .gpa-table tbody tr.empty-row {
+                display: block;
                 text-align: center;
                 padding: 40px 20px;
             }
