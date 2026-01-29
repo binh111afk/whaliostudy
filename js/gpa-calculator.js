@@ -1086,138 +1086,371 @@ function addGPAStyles() {
         .classification.excellent { color: #f472b6; }
         .classification.very-good { color: #60a5fa; }
 
-        /* Responsive */
+        /* ========== MOBILE RESPONSIVE - CARD LAYOUT ========== */
         @media (max-width: 768px) {
-            .summary-stats { grid-template-columns: repeat(2, 1fr); }
-            .gpa-modal-body { padding: 15px; }
-            .target-input-wrapper { min-width: 100%; }
+            /* MODAL: Full width, no border-radius, no side margins */
+            .gpa-modal {
+                padding: 0;
+                align-items: flex-start;
+            }
             
-            /* MOBILE RESPONSIVE - Thu nhỏ và sắp xếp lại layout */
             .gpa-modal-content { 
-                max-width: 95vw; 
-                max-height: 95vh; 
-                margin: 10px;
+                width: 100%;
+                max-width: 100%;
+                max-height: 100vh;
+                min-height: 100vh;
+                margin: 0;
+                border-radius: 0;
+                animation: none;
             }
             
             .gpa-modal-header { 
-                padding: 16px 20px; 
+                padding: 16px; 
+                position: sticky;
+                top: 0;
+                background: white;
+                z-index: 200;
             }
             
             .gpa-modal-header h2 { 
-                font-size: 18px; 
+                font-size: 16px;
+                gap: 8px;
             }
             
-            /* Actions: Thu nhỏ nút và xếp 2 cột */
+            .gpa-modal-header h2 svg {
+                width: 20px;
+                height: 20px;
+            }
+            
+            /* ACTIONS: Grid 2 columns */
             .gpa-actions { 
-                padding: 15px 20px;
+                padding: 12px 16px;
                 display: grid;
                 grid-template-columns: 1fr 1fr;
                 gap: 8px;
             }
             
             .gpa-btn { 
-                padding: 8px 12px; 
-                font-size: 12px;
+                padding: 10px 12px; 
+                font-size: 13px;
                 justify-content: center;
+                border-radius: 10px;
             }
             
             .gpa-btn svg { 
-                width: 16px; 
-                height: 16px; 
+                width: 18px; 
+                height: 18px; 
             }
             
             /* Nút Hướng dẫn full width dưới cùng */
             .gpa-btn-guide { 
                 grid-column: 1 / -1; 
+            }
+            
+            /* Content area */
+            .gpa-content-area {
+                padding: 0 12px 20px 12px;
+            }
+            
+            /* ========== TABLE TO CARD CONVERSION ========== */
+            .gpa-table-container { 
+                max-height: none;
+                border: none;
+                background: transparent;
+                overflow: visible;
+            }
+            
+            /* Hide table header on mobile */
+            .gpa-table thead {
+                display: none !important;
+            }
+            
+            .gpa-table {
+                display: block;
+                background: transparent;
+            }
+            
+            .gpa-table tbody {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+            
+            /* Each row becomes a card */
+            .gpa-table tbody tr {
+                display: flex;
+                flex-direction: column;
+                background: white;
+                border: 2px solid #e5e7eb;
+                border-radius: 16px;
+                padding: 16px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                position: relative;
+            }
+            
+            .gpa-table tbody tr:hover {
+                border-color: #3b82f6;
+                box-shadow: 0 6px 20px rgba(59, 130, 246, 0.15);
+            }
+            
+            /* Hide default td styling */
+            .gpa-table td {
+                display: block;
+                padding: 0;
+                border: none;
+                width: 100% !important;
+            }
+            
+            /* ROW 1: Course name - full width */
+            .gpa-table td:first-child {
+                order: 1;
+                margin-bottom: 12px;
+            }
+            
+            .gpa-table td:first-child .subject-input {
+                width: 100%;
+                padding: 14px 12px;
+                font-size: 16px;
+                font-weight: 600;
+                border: 2px solid #d1d5db;
+                border-radius: 10px;
+                background: #f9fafb;
+            }
+            
+            .gpa-table td:first-child .subject-input:focus {
+                border-color: #3b82f6;
+                background: white;
+                outline: none;
+            }
+            
+            /* ROW 2: Subject type, Credits in a row */
+            .gpa-table td:nth-child(2) {
+                order: 2;
+                margin-bottom: 12px;
+            }
+            
+            .gpa-table td:nth-child(2) .subject-type-select {
+                width: 100%;
+                padding: 12px;
+                font-size: 14px;
+                border: 2px solid #d1d5db;
+                border-radius: 10px;
+                min-height: 48px;
+            }
+            
+            /* Credits field */
+            .gpa-table td:nth-child(3) {
+                order: 3;
+                margin-bottom: 12px;
+            }
+            
+            .gpa-table td:nth-child(3)::before {
+                content: "Số tín chỉ: ";
+                font-weight: 600;
+                color: #6b7280;
+                font-size: 13px;
+                display: inline-block;
+                margin-right: 8px;
+            }
+            
+            .gpa-table td:nth-child(3) .subject-input {
+                width: 80px;
+                padding: 10px;
+                font-size: 16px;
+                text-align: center;
+                border: 2px solid #d1d5db;
+                border-radius: 10px;
+                display: inline-block;
+            }
+            
+            /* ROW 3: Components (Score fields) - styled nicely */
+            .gpa-table td:nth-child(4) {
+                order: 4;
+                margin-bottom: 12px;
+            }
+            
+            .gpa-table td:nth-child(4)::before {
+                content: "Các thành phần điểm:";
+                font-weight: 600;
+                color: #374151;
+                font-size: 14px;
+                display: block;
+                margin-bottom: 10px;
+            }
+            
+            .components-container {
+                gap: 10px;
+            }
+            
+            .component-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr auto;
+                gap: 10px;
+                padding: 12px;
+                background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+                border: 1px solid #bae6fd;
+                border-radius: 12px;
+                align-items: center;
+            }
+            
+            .component-row::before {
+                display: none;
+            }
+            
+            .comp-score-input {
+                width: 100% !important;
+                padding: 12px 8px;
+                font-size: 16px;
+                min-height: 48px;
+                border: 2px solid #d1d5db;
+                border-radius: 8px;
+                text-align: center;
+            }
+            
+            .comp-score-input::placeholder {
+                color: #9ca3af;
+            }
+            
+            .comp-weight-input {
+                width: 100% !important;
+                padding: 12px 8px;
+                font-size: 16px;
+                min-height: 48px;
+                border: 2px solid #d1d5db;
+                border-radius: 8px;
+                text-align: center;
+            }
+            
+            .comp-weight-label {
+                font-weight: 600;
+                color: #6b7280;
+                font-size: 14px;
+            }
+            
+            .comp-remove-btn {
+                padding: 10px;
+                border-radius: 8px;
+                min-width: 40px;
+                min-height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .add-component-btn {
+                padding: 12px;
+                font-size: 13px;
+                border-radius: 10px;
                 margin-top: 8px;
             }
             
-            /* Content area padding */
-            .gpa-content-area {
-                padding: 0 15px 20px 15px;
-            }
-            
-            /* Table responsive: Giảm chiều cao để có chỗ cho nút */
-            .gpa-table-container { 
-                max-height: 300px;
+            .weight-warning {
+                margin-top: 8px;
+                padding: 8px 12px;
+                border-radius: 8px;
                 font-size: 13px;
             }
             
-            .gpa-table th { 
-                padding: 10px 6px; 
-                font-size: 11px;
+            /* ROW 4: Results */
+            .gpa-table td:nth-child(5) {
+                order: 5;
+                margin-bottom: 12px;
+                padding: 12px;
+                background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%);
+                border: 1px solid #e9d5ff;
+                border-radius: 12px;
             }
             
-            .gpa-table td { 
-                padding: 8px 4px; 
-            }
-            
-            /* Input fields: Mở rộng để dễ nhập */
-            .subject-input { 
-                padding: 10px 8px; 
-                font-size: 14px;
-                min-height: 40px;
-            }
-            
-            .subject-type-select { 
-                padding: 8px; 
+            .gpa-table td:nth-child(5)::before {
+                content: "Kết quả:";
+                font-weight: 700;
+                color: #7c3aed;
                 font-size: 13px;
-                min-height: 40px;
+                display: block;
+                margin-bottom: 8px;
             }
             
-            /* Component inputs: Tăng kích thước */
-            .comp-score-input, 
-            .comp-weight-input { 
-                width: 50px; 
-                padding: 8px 4px; 
-                font-size: 14px;
-                min-height: 36px;
-            }
-            
-            .component-row { 
-                padding: 8px; 
-                margin-bottom: 4px;
+            .result-complete {
+                flex-direction: row;
+                align-items: center;
+                gap: 12px;
                 flex-wrap: wrap;
-                gap: 8px;
             }
             
-            .add-component-btn { 
-                padding: 8px; 
-                font-size: 11px; 
+            .result-grade {
+                font-size: 18px;
+                padding: 6px 12px;
             }
             
-            /* Results column: Stack vertically */
-            .result-complete { 
-                flex-direction: column; 
-                align-items: flex-start;
-                gap: 6px;
+            .result-gpa {
+                font-size: 16px;
             }
             
-            .result-grade { 
-                font-size: 14px; 
+            .result-targets {
+                font-size: 14px;
             }
             
-            .result-gpa { 
-                font-size: 13px; 
+            .targets-title {
+                font-size: 13px;
+                margin-bottom: 10px;
             }
             
-            .result-targets { 
-                font-size: 12px; 
+            .target-item {
+                padding: 6px 0;
             }
             
-            .targets-title { 
-                font-size: 11px; 
+            .target-grade, .target-score {
+                font-size: 14px;
             }
             
-            .target-item { 
-                padding: 3px 0; 
+            /* ROW 5: Delete button - bottom right corner */
+            .gpa-table td:last-child {
+                order: 6;
+                position: absolute;
+                top: 12px;
+                right: 12px;
+                width: auto !important;
             }
             
-            .target-grade, .target-score { 
-                font-size: 12px; 
+            .delete-btn {
+                padding: 10px;
+                background: #fef2f2;
+                border: 2px solid #fecaca;
+                border-radius: 10px;
+                color: #dc2626;
+                cursor: pointer;
+                transition: all 0.2s;
             }
             
-            /* Summary card: Compact */
+            .delete-btn:hover {
+                background: #fee2e2;
+                border-color: #f87171;
+            }
+            
+            .delete-btn svg {
+                width: 18px;
+                height: 18px;
+            }
+            
+            /* Empty row styling */
+            .gpa-table tbody tr.empty-row {
+                text-align: center;
+                padding: 40px 20px;
+            }
+            
+            .gpa-table tbody tr.empty-row td {
+                display: block;
+            }
+            
+            .gpa-table tbody tr.empty-row td::before {
+                display: none;
+            }
+            
+            /* Summary section */
+            .summary-stats { 
+                grid-template-columns: repeat(2, 1fr); 
+            }
+            
             .summary-card { 
                 padding: 20px 16px; 
                 border-radius: 16px;
@@ -1229,8 +1462,8 @@ function addGPAStyles() {
             }
             
             .gpa-summary .stat-item { 
-                padding: 12px 8px; 
-                min-height: 80px;
+                padding: 14px 10px; 
+                min-height: 90px;
             }
             
             .gpa-summary .stat-label { 
@@ -1238,16 +1471,26 @@ function addGPAStyles() {
             }
             
             .gpa-summary .stat-value { 
-                font-size: 24px; 
+                font-size: 26px; 
             }
             
             .gpa-summary .stat-item.highlight .stat-value { 
-                font-size: 28px; 
+                font-size: 30px; 
             }
             
             /* Target GPA section */
+            .target-gpa-container {
+                margin-top: 16px;
+            }
+            
             .target-gpa-card { 
-                padding: 16px; 
+                padding: 16px;
+                border-radius: 12px;
+            }
+            
+            .target-gpa-card h4 {
+                font-size: 14px;
+                margin-bottom: 12px;
             }
             
             .target-gpa-input-group { 
@@ -1259,35 +1502,80 @@ function addGPAStyles() {
                 width: 100%; 
             }
             
+            .target-input-wrapper label {
+                font-size: 13px;
+            }
+            
+            .target-input-wrapper input {
+                padding: 12px;
+                font-size: 16px;
+                min-height: 48px;
+            }
+            
             .gpa-btn-predict, 
             .gpa-btn-reset { 
                 width: 100%;
                 justify-content: center;
-                padding: 10px;
-                font-size: 13px;
+                padding: 12px;
+                font-size: 14px;
             }
         }
         
-        /* Extra small screens */
+        /* Extra small screens (< 480px) */
         @media (max-width: 480px) {
+            .gpa-modal-header h2 {
+                font-size: 14px;
+            }
+            
             .gpa-actions { 
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr 1fr;
                 gap: 6px;
+                padding: 10px 12px;
             }
             
             .gpa-btn { 
                 font-size: 11px;
-                padding: 6px 10px;
+                padding: 8px 10px;
             }
             
-            .gpa-table-container { 
-                max-height: 250px;
-                font-size: 12px;
+            .gpa-btn svg {
+                width: 16px;
+                height: 16px;
+            }
+            
+            .gpa-table tbody tr {
+                padding: 14px;
+            }
+            
+            .component-row {
+                grid-template-columns: 1fr 1fr auto;
+                gap: 8px;
+                padding: 10px;
+            }
+            
+            .comp-score-input,
+            .comp-weight-input {
+                padding: 10px 6px;
+                font-size: 15px;
+                min-height: 44px;
             }
             
             .summary-stats { 
-                grid-template-columns: 1fr; 
-                gap: 10px;
+                grid-template-columns: repeat(2, 1fr); 
+                gap: 8px;
+            }
+            
+            .gpa-summary .stat-item {
+                min-height: 80px;
+                padding: 12px 8px;
+            }
+            
+            .gpa-summary .stat-value {
+                font-size: 22px;
+            }
+            
+            .gpa-summary .stat-item.highlight .stat-value {
+                font-size: 26px;
             }
         }
 
@@ -1333,13 +1621,10 @@ function addGPAStyles() {
             box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
         }
 
-        /* Chỉnh lại mobile một chút để không bị vỡ layout nút */
-        @media (max-width: 600px) {
+        /* Desktop: Push guide button to right */
+        @media (min-width: 769px) {
             .gpa-btn-guide {
-                width: 100%;
-                margin-left: 0;
-                margin-top: 8px;
-                justify-content: center;
+                margin-left: auto;
             }
         }
     `;
