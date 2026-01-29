@@ -19,25 +19,15 @@ cloudinary.config({
 console.log('☁️  Cloudinary configured:', process.env.CLOUDINARY_CLOUD_NAME ? '✅' : '❌');
 
 // ==================== MONGODB CONNECTION ====================
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/whalio';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/whalio';
 
-mongoose.connect(MONGO_URI)
-    .then(async () => {
+mongoose.connect(MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+    .then(() => {
         console.log('🚀 Whalio is now connected to MongoDB Cloud');
-        
-        // Run seeding with timeout protection
-        const seedingTimeout = setTimeout(() => {
-            console.log('⚠️  AUTO-SEED: Seeding taking too long - continuing without seeding');
-        }, 10000); // 10 second timeout
-        
-        try {
-            await seedInitialData();
-        } catch (error) {
-            console.error('❌ AUTO-SEED failed:', error.message);
-        } finally {
-            clearTimeout(seedingTimeout);
-            console.log('🎯 Server is ready to accept connections!');
-        }
+        seedInitialData(); // Automatically seed data on startup
     })
     .catch((err) => {
         console.error('❌ MongoDB connection failed:', err);
@@ -428,38 +418,10 @@ const Activity = mongoose.model('Activity', activitySchema);
 const Timetable = mongoose.model('Timetable', timetableSchema);
 const Event = mongoose.model('Event', eventSchema);
 
-// ==================== AUTO-SEED FUNCTION (OPTIMIZED) ====================
-// Auto-seed on startup - optimized version
+// Auto-seed on startup
 async function seedInitialData() {
-    console.log('\n🔄 AUTO-SEED: Checking database state...');
-    
-    try {
-        // Quick check for existing data - check only exams for faster startup
-        const examCount = await Exam.countDocuments();
-        
-        console.log(`   📊 Database status: ${examCount} exams found`);
-        
-        // If database has ANY exams, skip seeding completely
-        if (examCount > 0) {
-            console.log('   ✅ Database already contains exams - skipping seeding');
-            console.log('   🚀 Server ready for connections\n');
-            return;
-        }
-        
-        // Only seed if completely empty
-        console.log('   🆕 Database is empty - running initial seeding...');
-        const result = await seedExamsFromJSON(false);
-        
-        if (result.success) {
-            console.log('   ✅ Seeding completed successfully');
-        } else {
-            console.log('   ⚠️  Seeding completed with warnings');
-        }
-        
-    } catch (error) {
-        console.error('   ❌ AUTO-SEED Error:', error.message);
-        console.log('   🚀 Continuing server startup despite seeding error\n');
-    }
+    console.log('\n🔄 AUTO-SEED: Running automatic database seeding on startup...');
+    await seedExamsFromJSON(false);
 }
 
 // Middleware
