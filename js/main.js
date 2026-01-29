@@ -56,6 +56,11 @@ const PageManager = {
         const sidebarHomeLink = document.querySelector('.sidebar-left .nav-menu a:first-child');
         UI.setActiveMenu(sidebarHomeLink);
         UI.setActiveNavItem('nav-home');
+        
+        // Update bottom navigation
+        if (typeof window.updateBottomNavActiveState === 'function') {
+            window.updateBottomNavActiveState('home');
+        }
     },
 
     showLibraryPage(menuItem) {
@@ -1072,3 +1077,22 @@ window.addEventListener('resize', () => {
         }
     }
 });
+
+/**
+ * Update bottom navigation active state
+ * @param {string} activeTab - ID of the active tab
+ */
+function updateBottomNavActiveState(activeTab) {
+    const bottomNavItems = document.querySelectorAll('.bottom-nav-item');
+    bottomNavItems.forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    const activeItem = document.querySelector(`#bottom-nav-${activeTab}`);
+    if (activeItem) {
+        activeItem.classList.add('active');
+    }
+}
+
+// Add to window object for global access
+window.updateBottomNavActiveState = updateBottomNavActiveState;
