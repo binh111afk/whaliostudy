@@ -538,7 +538,7 @@ function renderSemesterTable() {
                         <option value="major" ${subjectType === 'major' ? 'selected' : ''}>Chuyên ngành (≥5.5)</option>
                     </select>
                 </td>
-                <td><input type="number" class="subject-input text-center" min="1" max="6" value="${subject.credits}" onchange="updateSubjectField(${index}, 'credits', this.value)"></td>
+                <td><input type="number" class="subject-input text-center" placeholder="TC" min="1" max="6" value="${subject.credits}" onchange="updateSubjectField(${index}, 'credits', this.value)"></td>
                 <td class="components-cell"><div class="components-container">${componentsHTML}<button class="add-component-btn" onclick="addComponentToSubject(${index})"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Thêm thành phần</button>${weightWarning}</div></td>
                 <td class="result-cell">${resultHTML}</td>
                 <td><button class="delete-btn" onclick="deleteSubjectRow(${index})"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></td>
@@ -1233,21 +1233,12 @@ function addGPAStyles() {
             .gpa-table td:nth-child(3) {
                 grid-area: credits;
                 display: flex;
-                flex-direction: column;
                 align-items: center;
-            }
-            
-            .gpa-table td:nth-child(3)::before {
-                content: "TC";
-                font-weight: 600;
-                color: #6b7280;
-                font-size: 11px;
-                margin-bottom: 2px;
             }
             
             .gpa-table td:nth-child(3) .subject-input {
                 width: 50px;
-                padding: 10px 4px;
+                padding: 12px 4px;
                 font-size: 16px;
                 text-align: center;
                 border: 2px solid #d1d5db;
