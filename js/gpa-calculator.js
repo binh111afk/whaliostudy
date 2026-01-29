@@ -356,50 +356,52 @@ function openGPACalculator() {
                         </button>
                     </div>
 
-                    <div id="target-gpa-container" class="target-gpa-container" style="display: none;">
-                        <div class="target-gpa-card">
-                            <h4>Dự đoán điểm cần thiết để đạt GPA mục tiêu</h4>
-                            <div class="target-gpa-input-group">
-                                <div class="target-input-wrapper">
-                                    <label>GPA mong muốn (thang 4.0):</label>
-                                    <input type="number" id="target-gpa-input" min="0" max="4" step="0.01" placeholder="Ví dụ: 3.2, 3.6">
+                    <div class="gpa-content-area">
+                        <div id="target-gpa-container" class="target-gpa-container" style="display: none;">
+                            <div class="target-gpa-card">
+                                <h4>Dự đoán điểm cần thiết để đạt GPA mục tiêu</h4>
+                                <div class="target-gpa-input-group">
+                                    <div class="target-input-wrapper">
+                                        <label>GPA mong muốn (thang 4.0):</label>
+                                        <input type="number" id="target-gpa-input" min="0" max="4" step="0.01" placeholder="Ví dụ: 3.2, 3.6">
+                                    </div>
+                                    <button class="gpa-btn gpa-btn-predict" onclick="predictRequiredScores()">
+                                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                        </svg>
+                                        Tìm phương án
+                                    </button>
+                                    <button class="gpa-btn gpa-btn-reset" onclick="resetPredictedScores()">
+                                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                        </svg>
+                                        Reset dự đoán
+                                    </button>
                                 </div>
-                                <button class="gpa-btn gpa-btn-predict" onclick="predictRequiredScores()">
-                                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                    </svg>
-                                    Tìm phương án
-                                </button>
-                                <button class="gpa-btn gpa-btn-reset" onclick="resetPredictedScores()">
-                                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                                    </svg>
-                                    Reset dự đoán
-                                </button>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="gpa-table-container">
-                        <table class="gpa-table" id="semester-table">
-                            <thead>
-                                <tr>
-                                    <th style="width: 20%;">Tên môn học</th>
-                                    <th style="width: 15%;">Loại môn</th>
-                                    <th style="width: 8%;">Tín chỉ</th>
-                                    <th style="width: 45%;">Các thành phần điểm</th>
-                                    <th style="width: 22%;">Kết quả</th>
-                                    <th style="width: 5%;"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="semester-table-body">
-                                <!-- Rows will be rendered here -->
-                            </tbody>
-                        </table>
-                    </div>
+                        <div class="gpa-table-container">
+                            <table class="gpa-table" id="semester-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 20%;">Tên môn học</th>
+                                        <th style="width: 15%;">Loại môn</th>
+                                        <th style="width: 8%;">Tín chỉ</th>
+                                        <th style="width: 45%;">Các thành phần điểm</th>
+                                        <th style="width: 22%;">Kết quả</th>
+                                        <th style="width: 5%;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="semester-table-body">
+                                    <!-- Rows will be rendered here -->
+                                </tbody>
+                            </table>
+                        </div>
 
-                    <div id="gpa-summary" class="gpa-summary">
-                        <!-- Summary will be displayed here -->
+                        <div id="gpa-summary" class="gpa-summary">
+                            <!-- Summary will be displayed here -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -870,12 +872,33 @@ function addGPAStyles() {
         .gpa-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 20px; backdrop-filter: blur(4px); }
         .gpa-modal-content { background: white; border-radius: 16px; width: 100%; max-width: 1400px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); animation: gpaModalSlideIn 0.3s ease-out; }
         @keyframes gpaModalSlideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-        .gpa-modal-header { padding: 24px 30px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+        .gpa-modal-header { padding: 24px 30px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
         .gpa-modal-header h2 { margin: 0; font-size: 24px; font-weight: 700; color: #1f2937; display: flex; align-items: center; gap: 12px; }
         .gpa-close-btn { background: none; border: none; cursor: pointer; padding: 8px; border-radius: 8px; color: #6b7280; }
         .gpa-close-btn:hover { background: #f3f4f6; color: #1f2937; }
-        .gpa-modal-body { padding: 30px; overflow-y: auto; flex: 1; }
-        .gpa-actions { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;}
+        .gpa-modal-body { padding: 0; overflow: hidden; flex: 1; display: flex; flex-direction: column; }
+        
+        /* Sticky Actions Bar */
+        .gpa-actions { 
+            display: flex; 
+            gap: 12px; 
+            margin: 0; 
+            flex-wrap: wrap;
+            padding: 20px 30px;
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+        
+        /* Scrollable Content Area */
+        .gpa-content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 30px 30px 30px;
+        }
         
         /* Buttons */
         .gpa-btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
@@ -896,11 +919,35 @@ function addGPAStyles() {
         .target-input-wrapper label { display: block; margin-bottom: 6px; color: #6b21a8; font-weight: 600; }
         .target-input-wrapper input { width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #a855f7; }
 
-        /* Table & Inputs */
-        .gpa-table-container { overflow-x: auto; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 24px; }
-        .gpa-table { width: 100%; border-collapse: collapse; background: white; }
-        .gpa-table thead { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-        .gpa-table th { padding: 16px 12px; text-align: left; font-weight: 600; font-size: 13px; text-transform: uppercase; }
+        /* Table & Inputs with Sticky Header */
+        .gpa-table-container { 
+            border-radius: 12px; 
+            border: 1px solid #e5e7eb; 
+            margin-bottom: 24px; 
+            max-height: 400px;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .gpa-table { width: 100%; border-collapse: separate; border-spacing: 0; background: white; }
+        
+        .gpa-table thead { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .gpa-table th { 
+            padding: 16px 12px; 
+            text-align: left; 
+            font-weight: 600; 
+            font-size: 13px; 
+            text-transform: uppercase;
+            border-bottom: 2px solid #4c1d95;
+        }
+        
         .gpa-table tbody tr { border-bottom: 1px solid #e5e7eb; }
         .gpa-table tbody tr:hover { background: #f9fafb; }
         .gpa-table td { padding: 12px; vertical-align: top; }
