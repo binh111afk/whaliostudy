@@ -1336,7 +1336,7 @@ export const Timetable = {
 .mobile-day-tabs {
     display: flex;
     gap: 8px;
-    padding: 12px 10px;
+    padding: 12px 5px; /* Giảm từ 10px xuống 5px */
     background: #ffffff;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -1427,7 +1427,7 @@ export const Timetable = {
 
 /* === DAY CONTENT AREA === */
 .mobile-day-content-area {
-    padding: 12px 10px;
+    padding: 12px 5px; /* Giảm từ 10px xuống 5px */
     min-height: 50vh;
 }
 
@@ -1455,6 +1455,8 @@ export const Timetable = {
     margin-bottom: 14px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     border-left: 4px solid #94a3b8;
+    width: 100%; /* Chiếm trọn chiều ngang */
+    box-sizing: border-box;
 }
 
 /* Morning session - warm sunrise theme */
@@ -1606,10 +1608,7 @@ export const Timetable = {
 /* === MOBILE CLASS CARD (Simplified) === */
 .mobile-class-card {
     position: relative;
-    width: 100%;
-    max-width: 95vw;
-    margin-left: auto;
-    margin-right: auto;
+    width: 100%; /* Chiếm trọn chiều ngang */
     background: #ffffff;
     border-radius: 16px;
     padding: 16px;
@@ -1618,6 +1617,7 @@ export const Timetable = {
     border-left: 5px solid #6366f1;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
 }
 
 .mobile-class-card:last-child {
@@ -1784,14 +1784,14 @@ export const Timetable = {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 14px;
+    font-size: 15px; /* Tăng từ 14px lên 15px */
     color: #475569;
     line-height: 1.4;
 }
 
 .mobile-info-label {
-    font-weight: 700;
-    color: #334155;
+    font-weight: 800; /* Tăng từ 700 lên 800 */
+    color: #1e293b; /* Đậm hơn từ #334155 */
     min-width: 50px;
 }
 
