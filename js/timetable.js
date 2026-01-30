@@ -1336,7 +1336,7 @@ export const Timetable = {
 .mobile-day-tabs {
     display: flex;
     gap: 8px;
-    padding: 12px 16px;
+    padding: 12px 10px;
     background: #ffffff;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -1427,7 +1427,7 @@ export const Timetable = {
 
 /* === DAY CONTENT AREA === */
 .mobile-day-content-area {
-    padding: 16px;
+    padding: 12px 10px;
     min-height: 50vh;
 }
 
@@ -1449,7 +1449,7 @@ export const Timetable = {
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    padding: 10px 14px;
+    padding: 10px 12px;
     background: #ffffff;
     border-radius: 10px;
     margin-bottom: 12px;
@@ -1464,9 +1464,12 @@ export const Timetable = {
 .mobile-class-card {
     position: relative;
     width: 100%;
+    max-width: 95vw;
+    margin-left: auto;
+    margin-right: auto;
     background: #ffffff;
     border-radius: 16px;
-    padding: 18px;
+    padding: 16px;
     margin-bottom: 12px;
     border: 1px solid #e2e8f0;
     border-left: 5px solid #6366f1;
@@ -1492,10 +1495,10 @@ export const Timetable = {
 }
 
 .mobile-class-subject {
-    font-size: 18px;
-    font-weight: 700;
+    font-size: 20px;
+    font-weight: 800;
     color: #1e293b;
-    line-height: 1.3;
+    line-height: 1.25;
     flex: 1;
     word-break: break-word;
 }
@@ -1664,16 +1667,7 @@ export const Timetable = {
     color: #1e40af;
 }
 
-/* Campus row (smaller) */
-.mobile-info-row.campus-row {
-    padding: 8px 0;
-}
-
-.mobile-info-row.campus-row .mobile-info-text {
-    font-size: 14px;
-    font-weight: 500;
-    color: #64748b;
-}
+/* Campus row - REMOVED, now merged with room row */
 
 /* === STATUS BADGE (Mobile) === */
 .mobile-status-badge {
@@ -2152,20 +2146,13 @@ export const Timetable = {
                 <div class="mobile-card-info">
                     <div class="mobile-info-row room-row">
                         <span class="mobile-info-icon">🏫</span>
-                        <span class="mobile-info-text">${this.escapeHtml(cls.room)}</span>
+                        <span class="mobile-info-text">${this.escapeHtml(cls.room)}${cls.campus ? ` - CS ${this.escapeHtml(cls.campus)}` : ''}</span>
                     </div>
                     
                     <div class="mobile-info-row time-row">
                         <span class="mobile-info-icon">⏰</span>
                         <span class="mobile-info-text">${this.escapeHtml(timeRange)}</span>
                     </div>
-                    
-                    ${cls.campus ? `
-                    <div class="mobile-info-row campus-row">
-                        <span class="mobile-info-icon">📍</span>
-                        <span class="mobile-info-text">${this.escapeHtml(cls.campus)}</span>
-                    </div>
-                    ` : ''}
                     
                     ${statusHtml}
                 </div>
