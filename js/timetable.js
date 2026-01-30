@@ -1298,6 +1298,414 @@ export const Timetable = {
         font-size: 12px;
     }
 }
+
+/* ==================== MOBILE VERTICAL TIMELINE (< 768px) ==================== */
+@media (max-width: 767px) {
+    /* Hide the table completely on mobile */
+    .timetable-wrapper {
+        display: none !important;
+    }
+    
+    /* Show mobile timeline */
+    .mobile-timetable-container {
+        display: block !important;
+    }
+}
+
+@media (min-width: 768px) {
+    /* Hide mobile timeline on desktop */
+    .mobile-timetable-container {
+        display: none !important;
+    }
+    
+    /* Show table on desktop */
+    .timetable-wrapper {
+        display: block !important;
+    }
+}
+
+/* === MOBILE TIMELINE CONTAINER === */
+.mobile-timetable-container {
+    width: 100%;
+    padding: 0;
+    background: #f8fafc;
+}
+
+/* === DAY SECTION === */
+.mobile-day-section {
+    margin-bottom: 16px;
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.mobile-day-section.is-today {
+    border: 2px solid #6366f1;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+/* === DAY HEADER === */
+.mobile-day-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: #ffffff;
+}
+
+.mobile-day-section.is-today .mobile-day-header {
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+}
+
+.mobile-day-name {
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.mobile-day-date {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fbbf24;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.mobile-day-section.is-today .mobile-day-date {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.mobile-today-badge {
+    font-size: 11px;
+    font-weight: 800;
+    color: #ffffff;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-left: 8px;
+    text-transform: uppercase;
+}
+
+/* === DAY CONTENT (Classes list) === */
+.mobile-day-content {
+    padding: 12px;
+}
+
+/* === SESSION GROUP === */
+.mobile-session-group {
+    margin-bottom: 12px;
+}
+
+.mobile-session-group:last-child {
+    margin-bottom: 0;
+}
+
+.mobile-session-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 12px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.mobile-session-icon {
+    font-size: 16px;
+}
+
+/* === MOBILE CLASS CARD === */
+.mobile-class-card {
+    position: relative;
+    width: 100%;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 10px;
+    border: 1px solid #e2e8f0;
+    border-left: 5px solid #6366f1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mobile-class-card:last-child {
+    margin-bottom: 0;
+}
+
+.mobile-class-card:active {
+    transform: scale(0.98);
+}
+
+/* === MOBILE CARD HEADER === */
+.mobile-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.mobile-class-subject {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.3;
+    flex: 1;
+    word-break: break-word;
+}
+
+/* === 3-DOT MENU BUTTON === */
+.mobile-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    background: #f1f5f9;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.mobile-menu-btn:hover,
+.mobile-menu-btn:active {
+    background: #e2e8f0;
+}
+
+.mobile-menu-btn svg {
+    width: 20px;
+    height: 20px;
+    color: #64748b;
+}
+
+/* === DROPDOWN MENU === */
+.mobile-dropdown-menu {
+    position: absolute;
+    top: 50px;
+    right: 16px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    z-index: 100;
+    min-width: 160px;
+    display: none;
+}
+
+.mobile-dropdown-menu.show {
+    display: block;
+    animation: fadeInDown 0.2s ease;
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.mobile-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 16px;
+    border: none;
+    background: transparent;
+    font-size: 15px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    text-align: left;
+}
+
+.mobile-dropdown-item:hover,
+.mobile-dropdown-item:active {
+    background: #f8fafc;
+}
+
+.mobile-dropdown-item svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.mobile-dropdown-item.notes-item {
+    color: #10b981;
+}
+
+.mobile-dropdown-item.edit-item {
+    color: #6366f1;
+}
+
+.mobile-dropdown-item.delete-item {
+    color: #ef4444;
+}
+
+.mobile-dropdown-divider {
+    height: 1px;
+    background: #e5e7eb;
+}
+
+/* === MOBILE CARD INFO === */
+.mobile-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mobile-info-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    color: #475569;
+}
+
+.mobile-info-icon {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.mobile-info-label {
+    font-weight: 600;
+    color: #1e293b;
+    min-width: 50px;
+}
+
+.mobile-info-value {
+    color: #475569;
+    font-weight: 500;
+}
+
+/* Time row - special styling */
+.mobile-info-row.time-row {
+    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-top: 4px;
+}
+
+.mobile-info-row.time-row .mobile-info-icon {
+    background: #6366f1;
+    color: #ffffff;
+}
+
+.mobile-info-row.time-row .mobile-info-value {
+    font-weight: 700;
+    color: #4338ca;
+    font-size: 16px;
+}
+
+/* Room - highlight */
+.mobile-info-row.room-row .mobile-info-value {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 16px;
+}
+
+/* === STATUS BADGE (Mobile) === */
+.mobile-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 8px;
+}
+
+.mobile-status-badge--active {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #065f46;
+}
+
+.mobile-status-badge--upcoming {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+}
+
+.mobile-status-badge--ended {
+    background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+    color: #374151;
+}
+
+/* === NOTES INDICATOR (Mobile) === */
+.mobile-notes-indicator {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    cursor: pointer;
+    z-index: 10;
+}
+
+/* === EMPTY STATE === */
+.mobile-empty-day {
+    padding: 24px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 14px;
+    font-style: italic;
+}
+
+.mobile-empty-day-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+    opacity: 0.5;
+}
+
+/* === DATE RANGE (Mobile) === */
+.mobile-date-range {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #fefce8;
+    border-radius: 8px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #854d0e;
+}
+
+.mobile-date-range-icon {
+    font-size: 14px;
+}
         `;
         document.head.appendChild(styleTag);
         console.log('✅ Timetable CSS loaded successfully (Mobile-First, Clean)');
@@ -1403,11 +1811,322 @@ export const Timetable = {
             // Continue with the new tbody
             this.renderTableRows(newTbody);
             this.renderWeekDatesInHeader(); // Render dates again after creating structure
+            
+            // 🔥 NEW: Also render mobile view
+            this.renderMobileView();
             return;
         }
 
         // tbody found, render rows directly
         this.renderTableRows(tbody);
+        
+        // 🔥 NEW: Also render mobile view
+        this.renderMobileView();
+    },
+
+    // 🔥 NEW: Render mobile vertical timeline view
+    renderMobileView() {
+        console.log('📱 Rendering mobile timetable view...');
+        
+        // Find or create mobile container
+        const timetableContainer = document.querySelector('.timetable-container');
+        if (!timetableContainer) {
+            console.warn('⚠️ .timetable-container not found, cannot render mobile view');
+            return;
+        }
+        
+        // Check if mobile container already exists
+        let mobileContainer = timetableContainer.querySelector('.mobile-timetable-container');
+        if (!mobileContainer) {
+            mobileContainer = document.createElement('div');
+            mobileContainer.className = 'mobile-timetable-container';
+            // Insert after timetable-wrapper
+            const wrapper = timetableContainer.querySelector('.timetable-wrapper');
+            if (wrapper) {
+                wrapper.after(mobileContainer);
+            } else {
+                timetableContainer.appendChild(mobileContainer);
+            }
+        }
+        
+        // Get current day for highlighting
+        const today = this.getCurrentDay();
+        
+        // Define days with labels
+        const days = [
+            { id: '2', label: 'Thứ Hai' },
+            { id: '3', label: 'Thứ Ba' },
+            { id: '4', label: 'Thứ Tư' },
+            { id: '5', label: 'Thứ Năm' },
+            { id: '6', label: 'Thứ Sáu' },
+            { id: '7', label: 'Thứ Bảy' },
+            { id: 'CN', label: 'Chủ Nhật' }
+        ];
+        
+        // Define sessions
+        const sessions = [
+            { id: 'morning', label: 'Buổi Sáng', icon: '🌅', aliases: ['morning', 'sáng', 'sa', 'am'] },
+            { id: 'afternoon', label: 'Buổi Chiều', icon: '☀️', aliases: ['afternoon', 'chiều', 'ch', 'pm'] },
+            { id: 'evening', label: 'Buổi Tối', icon: '🌙', aliases: ['evening', 'tối', 'to', 'ev'] }
+        ];
+        
+        // Track rendered classes to prevent duplicates
+        const renderedClasses = new Set();
+        
+        let html = '';
+        
+        days.forEach((day, dayIndex) => {
+            const isToday = today === day.id;
+            
+            // Calculate date for this day
+            let dayDate = '--/--';
+            if (this.currentWeekStart) {
+                const date = new Date(this.currentWeekStart);
+                date.setDate(date.getDate() + dayIndex);
+                dayDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+            }
+            
+            html += `
+                <div class="mobile-day-section ${isToday ? 'is-today' : ''}" data-day="${day.id}">
+                    <div class="mobile-day-header">
+                        <div>
+                            <span class="mobile-day-name">${day.label}</span>
+                            ${isToday ? '<span class="mobile-today-badge">Hôm nay</span>' : ''}
+                        </div>
+                        <span class="mobile-day-date">${dayDate}</span>
+                    </div>
+                    <div class="mobile-day-content">
+            `;
+            
+            let hasClasses = false;
+            
+            sessions.forEach(session => {
+                // Filter classes for this day and session
+                const classes = this.currentTimetable.filter(cls => {
+                    const dayMatch = String(cls.day) === String(day.id);
+                    const sessionLower = String(cls.session || '').toLowerCase();
+                    const sessionMatch = session.id === sessionLower || session.aliases.includes(sessionLower);
+                    const weekMatch = this.isClassInWeek(cls);
+                    return dayMatch && sessionMatch && weekMatch;
+                });
+                
+                if (classes.length > 0) {
+                    hasClasses = true;
+                    
+                    html += `
+                        <div class="mobile-session-group">
+                            <div class="mobile-session-label">
+                                <span class="mobile-session-icon">${session.icon}</span>
+                                ${session.label}
+                            </div>
+                    `;
+                    
+                    classes.forEach(cls => {
+                        // Create unique key to prevent duplicates
+                        const uniqueKey = `${cls.subject}|${cls.day}|${cls.session}|${cls.startPeriod}`;
+                        
+                        if (renderedClasses.has(uniqueKey)) {
+                            return;
+                        }
+                        renderedClasses.add(uniqueKey);
+                        
+                        html += this.renderMobileClassCard(cls);
+                    });
+                    
+                    html += '</div>';
+                }
+            });
+            
+            if (!hasClasses) {
+                html += `
+                    <div class="mobile-empty-day">
+                        <div class="mobile-empty-day-icon">📚</div>
+                        Không có lớp học
+                    </div>
+                `;
+            }
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+        
+        mobileContainer.innerHTML = html;
+        
+        // Setup mobile dropdown menu event listeners
+        this.setupMobileMenuListeners();
+        
+        console.log('✅ Mobile timetable view rendered successfully!');
+    },
+    
+    // 🔥 NEW: Render a single mobile class card
+    renderMobileClassCard(cls) {
+        const colorIndex = Math.abs(cls.subject.charCodeAt(0)) % this.pastelColors.length;
+        const bgColor = this.pastelColors[colorIndex];
+        const classId = cls._id || cls.id;
+        
+        // Validate periods
+        const startPeriod = (!isNaN(cls.startPeriod) && cls.startPeriod >= 1) ? cls.startPeriod : 1;
+        const numPeriods = (!isNaN(cls.numPeriods) && cls.numPeriods >= 1) ? cls.numPeriods : 1;
+        const endPeriod = startPeriod + numPeriods - 1;
+        
+        const startTime = this.periodTimes[startPeriod]?.start || '00:00';
+        const endTime = this.periodTimes[endPeriod]?.end || '23:59';
+        const timeRange = cls.timeRange || `${startTime} - ${endTime}`;
+        
+        // Notes count
+        const notes = cls.notes || [];
+        const pendingNotes = notes.filter(n => !n.isDone).length;
+        const hasNotes = pendingNotes > 0;
+        
+        // Status
+        let statusClass = '';
+        let statusText = '';
+        
+        if (cls.startDate && cls.endDate) {
+            const todayDate = new Date();
+            const start = new Date(cls.startDate);
+            const end = new Date(cls.endDate);
+            
+            if (todayDate < start) {
+                statusClass = 'mobile-status-badge--upcoming';
+                statusText = '⏳ Sắp diễn ra';
+            } else if (todayDate > end) {
+                statusClass = 'mobile-status-badge--ended';
+                statusText = '✓ Đã kết thúc';
+            } else {
+                statusClass = 'mobile-status-badge--active';
+                statusText = '▶ Đang diễn ra';
+            }
+        }
+        
+        return `
+            <div class="mobile-class-card" style="background: ${bgColor}; --card-border-color: ${this.getDarkerColor(bgColor)};" data-class-id="${classId}">
+                ${hasNotes ? `
+                    <span class="mobile-notes-indicator" onclick="event.stopPropagation(); Timetable.openNotesModal('${classId}')">
+                        📝 ${pendingNotes}
+                    </span>
+                ` : ''}
+                
+                <div class="mobile-card-header">
+                    <span class="mobile-class-subject">${this.escapeHtml(cls.subject)}</span>
+                    <button class="mobile-menu-btn" data-class-id="${classId}" onclick="event.stopPropagation(); Timetable.toggleMobileMenu(this)">
+                        <svg fill="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="5" r="2"/>
+                            <circle cx="12" cy="12" r="2"/>
+                            <circle cx="12" cy="19" r="2"/>
+                        </svg>
+                    </button>
+                    
+                    <div class="mobile-dropdown-menu" data-class-id="${classId}">
+                        <button class="mobile-dropdown-item notes-item" onclick="event.stopPropagation(); Timetable.openNotesModal('${classId}'); Timetable.closeMobileMenus();">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            Ghi chú
+                        </button>
+                        <button class="mobile-dropdown-item edit-item" onclick="event.stopPropagation(); Timetable.openEditModal('${classId}'); Timetable.closeMobileMenus();">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                            Chỉnh sửa
+                        </button>
+                        <div class="mobile-dropdown-divider"></div>
+                        <button class="mobile-dropdown-item delete-item" onclick="event.stopPropagation(); Timetable.deleteClass('${classId}'); Timetable.closeMobileMenus();">
+                            <svg fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                            </svg>
+                            Xóa
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mobile-card-info">
+                    <div class="mobile-info-row room-row">
+                        <span class="mobile-info-icon">🏫</span>
+                        <span class="mobile-info-label">Phòng:</span>
+                        <span class="mobile-info-value">${this.escapeHtml(cls.room)}</span>
+                    </div>
+                    
+                    ${cls.campus ? `
+                    <div class="mobile-info-row">
+                        <span class="mobile-info-icon">📍</span>
+                        <span class="mobile-info-label">Cơ sở:</span>
+                        <span class="mobile-info-value">${this.escapeHtml(cls.campus)}</span>
+                    </div>
+                    ` : ''}
+                    
+                    ${cls.teacher ? `
+                    <div class="mobile-info-row">
+                        <span class="mobile-info-icon">👨‍🏫</span>
+                        <span class="mobile-info-label">GV:</span>
+                        <span class="mobile-info-value">${this.escapeHtml(cls.teacher)}</span>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="mobile-info-row time-row">
+                        <span class="mobile-info-icon">⏰</span>
+                        <span class="mobile-info-label">Giờ:</span>
+                        <span class="mobile-info-value">${this.escapeHtml(timeRange)}</span>
+                    </div>
+                    
+                    ${cls.dateRangeDisplay ? `
+                    <div class="mobile-date-range">
+                        <span class="mobile-date-range-icon">📅</span>
+                        ${this.escapeHtml(cls.dateRangeDisplay)}
+                    </div>
+                    ` : ''}
+                    
+                    ${statusText ? `
+                    <span class="mobile-status-badge ${statusClass}">${statusText}</span>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    },
+    
+    // 🔥 NEW: Get darker shade of color for border
+    getDarkerColor(hexColor) {
+        // Simple darkening - reduce each RGB component by 20%
+        const hex = hexColor.replace('#', '');
+        const r = Math.max(0, parseInt(hex.substr(0, 2), 16) - 40);
+        const g = Math.max(0, parseInt(hex.substr(2, 2), 16) - 40);
+        const b = Math.max(0, parseInt(hex.substr(4, 2), 16) - 40);
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    },
+    
+    // 🔥 NEW: Toggle mobile dropdown menu
+    toggleMobileMenu(btn) {
+        const classId = btn.dataset.classId;
+        const menu = btn.parentElement.querySelector('.mobile-dropdown-menu');
+        
+        // Close all other menus first
+        document.querySelectorAll('.mobile-dropdown-menu.show').forEach(m => {
+            if (m !== menu) {
+                m.classList.remove('show');
+            }
+        });
+        
+        // Toggle current menu
+        menu.classList.toggle('show');
+    },
+    
+    // 🔥 NEW: Close all mobile menus
+    closeMobileMenus() {
+        document.querySelectorAll('.mobile-dropdown-menu.show').forEach(m => {
+            m.classList.remove('show');
+        });
+    },
+    
+    // 🔥 NEW: Setup mobile menu event listeners
+    setupMobileMenuListeners() {
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.mobile-menu-btn') && !e.target.closest('.mobile-dropdown-menu')) {
+                this.closeMobileMenus();
+            }
+        }, { once: false });
     },
 
     renderTableRows(tbody) {
