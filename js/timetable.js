@@ -1299,7 +1299,7 @@ export const Timetable = {
     }
 }
 
-/* ==================== MOBILE VERTICAL TIMELINE (< 768px) ==================== */
+/* ==================== MOBILE DAY TABS VIEW (< 768px) ==================== */
 @media (max-width: 767px) {
     /* Hide the table completely on mobile */
     .timetable-wrapper {
@@ -1324,81 +1324,116 @@ export const Timetable = {
     }
 }
 
-/* === MOBILE TIMELINE CONTAINER === */
+/* === MOBILE CONTAINER === */
 .mobile-timetable-container {
     width: 100%;
     padding: 0;
     background: #f8fafc;
+    min-height: 60vh;
 }
 
-/* === DAY SECTION === */
-.mobile-day-section {
-    margin-bottom: 16px;
+/* === DAY TABS BAR (Scrollable) === */
+.mobile-day-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
     background: #ffffff;
-    border-radius: 12px;
-    overflow: hidden;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    position: sticky;
+    top: 64px;
+    z-index: 50;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.mobile-day-section.is-today {
-    border: 2px solid #6366f1;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+.mobile-day-tabs::-webkit-scrollbar {
+    display: none;
 }
 
-/* === DAY HEADER === */
-.mobile-day-header {
+/* === DAY TAB BUTTON === */
+.mobile-day-tab {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px;
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-    color: #ffffff;
+    justify-content: center;
+    min-width: 70px;
+    padding: 10px 14px;
+    background: #f1f5f9;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
-.mobile-day-section.is-today .mobile-day-header {
-    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+.mobile-day-tab:hover {
+    background: #e2e8f0;
 }
 
-.mobile-day-name {
-    font-size: 18px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+.mobile-day-tab.active {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    border-color: #4338ca;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
-.mobile-day-date {
+.mobile-day-tab.is-today:not(.active) {
+    border-color: #10b981;
+    background: #ecfdf5;
+}
+
+.mobile-day-tab-name {
     font-size: 14px;
-    font-weight: 600;
-    color: #fbbf24;
-    background: rgba(0, 0, 0, 0.2);
-    padding: 4px 12px;
-    border-radius: 20px;
-}
-
-.mobile-day-section.is-today .mobile-day-date {
-    background: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-}
-
-.mobile-today-badge {
-    font-size: 11px;
-    font-weight: 800;
-    color: #ffffff;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    padding: 4px 10px;
-    border-radius: 20px;
-    margin-left: 8px;
+    font-weight: 700;
+    color: #374151;
     text-transform: uppercase;
 }
 
-/* === DAY CONTENT (Classes list) === */
-.mobile-day-content {
-    padding: 12px;
+.mobile-day-tab.active .mobile-day-tab-name {
+    color: #ffffff;
+}
+
+.mobile-day-tab.is-today:not(.active) .mobile-day-tab-name {
+    color: #059669;
+}
+
+.mobile-day-tab-date {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.mobile-day-tab.active .mobile-day-tab-date {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.mobile-day-tab.is-today:not(.active) .mobile-day-tab-date {
+    color: #10b981;
+}
+
+/* Today dot indicator */
+.mobile-today-dot {
+    width: 6px;
+    height: 6px;
+    background: #10b981;
+    border-radius: 50%;
+    margin-top: 4px;
+}
+
+.mobile-day-tab.active .mobile-today-dot {
+    background: #ffffff;
+}
+
+/* === DAY CONTENT AREA === */
+.mobile-day-content-area {
+    padding: 16px;
+    min-height: 50vh;
 }
 
 /* === SESSION GROUP === */
 .mobile-session-group {
-    margin-bottom: 12px;
+    margin-bottom: 16px;
 }
 
 .mobile-session-group:last-child {
@@ -1414,27 +1449,28 @@ export const Timetable = {
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    padding: 8px 12px;
-    background: #f1f5f9;
-    border-radius: 8px;
-    margin-bottom: 10px;
+    padding: 10px 14px;
+    background: #ffffff;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .mobile-session-icon {
-    font-size: 16px;
+    font-size: 18px;
 }
 
-/* === MOBILE CLASS CARD === */
+/* === MOBILE CLASS CARD (Simplified) === */
 .mobile-class-card {
     position: relative;
     width: 100%;
     background: #ffffff;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 10px;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 12px;
     border: 1px solid #e2e8f0;
     border-left: 5px solid #6366f1;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -1452,11 +1488,11 @@ export const Timetable = {
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 
 .mobile-class-subject {
-    font-size: 17px;
+    font-size: 18px;
     font-weight: 700;
     color: #1e293b;
     line-height: 1.3;
@@ -1469,12 +1505,12 @@ export const Timetable = {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
     background: #f1f5f9;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
     transition: background 0.2s ease;
 }
@@ -1485,23 +1521,23 @@ export const Timetable = {
 }
 
 .mobile-menu-btn svg {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     color: #64748b;
 }
 
 /* === DROPDOWN MENU === */
 .mobile-dropdown-menu {
     position: absolute;
-    top: 50px;
-    right: 16px;
+    top: 55px;
+    right: 18px;
     background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    border-radius: 14px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
     border: 1px solid #e2e8f0;
     overflow: hidden;
     z-index: 100;
-    min-width: 160px;
+    min-width: 170px;
     display: none;
 }
 
@@ -1526,11 +1562,11 @@ export const Timetable = {
     align-items: center;
     gap: 12px;
     width: 100%;
-    padding: 14px 16px;
+    padding: 14px 18px;
     border: none;
     background: transparent;
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 600;
     color: #374151;
     cursor: pointer;
     transition: background 0.2s ease;
@@ -1543,8 +1579,8 @@ export const Timetable = {
 }
 
 .mobile-dropdown-item svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
 }
 
@@ -1565,68 +1601,78 @@ export const Timetable = {
     background: #e5e7eb;
 }
 
-/* === MOBILE CARD INFO === */
+/* === MOBILE CARD INFO (Simplified - Only Room & Time) === */
 .mobile-card-info {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
 }
 
 .mobile-info-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 15px;
-    color: #475569;
+    gap: 12px;
 }
 
 .mobile-info-icon {
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: #f1f5f9;
-    border-radius: 8px;
-    font-size: 16px;
-}
-
-.mobile-info-label {
-    font-weight: 600;
-    color: #1e293b;
-    min-width: 50px;
-}
-
-.mobile-info-value {
-    color: #475569;
-    font-weight: 500;
-}
-
-/* Time row - special styling */
-.mobile-info-row.time-row {
-    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
-    padding: 10px 12px;
     border-radius: 10px;
-    margin-top: 4px;
+    font-size: 18px;
+}
+
+/* Room - BIG & BOLD */
+.mobile-info-row.room-row {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    padding: 14px 16px;
+    border-radius: 12px;
+}
+
+.mobile-info-row.room-row .mobile-info-icon {
+    background: #f59e0b;
+    color: #ffffff;
+    font-size: 20px;
+}
+
+.mobile-info-row.room-row .mobile-info-text {
+    font-size: 20px;
+    font-weight: 800;
+    color: #92400e;
+}
+
+/* Time - BIG & BOLD */
+.mobile-info-row.time-row {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    padding: 14px 16px;
+    border-radius: 12px;
 }
 
 .mobile-info-row.time-row .mobile-info-icon {
-    background: #6366f1;
+    background: #3b82f6;
     color: #ffffff;
+    font-size: 20px;
 }
 
-.mobile-info-row.time-row .mobile-info-value {
-    font-weight: 700;
-    color: #4338ca;
-    font-size: 16px;
+.mobile-info-row.time-row .mobile-info-text {
+    font-size: 20px;
+    font-weight: 800;
+    color: #1e40af;
 }
 
-/* Room - highlight */
-.mobile-info-row.room-row .mobile-info-value {
-    font-weight: 700;
-    color: #1e293b;
-    font-size: 16px;
+/* Campus row (smaller) */
+.mobile-info-row.campus-row {
+    padding: 8px 0;
+}
+
+.mobile-info-row.campus-row .mobile-info-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #64748b;
 }
 
 /* === STATUS BADGE (Mobile) === */
@@ -1634,16 +1680,22 @@ export const Timetable = {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 12px;
+    padding: 8px 14px;
     border-radius: 20px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
-    margin-top: 8px;
+    margin-top: 10px;
 }
 
 .mobile-status-badge--active {
     background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
     color: #065f46;
+    animation: pulse-active 2s ease-in-out infinite;
+}
+
+@keyframes pulse-active {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
 }
 
 .mobile-status-badge--upcoming {
@@ -1653,63 +1705,80 @@ export const Timetable = {
 
 .mobile-status-badge--ended {
     background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
-    color: #374151;
+    color: #6b7280;
 }
 
 /* === NOTES INDICATOR (Mobile) === */
 .mobile-notes-indicator {
     position: absolute;
-    top: 12px;
+    top: -8px;
     left: 12px;
     display: flex;
     align-items: center;
     gap: 4px;
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     color: #ffffff;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
-    padding: 4px 8px;
+    padding: 5px 10px;
     border-radius: 20px;
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
     cursor: pointer;
     z-index: 10;
 }
 
-/* === EMPTY STATE === */
-.mobile-empty-day {
-    padding: 24px;
-    text-align: center;
-    color: #94a3b8;
-    font-size: 14px;
-    font-style: italic;
-}
-
-.mobile-empty-day-icon {
-    font-size: 32px;
-    margin-bottom: 8px;
-    opacity: 0.5;
-}
-
-/* === DATE RANGE (Mobile) === */
-.mobile-date-range {
+/* === EMPTY STATE (Fun!) === */
+.mobile-empty-state {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: #fefce8;
-    border-radius: 8px;
-    margin-top: 8px;
-    font-size: 13px;
-    color: #854d0e;
+    justify-content: center;
+    padding: 60px 30px;
+    text-align: center;
+    min-height: 40vh;
 }
 
-.mobile-date-range-icon {
-    font-size: 14px;
+.mobile-empty-icon {
+    font-size: 80px;
+    margin-bottom: 20px;
+    animation: bounce-fun 2s ease-in-out infinite;
+}
+
+@keyframes bounce-fun {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-10px) rotate(-5deg); }
+    75% { transform: translateY(-10px) rotate(5deg); }
+}
+
+.mobile-empty-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 8px;
+}
+
+.mobile-empty-subtitle {
+    font-size: 16px;
+    color: #64748b;
+    margin-bottom: 16px;
+}
+
+.mobile-empty-emoji {
+    font-size: 40px;
+    animation: party 1s ease-in-out infinite;
+}
+
+@keyframes party {
+    0%, 100% { transform: rotate(-10deg); }
+    50% { transform: rotate(10deg); }
 }
         `;
         document.head.appendChild(styleTag);
-        console.log('✅ Timetable CSS loaded successfully (Mobile-First, Clean)');
+        console.log('✅ Timetable CSS loaded successfully (Mobile Day Tabs)');
     },
+
+    // Track selected day for mobile tabs
+    selectedMobileDay: null,
 
     async loadTimetable() {
         try {
@@ -1824,9 +1893,9 @@ export const Timetable = {
         this.renderMobileView();
     },
 
-    // 🔥 NEW: Render mobile vertical timeline view
+    // 🔥 UPDATED: Render mobile Day Tabs view
     renderMobileView() {
-        console.log('📱 Rendering mobile timetable view...');
+        console.log('📱 Rendering mobile Day Tabs view...');
         
         // Find or create mobile container
         const timetableContainer = document.querySelector('.timetable-container');
@@ -1849,34 +1918,31 @@ export const Timetable = {
             }
         }
         
-        // Get current day for highlighting
+        // Get current day for default selection
         const today = this.getCurrentDay();
         
-        // Define days with labels
+        // Set default selected day to today if not already set
+        if (!this.selectedMobileDay) {
+            this.selectedMobileDay = today;
+        }
+        
+        // Define days with short labels for tabs
         const days = [
-            { id: '2', label: 'Thứ Hai' },
-            { id: '3', label: 'Thứ Ba' },
-            { id: '4', label: 'Thứ Tư' },
-            { id: '5', label: 'Thứ Năm' },
-            { id: '6', label: 'Thứ Sáu' },
-            { id: '7', label: 'Thứ Bảy' },
-            { id: 'CN', label: 'Chủ Nhật' }
+            { id: '2', label: 'T2', fullLabel: 'Thứ Hai' },
+            { id: '3', label: 'T3', fullLabel: 'Thứ Ba' },
+            { id: '4', label: 'T4', fullLabel: 'Thứ Tư' },
+            { id: '5', label: 'T5', fullLabel: 'Thứ Năm' },
+            { id: '6', label: 'T6', fullLabel: 'Thứ Sáu' },
+            { id: '7', label: 'T7', fullLabel: 'Thứ Bảy' },
+            { id: 'CN', label: 'CN', fullLabel: 'Chủ Nhật' }
         ];
         
-        // Define sessions
-        const sessions = [
-            { id: 'morning', label: 'Buổi Sáng', icon: '🌅', aliases: ['morning', 'sáng', 'sa', 'am'] },
-            { id: 'afternoon', label: 'Buổi Chiều', icon: '☀️', aliases: ['afternoon', 'chiều', 'ch', 'pm'] },
-            { id: 'evening', label: 'Buổi Tối', icon: '🌙', aliases: ['evening', 'tối', 'to', 'ev'] }
-        ];
-        
-        // Track rendered classes to prevent duplicates
-        const renderedClasses = new Set();
-        
-        let html = '';
+        // Build tabs HTML
+        let tabsHtml = '<div class="mobile-day-tabs">';
         
         days.forEach((day, dayIndex) => {
             const isToday = today === day.id;
+            const isSelected = this.selectedMobileDay === day.id;
             
             // Calculate date for this day
             let dayDate = '--/--';
@@ -1886,81 +1952,130 @@ export const Timetable = {
                 dayDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
             }
             
-            html += `
-                <div class="mobile-day-section ${isToday ? 'is-today' : ''}" data-day="${day.id}">
-                    <div class="mobile-day-header">
-                        <div>
-                            <span class="mobile-day-name">${day.label}</span>
-                            ${isToday ? '<span class="mobile-today-badge">Hôm nay</span>' : ''}
-                        </div>
-                        <span class="mobile-day-date">${dayDate}</span>
-                    </div>
-                    <div class="mobile-day-content">
-            `;
-            
-            let hasClasses = false;
-            
-            sessions.forEach(session => {
-                // Filter classes for this day and session
-                const classes = this.currentTimetable.filter(cls => {
-                    const dayMatch = String(cls.day) === String(day.id);
-                    const sessionLower = String(cls.session || '').toLowerCase();
-                    const sessionMatch = session.id === sessionLower || session.aliases.includes(sessionLower);
-                    const weekMatch = this.isClassInWeek(cls);
-                    return dayMatch && sessionMatch && weekMatch;
-                });
-                
-                if (classes.length > 0) {
-                    hasClasses = true;
-                    
-                    html += `
-                        <div class="mobile-session-group">
-                            <div class="mobile-session-label">
-                                <span class="mobile-session-icon">${session.icon}</span>
-                                ${session.label}
-                            </div>
-                    `;
-                    
-                    classes.forEach(cls => {
-                        // Create unique key to prevent duplicates
-                        const uniqueKey = `${cls.subject}|${cls.day}|${cls.session}|${cls.startPeriod}`;
-                        
-                        if (renderedClasses.has(uniqueKey)) {
-                            return;
-                        }
-                        renderedClasses.add(uniqueKey);
-                        
-                        html += this.renderMobileClassCard(cls);
-                    });
-                    
-                    html += '</div>';
-                }
-            });
-            
-            if (!hasClasses) {
-                html += `
-                    <div class="mobile-empty-day">
-                        <div class="mobile-empty-day-icon">📚</div>
-                        Không có lớp học
-                    </div>
-                `;
-            }
-            
-            html += `
-                    </div>
-                </div>
+            tabsHtml += `
+                <button class="mobile-day-tab ${isSelected ? 'active' : ''} ${isToday ? 'is-today' : ''}" 
+                        data-day="${day.id}" 
+                        onclick="Timetable.selectMobileDay('${day.id}')">
+                    <span class="mobile-day-tab-name">${day.label}</span>
+                    <span class="mobile-day-tab-date">${dayDate}</span>
+                    ${isToday ? '<span class="mobile-today-dot"></span>' : ''}
+                </button>
             `;
         });
         
-        mobileContainer.innerHTML = html;
+        tabsHtml += '</div>';
+        
+        // Build content HTML for selected day
+        const contentHtml = this.renderMobileDayContent(this.selectedMobileDay);
+        
+        mobileContainer.innerHTML = tabsHtml + `<div class="mobile-day-content-area">${contentHtml}</div>`;
+        
+        // Scroll to selected tab
+        setTimeout(() => {
+            const activeTab = mobileContainer.querySelector('.mobile-day-tab.active');
+            if (activeTab) {
+                activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+        }, 100);
         
         // Setup mobile dropdown menu event listeners
         this.setupMobileMenuListeners();
         
-        console.log('✅ Mobile timetable view rendered successfully!');
+        console.log('✅ Mobile Day Tabs view rendered successfully!');
     },
     
-    // 🔥 NEW: Render a single mobile class card
+    // 🔥 NEW: Select a day tab
+    selectMobileDay(dayId) {
+        console.log('📅 Selecting mobile day:', dayId);
+        this.selectedMobileDay = dayId;
+        
+        // Update tabs active state
+        document.querySelectorAll('.mobile-day-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.day === dayId);
+        });
+        
+        // Update content area
+        const contentArea = document.querySelector('.mobile-day-content-area');
+        if (contentArea) {
+            contentArea.innerHTML = this.renderMobileDayContent(dayId);
+            // Re-setup menu listeners for new content
+            this.setupMobileMenuListeners();
+        }
+    },
+    
+    // 🔥 NEW: Render content for a specific day
+    renderMobileDayContent(dayId) {
+        const sessions = [
+            { id: 'morning', label: 'Buổi Sáng', icon: '🌅', aliases: ['morning', 'sáng', 'sa', 'am'] },
+            { id: 'afternoon', label: 'Buổi Chiều', icon: '☀️', aliases: ['afternoon', 'chiều', 'ch', 'pm'] },
+            { id: 'evening', label: 'Buổi Tối', icon: '🌙', aliases: ['evening', 'tối', 'to', 'ev'] }
+        ];
+        
+        const renderedClasses = new Set();
+        let html = '';
+        let hasClasses = false;
+        
+        sessions.forEach(session => {
+            // Filter classes for this day and session
+            const classes = this.currentTimetable.filter(cls => {
+                const dayMatch = String(cls.day) === String(dayId);
+                const sessionLower = String(cls.session || '').toLowerCase();
+                const sessionMatch = session.id === sessionLower || session.aliases.includes(sessionLower);
+                const weekMatch = this.isClassInWeek(cls);
+                return dayMatch && sessionMatch && weekMatch;
+            });
+            
+            if (classes.length > 0) {
+                hasClasses = true;
+                
+                html += `
+                    <div class="mobile-session-group">
+                        <div class="mobile-session-label">
+                            <span class="mobile-session-icon">${session.icon}</span>
+                            ${session.label}
+                        </div>
+                `;
+                
+                classes.forEach(cls => {
+                    const uniqueKey = `${cls.subject}|${cls.day}|${cls.session}|${cls.startPeriod}`;
+                    
+                    if (renderedClasses.has(uniqueKey)) {
+                        return;
+                    }
+                    renderedClasses.add(uniqueKey);
+                    
+                    html += this.renderMobileClassCard(cls);
+                });
+                
+                html += '</div>';
+            }
+        });
+        
+        // Empty state with fun message
+        if (!hasClasses) {
+            const emptyMessages = [
+                { icon: '🎉', title: 'Hôm nay bạn được nghỉ!', subtitle: 'Xõa thôi nào!', emoji: '🥳' },
+                { icon: '😎', title: 'Không có lớp học!', subtitle: 'Thời gian để chill~', emoji: '🎮' },
+                { icon: '🌴', title: 'Ngày nghỉ ngơi!', subtitle: 'Tranh thủ sạc pin nha!', emoji: '☕' },
+                { icon: '🎊', title: 'Tự do rồi!', subtitle: 'Làm gì đây nhỉ?', emoji: '🤔' }
+            ];
+            
+            const randomMsg = emptyMessages[Math.floor(Math.random() * emptyMessages.length)];
+            
+            html = `
+                <div class="mobile-empty-state">
+                    <div class="mobile-empty-icon">${randomMsg.icon}</div>
+                    <div class="mobile-empty-title">${randomMsg.title}</div>
+                    <div class="mobile-empty-subtitle">${randomMsg.subtitle}</div>
+                    <div class="mobile-empty-emoji">${randomMsg.emoji}</div>
+                </div>
+            `;
+        }
+        
+        return html;
+    },
+    
+    // 🔥 UPDATED: Render a simplified mobile class card (no teacher, big room & time)
     renderMobileClassCard(cls) {
         const colorIndex = Math.abs(cls.subject.charCodeAt(0)) % this.pastelColors.length;
         const bgColor = this.pastelColors[colorIndex];
@@ -1980,29 +2095,21 @@ export const Timetable = {
         const pendingNotes = notes.filter(n => !n.isDone).length;
         const hasNotes = pendingNotes > 0;
         
-        // Status
-        let statusClass = '';
-        let statusText = '';
+        // Status - only show "Đang diễn ra" (active)
+        let statusHtml = '';
         
         if (cls.startDate && cls.endDate) {
             const todayDate = new Date();
             const start = new Date(cls.startDate);
             const end = new Date(cls.endDate);
             
-            if (todayDate < start) {
-                statusClass = 'mobile-status-badge--upcoming';
-                statusText = '⏳ Sắp diễn ra';
-            } else if (todayDate > end) {
-                statusClass = 'mobile-status-badge--ended';
-                statusText = '✓ Đã kết thúc';
-            } else {
-                statusClass = 'mobile-status-badge--active';
-                statusText = '▶ Đang diễn ra';
+            if (todayDate >= start && todayDate <= end) {
+                statusHtml = '<span class="mobile-status-badge mobile-status-badge--active">▶ Đang diễn ra</span>';
             }
         }
         
         return `
-            <div class="mobile-class-card" style="background: ${bgColor}; --card-border-color: ${this.getDarkerColor(bgColor)};" data-class-id="${classId}">
+            <div class="mobile-class-card" style="background: ${bgColor};" data-class-id="${classId}">
                 ${hasNotes ? `
                     <span class="mobile-notes-indicator" onclick="event.stopPropagation(); Timetable.openNotesModal('${classId}')">
                         📝 ${pendingNotes}
@@ -2045,42 +2152,22 @@ export const Timetable = {
                 <div class="mobile-card-info">
                     <div class="mobile-info-row room-row">
                         <span class="mobile-info-icon">🏫</span>
-                        <span class="mobile-info-label">Phòng:</span>
-                        <span class="mobile-info-value">${this.escapeHtml(cls.room)}</span>
+                        <span class="mobile-info-text">${this.escapeHtml(cls.room)}</span>
                     </div>
-                    
-                    ${cls.campus ? `
-                    <div class="mobile-info-row">
-                        <span class="mobile-info-icon">📍</span>
-                        <span class="mobile-info-label">Cơ sở:</span>
-                        <span class="mobile-info-value">${this.escapeHtml(cls.campus)}</span>
-                    </div>
-                    ` : ''}
-                    
-                    ${cls.teacher ? `
-                    <div class="mobile-info-row">
-                        <span class="mobile-info-icon">👨‍🏫</span>
-                        <span class="mobile-info-label">GV:</span>
-                        <span class="mobile-info-value">${this.escapeHtml(cls.teacher)}</span>
-                    </div>
-                    ` : ''}
                     
                     <div class="mobile-info-row time-row">
                         <span class="mobile-info-icon">⏰</span>
-                        <span class="mobile-info-label">Giờ:</span>
-                        <span class="mobile-info-value">${this.escapeHtml(timeRange)}</span>
+                        <span class="mobile-info-text">${this.escapeHtml(timeRange)}</span>
                     </div>
                     
-                    ${cls.dateRangeDisplay ? `
-                    <div class="mobile-date-range">
-                        <span class="mobile-date-range-icon">📅</span>
-                        ${this.escapeHtml(cls.dateRangeDisplay)}
+                    ${cls.campus ? `
+                    <div class="mobile-info-row campus-row">
+                        <span class="mobile-info-icon">📍</span>
+                        <span class="mobile-info-text">${this.escapeHtml(cls.campus)}</span>
                     </div>
                     ` : ''}
                     
-                    ${statusText ? `
-                    <span class="mobile-status-badge ${statusClass}">${statusText}</span>
-                    ` : ''}
+                    ${statusHtml}
                 </div>
             </div>
         `;
