@@ -1462,6 +1462,46 @@ export const Timetable = {
     background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
     border-left-color: #f59e0b;
     color: #92400e;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Decorative sunrise rays effect */
+.mobile-session-label.morning::before {
+    content: '🌄';
+    position: absolute;
+    right: 50px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    opacity: 0.7;
+    animation: sunrise 3s ease-in-out infinite;
+}
+
+.mobile-session-label.morning::after {
+    content: '☀️';
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    opacity: 0.8;
+    animation: sunrise 3s ease-in-out infinite 1s;
+}
+
+@keyframes sunrise {
+    0%, 100% { opacity: 0.7; transform: translateY(-50%) scale(1); }
+    50% { opacity: 1; transform: translateY(-50%) scale(1.1); }
+}
+
+.mobile-session-label.morning .mobile-session-icon {
+    text-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+    animation: warm-glow 3s ease-in-out infinite;
+}
+
+@keyframes warm-glow {
+    0%, 100% { text-shadow: 0 0 8px rgba(245, 158, 11, 0.6); }
+    50% { text-shadow: 0 0 16px rgba(245, 158, 11, 0.9); }
 }
 
 /* Afternoon session - bright sun theme */
@@ -1469,6 +1509,46 @@ export const Timetable = {
     background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
     border-left-color: #ea580c;
     color: #9a3412;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Decorative bright sun effect */
+.mobile-session-label.afternoon::before {
+    content: '🔆';
+    position: absolute;
+    right: 50px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    opacity: 0.8;
+    animation: bright-pulse 2.5s ease-in-out infinite;
+}
+
+.mobile-session-label.afternoon::after {
+    content: '🌞';
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    opacity: 0.9;
+    animation: bright-pulse 2.5s ease-in-out infinite 0.8s;
+}
+
+@keyframes bright-pulse {
+    0%, 100% { opacity: 0.8; transform: translateY(-50%) scale(1) rotate(0deg); }
+    50% { opacity: 1; transform: translateY(-50%) scale(1.15) rotate(5deg); }
+}
+
+.mobile-session-label.afternoon .mobile-session-icon {
+    text-shadow: 0 0 10px rgba(234, 88, 12, 0.7);
+    animation: bright-glow 2.5s ease-in-out infinite;
+}
+
+@keyframes bright-glow {
+    0%, 100% { text-shadow: 0 0 10px rgba(234, 88, 12, 0.7); }
+    50% { text-shadow: 0 0 20px rgba(234, 88, 12, 1); }
 }
 
 /* Evening session - dark night theme */
