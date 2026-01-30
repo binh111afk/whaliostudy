@@ -1443,21 +1443,84 @@ export const Timetable = {
 .mobile-session-label {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
+    gap: 10px;
+    font-size: 14px;
     font-weight: 700;
-    color: #64748b;
+    color: #475569;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 10px 12px;
-    background: #ffffff;
-    border-radius: 10px;
-    margin-bottom: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    letter-spacing: 1px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 12px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-left: 4px solid #94a3b8;
+}
+
+/* Morning session - warm sunrise theme */
+.mobile-session-label.morning {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-left-color: #f59e0b;
+    color: #92400e;
+}
+
+/* Afternoon session - bright sun theme */
+.mobile-session-label.afternoon {
+    background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+    border-left-color: #ea580c;
+    color: #9a3412;
+}
+
+/* Evening session - dark night theme */
+.mobile-session-label.evening {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-left-color: #fbbf24;
+    color: #fef3c7;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Decorative stars effect */
+.mobile-session-label.evening::before {
+    content: '✨';
+    position: absolute;
+    right: 50px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    opacity: 0.7;
+    animation: twinkle 2s ease-in-out infinite;
+}
+
+.mobile-session-label.evening::after {
+    content: '⭐';
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    opacity: 0.6;
+    animation: twinkle 2s ease-in-out infinite 0.5s;
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 0.6; transform: translateY(-50%) scale(1); }
+    50% { opacity: 1; transform: translateY(-50%) scale(1.2); }
+}
+
+.mobile-session-label.evening .mobile-session-icon {
+    text-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
+    animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes glow {
+    0%, 100% { text-shadow: 0 0 10px rgba(251, 191, 36, 0.6); }
+    50% { text-shadow: 0 0 20px rgba(251, 191, 36, 0.9); }
 }
 
 .mobile-session-icon {
-    font-size: 18px;
+    font-size: 20px;
 }
 
 /* === MOBILE CLASS CARD (Simplified) === */
@@ -1629,45 +1692,63 @@ export const Timetable = {
     font-size: 18px;
 }
 
-/* Room - BIG & BOLD */
-.mobile-info-row.room-row {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    padding: 14px 16px;
-    border-radius: 12px;
+/* === MINIMALIST TEXT LIST STYLE === */
+.mobile-card-info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 4px;
 }
 
-.mobile-info-row.room-row .mobile-info-icon {
-    background: #f59e0b;
-    color: #ffffff;
-    font-size: 20px;
+.mobile-info-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #475569;
+    line-height: 1.4;
 }
 
-.mobile-info-row.room-row .mobile-info-text {
-    font-size: 20px;
-    font-weight: 800;
-    color: #92400e;
+.mobile-info-label {
+    font-weight: 700;
+    color: #334155;
+    min-width: 50px;
 }
 
-/* Time - BIG & BOLD */
+.mobile-info-value {
+    font-weight: 500;
+    color: #64748b;
+}
+
+/* Period highlight */
+.mobile-info-line.period-line .mobile-info-value {
+    font-weight: 600;
+    color: #7c3aed;
+}
+
+/* Room highlight */
+.mobile-info-line.room-line .mobile-info-value {
+    font-weight: 600;
+    color: #0369a1;
+}
+
+/* Campus styling */
+.mobile-info-line.campus-line .mobile-info-value {
+    font-weight: 500;
+    color: #059669;
+}
+
+/* Time styling */
+.mobile-info-line.time-line .mobile-info-value {
+    font-weight: 600;
+    color: #dc2626;
+}
+
+/* Keep old classes for backward compat (hidden) */
+.mobile-info-row.room-row,
 .mobile-info-row.time-row {
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    padding: 14px 16px;
-    border-radius: 12px;
+    display: none;
 }
-
-.mobile-info-row.time-row .mobile-info-icon {
-    background: #3b82f6;
-    color: #ffffff;
-    font-size: 20px;
-}
-
-.mobile-info-row.time-row .mobile-info-text {
-    font-size: 20px;
-    font-weight: 800;
-    color: #1e40af;
-}
-
-/* Campus row - REMOVED, now merged with room row */
 
 /* === STATUS BADGE (Mobile) === */
 .mobile-status-badge {
@@ -2024,7 +2105,7 @@ export const Timetable = {
                 
                 html += `
                     <div class="mobile-session-group">
-                        <div class="mobile-session-label">
+                        <div class="mobile-session-label ${session.id}">
                             <span class="mobile-session-icon">${session.icon}</span>
                             ${session.label}
                         </div>
@@ -2143,17 +2224,25 @@ export const Timetable = {
                     </div>
                 </div>
                 
-                <div class="mobile-card-info">
-                    <div class="mobile-info-row room-row">
-                        <span class="mobile-info-icon">🏫</span>
-                        <span class="mobile-info-text">${this.escapeHtml(cls.room)}${cls.campus ? ` - CS ${this.escapeHtml(cls.campus)}` : ''}</span>
+                <div class="mobile-card-info-list">
+                    <div class="mobile-info-line period-line">
+                        <span class="mobile-info-label">Tiết:</span>
+                        <span class="mobile-info-value">${startPeriod}${numPeriods > 1 ? ` - ${endPeriod}` : ''}</span>
                     </div>
-                    
-                    <div class="mobile-info-row time-row">
-                        <span class="mobile-info-icon">⏰</span>
-                        <span class="mobile-info-text">${this.escapeHtml(timeRange)}</span>
+                    <div class="mobile-info-line room-line">
+                        <span class="mobile-info-label">Phòng:</span>
+                        <span class="mobile-info-value">${this.escapeHtml(cls.room) || 'TBA'}</span>
                     </div>
-                    
+                    ${cls.campus ? `
+                    <div class="mobile-info-line campus-line">
+                        <span class="mobile-info-label">Cơ sở:</span>
+                        <span class="mobile-info-value">${this.escapeHtml(cls.campus)}</span>
+                    </div>
+                    ` : ''}
+                    <div class="mobile-info-line time-line">
+                        <span class="mobile-info-label">Giờ:</span>
+                        <span class="mobile-info-value">${this.escapeHtml(timeRange) || 'TBA'}</span>
+                    </div>
                     ${statusHtml}
                 </div>
             </div>
