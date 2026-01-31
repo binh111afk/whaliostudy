@@ -2848,25 +2848,26 @@ main {
     top: calc(100% + 8px);
     left: 0;
     width: 100%;
+    min-width: 280px;
     max-height: 400px;
     background: white;
     border: 2px solid #e5e7eb;
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
     display: none;
-    z-index: 1000;
+    z-index: 9999;
     overflow: hidden;
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: all 0.2s ease;
 }
 
-/* When dropdown is active/open */
-.course-dropdown-menu.active,
+/* When dropdown is active/open - using multiple selectors for reliability */
+.course-dropdown-menu.active {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
 .course-dropdown-btn.active + .course-dropdown-menu {
     display: block !important;
-    opacity: 1;
-    transform: translateY(0);
 }
 
 .course-dropdown-search {

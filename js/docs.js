@@ -55,33 +55,49 @@ export const DocumentManager = {
 
     // Toggle dropdown visibility
     toggleCourseDropdown(event) {
-        // Get the button that was clicked
-        const btn = event?.target?.closest('.course-dropdown-btn') || document.getElementById('courseDropdownBtn');
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        
+        // Get the button that was clicked - support both desktop and mobile buttons
+        let btn = null;
+        if (event && event.target) {
+            btn = event.target.closest('.course-dropdown-btn') || 
+                  event.target.closest('.filter-chip.has-dropdown');
+        }
+        if (!btn) {
+            btn = document.getElementById('courseDropdownBtn');
+        }
+        
         if (!btn) return;
 
-        // Find the dropdown menu (next sibling of button)
-        const container = btn.closest('.course-dropdown-container');
-        const dropdown = container?.querySelector('.course-dropdown-menu');
-
+        // Find the dropdown menu - check multiple container types
+        const container = btn.closest('.course-dropdown-container') || 
+                          btn.closest('.filter-chip-dropdown');
+        if (!container) return;
+        
+        const dropdown = container.querySelector('.course-dropdown-menu');
         if (!dropdown) return;
 
-        this.isDropdownOpen = !this.isDropdownOpen;
+        // Toggle state
+        const isCurrentlyOpen = dropdown.classList.contains('active');
+        
+        // Close all dropdowns first
+        document.querySelectorAll('.course-dropdown-menu').forEach(d => {
+            d.style.display = 'none';
+            d.classList.remove('active');
+        });
+        document.querySelectorAll('.course-dropdown-btn, .filter-chip.has-dropdown').forEach(b => {
+            b.classList.remove('active');
+        });
 
-        if (this.isDropdownOpen) {
-            // Close any other open dropdowns first
-            document.querySelectorAll('.course-dropdown-menu').forEach(d => {
-                if (d !== dropdown) {
-                    d.style.display = 'none';
-                    d.classList.remove('active');
-                }
-            });
-            document.querySelectorAll('.course-dropdown-btn').forEach(b => {
-                if (b !== btn) b.classList.remove('active');
-            });
-
+        // If it was closed, open it
+        if (!isCurrentlyOpen) {
             dropdown.style.display = 'block';
             dropdown.classList.add('active');
             btn.classList.add('active');
+            this.isDropdownOpen = true;
 
             // Focus search input
             const searchInput = dropdown.querySelector('.course-search-input');
@@ -89,9 +105,7 @@ export const DocumentManager = {
                 setTimeout(() => searchInput.focus(), 100);
             }
         } else {
-            dropdown.style.display = 'none';
-            dropdown.classList.remove('active');
-            btn.classList.remove('active');
+            this.isDropdownOpen = false;
         }
     },
 
@@ -100,7 +114,7 @@ export const DocumentManager = {
         document.addEventListener('click', (e) => {
             // Handle course dropdowns
             const dropdowns = document.querySelectorAll('.course-dropdown-menu');
-            const buttons = document.querySelectorAll('.course-dropdown-btn');
+            const buttons = document.querySelectorAll('.course-dropdown-btn, .filter-chip.has-dropdown');
 
             // Check if click is outside all dropdowns and buttons
             let clickedInside = false;
@@ -164,15 +178,17 @@ export const DocumentManager = {
     selectCourseFromDropdown(courseId, courseName, event) {
         this.selectedSubject = { id: courseId, name: courseName };
 
-        // Get the clicked item's container
+        // Get the clicked item's container - support both desktop and mobile
         const item = event?.target?.closest('.course-dropdown-item');
-        const container = item?.closest('.course-dropdown-container');
-        const btn = container?.querySelector('.course-dropdown-btn');
+        const container = item?.closest('.course-dropdown-container') || 
+                          item?.closest('.filter-chip-dropdown');
+        const btn = container?.querySelector('.course-dropdown-btn') ||
+                    container?.querySelector('.filter-chip.has-dropdown');
         const dropdown = container?.querySelector('.course-dropdown-menu');
 
         // Update button text
         if (btn) {
-            const textSpan = btn.querySelector('.dropdown-btn-text');
+            const textSpan = btn.querySelector('.dropdown-btn-text') || btn.querySelector('.chip-text');
             if (textSpan) {
                 textSpan.textContent = courseName;
             }
@@ -180,8 +196,11 @@ export const DocumentManager = {
 
         // Close dropdown
         this.isDropdownOpen = false;
-        if (dropdown && btn) {
+        if (dropdown) {
             dropdown.style.display = 'none';
+            dropdown.classList.remove('active');
+        }
+        if (btn) {
             btn.classList.remove('active');
         }
 
