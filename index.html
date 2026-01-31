@@ -487,7 +487,7 @@
         <!-- Thêm vào sau section profile-section -->
         <section id="documents-section" style="display: none; width: 100%;">
             <div class="documents-page">
-                <!-- Header của trang tài liệu -->
+                <!-- Header của trang tài liệu - Mobile Optimized -->
                 <div class="page-header">
                     <div class="page-title">
                         <h1>
@@ -497,9 +497,10 @@
                             </svg>
                             Kho Tài Liệu Chung
                         </h1>
-                        <p>Tổng hợp tài liệu học tập từ các thành viên</p>
+                        <p class="page-subtitle">Tổng hợp tài liệu học tập từ các thành viên</p>
                     </div>
-                    <button onclick="openUploadDocModal()" class="btn-upload-header">
+                    <!-- Desktop upload button - hidden on mobile -->
+                    <button onclick="openUploadDocModal()" class="btn-upload-header btn-upload-desktop">
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
@@ -508,8 +509,63 @@
                     </button>
                 </div>
 
-                <!-- Bộ lọc và tìm kiếm -->
-                <div class="docs-filter">
+                <!-- Mobile Horizontal Scrolling Filter Chips -->
+                <div class="mobile-filter-chips">
+                    <!-- Search chip first -->
+                    <div class="filter-chip-search">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        <input type="text" id="docs-search-mobile" placeholder="Tìm kiếm..."
+                            oninput="searchDocuments(this.value)">
+                    </div>
+                    
+                    <!-- Filter chips -->
+                    <div class="filter-chips-scroll">
+                        <button class="filter-chip active" data-filter="all" onclick="filterByType('')">
+                            Tất cả
+                        </button>
+                        <button class="filter-chip" data-filter="pdf" onclick="filterByType('pdf')">
+                            <span class="chip-icon">📄</span> PDF
+                        </button>
+                        <button class="filter-chip" data-filter="word" onclick="filterByType('word')">
+                            <span class="chip-icon">📝</span> Word
+                        </button>
+                        <button class="filter-chip" data-filter="excel" onclick="filterByType('excel')">
+                            <span class="chip-icon">📊</span> Excel
+                        </button>
+                        <button class="filter-chip" data-filter="ppt" onclick="filterByType('ppt')">
+                            <span class="chip-icon">📽️</span> PPT
+                        </button>
+                        <button class="filter-chip" data-filter="image" onclick="filterByType('image')">
+                            <span class="chip-icon">🖼️</span> Ảnh
+                        </button>
+                        
+                        <!-- Course dropdown chip -->
+                        <div class="filter-chip-dropdown">
+                            <button class="filter-chip has-dropdown" id="mobileCourseChip" 
+                                onclick="DocumentManager.toggleCourseDropdown(event)">
+                                <span class="chip-text">Môn học</span>
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <!-- Refresh chip -->
+                        <button class="filter-chip chip-action" onclick="loadDocuments()">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Desktop Bộ lọc và tìm kiếm - hidden on mobile -->
+                <div class="docs-filter docs-filter-desktop">
                     <div class="search-box">
                         <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -541,8 +597,8 @@
                     </div>
                 </div>
 
-                <!-- Course Filter for Documents -->
-                <div class="course-filters-section">
+                <!-- Course Filter for Documents - Desktop only -->
+                <div class="course-filters-section course-filters-desktop">
                     <span class="filter-label">Lọc theo môn:</span>
 
                     <!-- Searchable Dropdown -->
@@ -565,7 +621,7 @@
                     </div>
                 </div>
 
-                <!-- Stats summary -->
+                <!-- Stats summary - Compact on mobile -->
                 <div class="docs-stats">
                     <div class="stat-card">
                         <span class="stat-number" id="total-docs">0</span>
@@ -577,7 +633,7 @@
                     </div>
                     <div class="stat-card">
                         <span class="stat-number" id="recent-docs">0</span>
-                        <span class="stat-label">Mới nhất 7 ngày</span>
+                        <span class="stat-label">Mới 7 ngày</span>
                     </div>
                 </div>
 
@@ -588,6 +644,13 @@
 
                 <!-- Pagination cho documents section -->
                 <div id="pagination-container" class="pagination-container"></div>
+
+                <!-- Floating Action Button (FAB) - Mobile Only -->
+                <button class="fab-upload" onclick="openUploadDocModal()" title="Tải tài liệu lên">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                </button>
             </div>
         </section>
 

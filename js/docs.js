@@ -93,6 +93,7 @@ export const DocumentManager = {
     // Close dropdown when clicking outside
     setupDropdownListeners() {
         document.addEventListener('click', (e) => {
+            // Handle course dropdowns
             const dropdowns = document.querySelectorAll('.course-dropdown-menu');
             const buttons = document.querySelectorAll('.course-dropdown-btn');
 
@@ -113,6 +114,22 @@ export const DocumentManager = {
                 buttons.forEach(btn => {
                     btn.classList.remove('active');
                 });
+            }
+
+            // Handle mobile card dropdowns
+            const cardDropdowns = document.querySelectorAll('.doc-card-dropdown');
+            const cardMenuBtns = document.querySelectorAll('.doc-card-more-btn');
+            
+            let clickedInsideCard = false;
+            cardDropdowns.forEach(dropdown => {
+                if (dropdown.contains(e.target)) clickedInsideCard = true;
+            });
+            cardMenuBtns.forEach(btn => {
+                if (btn.contains(e.target)) clickedInsideCard = true;
+            });
+
+            if (!clickedInsideCard) {
+                this.closeAllDropdowns();
             }
         });
     },
@@ -398,6 +415,46 @@ export const DocumentManager = {
                 </button>
             ` : '';
 
+            // Mobile 3-dot menu items
+            const mobileMenuItems = [];
+            if (canEdit) {
+                mobileMenuItems.push(`
+                    <button class="doc-card-dropdown-item" onclick="event.stopPropagation(); DocumentManager.closeAllDropdowns(); DocumentManager.openEditModal('${doc.id}')">
+                        ${ICON_EDIT}
+                        <span>Sửa thông tin</span>
+                    </button>
+                `);
+            }
+            mobileMenuItems.push(`
+                <button class="doc-card-dropdown-item" onclick="event.stopPropagation(); DocumentManager.closeAllDropdowns(); DocumentManager.toggleSave('${doc.id}')">
+                    ${isSaved ? ICON_BOOKMARK_FILLED : ICON_BOOKMARK_OUTLINE}
+                    <span>${isSaved ? 'Bỏ lưu' : 'Lưu tài liệu'}</span>
+                </button>
+            `);
+            if (canDelete) {
+                mobileMenuItems.push(`
+                    <button class="doc-card-dropdown-item danger" onclick="event.stopPropagation(); DocumentManager.closeAllDropdowns(); DocumentManager.openDeleteModal('${doc.id}', '${currentUsername}')">
+                        ${ICON_TRASH}
+                        <span>Xóa tài liệu</span>
+                    </button>
+                `);
+            }
+
+            const mobileMoreMenu = `
+                <div class="doc-card-more-menu">
+                    <button class="doc-card-more-btn" onclick="event.stopPropagation(); DocumentManager.toggleCardDropdown(this)" title="Thêm tùy chọn">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="5" r="2"/>
+                            <circle cx="12" cy="12" r="2"/>
+                            <circle cx="12" cy="19" r="2"/>
+                        </svg>
+                    </button>
+                    <div class="doc-card-dropdown">
+                        ${mobileMenuItems.join('')}
+                    </div>
+                </div>
+            `;
+
             // 👇 CẬP NHẬT: Dùng viewUrl (đã bọc Viewer) và downloadUrl (link gốc)
             return `
                 <div class="doc-card" data-id="${doc.id}" onclick="window.open('${viewUrl}', '_blank')">
@@ -416,6 +473,7 @@ export const DocumentManager = {
                                 <span class="course-code">${courseCode}</span>
                             </div>
                         </div>
+                        ${mobileMoreMenu}
                     </div>
                     <div class="doc-card-body">
                         <div class="doc-meta-info">
@@ -445,6 +503,27 @@ export const DocumentManager = {
                 </div>
             `;
         }).join('');
+    },
+
+    // Toggle mobile card dropdown menu
+    toggleCardDropdown(btn) {
+        const dropdown = btn.nextElementSibling;
+        const isActive = dropdown.classList.contains('active');
+        
+        // Close all other dropdowns first
+        this.closeAllDropdowns();
+        
+        // Toggle current dropdown
+        if (!isActive) {
+            dropdown.classList.add('active');
+        }
+    },
+
+    // Close all card dropdown menus
+    closeAllDropdowns() {
+        document.querySelectorAll('.doc-card-dropdown.active').forEach(d => {
+            d.classList.remove('active');
+        });
     },
 
     openDeleteModal(docId, username) {
@@ -990,6 +1069,12 @@ export const DocumentManager = {
         this.currentFilteredDocs = term ? src.filter(d => d.name.toLowerCase().includes(term) || d.uploader.toLowerCase().includes(term)) : [...src];
         this.pagination.currentPage = 1;
         this.renderPagedDocuments();
+
+        // Sync both search inputs (mobile & desktop)
+        const desktopSearch = document.getElementById('docs-search');
+        const mobileSearch = document.getElementById('docs-search-mobile');
+        if (desktopSearch && desktopSearch.value !== k) desktopSearch.value = k;
+        if (mobileSearch && mobileSearch.value !== k) mobileSearch.value = k;
     },
 
     filterByType(t) {
@@ -999,6 +1084,25 @@ export const DocumentManager = {
         this.currentFilteredDocs = t ? src.filter(d => d.type === t) : [...src];
         this.pagination.currentPage = 1;
         this.renderPagedDocuments();
+
+        // Update filter chips active state (mobile)
+        const chips = document.querySelectorAll('.filter-chip[data-filter]');
+        chips.forEach(chip => {
+            const filterValue = chip.getAttribute('data-filter');
+            if ((t === '' || t === null) && filterValue === 'all') {
+                chip.classList.add('active');
+            } else if (filterValue === t) {
+                chip.classList.add('active');
+            } else {
+                chip.classList.remove('active');
+            }
+        });
+
+        // Sync desktop select dropdown
+        const selectEl = document.getElementById('doc-type-filter');
+        if (selectEl) {
+            selectEl.value = t || '';
+        }
     },
 
     renderDocuments(docs, container) {
