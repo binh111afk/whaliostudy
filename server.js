@@ -1,4 +1,5 @@
 require('dotenv').config();
+console.log("🔑 KEY CHECK:", process.env.GEMINI_API_KEY ? "Đã tìm thấy Key!" : "❌ KHÔNG THẤY KEY");
 const express = require('express');
 const fs = require('fs').promises;
 const multer = require('multer');
