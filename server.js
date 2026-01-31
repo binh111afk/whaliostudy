@@ -2070,7 +2070,7 @@ app.post('/api/chat', async (req, res) => {
 
         // Initialize the model with system instruction
         const model = genAI.getGenerativeModel({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
             systemInstruction: WHALIO_SYSTEM_INSTRUCTION
         });
 
@@ -2102,6 +2102,14 @@ app.post('/api/chat', async (req, res) => {
                 success: false,
                 message: 'Xin lỗi, mình không thể trả lời câu hỏi này.',
                 response: 'Xin lỗi, mình không thể trả lời câu hỏi này. Hãy thử hỏi điều khác nhé! 😊'
+            });
+        }
+
+        if (err.message?.includes('429') || err.message?.includes('quota') || err.message?.includes('Too Many Requests')) {
+            return res.status(429).json({
+                success: false,
+                message: 'Whalio đang bận, vui lòng thử lại sau vài giây nhé! 😊',
+                response: 'Xin lỗi, mình đang nhận được quá nhiều tin nhắn. Hãy thử lại sau ít phút nhé! 🙏'
             });
         }
 
