@@ -13,6 +13,7 @@ import { EventManager } from './events.js';
 import { DataManager } from './data.js';
 import { AnalyticsManager } from './analytics.js';
 import { FlashcardManager } from './flashcard.js';
+import { ThemeManager } from './theme.js';
 
 // ==================== PAGE MANAGER ====================
 const PageManager = {
@@ -631,6 +632,7 @@ window.PageManager = PageManager;
 window.ModalManager = ModalManager;
 window.Utils = Utils;
 window.EventManager = EventManager;
+window.ThemeManager = ThemeManager;
 
 // Timer functions
 window.selectedMinutes = 25;

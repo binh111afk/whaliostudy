@@ -19,6 +19,13 @@
     /* Xám nhạt nền web */
     --bg-card: #ffffff;
     --border-color: #e5e7eb;
+    
+    /* Header specific */
+    --header-bg: #ffffff;
+    --nav-icon-bg: #f3f4f6;
+    --nav-icon-hover-bg: #e5e7eb;
+    --input-bg: #f3f4f6;
+    --input-focus-bg: #ffffff;
 
     /* Hiệu ứng */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -27,6 +34,57 @@
     --radius-md: 12px;
     --radius-lg: 16px;
     --transition: all 0.25s ease;
+}
+
+/* =========================================
+   DARK MODE THEME VARIABLES
+   ========================================= */
+html.dark-mode {
+    /* Background colors */
+    --bg-body: #121212;
+    --bg-card: #1e1e1e;
+    --header-bg: #1a1b1e;
+    
+    /* Text colors */
+    --text-main: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    
+    /* Border & Dividers */
+    --border-color: #2d2d2d;
+    
+    /* Primary colors adjusted for dark mode */
+    --primary-light: rgba(19, 70, 145, 0.2);
+    
+    /* Input fields */
+    --nav-icon-bg: #2d2d2d;
+    --nav-icon-hover-bg: #3d3d3d;
+    --input-bg: #2d2d2d;
+    --input-focus-bg: #3d3d3d;
+    
+    /* Shadows adjusted for dark mode */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+}
+
+/* =========================================
+   THEME TRANSITION STYLES
+   ========================================= */
+body,
+header,
+.sidebar-left,
+.sidebar-right,
+.section-box,
+.welcome-card,
+.widget-box,
+.teacher-card,
+.bottom-nav,
+.nav-search input,
+.nav-icon-btn,
+.dropdown-menu,
+.modal,
+.modal-content {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 * {
@@ -69,7 +127,7 @@ input {
    2. HEADER (THANH ĐIỀU HƯỚNG TRÊN CÙNG)
    ========================================= */
 header {
-    background: #ffffff;
+    background: var(--header-bg);
     height: 64px;
     position: sticky;
     top: 0;
@@ -117,18 +175,18 @@ header {
 }
 
 .nav-search input {
-    background: #f3f4f6;
+    background: var(--input-bg);
     border: none;
     padding: 9px 16px 9px 40px;
     border-radius: 8px;
     width: 240px;
     font-size: 14px;
-    color: #4b5563;
+    color: var(--text-main);
     transition: var(--transition);
 }
 
 .nav-search input:focus {
-    background: #fff;
+    background: var(--input-focus-bg);
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
     outline: none;
 }
@@ -138,7 +196,7 @@ header {
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    color: #9ca3af;
+    color: var(--text-secondary);
     width: 18px;
     height: 18px;
 }
@@ -185,7 +243,7 @@ header {
     gap: 6px;
     font-size: 14px;
     font-weight: 600;
-    color: #4b5563;
+    color: var(--text-secondary);
 }
 
 .btn-activate-card:hover {
@@ -195,15 +253,15 @@ header {
 .nav-divider {
     width: 1px;
     height: 24px;
-    background: #e5e7eb;
+    background: var(--border-color);
 }
 
 .nav-icon-btn {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: #f3f4f6;
-    color: #6b7280;
+    background: var(--nav-icon-bg);
+    color: var(--text-secondary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -211,22 +269,22 @@ header {
 }
 
 .nav-icon-btn:hover {
-    background: #e5e7eb;
+    background: var(--nav-icon-hover-bg);
     color: var(--primary-color);
 }
 
 .nav-avatar {
     width: 36px;
     height: 36px;
-    background: #e5e7eb;
+    background: var(--nav-icon-bg);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 600;
-    color: #6b7280;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 1px #e5e7eb;
+    color: var(--text-secondary);
+    border: 2px solid var(--bg-card);
+    box-shadow: 0 0 0 1px var(--border-color);
     cursor: pointer;
 }
 
@@ -8662,7 +8720,7 @@ select {
     bottom: 0;
     left: 0;
     right: 0;
-    background: white;
+    background: var(--bg-card);
     border-top: 1px solid var(--border-color);
     padding: 8px 0 12px 0;
     z-index: 1000;
@@ -9221,4 +9279,270 @@ select {
         grid-template-columns: repeat(2, 1fr);
         gap: 20px;
     }
+}
+/* ==================== THEME TOGGLE BUTTON ==================== */
+.theme-toggle-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--nav-icon-bg);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: none;
+    position: relative;
+}
+
+.theme-toggle-btn:hover {
+    background: var(--nav-icon-hover-bg);
+    color: var(--primary-color);
+    transform: rotate(15deg);
+}
+
+.theme-toggle-btn svg {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.theme-toggle-btn .icon-sun {
+    display: none;
+}
+
+.theme-toggle-btn .icon-moon {
+    display: block;
+}
+
+/* Active state for dark mode */
+html.dark-mode .theme-toggle-btn .icon-sun {
+    display: block;
+}
+
+html.dark-mode .theme-toggle-btn .icon-moon {
+    display: none;
+}
+
+/* Mobile theme toggle - compact size */
+@media (max-width: 768px) {
+    .theme-toggle-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .theme-toggle-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+/* ==================== DARK MODE ADDITIONAL OVERRIDES ==================== */
+
+/* Cards and teacher cards */
+html.dark-mode .teacher-card {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+html.dark-mode .teacher-card:hover {
+    border-color: var(--primary-color);
+}
+
+html.dark-mode .teacher-name {
+    color: var(--text-main);
+}
+
+/* Stat items glass effect override for dark mode */
+html.dark-mode .stat-item {
+    background: rgba(30, 30, 30, 0.8) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark-mode .stat-label {
+    color: var(--text-secondary);
+}
+
+/* Welcome card in dark mode */
+html.dark-mode .welcome-info h1 {
+    color: var(--text-main);
+}
+
+html.dark-mode .welcome-info p {
+    color: var(--text-secondary);
+}
+
+/* Dropdown menu */
+html.dark-mode .dropdown-menu {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+    box-shadow: var(--shadow-lg);
+}
+
+html.dark-mode .dropdown-item {
+    color: var(--text-main);
+}
+
+html.dark-mode .dropdown-item:hover {
+    background: var(--primary-light);
+}
+
+html.dark-mode .dropdown-info {
+    border-bottom-color: var(--border-color) !important;
+}
+
+html.dark-mode #menuUserName {
+    color: var(--text-main) !important;
+}
+
+/* Modal styles */
+html.dark-mode .modal-content {
+    background: var(--bg-card);
+    color: var(--text-main);
+}
+
+html.dark-mode .modal-header {
+    border-bottom-color: var(--border-color);
+}
+
+html.dark-mode .modal-footer {
+    border-top-color: var(--border-color);
+}
+
+/* Form inputs in dark mode */
+html.dark-mode input,
+html.dark-mode textarea,
+html.dark-mode select {
+    background: var(--input-bg);
+    color: var(--text-main);
+    border-color: var(--border-color);
+}
+
+html.dark-mode input::placeholder,
+html.dark-mode textarea::placeholder {
+    color: var(--text-secondary);
+}
+
+html.dark-mode input:focus,
+html.dark-mode textarea:focus,
+html.dark-mode select:focus {
+    background: var(--input-focus-bg);
+    border-color: var(--primary-color);
+}
+
+/* Tables in dark mode */
+html.dark-mode table th,
+html.dark-mode table td {
+    border-color: var(--border-color);
+}
+
+html.dark-mode table th {
+    background: var(--bg-body);
+}
+
+html.dark-mode table tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+html.dark-mode table tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Document cards */
+html.dark-mode .document-card {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+html.dark-mode .document-card:hover {
+    border-color: var(--primary-color);
+}
+
+/* Tooltips */
+html.dark-mode .nav-item::after {
+    background-color: #333;
+}
+
+html.dark-mode .nav-item::before {
+    border-color: transparent transparent #333 transparent;
+}
+
+/* Widget boxes */
+html.dark-mode .widget-box {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+/* Scrollbar for dark mode */
+html.dark-mode ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+html.dark-mode ::-webkit-scrollbar-track {
+    background: var(--bg-body);
+}
+
+html.dark-mode ::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+
+html.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Login button in dark mode */
+html.dark-mode .btn-login-nav {
+    color: var(--text-main);
+    border-color: var(--border-color);
+}
+
+html.dark-mode .btn-login-nav:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+/* Quick upload button */
+html.dark-mode .btn-quick-upload {
+    background: var(--primary-color);
+}
+
+/* User mini profile */
+html.dark-mode .user-mini-profile .avatar {
+    background: rgba(19, 70, 145, 0.3);
+}
+
+/* Section titles */
+html.dark-mode .section-title {
+    color: var(--text-main);
+}
+
+html.dark-mode .view-all {
+    color: var(--primary-color);
+}
+
+/* Community section */
+html.dark-mode .post-card {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+/* Exam cards */
+html.dark-mode .exam-card {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+/* Profile section */
+html.dark-mode .profile-card {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+/* Footer */
+html.dark-mode footer {
+    background: #0d0d0d;
 }
