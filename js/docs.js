@@ -94,6 +94,9 @@ export const DocumentManager = {
 
         // If it was closed, open it
         if (!isCurrentlyOpen) {
+            // Ensure dropdown items are rendered
+            this.renderCourseDropdown();
+            
             dropdown.style.display = 'block';
             dropdown.classList.add('active');
             btn.classList.add('active');
