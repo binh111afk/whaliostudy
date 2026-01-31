@@ -1,28 +1,55 @@
 // ==================== THEME MANAGER ====================
 // Dark Mode / Light Mode Toggle with localStorage persistence
+// STRICT LOGIC: Ignores system preferences, always defaults to Light Mode
 
 const ThemeManager = {
     STORAGE_KEY: 'whalio-theme',
     DARK_CLASS: 'dark-mode',
+    LIGHT_THEME_COLOR: '#ffffff',  // White status bar for light mode
+    DARK_THEME_COLOR: '#1a1b1e',   // Dark status bar for dark mode
     
     /**
      * Initialize theme on page load
-     * Checks localStorage and applies saved preference
+     * STRICT: Check localStorage ONLY. If empty, force LIGHT mode.
+     * NEVER use prefers-color-scheme.
      */
     init() {
         const savedTheme = localStorage.getItem(this.STORAGE_KEY);
         
-        // Apply saved theme or default to light
+        // STRICT LOGIC:
+        // 1. If localStorage has 'dark' -> apply dark mode
+        // 2. If localStorage has 'light' OR is empty/null -> force light mode
         if (savedTheme === 'dark') {
-            document.documentElement.classList.add(this.DARK_CLASS);
-            this.updateToggleIcon(true);
+            this.applyTheme(true);
         } else {
-            document.documentElement.classList.remove(this.DARK_CLASS);
-            this.updateToggleIcon(false);
+            // Force light mode (ignore system preference)
+            this.applyTheme(false);
+            // If localStorage was empty, explicitly save 'light' to prevent future issues
+            if (!savedTheme) {
+                localStorage.setItem(this.STORAGE_KEY, 'light');
+            }
         }
         
         // Set up event listeners for toggle buttons
         this.setupEventListeners();
+    },
+    
+    /**
+     * Apply a specific theme
+     * @param {boolean} isDark - Whether to apply dark mode
+     */
+    applyTheme(isDark) {
+        if (isDark) {
+            document.documentElement.classList.add(this.DARK_CLASS);
+        } else {
+            document.documentElement.classList.remove(this.DARK_CLASS);
+        }
+        
+        // Update toggle button icons
+        this.updateToggleIcon(isDark);
+        
+        // Update meta theme-color for mobile status bar (PWA)
+        this.updateMetaThemeColor(isDark);
     },
     
     /**
@@ -37,11 +64,26 @@ const ThemeManager = {
         // Update toggle button icons
         this.updateToggleIcon(isDark);
         
-        // Update theme-color meta tag for mobile browsers
-        const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-        if (themeColorMeta) {
-            themeColorMeta.setAttribute('content', isDark ? '#1a1b1e' : '#7c3aed');
+        // Update meta theme-color for mobile status bar (PWA)
+        this.updateMetaThemeColor(isDark);
+    },
+    
+    /**
+     * Update the meta theme-color tag for mobile browsers/PWA
+     * This changes the status bar color on mobile devices
+     * @param {boolean} isDark - Whether dark mode is active
+     */
+    updateMetaThemeColor(isDark) {
+        let themeColorMeta = document.querySelector('meta[name="theme-color"]');
+        
+        // Create meta tag if it doesn't exist
+        if (!themeColorMeta) {
+            themeColorMeta = document.createElement('meta');
+            themeColorMeta.setAttribute('name', 'theme-color');
+            document.head.appendChild(themeColorMeta);
         }
+        
+        themeColorMeta.setAttribute('content', isDark ? this.DARK_THEME_COLOR : this.LIGHT_THEME_COLOR);
     },
     
     /**
@@ -91,11 +133,23 @@ document.addEventListener('DOMContentLoaded', () => {
     ThemeManager.init();
 });
 
-// Also run immediately to prevent flash of wrong theme
+// IIFE: Run immediately to prevent flash of wrong theme
+// STRICT: Only apply dark if explicitly saved, otherwise force light
 (function() {
     const savedTheme = localStorage.getItem('whalio-theme');
+    
+    // Only apply dark mode if explicitly set to 'dark'
+    // Otherwise, ensure we're in light mode (remove dark-mode class if present)
     if (savedTheme === 'dark') {
         document.documentElement.classList.add('dark-mode');
+    } else {
+        document.documentElement.classList.remove('dark-mode');
+    }
+    
+    // Update meta theme-color immediately
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+        themeColorMeta.setAttribute('content', savedTheme === 'dark' ? '#1a1b1e' : '#ffffff');
     }
 })();
 

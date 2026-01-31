@@ -7,7 +7,8 @@
     <title>Whalio - Dashboard</title>
     <link rel="icon" href="img/logo.png">
     <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#7c3aed">
+    <!-- Default to white for light mode - JavaScript will update if dark mode is saved -->
+    <meta name="theme-color" content="#ffffff">
     <meta name="description"
         content="A comprehensive student dashboard for managing courses, exams, flashcards, and study time">
     <link rel="manifest" href="manifest.json">
@@ -25,14 +26,20 @@
     <link rel="stylesheet" href="community.css">
     
     <!-- Early theme detection to prevent flash of wrong theme -->
+    <!-- STRICT LOGIC: Only apply dark if explicitly saved, otherwise force light mode -->
     <script>
         (function() {
             const savedTheme = localStorage.getItem('whalio-theme');
+            const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+            
+            // STRICT: Only apply dark mode if explicitly set to 'dark'
+            // Otherwise, ensure light mode (ignore system prefers-color-scheme)
             if (savedTheme === 'dark') {
                 document.documentElement.classList.add('dark-mode');
-                // Update theme-color meta for mobile browsers
-                const themeColorMeta = document.querySelector('meta[name="theme-color"]');
                 if (themeColorMeta) themeColorMeta.setAttribute('content', '#1a1b1e');
+            } else {
+                document.documentElement.classList.remove('dark-mode');
+                if (themeColorMeta) themeColorMeta.setAttribute('content', '#ffffff');
             }
         })();
     </script>

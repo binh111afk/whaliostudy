@@ -9280,6 +9280,450 @@ select {
         gap: 20px;
     }
 }
+
+/* ==================================================================================
+   COMPREHENSIVE DARK MODE OVERRIDES
+   Fix all white backgrounds that don't use CSS variables
+   ================================================================================== */
+
+/* ========== 1. DASHBOARD CARDS / STAT ITEMS ========== */
+/* Stat items with glass effect - force dark background */
+html.dark-mode .stat-item {
+    background: rgba(30, 30, 30, 0.9) !important;
+    border: 2px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 
+        0 10px 15px -3px rgba(0, 0, 0, 0.3),
+        inset 0 0 20px rgba(255, 255, 255, 0.05) !important;
+}
+
+html.dark-mode .stat-streak,
+html.dark-mode .stat-study,
+html.dark-mode .stat-relax {
+    background: rgba(30, 30, 30, 0.9) !important;
+}
+
+html.dark-mode .stat-label {
+    color: #b0b0b0 !important;
+}
+
+html.dark-mode .stat-num {
+    filter: brightness(1.2);
+}
+
+/* ========== 2. CONTENT CARDS (Subject Thumbnails, Teachers) ========== */
+/* Teacher cards (Tài liệu các môn) */
+html.dark-mode .teacher-card {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .teacher-info {
+    background: var(--bg-card) !important;
+}
+
+html.dark-mode .teacher-name {
+    color: var(--text-main) !important;
+}
+
+/* Course cards */
+html.dark-mode .course-card {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .course-title {
+    color: var(--text-main) !important;
+}
+
+html.dark-mode .course-meta {
+    color: var(--text-secondary) !important;
+}
+
+/* Exam cards (Đề thi) */
+html.dark-mode .exam-card {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .exam-card:hover {
+    border-color: var(--primary-color) !important;
+}
+
+html.dark-mode .exam-content {
+    background: var(--bg-card) !important;
+}
+
+html.dark-mode .exam-title {
+    color: var(--text-main) !important;
+}
+
+html.dark-mode .exam-meta,
+html.dark-mode .exam-stats {
+    color: var(--text-secondary) !important;
+}
+
+html.dark-mode .exam-tag {
+    background: rgba(30, 30, 30, 0.95) !important;
+    color: var(--primary-color) !important;
+}
+
+/* ========== 3. INPUTS, FORMS & SEARCH BARS ========== */
+/* Search input */
+html.dark-mode .nav-search input {
+    background: var(--input-bg) !important;
+    color: var(--text-main) !important;
+}
+
+html.dark-mode .nav-search input::placeholder {
+    color: var(--text-secondary) !important;
+}
+
+html.dark-mode .nav-search input:focus {
+    background: var(--input-focus-bg) !important;
+}
+
+html.dark-mode .search-box input {
+    background: var(--input-bg) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* All form inputs, textareas, selects */
+html.dark-mode input,
+html.dark-mode textarea,
+html.dark-mode select {
+    background: var(--input-bg) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode input:focus,
+html.dark-mode textarea:focus,
+html.dark-mode select:focus {
+    background: var(--input-focus-bg) !important;
+    border-color: var(--primary-color) !important;
+}
+
+html.dark-mode input::placeholder,
+html.dark-mode textarea::placeholder {
+    color: var(--text-secondary) !important;
+}
+
+/* Auth inputs */
+html.dark-mode .auth-input {
+    background: var(--input-bg) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .auth-input:focus {
+    background: var(--input-focus-bg) !important;
+}
+
+/* Filter dropdowns (Lọc theo môn) */
+html.dark-mode .filter-options select {
+    background: var(--input-bg) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .filter-options select option {
+    background: var(--bg-card) !important;
+    color: var(--text-main) !important;
+}
+
+/* Course filters section */
+html.dark-mode .course-filters-section {
+    background: linear-gradient(135deg, #1e1e1e, #252525) !important;
+}
+
+/* ========== 4. MODALS & UPLOAD DIALOGS ========== */
+/* Modal backgrounds */
+html.dark-mode .modal-box {
+    background: var(--bg-card) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark-mode .modal-content {
+    background: var(--bg-card) !important;
+    color: var(--text-main) !important;
+}
+
+html.dark-mode .modal-header h2 {
+    color: var(--primary-color) !important;
+}
+
+html.dark-mode .modal-header p {
+    color: var(--text-secondary) !important;
+}
+
+/* Close button in modals */
+html.dark-mode .btn-close-modal {
+    color: var(--text-secondary) !important;
+}
+
+html.dark-mode .btn-close-modal:hover {
+    background: var(--nav-icon-hover-bg) !important;
+    color: var(--text-main) !important;
+}
+
+/* Form labels in modals */
+html.dark-mode .form-label {
+    color: var(--text-main) !important;
+}
+
+html.dark-mode .form-group label {
+    color: var(--text-main) !important;
+}
+
+/* Upload areas */
+html.dark-mode .upload-area,
+html.dark-mode .drop-zone {
+    background: var(--input-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-secondary) !important;
+}
+
+/* ========== 5. TIMETABLE / SCHEDULE GRID ========== */
+/* Timetable wrapper background */
+html.dark-mode .timetable-wrapper {
+    background: var(--bg-card) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Timetable table */
+html.dark-mode .timetable-table {
+    background: var(--bg-card) !important;
+}
+
+html.dark-mode .timetable-table th {
+    background: #252525 !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .timetable-table td {
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .timetable-table .timetable-cell,
+html.dark-mode td.timetable-cell {
+    background: var(--bg-card) !important;
+}
+
+html.dark-mode .timetable-cell:hover {
+    background: #252525 !important;
+}
+
+html.dark-mode .session-col {
+    background: #252525 !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Class cards in timetable */
+html.dark-mode .class-card {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark-mode .class-subject,
+html.dark-mode .class-room,
+html.dark-mode .class-time {
+    color: inherit !important;
+}
+
+/* Timetable scrollbar */
+html.dark-mode .timetable-wrapper::-webkit-scrollbar-track {
+    background: #1e1e1e !important;
+}
+
+html.dark-mode .timetable-wrapper::-webkit-scrollbar-thumb {
+    background: #444 !important;
+}
+
+html.dark-mode .timetable-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #555 !important;
+}
+
+/* ========== 6. DROPDOWN MENUS ========== */
+html.dark-mode .dropdown-menu {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark-mode .dropdown-item {
+    color: var(--text-main) !important;
+}
+
+html.dark-mode .dropdown-item:hover {
+    background: #2d2d2d !important;
+}
+
+html.dark-mode .dropdown-item.item-logout:hover {
+    background: rgba(239, 68, 68, 0.15) !important;
+}
+
+/* ========== 7. SIDEBAR & WIDGETS ========== */
+html.dark-mode .sidebar-left {
+    background: var(--bg-card) !important;
+}
+
+html.dark-mode .sidebar-right {
+    background: transparent !important;
+}
+
+html.dark-mode .widget-box {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .widget-header h3 {
+    color: var(--text-main) !important;
+}
+
+/* Smart reminders widget */
+html.dark-mode .smart-reminders-widget {
+    background: linear-gradient(135deg, #3d3d1e 0%, #4a4a20 100%) !important;
+    border-color: #5a5a30 !important;
+}
+
+html.dark-mode .reminder-item {
+    background: var(--bg-card) !important;
+    color: var(--text-main) !important;
+}
+
+/* ========== 8. PROFILE CARDS ========== */
+html.dark-mode .profile-sidebar-card {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .profile-header-s {
+    border-bottom-color: var(--border-color) !important;
+}
+
+html.dark-mode .profile-card {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* ========== 9. WELCOME CARD ========== */
+html.dark-mode .welcome-card {
+    background: var(--bg-card) !important;
+}
+
+html.dark-mode .welcome-info h1 {
+    color: var(--text-main) !important;
+}
+
+html.dark-mode .welcome-info p {
+    color: var(--text-secondary) !important;
+}
+
+/* ========== 10. SECTION BOXES ========== */
+html.dark-mode .section-box {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .section-header {
+    border-bottom-color: var(--border-color) !important;
+}
+
+html.dark-mode .section-title {
+    color: var(--text-main) !important;
+}
+
+/* ========== 11. DOCUMENT CARDS ========== */
+html.dark-mode .document-card {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .document-card:hover {
+    border-color: var(--primary-color) !important;
+}
+
+html.dark-mode .document-title,
+html.dark-mode .document-name {
+    color: var(--text-main) !important;
+}
+
+html.dark-mode .document-meta,
+html.dark-mode .document-info {
+    color: var(--text-secondary) !important;
+}
+
+/* ========== 12. POST CARDS (Community) ========== */
+html.dark-mode .post-card {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .post-card:hover {
+    border-color: var(--primary-color) !important;
+}
+
+html.dark-mode .post-title,
+html.dark-mode .post-author {
+    color: var(--text-main) !important;
+}
+
+html.dark-mode .post-content,
+html.dark-mode .post-meta {
+    color: var(--text-secondary) !important;
+}
+
+/* ========== 13. BUTTONS ========== */
+html.dark-mode .btn-refresh {
+    background: var(--input-bg) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .btn-refresh:hover {
+    background: var(--nav-icon-hover-bg) !important;
+}
+
+/* ========== 14. SCROLLBAR TRACK (Teacher scroll) ========== */
+html.dark-mode .teachers-scroll::-webkit-scrollbar-track {
+    background: #1e1e1e !important;
+}
+
+html.dark-mode .teachers-scroll::-webkit-scrollbar-thumb {
+    background: #444 !important;
+    border-color: #1e1e1e !important;
+}
+
+/* ========== 15. MISC ELEMENTS ========== */
+/* User mini profile border */
+html.dark-mode .user-mini-profile {
+    border-bottom-color: var(--border-color) !important;
+}
+
+/* Social links */
+html.dark-mode .social-links {
+    border-top-color: var(--border-color) !important;
+}
+
+/* Nav menu items */
+html.dark-mode .nav-menu a {
+    color: var(--text-secondary) !important;
+}
+
+html.dark-mode .nav-menu a:hover {
+    background: var(--primary-light) !important;
+    color: var(--primary-color) !important;
+}
+
+html.dark-mode .nav-menu a.active {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+}
+
+/* ==================== END COMPREHENSIVE DARK MODE OVERRIDES ==================== */
+
 /* ==================== THEME TOGGLE BUTTON ==================== */
 .theme-toggle-btn {
     width: 36px;
