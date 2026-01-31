@@ -1,21 +1,17 @@
 // ==================== WHALIO AI CHAT WIDGET ====================
-// Floating chat widget with AI assistant simulation
+// Floating chat widget connected to Google Gemini AI
 // Supports both Light and Dark mode via CSS variables
 
 const ChatWidget = {
     isOpen: false,
     isTyping: false,
+    API_ENDPOINT: '/api/chat',
     
-    // AI Response Templates (for simulation)
-    responses: [
-        "Xin chào! Mình là Whalio AI, mình có thể giúp gì cho bạn?",
-        "Cảm ơn bạn đã liên hệ! Hãy cho mình biết bạn cần hỗ trợ gì nhé.",
-        "Mình hiểu rồi! Để mình tìm hiểu thêm về vấn đề này cho bạn.",
-        "Đó là một câu hỏi hay! Bạn có thể thử xem phần Tài liệu hoặc Flashcard để ôn tập nhé.",
-        "Mình sẽ hỗ trợ bạn ngay! Bạn có thể cung cấp thêm chi tiết được không?",
-        "Bạn có thể sử dụng tính năng Tính GPA để theo dõi điểm số của mình.",
-        "Để quản lý thời gian tốt hơn, hãy thử dùng Thời khóa biểu và Pomodoro Timer nhé!",
-        "Mình rất vui được giúp đỡ bạn! Có gì cần hỏi thêm không?"
+    // Fallback responses when API is unavailable
+    fallbackResponses: [
+        "Xin lỗi, mình đang gặp sự cố kết nối. Vui lòng thử lại sau nhé! 🙏",
+        "Hệ thống đang bận, bạn có thể thử lại sau vài giây không?",
+        "Mình chưa thể xử lý yêu cầu ngay bây giờ. Hãy thử lại nhé! 😊"
     ],
     
     /**
@@ -184,9 +180,9 @@ const ChatWidget = {
     },
     
     /**
-     * Handle sending a message
+     * Handle sending a message - Connected to Gemini AI API
      */
-    handleSendMessage() {
+    async handleSendMessage() {
         const input = document.getElementById('chat-input');
         const message = input.value.trim();
         
@@ -196,16 +192,43 @@ const ChatWidget = {
         this.addMessage(message, 'user');
         input.value = '';
         
-        // Show typing indicator and simulate AI response
+        // Show typing indicator
         this.showTypingIndicator();
         
-        // Simulate AI thinking time (1.5-3 seconds)
-        const delay = Math.random() * 1500 + 1500;
-        setTimeout(() => {
+        try {
+            // Send message to backend API
+            const response = await fetch(this.API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message })
+            });
+            
+            const data = await response.json();
+            
+            // Hide typing indicator
             this.hideTypingIndicator();
-            const response = this.generateResponse(message);
-            this.addMessage(response, 'ai');
-        }, delay);
+            
+            if (data.success && data.response) {
+                // Display AI response
+                this.addMessage(data.response, 'ai');
+            } else {
+                // Handle API error response
+                const errorMessage = data.response || data.message || 'Xin lỗi, mình không thể xử lý yêu cầu này. Hãy thử lại nhé! 😊';
+                this.addMessage(errorMessage, 'ai');
+            }
+            
+        } catch (error) {
+            console.error('Chat API Error:', error);
+            
+            // Hide typing indicator
+            this.hideTypingIndicator();
+            
+            // Show fallback error message
+            const fallbackIndex = Math.floor(Math.random() * this.fallbackResponses.length);
+            this.addMessage(this.fallbackResponses[fallbackIndex], 'ai');
+        }
     },
     
     /**
@@ -286,45 +309,6 @@ const ChatWidget = {
         if (typingIndicator) {
             typingIndicator.remove();
         }
-    },
-    
-    /**
-     * Generate a simulated AI response based on user input
-     * @param {string} userMessage - User's message
-     * @returns {string} AI response
-     */
-    generateResponse(userMessage) {
-        const lowerMessage = userMessage.toLowerCase();
-        
-        // Simple keyword matching for demo
-        if (lowerMessage.includes('xin chào') || lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
-            return "Xin chào bạn! 👋 Mình có thể giúp gì cho bạn hôm nay?";
-        }
-        if (lowerMessage.includes('gpa') || lowerMessage.includes('điểm')) {
-            return "Để tính GPA, bạn hãy vào mục 'Tính GPA' trên thanh điều hướng. Tại đó bạn có thể nhập điểm các môn học và hệ thống sẽ tự động tính GPA cho bạn! 📊";
-        }
-        if (lowerMessage.includes('flashcard') || lowerMessage.includes('ôn tập') || lowerMessage.includes('học')) {
-            return "Bạn có thể sử dụng tính năng Flashcard để ôn tập hiệu quả! Hãy vào trang chủ và tìm phần Flashcard để tạo bộ thẻ học của riêng mình. 📚";
-        }
-        if (lowerMessage.includes('thời khóa biểu') || lowerMessage.includes('lịch học')) {
-            return "Để quản lý thời khóa biểu, bạn có thể sử dụng tính năng Thời khóa biểu trên Dashboard. Tại đây bạn có thể thêm các môn học theo từng ngày trong tuần! 📅";
-        }
-        if (lowerMessage.includes('timer') || lowerMessage.includes('pomodoro') || lowerMessage.includes('thời gian')) {
-            return "Whalio có tích hợp Pomodoro Timer để giúp bạn tập trung học tập. Hãy thử phương pháp 25 phút học - 5 phút nghỉ để tăng hiệu quả nhé! ⏱️";
-        }
-        if (lowerMessage.includes('tài liệu') || lowerMessage.includes('document') || lowerMessage.includes('file')) {
-            return "Bạn có thể truy cập thư viện Tài liệu từ thanh điều hướng. Tại đây có thể tải lên và quản lý các file học tập của bạn! 📁";
-        }
-        if (lowerMessage.includes('cảm ơn') || lowerMessage.includes('thank')) {
-            return "Không có gì! 😊 Nếu cần hỗ trợ thêm, đừng ngại hỏi mình nhé!";
-        }
-        if (lowerMessage.includes('tạm biệt') || lowerMessage.includes('bye')) {
-            return "Tạm biệt bạn! Chúc bạn học tập hiệu quả! 👋✨";
-        }
-        
-        // Random response for other messages
-        const randomIndex = Math.floor(Math.random() * this.responses.length);
-        return this.responses[randomIndex];
     },
     
     /**

@@ -6,6 +6,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -2028,6 +2029,86 @@ app.delete('/api/events/:id', async (req, res) => {
     } catch (err) {
         console.error('Error deleting event:', err);
         res.json({ success: false, message: 'Server error' });
+    }
+});
+
+// ==================== WHALIO AI CHAT (GEMINI) ====================
+// Initialize Gemini AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// System instruction for Whalio Bot personality
+const WHALIO_SYSTEM_INSTRUCTION = `Bạn là Whalio Bot, một trợ lý AI thân thiện dành cho sinh viên đại học. 
+Hãy trả lời ngắn gọn, hữu ích và sử dụng giọng điệu khích lệ, động viên.
+Sử dụng tiếng Việt để giao tiếp.
+Bạn có thể giúp sinh viên với:
+- Giải đáp thắc mắc về học tập
+- Hướng dẫn sử dụng các tính năng của Whalio (GPA Calculator, Flashcard, Thời khóa biểu, Pomodoro Timer, Tài liệu)
+- Đưa ra lời khuyên về phương pháp học tập hiệu quả
+- Động viên khi sinh viên gặp khó khăn
+Hãy sử dụng emoji phù hợp để tạo cảm giác thân thiện.`;
+
+// POST /api/chat - Chat with Whalio AI
+app.post('/api/chat', async (req, res) => {
+    try {
+        const { message } = req.body;
+
+        if (!message || typeof message !== 'string' || message.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                message: 'Message is required'
+            });
+        }
+
+        // Check if API key is configured
+        if (!process.env.GEMINI_API_KEY) {
+            console.error('❌ GEMINI_API_KEY is not configured');
+            return res.status(500).json({
+                success: false,
+                message: 'AI service is not configured'
+            });
+        }
+
+        // Initialize the model with system instruction
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-1.5-flash',
+            systemInstruction: WHALIO_SYSTEM_INSTRUCTION
+        });
+
+        // Generate response
+        const result = await model.generateContent(message.trim());
+        const response = await result.response;
+        const text = response.text();
+
+        console.log(`🤖 Whalio AI responded to: "${message.substring(0, 50)}..."`);
+
+        res.json({
+            success: true,
+            response: text
+        });
+
+    } catch (err) {
+        console.error('❌ Gemini AI Error:', err.message);
+        
+        // Handle specific error types
+        if (err.message?.includes('API_KEY_INVALID')) {
+            return res.status(500).json({
+                success: false,
+                message: 'Invalid API key configuration'
+            });
+        }
+        
+        if (err.message?.includes('SAFETY')) {
+            return res.status(400).json({
+                success: false,
+                message: 'Xin lỗi, mình không thể trả lời câu hỏi này.',
+                response: 'Xin lỗi, mình không thể trả lời câu hỏi này. Hãy thử hỏi điều khác nhé! 😊'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Đã xảy ra lỗi khi xử lý yêu cầu'
+        });
     }
 });
 
