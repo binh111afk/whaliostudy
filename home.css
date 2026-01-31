@@ -9722,6 +9722,251 @@ html.dark-mode .nav-menu a.active {
     color: #fff !important;
 }
 
+/* ========== 16. FLASHCARD ITEMS / DECK CARDS ========== */
+html.dark-mode .flashcard-item {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .flashcard-item:hover {
+    border-color: #7c3aed !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark-mode .deck-info h4 {
+    color: var(--text-main) !important;
+}
+
+html.dark-mode .deck-info p {
+    color: var(--text-secondary) !important;
+}
+
+/* Deck icon backgrounds in dark mode - slightly more muted */
+html.dark-mode .deck-icon.bg-blue {
+    background: rgba(30, 64, 175, 0.3) !important;
+}
+
+html.dark-mode .deck-icon.bg-purple {
+    background: rgba(107, 33, 168, 0.3) !important;
+}
+
+html.dark-mode .deck-icon.bg-green {
+    background: rgba(6, 95, 70, 0.3) !important;
+}
+
+html.dark-mode .deck-icon.bg-red {
+    background: rgba(153, 27, 27, 0.3) !important;
+}
+
+html.dark-mode .deck-icon.bg-orange {
+    background: rgba(154, 52, 18, 0.3) !important;
+}
+
+html.dark-mode .deck-icon.bg-pink {
+    background: rgba(159, 18, 57, 0.3) !important;
+}
+
+/* ========== 17. STAT CARDS (Tài liệu, Đã lưu, Mới 7 ngày) ========== */
+html.dark-mode .stat-card {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .stat-card:hover {
+    border-color: var(--primary-color) !important;
+}
+
+html.dark-mode .stat-number {
+    color: var(--primary-color) !important;
+}
+
+html.dark-mode .stat-label {
+    color: var(--text-secondary) !important;
+}
+
+/* ========== 18. DOCUMENT CARDS ========== */
+html.dark-mode .doc-card {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .doc-card:hover {
+    border-color: var(--primary-color) !important;
+}
+
+html.dark-mode .doc-card-header {
+    border-bottom-color: var(--border-color) !important;
+}
+
+html.dark-mode .doc-card-info h3 {
+    color: var(--text-main) !important;
+}
+
+html.dark-mode .doc-uploader {
+    color: var(--text-secondary) !important;
+}
+
+html.dark-mode .doc-card-body {
+    color: var(--text-secondary) !important;
+}
+
+html.dark-mode .doc-card-btn {
+    background: var(--input-bg) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .doc-card-btn:hover {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+}
+
+/* ========== 19. SCROLL BUTTONS (Carousel Arrows) ========== */
+html.dark-mode .btn-scroll-deck {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-secondary) !important;
+}
+
+html.dark-mode .btn-scroll-deck:hover {
+    background: var(--nav-icon-hover-bg) !important;
+    color: var(--text-main) !important;
+}
+
+html.dark-mode .btn-scroll {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .btn-scroll:hover {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+    border-color: var(--primary-color) !important;
+}
+
+/* ========== 20. SEARCH BOX & FILTER CONTAINERS ========== */
+html.dark-mode .docs-filter-bar {
+    background: var(--bg-card) !important;
+}
+
+html.dark-mode .search-box {
+    background: var(--input-bg) !important;
+}
+
+html.dark-mode .search-box input {
+    background: var(--input-bg) !important;
+    color: var(--text-main) !important;
+}
+
+html.dark-mode .filter-select,
+html.dark-mode .docs-filter-bar select {
+    background: var(--input-bg) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* ========== 21. PAGE TITLES & HEADERS ========== */
+html.dark-mode .page-title,
+html.dark-mode .library-title,
+html.dark-mode .section-heading {
+    color: var(--primary-color) !important;
+}
+
+html.dark-mode .page-subtitle,
+html.dark-mode .library-subtitle {
+    color: var(--text-secondary) !important;
+}
+
+/* ========== 22. COURSE DROPDOWN BUTTON ========== */
+html.dark-mode .course-dropdown-btn {
+    background: var(--input-bg) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .course-dropdown-btn:hover {
+    border-color: var(--primary-color) !important;
+}
+
+html.dark-mode .course-dropdown-list {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .course-dropdown-list li {
+    color: var(--text-main) !important;
+}
+
+html.dark-mode .course-dropdown-list li:hover {
+    background: var(--nav-icon-hover-bg) !important;
+}
+
+/* ========== 23. UNIVERSITY/SCHOOL CARDS (Teacher scroll) ========== */
+html.dark-mode .university-card,
+html.dark-mode .school-card {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .university-card:hover,
+html.dark-mode .school-card:hover {
+    border-color: var(--primary-color) !important;
+}
+
+/* ========== 24. GENERAL WHITE BACKGROUND FIX ========== */
+/* Force all elements with explicit white/fff backgrounds to use dark theme */
+html.dark-mode [style*="background: white"],
+html.dark-mode [style*="background:white"],
+html.dark-mode [style*="background: #fff"],
+html.dark-mode [style*="background:#fff"],
+html.dark-mode [style*="background: #ffffff"],
+html.dark-mode [style*="background:#ffffff"] {
+    background: var(--bg-card) !important;
+}
+
+/* ========== 25. BUTTONS WITH WHITE BACKGROUNDS ========== */
+html.dark-mode .btn-add-mini,
+html.dark-mode .btn-add-card-row {
+    background: var(--bg-card) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-mode .btn-add-mini:hover,
+html.dark-mode .btn-add-card-row:hover {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+}
+
+/* ========== 26. FORM INPUT LABELS ========== */
+html.dark-mode label {
+    color: var(--text-main) !important;
+}
+
+/* ========== 27. ALL REMAINING WHITE CARDS ========== */
+html.dark-mode .card,
+html.dark-mode .box,
+html.dark-mode .panel {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* ========== 28. CHIP TAGS ========== */
+html.dark-mode .tag,
+html.dark-mode .chip,
+html.dark-mode .badge {
+    background: var(--input-bg) !important;
+    color: var(--text-main) !important;
+}
+
+/* ========== 29. FILTER BAR BACKGROUNDS ========== */
+html.dark-mode .filter-bar,
+html.dark-mode .toolbar,
+html.dark-mode .action-bar {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
 /* ==================== END COMPREHENSIVE DARK MODE OVERRIDES ==================== */
 
 /* ==================== THEME TOGGLE BUTTON ==================== */
