@@ -70,13 +70,17 @@ export const DocumentManager = {
         if (this.isDropdownOpen) {
             // Close any other open dropdowns first
             document.querySelectorAll('.course-dropdown-menu').forEach(d => {
-                if (d !== dropdown) d.style.display = 'none';
+                if (d !== dropdown) {
+                    d.style.display = 'none';
+                    d.classList.remove('active');
+                }
             });
             document.querySelectorAll('.course-dropdown-btn').forEach(b => {
                 if (b !== btn) b.classList.remove('active');
             });
 
             dropdown.style.display = 'block';
+            dropdown.classList.add('active');
             btn.classList.add('active');
 
             // Focus search input
@@ -86,6 +90,7 @@ export const DocumentManager = {
             }
         } else {
             dropdown.style.display = 'none';
+            dropdown.classList.remove('active');
             btn.classList.remove('active');
         }
     },
@@ -110,6 +115,7 @@ export const DocumentManager = {
                 this.isDropdownOpen = false;
                 dropdowns.forEach(dropdown => {
                     dropdown.style.display = 'none';
+                    dropdown.classList.remove('active');
                 });
                 buttons.forEach(btn => {
                     btn.classList.remove('active');
