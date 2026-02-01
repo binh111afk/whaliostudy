@@ -89,6 +89,70 @@ const ChatWidget = {
         const customStyles = document.createElement('style');
         customStyles.id = 'whalio-chat-custom-styles';
         customStyles.textContent = `
+            /* ==================== CRITICAL OVERFLOW FIX ==================== */
+            /* Chat messages container */
+            #chat-messages.chat-messages {
+                overflow-y: auto;
+                overflow-x: hidden;
+                scrollbar-width: thin;
+                scrollbar-color: var(--border-color, #ccc) transparent;
+            }
+            
+            #chat-messages.chat-messages::-webkit-scrollbar {
+                width: 6px;
+            }
+            
+            #chat-messages.chat-messages::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            
+            #chat-messages.chat-messages::-webkit-scrollbar-thumb {
+                background: var(--border-color, #ccc);
+                border-radius: 3px;
+            }
+            
+            #chat-messages.chat-messages::-webkit-scrollbar-thumb:hover {
+                background: var(--text-secondary, #999);
+            }
+            
+            /* Chat message row */
+            .chat-message {
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+            
+            /* Message bubble - CRITICAL FIX */
+            .chat-message .message-bubble {
+                max-width: 85%;
+                word-wrap: break-word;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+                box-sizing: border-box;
+            }
+            
+            /* AI message specific */
+            .ai-message .message-content {
+                max-width: 100%;
+                min-width: 0;
+            }
+            
+            .ai-message .message-bubble {
+                white-space: pre-wrap;
+                font-family: inherit;
+                max-width: 85%;
+                overflow: hidden;
+            }
+            
+            /* User message specific */
+            .user-message .message-content {
+                max-width: 100%;
+                min-width: 0;
+            }
+            
+            .user-message .message-bubble {
+                max-width: 85%;
+            }
+            
             /* ==================== TEXTAREA AUTO-RESIZE STYLES ==================== */
             .chat-input-wrapper .chat-input {
                 resize: none;
@@ -110,7 +174,7 @@ const ChatWidget = {
                 border-radius: 2px;
             }
             
-            /* ==================== CODE BLOCK STYLES ==================== */
+            /* ==================== CODE BLOCK STYLES - OVERFLOW FIX ==================== */
             .message-bubble .code-block-wrapper {
                 position: relative;
                 margin: 8px 0;
@@ -118,6 +182,8 @@ const ChatWidget = {
                 overflow: hidden;
                 background: #0d1117;
                 border: 1px solid #30363d;
+                max-width: 100%;
+                box-sizing: border-box;
             }
             
             .message-bubble .code-block-header {
@@ -129,6 +195,8 @@ const ChatWidget = {
                 border-bottom: 1px solid #30363d;
                 font-size: 12px;
                 color: #8b949e;
+                flex-wrap: wrap;
+                gap: 8px;
             }
             
             .message-bubble .code-block-lang {
@@ -148,6 +216,7 @@ const ChatWidget = {
                 font-size: 12px;
                 cursor: pointer;
                 transition: all 0.2s ease;
+                flex-shrink: 0;
             }
             
             .message-bubble .code-copy-btn:hover {
@@ -166,11 +235,34 @@ const ChatWidget = {
                 height: 14px;
             }
             
+            /* Pre and Code - CRITICAL OVERFLOW FIX */
             .message-bubble pre {
                 margin: 0;
                 padding: 12px 16px;
                 overflow-x: auto;
+                overflow-y: hidden;
                 background: #0d1117;
+                max-width: 100%;
+                box-sizing: border-box;
+                scrollbar-width: thin;
+                scrollbar-color: #30363d transparent;
+            }
+            
+            .message-bubble pre::-webkit-scrollbar {
+                height: 6px;
+            }
+            
+            .message-bubble pre::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            
+            .message-bubble pre::-webkit-scrollbar-thumb {
+                background: #30363d;
+                border-radius: 3px;
+            }
+            
+            .message-bubble pre::-webkit-scrollbar-thumb:hover {
+                background: #484f58;
             }
             
             .message-bubble pre code {
@@ -182,6 +274,8 @@ const ChatWidget = {
                 border-radius: 0;
                 white-space: pre;
                 word-wrap: normal;
+                display: block;
+                overflow-x: visible;
             }
             
             .message-bubble pre code.hljs {
@@ -197,6 +291,7 @@ const ChatWidget = {
                 font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
                 font-size: 0.9em;
                 color: #e6edf3;
+                word-break: break-all;
             }
             
             /* Light mode code styles */
@@ -223,6 +318,15 @@ const ChatWidget = {
             
             html:not(.dark-mode) .message-bubble pre {
                 background: #f6f8fa;
+                scrollbar-color: #d0d7de transparent;
+            }
+            
+            html:not(.dark-mode) .message-bubble pre::-webkit-scrollbar-thumb {
+                background: #d0d7de;
+            }
+            
+            html:not(.dark-mode) .message-bubble pre::-webkit-scrollbar-thumb:hover {
+                background: #afb8c1;
             }
             
             html:not(.dark-mode) .message-bubble code:not(pre code) {
@@ -230,16 +334,33 @@ const ChatWidget = {
                 color: #24292f;
             }
             
-            /* AI message preserve whitespace */
-            .ai-message .message-bubble {
-                white-space: pre-wrap;
-                font-family: inherit;
-            }
-            
             /* User message in bubble */
             .user-message .message-bubble code:not(pre code) {
                 background: rgba(255, 255, 255, 0.2);
                 color: white;
+            }
+            
+            /* ==================== MESSAGE TEXT OVERFLOW ==================== */
+            .message-bubble .message-text {
+                max-width: 100%;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+            }
+            
+            /* Image in message */
+            .message-bubble .message-image {
+                max-width: 100%;
+            }
+            
+            .message-bubble .message-image img {
+                max-width: 100%;
+                height: auto;
+            }
+            
+            /* File in message */
+            .message-bubble .message-file {
+                max-width: 100%;
+                box-sizing: border-box;
             }
         `;
         document.head.appendChild(customStyles);

@@ -10441,11 +10441,14 @@ html.dark-mode footer {
 .chat-messages {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
     background: var(--bg-body);
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
 }
 
 .chat-messages::-webkit-scrollbar {
@@ -10461,12 +10464,17 @@ html.dark-mode footer {
     border-radius: 3px;
 }
 
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
 /* Message Bubbles */
 .chat-message {
     display: flex;
     gap: 8px;
-    max-width: 85%;
+    max-width: 100%;
     animation: message-slide-in 0.3s ease;
+    box-sizing: border-box;
 }
 
 @keyframes message-slide-in {
@@ -10510,6 +10518,9 @@ html.dark-mode footer {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .message-bubble {
@@ -10518,8 +10529,12 @@ html.dark-mode footer {
     font-size: 14px;
     line-height: 1.5;
     word-wrap: break-word;
+    overflow-wrap: anywhere;
+    word-break: break-word;
     white-space: pre-wrap;
     font-family: inherit;
+    max-width: 85%;
+    box-sizing: border-box;
 }
 
 .user-message .message-bubble {
