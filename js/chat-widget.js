@@ -2,6 +2,7 @@
 // Floating chat widget connected to Google Gemini AI
 // Supports both Light and Dark mode via CSS variables
 // Enhanced with Syntax Highlighting and Code Programming Support
+// OPTIMIZED for indentation handling and overflow prevention
 
 const ChatWidget = {
     isOpen: false,
@@ -121,13 +122,16 @@ const ChatWidget = {
                 box-sizing: border-box;
             }
             
-            /* Message bubble - CRITICAL FIX */
+            /* Message bubble - CRITICAL FIX with PRE-WRAP for indentation preservation */
             .chat-message .message-bubble {
                 max-width: 85%;
                 word-wrap: break-word;
                 overflow-wrap: anywhere;
                 word-break: break-word;
                 box-sizing: border-box;
+                white-space: pre-wrap; /* PRESERVE USER INDENTATION */
+                overflow-x: auto; /* Handle horizontal overflow */
+                font-family: inherit;
             }
             
             /* AI message specific */
@@ -137,7 +141,7 @@ const ChatWidget = {
             }
             
             .ai-message .message-bubble {
-                white-space: pre-wrap;
+                white-space: pre-wrap; /* PRESERVE AI RESPONSE INDENTATION */
                 font-family: inherit;
                 max-width: 85%;
                 overflow: hidden;
@@ -151,6 +155,7 @@ const ChatWidget = {
             
             .user-message .message-bubble {
                 max-width: 85%;
+                white-space: pre-wrap; /* PRESERVE USER MESSAGE INDENTATION */
             }
             
             /* ==================== TEXTAREA AUTO-RESIZE STYLES ==================== */
@@ -368,22 +373,16 @@ const ChatWidget = {
     
     /**
      * Create and inject the widget HTML into the page
+     * HTML written on single lines to prevent indentation artifacts in DOM
      */
     createWidgetHTML() {
-        const widgetHTML = `
+        const widgetHTML = this.cleanHTML(`
             <!-- Whalio AI Chat Widget -->
             <div id="whalio-chat-widget" class="chat-widget-container">
                 <!-- Floating Launcher Button -->
                 <button id="chat-launcher" class="chat-launcher" aria-label="Open chat">
-                    <svg class="chat-icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.08L2 22l4.92-1.36C8.42 21.5 10.15 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/>
-                        <circle cx="8" cy="12" r="1" fill="currentColor"/>
-                        <circle cx="12" cy="12" r="1" fill="currentColor"/>
-                        <circle cx="16" cy="12" r="1" fill="currentColor"/>
-                    </svg>
-                    <svg class="chat-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
+                    <svg class="chat-icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.08L2 22l4.92-1.36C8.42 21.5 10.15 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/><circle cx="8" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="16" cy="12" r="1" fill="currentColor"/></svg>
+                    <svg class="chat-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
                 
                 <!-- Chat Window -->
@@ -391,24 +390,10 @@ const ChatWidget = {
                     <!-- Header -->
                     <div class="chat-header">
                         <div class="chat-header-info">
-                            <div class="chat-avatar">
-                                <svg viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-                                </svg>
-                            </div>
-                            <div class="chat-header-text">
-                                <h4>Whalio AI Assistant</h4>
-                                <span class="chat-status">
-                                    <span class="status-dot"></span>
-                                    Trực tuyến
-                                </span>
-                            </div>
+                            <div class="chat-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></div>
+                            <div class="chat-header-text"><h4>Whalio AI Assistant</h4><span class="chat-status"><span class="status-dot"></span>Trực tuyến</span></div>
                         </div>
-                        <button id="chat-close-btn" class="chat-close-btn" aria-label="Close chat">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
-                        </button>
+                        <button id="chat-close-btn" class="chat-close-btn" aria-label="Close chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
                     </div>
                     
                     <!-- Messages Area -->
@@ -425,63 +410,42 @@ const ChatWidget = {
                                 <img id="chat-preview-img" src="" alt="Preview" style="display: none;" />
                                 <!-- File Info Preview -->
                                 <div id="chat-preview-file" class="file-preview-info" style="display: none;">
-                                    <div class="file-icon">
-                                        <svg viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6z"/>
-                                            <path d="M14 2v6h6"/>
-                                        </svg>
-                                    </div>
-                                    <div class="file-details">
-                                        <div class="file-name"></div>
-                                        <div class="file-size"></div>
-                                    </div>
+                                    <div class="file-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6z"/><path d="M14 2v6h6"/></svg></div>
+                                    <div class="file-details"><div class="file-name"></div><div class="file-size"></div></div>
                                 </div>
-                                <button id="chat-remove-file" class="remove-file-btn" aria-label="Remove file">
-                                    <svg viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                                    </svg>
-                                </button>
+                                <button id="chat-remove-file" class="remove-file-btn" aria-label="Remove file"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
                             </div>
                         </div>
                         
                         <div class="chat-input-wrapper">
                             <!-- Hidden File Input for All Types -->
-                            <input 
-                                type="file" 
-                                id="chat-file-input" 
-                                accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.js,.html,.css,.py,.java,.cpp,.c,.ts,.jsx,.tsx,.json,.xml,.yaml,.yml,.md,.sql,.sh,.bash" 
-                                hidden
-                            />
+                            <input type="file" id="chat-file-input" accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.js,.html,.css,.py,.java,.cpp,.c,.ts,.jsx,.tsx,.json,.xml,.yaml,.yml,.md,.sql,.sh,.bash" hidden />
                             
                             <!-- File/Image Upload Button -->
-                            <button id="chat-upload-btn" class="chat-upload-btn" aria-label="Attach file">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <line x1="12" y1="8" x2="12" y2="16"/>
-                                    <line x1="8" y1="12" x2="16" y2="12"/>
-                                </svg>
-                            </button>
+                            <button id="chat-upload-btn" class="chat-upload-btn" aria-label="Attach file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></button>
                             
-                            <textarea 
-                                id="chat-input" 
-                                class="chat-input" 
-                                placeholder="Hỏi Whalio bất cứ điều gì..." 
-                                autocomplete="off"
-                                rows="1"
-                            ></textarea>
-                            <button id="chat-send-btn" class="chat-send-btn" aria-label="Send message">
-                                <svg viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                                </svg>
-                            </button>
+                            <textarea id="chat-input" class="chat-input" placeholder="Hỏi Whalio bất cứ điều gì..." autocomplete="off" rows="1"></textarea>
+                            <button id="chat-send-btn" class="chat-send-btn" aria-label="Send message"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
                         </div>
                     </div>
                 </div>
             </div>
-        `;
+        `);
         
         // Insert widget into the body
         document.body.insertAdjacentHTML('beforeend', widgetHTML);
+    },
+
+    /**
+     * Clean HTML template literal - remove extra whitespace and newlines between tags
+     * but preserve intentional spaces within content
+     */
+    cleanHTML(html) {
+        return html
+            // Remove newlines and extra whitespace between tags
+            .replace(/>\s+</g, '><')
+            // Remove leading/trailing whitespace
+            .trim();
     },
     
     /**
@@ -817,10 +781,14 @@ const ChatWidget = {
     /**
      * Handle sending a message - Connected to Gemini AI API
      * Hỗ trợ gửi cả text và ảnh (Multimodal)
+     * ENHANCED: Smart trimming - only trim start/end, preserve internal spacing/tabs
      */
     async handleSendMessage() {
         const input = document.getElementById('chat-input');
-        const message = input.value.trim();
+        const rawMessage = input.value;
+        
+        // Smart trim: Only remove leading/trailing whitespace, preserve internal indentation
+        const message = this.smartTrim(rawMessage);
         
         // Kiểm tra: phải có message hoặc file, và không đang typing
         if ((!message && !this.selectedFile) || this.isTyping) return;
@@ -891,6 +859,20 @@ const ChatWidget = {
             this.clearSelectedFile();
         }
     },
+
+    /**
+     * Smart trimming - only remove leading/trailing whitespace and newlines
+     * but preserve internal spacing, tabs, and intentional indentation
+     * @param {string} text 
+     * @returns {string}
+     */
+    smartTrim(text) {
+        if (!text) return text;
+        
+        // Remove only leading and trailing whitespace/newlines
+        // This preserves internal tabs, spaces, and multi-line formatting
+        return text.replace(/^[\s\n\r]+|[\s\n\r]+$/g, '');
+    },
     
     /**
      * Thêm tin nhắn kèm file vào chat
@@ -913,36 +895,23 @@ const ChatWidget = {
         let fileContent = '';
         
         if (isImage) {
-            // Hiển thị ảnh như trước
             const imageUrl = URL.createObjectURL(file);
             fileContent = `<div class="message-image"><img src="${imageUrl}" alt="Sent image" onload="this.parentElement.classList.add('loaded')" /></div>`;
         } else {
-            // Hiển thị thông tin file
-            fileContent = `
+            fileContent = this.cleanHTML(`
                 <div class="message-file">
-                    <div class="file-icon">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6z"/>
-                            <path d="M14 2v6h6"/>
-                        </svg>
-                    </div>
-                    <div class="file-info">
-                        <div class="file-name">${file.name}</div>
-                        <div class="file-size">${this.formatFileSize(file.size)}</div>
-                    </div>
+                    <div class="file-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6z"/><path d="M14 2v6h6"/></svg></div>
+                    <div class="file-info"><div class="file-name">${file.name}</div><div class="file-size">${this.formatFileSize(file.size)}</div></div>
                 </div>
-            `;
+            `);
         }
         
-        messageDiv.innerHTML = `
+        messageDiv.innerHTML = this.cleanHTML(`
             <div class="message-content">
-                <div class="message-bubble">
-                    ${fileContent}
-                    ${textContent}
-                </div>
+                <div class="message-bubble">${fileContent}${textContent}</div>
                 <span class="message-time">${time}</span>
             </div>
-        `;
+        `);
         
         messagesContainer.appendChild(messageDiv);
         this.scrollToBottom();
@@ -966,24 +935,14 @@ const ChatWidget = {
         const formattedText = this.formatMessage(text);
         
         if (sender === 'ai') {
-            messageDiv.innerHTML = `
-                <div class="message-avatar">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-                    </svg>
-                </div>
-                <div class="message-content">
-                    <div class="message-bubble">${formattedText}</div>
-                    <span class="message-time">${time}</span>
-                </div>
-            `;
+            messageDiv.innerHTML = this.cleanHTML(`
+                <div class="message-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></div>
+                <div class="message-content"><div class="message-bubble">${formattedText}</div><span class="message-time">${time}</span></div>
+            `);
         } else {
-            messageDiv.innerHTML = `
-                <div class="message-content">
-                    <div class="message-bubble">${formattedText}</div>
-                    <span class="message-time">${time}</span>
-                </div>
-            `;
+            messageDiv.innerHTML = this.cleanHTML(`
+                <div class="message-content"><div class="message-bubble">${formattedText}</div><span class="message-time">${time}</span></div>
+            `);
         }
         
         messagesContainer.appendChild(messageDiv);
@@ -1048,20 +1007,10 @@ const ChatWidget = {
         const typingDiv = document.createElement('div');
         typingDiv.className = 'chat-message ai-message typing-indicator-wrapper';
         typingDiv.id = 'typing-indicator';
-        typingDiv.innerHTML = `
-            <div class="message-avatar">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-                </svg>
-            </div>
-            <div class="message-content">
-                <div class="typing-indicator">
-                    <span class="typing-dot"></span>
-                    <span class="typing-dot"></span>
-                    <span class="typing-dot"></span>
-                </div>
-            </div>
-        `;
+        typingDiv.innerHTML = this.cleanHTML(`
+            <div class="message-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></div>
+            <div class="message-content"><div class="typing-indicator"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>
+        `);
         
         messagesContainer.appendChild(typingDiv);
         this.scrollToBottom();
@@ -1089,6 +1038,7 @@ const ChatWidget = {
     /**
      * Format message with code block support and syntax highlighting
      * Handles: code blocks (```), inline code (`), bold (**), italic (*), newlines
+     * ENHANCED: Better code block handling without source indentation artifacts
      * @param {string} text 
      * @returns {string}
      */
@@ -1109,7 +1059,8 @@ const ChatWidget = {
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;');
             
-            const codeBlockHTML = `
+            // Clean HTML template for code blocks - NO INDENTATION ARTIFACTS
+            const codeBlockHTML = this.cleanHTML(`
                 <div class="code-block-wrapper" id="${id}">
                     <div class="code-block-header">
                         <span class="code-block-lang">${language}</span>
@@ -1123,7 +1074,7 @@ const ChatWidget = {
                     </div>
                     <pre><code class="language-${language}">${escapedCode}</code></pre>
                 </div>
-            `;
+            `);
             
             const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
             codeBlocks.push(codeBlockHTML);
