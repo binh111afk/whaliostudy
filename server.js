@@ -2098,7 +2098,8 @@ Hãy sử dụng emoji phù hợp để tạo cảm giác thân thiện.`;
 
 // POST /api/chat - Chat with Whalio AI (Hỗ trợ Multimodal: Text + Image + Files)
 // Sử dụng multipart/form-data thay vì JSON để hỗ trợ upload ảnh/file
-app.post('/api/chat', chatFileUpload.single('file'), async (req, res) => {
+// Field name phải là 'image' để khớp với frontend FormData
+app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
     try {
         const message = req.body.message;
 

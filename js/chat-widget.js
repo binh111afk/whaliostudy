@@ -426,9 +426,9 @@ const ChatWidget = {
             // Append message (luôn gửi, có thể rỗng)
             formData.append('message', message);
             
-            // Append file nếu có
+            // Append file/image với key 'image' để khớp với backend multer
             if (this.selectedFile) {
-                formData.append('file', this.selectedFile);
+                formData.append('image', this.selectedFile);
             }
             
             // Gửi request (KHÔNG set Content-Type header, để browser tự xử lý boundary)
@@ -437,9 +437,6 @@ const ChatWidget = {
                 body: formData
                 // Lưu ý: Không set headers Content-Type, browser sẽ tự thêm với boundary
             });
-            
-            // Clear selected file SAU khi gửi request thành công
-            this.clearSelectedFile();
             
             const data = await response.json();
             
@@ -458,15 +455,16 @@ const ChatWidget = {
         } catch (error) {
             console.error('Chat API Error:', error);
             
-            // Clear selected file khi có lỗi
-            this.clearSelectedFile();
-            
             // Hide typing indicator
             this.hideTypingIndicator();
             
             // Show fallback error message
             const fallbackIndex = Math.floor(Math.random() * this.fallbackResponses.length);
             this.addMessage(this.fallbackResponses[fallbackIndex], 'ai');
+        } finally {
+            // ==================== LUÔN CLEAR FILE SAU KHI GỬI ====================
+            // Dù thành công hay lỗi, luôn reset file input và preview
+            this.clearSelectedFile();
         }
     },
     
