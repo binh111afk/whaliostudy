@@ -122,26 +122,33 @@ const ChatWidget = {
                 box-sizing: border-box;
                 display: flex;
                 margin-bottom: 8px;
+                gap: 8px;
             }
             
-            /* Message content container - KEY FIX */
+            /* User message - BỎ GAP ĐỂ KHÔNG BỊ THỤT */
+            #chat-messages .chat-message.user-message {
+                justify-content: flex-end;
+                gap: 0 !important;
+                margin-left: auto;
+                max-width: fit-content;
+            }
+            
+            /* Message content container - KHÔNG GIỚI HẠN */
             #chat-messages .chat-message .message-content {
                 display: flex;
                 flex-direction: column;
                 gap: 4px;
-                width: fit-content;
-                min-width: 0;
             }
             
-            /* Message bubble - Giới hạn chiều rộng tối đa */
+            /* Message bubble - CHỈ GIỚI HẠN MAX-WIDTH */
             #chat-messages .chat-message .message-bubble {
-                max-width: 400px;
-                width: fit-content;
+                max-width: 450px !important;
+                display: inline-block;
                 word-wrap: break-word;
                 overflow-wrap: break-word;
                 word-break: break-word;
                 box-sizing: border-box;
-                white-space: normal;
+                white-space: normal !important;
                 font-family: inherit;
             }
             
