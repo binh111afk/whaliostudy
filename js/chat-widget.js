@@ -1,11 +1,13 @@
 // ==================== WHALIO AI CHAT WIDGET ====================
 // Floating chat widget connected to Google Gemini AI
 // Supports both Light and Dark mode via CSS variables
+// Enhanced with Syntax Highlighting and Code Programming Support
 
 const ChatWidget = {
     isOpen: false,
     isTyping: false,
     API_ENDPOINT: '/api/chat',
+    highlightJsLoaded: false,
     
     // Fallback responses when API is unavailable
     fallbackResponses: [
@@ -18,9 +20,229 @@ const ChatWidget = {
      * Initialize the chat widget
      */
     init() {
+        this.loadHighlightJs();
+        this.injectCustomStyles();
         this.createWidgetHTML();
         this.setupEventListeners();
         this.addWelcomeMessage();
+    },
+    
+    /**
+     * Load highlight.js library from CDN
+     */
+    loadHighlightJs() {
+        // Check if already loaded
+        if (window.hljs) {
+            this.highlightJsLoaded = true;
+            return;
+        }
+        
+        // Load CSS theme (GitHub Dark - matches VS Code dark theme)
+        const hljsCss = document.createElement('link');
+        hljsCss.rel = 'stylesheet';
+        hljsCss.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css';
+        hljsCss.id = 'hljs-theme-dark';
+        document.head.appendChild(hljsCss);
+        
+        // Also load light theme for light mode
+        const hljsCssLight = document.createElement('link');
+        hljsCssLight.rel = 'stylesheet';
+        hljsCssLight.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+        hljsCssLight.id = 'hljs-theme-light';
+        hljsCssLight.disabled = true; // Disabled by default
+        document.head.appendChild(hljsCssLight);
+        
+        // Load highlight.js script
+        const hljsScript = document.createElement('script');
+        hljsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js';
+        hljsScript.onload = () => {
+            this.highlightJsLoaded = true;
+            console.log('✅ Highlight.js loaded successfully');
+            
+            // Update theme based on current mode
+            this.updateHighlightTheme();
+        };
+        hljsScript.onerror = () => {
+            console.warn('⚠️ Failed to load highlight.js');
+        };
+        document.head.appendChild(hljsScript);
+    },
+    
+    /**
+     * Update highlight.js theme based on dark/light mode
+     */
+    updateHighlightTheme() {
+        const isDarkMode = document.documentElement.classList.contains('dark-mode');
+        const darkTheme = document.getElementById('hljs-theme-dark');
+        const lightTheme = document.getElementById('hljs-theme-light');
+        
+        if (darkTheme && lightTheme) {
+            darkTheme.disabled = !isDarkMode;
+            lightTheme.disabled = isDarkMode;
+        }
+    },
+    
+    /**
+     * Inject custom CSS styles for code blocks and textarea
+     */
+    injectCustomStyles() {
+        const customStyles = document.createElement('style');
+        customStyles.id = 'whalio-chat-custom-styles';
+        customStyles.textContent = `
+            /* ==================== TEXTAREA AUTO-RESIZE STYLES ==================== */
+            .chat-input-wrapper .chat-input {
+                resize: none;
+                min-height: 40px;
+                max-height: 200px;
+                overflow-y: auto;
+                line-height: 1.4;
+                padding: 10px 0;
+                font-family: inherit;
+                scrollbar-width: thin;
+            }
+            
+            .chat-input-wrapper .chat-input::-webkit-scrollbar {
+                width: 4px;
+            }
+            
+            .chat-input-wrapper .chat-input::-webkit-scrollbar-thumb {
+                background: var(--border-color);
+                border-radius: 2px;
+            }
+            
+            /* ==================== CODE BLOCK STYLES ==================== */
+            .message-bubble .code-block-wrapper {
+                position: relative;
+                margin: 8px 0;
+                border-radius: 8px;
+                overflow: hidden;
+                background: #0d1117;
+                border: 1px solid #30363d;
+            }
+            
+            .message-bubble .code-block-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 12px;
+                background: #161b22;
+                border-bottom: 1px solid #30363d;
+                font-size: 12px;
+                color: #8b949e;
+            }
+            
+            .message-bubble .code-block-lang {
+                font-weight: 500;
+                text-transform: uppercase;
+            }
+            
+            .message-bubble .code-copy-btn {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                padding: 4px 8px;
+                background: transparent;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                color: #8b949e;
+                font-size: 12px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            
+            .message-bubble .code-copy-btn:hover {
+                background: #30363d;
+                color: #f0f6fc;
+            }
+            
+            .message-bubble .code-copy-btn.copied {
+                background: #238636;
+                border-color: #238636;
+                color: #ffffff;
+            }
+            
+            .message-bubble .code-copy-btn svg {
+                width: 14px;
+                height: 14px;
+            }
+            
+            .message-bubble pre {
+                margin: 0;
+                padding: 12px 16px;
+                overflow-x: auto;
+                background: #0d1117;
+            }
+            
+            .message-bubble pre code {
+                font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+                font-size: 13px;
+                line-height: 1.5;
+                background: transparent;
+                padding: 0;
+                border-radius: 0;
+                white-space: pre;
+                word-wrap: normal;
+            }
+            
+            .message-bubble pre code.hljs {
+                background: transparent;
+                padding: 0;
+            }
+            
+            /* Inline code */
+            .message-bubble code:not(pre code) {
+                background: rgba(110, 118, 129, 0.2);
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+                font-size: 0.9em;
+                color: #e6edf3;
+            }
+            
+            /* Light mode code styles */
+            html:not(.dark-mode) .message-bubble .code-block-wrapper {
+                background: #f6f8fa;
+                border-color: #d0d7de;
+            }
+            
+            html:not(.dark-mode) .message-bubble .code-block-header {
+                background: #f6f8fa;
+                border-bottom-color: #d0d7de;
+                color: #57606a;
+            }
+            
+            html:not(.dark-mode) .message-bubble .code-copy-btn {
+                border-color: #d0d7de;
+                color: #57606a;
+            }
+            
+            html:not(.dark-mode) .message-bubble .code-copy-btn:hover {
+                background: #d0d7de;
+                color: #24292f;
+            }
+            
+            html:not(.dark-mode) .message-bubble pre {
+                background: #f6f8fa;
+            }
+            
+            html:not(.dark-mode) .message-bubble code:not(pre code) {
+                background: rgba(175, 184, 193, 0.2);
+                color: #24292f;
+            }
+            
+            /* AI message preserve whitespace */
+            .ai-message .message-bubble {
+                white-space: pre-wrap;
+                font-family: inherit;
+            }
+            
+            /* User message in bubble */
+            .user-message .message-bubble code:not(pre code) {
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+            }
+        `;
+        document.head.appendChild(customStyles);
     },
     
     /**
@@ -106,7 +328,7 @@ const ChatWidget = {
                             <input 
                                 type="file" 
                                 id="chat-file-input" 
-                                accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.js,.html,.css" 
+                                accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.js,.html,.css,.py,.java,.cpp,.c,.ts,.jsx,.tsx,.json,.xml,.yaml,.yml,.md,.sql,.sh,.bash" 
                                 hidden
                             />
                             
@@ -119,13 +341,13 @@ const ChatWidget = {
                                 </svg>
                             </button>
                             
-                            <input 
-                                type="text" 
+                            <textarea 
                                 id="chat-input" 
                                 class="chat-input" 
-                                placeholder="Nhập tin nhắn..." 
+                                placeholder="Nhập tin nhắn... (Enter gửi, Shift+Enter xuống dòng, Tab thêm 4 spaces)" 
                                 autocomplete="off"
-                            />
+                                rows="1"
+                            ></textarea>
                             <button id="chat-send-btn" class="chat-send-btn" aria-label="Send message">
                                 <svg viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
@@ -156,11 +378,41 @@ const ChatWidget = {
         
         // Send message
         sendBtn.addEventListener('click', () => this.handleSendMessage());
-        input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
+        
+        // ==================== TEXTAREA KEY HANDLING ====================
+        input.addEventListener('keydown', (e) => {
+            // Tab key: Insert 4 spaces
+            if (e.key === 'Tab') {
                 e.preventDefault();
-                this.handleSendMessage();
+                const start = input.selectionStart;
+                const end = input.selectionEnd;
+                const spaces = '    '; // 4 spaces
+                
+                input.value = input.value.substring(0, start) + spaces + input.value.substring(end);
+                input.selectionStart = input.selectionEnd = start + spaces.length;
+                
+                // Trigger auto-resize
+                this.autoResizeTextarea(input);
+                return;
             }
+            
+            // Enter key handling
+            if (e.key === 'Enter') {
+                if (e.shiftKey) {
+                    // Shift + Enter: New line (default behavior)
+                    // Let it happen naturally, just auto-resize after
+                    setTimeout(() => this.autoResizeTextarea(input), 0);
+                } else {
+                    // Enter only: Send message
+                    e.preventDefault();
+                    this.handleSendMessage();
+                }
+            }
+        });
+        
+        // Auto-resize textarea on input
+        input.addEventListener('input', () => {
+            this.autoResizeTextarea(input);
         });
         
         // ==================== FILE UPLOAD & DRAG-DROP EVENT LISTENERS ====================
@@ -168,7 +420,6 @@ const ChatWidget = {
         const fileInput = document.getElementById('chat-file-input');
         const removeFileBtn = document.getElementById('chat-remove-file');
         const inputWrapper = document.querySelector('.chat-input-wrapper');
-        const chatInput = document.getElementById('chat-input');
         
         // Click nút upload -> kích hoạt input file
         uploadBtn.addEventListener('click', () => {
@@ -223,6 +474,37 @@ const ChatWidget = {
                 // this.closeChat();
             }
         });
+        
+        // Listen for theme changes to update highlight.js theme
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'class') {
+                    this.updateHighlightTheme();
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true });
+    },
+    
+    /**
+     * Auto-resize textarea based on content
+     * @param {HTMLTextAreaElement} textarea 
+     */
+    autoResizeTextarea(textarea) {
+        // Reset height to auto to get the correct scrollHeight
+        textarea.style.height = 'auto';
+        
+        // Calculate new height
+        const minHeight = 40;
+        const maxHeight = 200;
+        const scrollHeight = textarea.scrollHeight;
+        
+        // Set new height within bounds
+        const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
+        textarea.style.height = newHeight + 'px';
+        
+        // Show scrollbar if content exceeds max height
+        textarea.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
     },
     
     /**
@@ -254,15 +536,32 @@ const ChatWidget = {
             'application/vnd.openxmlformats-officedocument.presentationml.presentation',
             // Archives
             'application/zip', 'application/x-rar-compressed',
-            // Code
-            'application/javascript', 'text/html', 'text/css'
+            // Code files
+            'application/javascript', 'text/javascript',
+            'text/html', 'text/css',
+            'text/x-python', 'text/x-java',
+            'text/x-c', 'text/x-c++',
+            'application/json', 'application/xml',
+            'text/yaml', 'text/markdown',
+            'application/x-sh'
         ];
         
-        const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.txt', '.xls', '.xlsx', '.ppt', '.pptx', '.zip', '.rar', '.js', '.html', '.css'];
+        const allowedExtensions = [
+            '.jpg', '.jpeg', '.png', '.gif', '.webp', 
+            '.pdf', '.doc', '.docx', '.txt', 
+            '.xls', '.xlsx', '.ppt', '.pptx', 
+            '.zip', '.rar',
+            '.js', '.ts', '.jsx', '.tsx',
+            '.html', '.css', '.scss', '.sass',
+            '.py', '.java', '.cpp', '.c', '.h', '.hpp',
+            '.json', '.xml', '.yaml', '.yml',
+            '.md', '.sql', '.sh', '.bash',
+            '.php', '.rb', '.go', '.rs', '.swift'
+        ];
         const fileExt = file.name.toLowerCase().substr(file.name.lastIndexOf('.'));
         
         if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
-            alert('Loại file không được hỗ trợ! Chỉ chấp nhận: ảnh, PDF, Word, Excel, PowerPoint, ZIP, văn bản.');
+            alert('Loại file không được hỗ trợ! Chỉ chấp nhận: ảnh, PDF, Word, Excel, PowerPoint, ZIP, và các file code.');
             return;
         }
         
@@ -367,7 +666,9 @@ const ChatWidget = {
         
         // Focus on input
         setTimeout(() => {
-            document.getElementById('chat-input').focus();
+            const input = document.getElementById('chat-input');
+            input.focus();
+            this.autoResizeTextarea(input);
         }, 300);
     },
     
@@ -388,7 +689,7 @@ const ChatWidget = {
      */
     addWelcomeMessage() {
         setTimeout(() => {
-            this.addMessage("Xin chào! 👋 Mình là Whalio AI Assistant. Mình có thể giúp bạn tìm hiểu về các tính năng của Whalio hoặc giải đáp thắc mắc. Hãy hỏi mình bất cứ điều gì!", 'ai');
+            this.addMessage("Xin chào! 👋 Mình là Whalio AI Assistant. Mình có thể giúp bạn tìm hiểu về các tính năng của Whalio, giải đáp thắc mắc, hoặc hỗ trợ lập trình. Hãy hỏi mình bất cứ điều gì!", 'ai');
         }, 500);
     },
     
@@ -412,8 +713,10 @@ const ChatWidget = {
             this.addMessage(message, 'user');
         }
         
-        // Clear input và ảnh preview
+        // Clear input và reset textarea height
         input.value = '';
+        input.style.height = '40px';
+        input.style.overflowY = 'hidden';
         
         // Show typing indicator
         this.showTypingIndicator();
@@ -539,6 +842,8 @@ const ChatWidget = {
             minute: '2-digit' 
         });
         
+        const formattedText = this.formatMessage(text);
+        
         if (sender === 'ai') {
             messageDiv.innerHTML = `
                 <div class="message-avatar">
@@ -547,21 +852,69 @@ const ChatWidget = {
                     </svg>
                 </div>
                 <div class="message-content">
-                    <div class="message-bubble">${this.formatMessage(text)}</div>
+                    <div class="message-bubble">${formattedText}</div>
                     <span class="message-time">${time}</span>
                 </div>
             `;
         } else {
             messageDiv.innerHTML = `
                 <div class="message-content">
-                    <div class="message-bubble">${this.formatMessage(text)}</div>
+                    <div class="message-bubble">${formattedText}</div>
                     <span class="message-time">${time}</span>
                 </div>
             `;
         }
         
         messagesContainer.appendChild(messageDiv);
+        
+        // Apply syntax highlighting to code blocks
+        this.applyHighlighting(messageDiv);
+        
         this.scrollToBottom();
+    },
+    
+    /**
+     * Apply syntax highlighting to code blocks in a message
+     * @param {HTMLElement} container 
+     */
+    applyHighlighting(container) {
+        if (!this.highlightJsLoaded || !window.hljs) return;
+        
+        const codeBlocks = container.querySelectorAll('pre code');
+        codeBlocks.forEach(block => {
+            // Use requestAnimationFrame to avoid blocking
+            requestAnimationFrame(() => {
+                hljs.highlightElement(block);
+            });
+        });
+    },
+    
+    /**
+     * Copy code to clipboard
+     * @param {HTMLButtonElement} button 
+     */
+    copyCodeToClipboard(button) {
+        const codeBlock = button.closest('.code-block-wrapper').querySelector('code');
+        const code = codeBlock.textContent;
+        
+        navigator.clipboard.writeText(code).then(() => {
+            // Visual feedback
+            const originalHTML = button.innerHTML;
+            button.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Copied!
+            `;
+            button.classList.add('copied');
+            
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.classList.remove('copied');
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy code:', err);
+        });
     },
     
     /**
@@ -613,23 +966,78 @@ const ChatWidget = {
     },
     
     /**
-     * Format message: Escape HTML -> Convert Markdown -> Handle Newlines
+     * Format message with code block support and syntax highlighting
+     * Handles: code blocks (```), inline code (`), bold (**), italic (*), newlines
+     * @param {string} text 
+     * @returns {string}
      */
     formatMessage(text) {
-        // 1. Bảo mật: Chuyển các ký tự nguy hiểm thành text an toàn trước
+        // Generate unique ID for copy button callbacks
+        const generateId = () => 'code-' + Math.random().toString(36).substr(2, 9);
+        
+        // 1. Extract and preserve code blocks first (```code```)
+        const codeBlocks = [];
+        let processedText = text.replace(/```(\w+)?\n?([\s\S]*?)```/g, (match, lang, code) => {
+            const id = generateId();
+            const language = lang || 'plaintext';
+            const trimmedCode = code.trim();
+            
+            // Escape HTML in code
+            const escapedCode = trimmedCode
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            
+            const codeBlockHTML = `
+                <div class="code-block-wrapper" id="${id}">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">${language}</span>
+                        <button class="code-copy-btn" onclick="ChatWidget.copyCodeToClipboard(this)" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                            Copy
+                        </button>
+                    </div>
+                    <pre><code class="language-${language}">${escapedCode}</code></pre>
+                </div>
+            `;
+            
+            const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+            codeBlocks.push(codeBlockHTML);
+            return placeholder;
+        });
+        
+        // 2. Escape remaining HTML for security
         const div = document.createElement('div');
-        div.textContent = text;
+        div.textContent = processedText;
         let safeText = div.innerHTML;
-
-        // 2. Xử lý in đậm: Đổi **text** thành <strong>text</strong>
-        safeText = safeText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-        // 3. Xử lý in nghiêng: Đổi *text* thành <em>text</em>
-        safeText = safeText.replace(/\*(.*?)\*/g, '<em>$1</em>');
-
-        // 4. Xử lý xuống dòng: Đổi \n thành <br>
-        safeText = safeText.replace(/\n/g, '<br>');
-
+        
+        // 3. Restore code blocks (they're already safe)
+        codeBlocks.forEach((block, index) => {
+            safeText = safeText.replace(`__CODE_BLOCK_${index}__`, block);
+        });
+        
+        // 4. Handle inline code: `code` -> <code>code</code>
+        safeText = safeText.replace(/`([^`]+)`/g, '<code>$1</code>');
+        
+        // 5. Handle bold: **text** -> <strong>text</strong>
+        safeText = safeText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        
+        // 6. Handle italic: *text* -> <em>text</em> (but not inside code)
+        safeText = safeText.replace(/(?<!`)\*([^*]+)\*(?!`)/g, '<em>$1</em>');
+        
+        // 7. Handle newlines (but not inside code blocks)
+        // Split by code blocks, process each part, then rejoin
+        const parts = safeText.split(/(<div class="code-block-wrapper"[\s\S]*?<\/div>\s*<\/div>)/g);
+        safeText = parts.map((part, index) => {
+            // Odd indices are code blocks, skip them
+            if (index % 2 === 1) return part;
+            // Even indices are regular text, convert newlines
+            return part.replace(/\n/g, '<br>');
+        }).join('');
+        
         return safeText;
     }
 };

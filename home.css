@@ -10518,6 +10518,8 @@ html.dark-mode footer {
     font-size: 14px;
     line-height: 1.5;
     word-wrap: break-word;
+    white-space: pre-wrap;
+    font-family: inherit;
 }
 
 .user-message .message-bubble {
@@ -10594,7 +10596,7 @@ html.dark-mode footer {
 
 .chat-input-wrapper {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 8px;
     background: var(--bg-body);
     border: 1px solid var(--border-color);
@@ -10616,10 +10618,29 @@ html.dark-mode footer {
     color: var(--text-main);
     outline: none;
     padding: 8px 0;
+    resize: none;
+    min-height: 40px;
+    max-height: 200px;
+    overflow-y: hidden;
+    line-height: 1.4;
+    font-family: inherit;
 }
 
 .chat-input::placeholder {
     color: var(--text-secondary);
+}
+
+.chat-input::-webkit-scrollbar {
+    width: 4px;
+}
+
+.chat-input::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+}
+
+.chat-input::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .chat-send-btn {
