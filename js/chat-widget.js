@@ -1,5 +1,6 @@
-// ==================== WHALIO AI CHAT WIDGET V2 ====================
+// ==================== WHALIO AI CHAT WIDGET V3 (MERGED) ====================
 // Floating chat widget with Full Screen Mode (Gemini-style)
+// MERGED: V2 Fullscreen/Sidebar + Backup Text/Code Logic
 // Supports: Session History, Light/Dark mode, Syntax Highlighting
 // Author: Whalio Team
 
@@ -12,6 +13,11 @@ const ChatWidget = {
     currentSessionId: null,
     sessions: [],
     highlightJsLoaded: false,
+    selectedFile: null,
+    
+    // ==================== RATE LIMIT / DEBOUNCE ====================
+    lastSessionsLoadTime: 0,
+    SESSIONS_CACHE_TTL: 60000, // 60 seconds cache
     
     // ==================== CONFIG ====================
     API_ENDPOINT: '/api/chat',
@@ -32,6 +38,27 @@ const ChatWidget = {
         this.createWidgetHTML();
         this.setupEventListeners();
         this.addWelcomeMessage();
+    },
+    
+    // ==================== UTILITY: Clean HTML (FROM BACKUP) ====================
+    /**
+     * Clean HTML template literal - remove extra whitespace and newlines between tags
+     * but preserve intentional spaces within content
+     */
+    cleanHTML(html) {
+        return html
+            .replace(/>\s+</g, '><')
+            .trim();
+    },
+    
+    // ==================== UTILITY: Smart Trim (FROM BACKUP) ====================
+    /**
+     * Smart trimming - only remove leading/trailing whitespace and newlines
+     * but preserve internal spacing, tabs, and intentional indentation
+     */
+    smartTrim(text) {
+        if (!text) return text;
+        return text.replace(/^[\s\n\r]+|[\s\n\r]+$/g, '');
     },
     
     // ==================== LOAD HIGHLIGHT.JS ====================
@@ -77,7 +104,7 @@ const ChatWidget = {
         }
     },
     
-    // ==================== INJECT CSS STYLES ====================
+    // ==================== INJECT CSS STYLES (MERGED) ====================
     injectStyles() {
         const styles = document.createElement('style');
         styles.id = 'whalio-chat-styles';
@@ -561,13 +588,20 @@ const ChatWidget = {
                 max-width: calc(100% - 50px);
             }
             
+            /* ==================== MESSAGE BUBBLE (MERGED FROM BACKUP) ==================== */
             .whalio-message-bubble {
                 padding: 12px 16px;
                 border-radius: 16px;
                 font-size: 14px;
                 line-height: 1.6;
+                /* CRITICAL: From Backup - Fix display and overflow */
+                max-width: 100%;
+                width: fit-content;
                 word-wrap: break-word;
                 overflow-wrap: break-word;
+                word-break: break-word;
+                white-space: pre-wrap;
+                box-sizing: border-box;
             }
             
             .whalio-message.ai .whalio-message-bubble {
@@ -820,13 +854,16 @@ const ChatWidget = {
                 margin-left: 2px;
             }
             
-            /* ==================== CODE BLOCKS ==================== */
+            /* ==================== CODE BLOCKS (MERGED FROM BACKUP) ==================== */
             .whalio-message-bubble .code-block-wrapper {
-                margin: 12px 0;
+                position: relative;
+                margin: 8px 0;
                 border-radius: 8px;
                 overflow: hidden;
                 background: #0d1117;
                 border: 1px solid #30363d;
+                max-width: 100%;
+                box-sizing: border-box;
             }
             
             .whalio-message-bubble .code-block-header {
@@ -838,6 +875,8 @@ const ChatWidget = {
                 border-bottom: 1px solid #30363d;
                 font-size: 12px;
                 color: #8b949e;
+                flex-wrap: wrap;
+                gap: 8px;
             }
             
             .whalio-message-bubble .code-block-lang {
@@ -857,6 +896,7 @@ const ChatWidget = {
                 font-size: 12px;
                 cursor: pointer;
                 transition: all 0.2s ease;
+                flex-shrink: 0;
             }
             
             .whalio-message-bubble .code-copy-btn:hover {
@@ -875,27 +915,62 @@ const ChatWidget = {
                 height: 14px;
             }
             
+            /* Pre and Code - CRITICAL OVERFLOW FIX FROM BACKUP */
             .whalio-message-bubble pre {
                 margin: 0;
                 padding: 12px 16px;
                 overflow-x: auto;
+                overflow-y: hidden;
                 background: #0d1117;
+                max-width: 100%;
+                box-sizing: border-box;
+                scrollbar-width: thin;
+                scrollbar-color: #30363d transparent;
+            }
+            
+            .whalio-message-bubble pre::-webkit-scrollbar {
+                height: 6px;
+            }
+            
+            .whalio-message-bubble pre::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            
+            .whalio-message-bubble pre::-webkit-scrollbar-thumb {
+                background: #30363d;
+                border-radius: 3px;
+            }
+            
+            .whalio-message-bubble pre::-webkit-scrollbar-thumb:hover {
+                background: #484f58;
             }
             
             .whalio-message-bubble pre code {
-                font-family: 'Fira Code', 'Consolas', monospace;
+                font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
                 font-size: 13px;
                 line-height: 1.5;
                 background: transparent;
+                padding: 0;
+                border-radius: 0;
                 white-space: pre;
+                word-wrap: normal;
+                display: block;
+                overflow-x: visible;
+            }
+            
+            .whalio-message-bubble pre code.hljs {
+                background: transparent;
+                padding: 0;
             }
             
             .whalio-message-bubble code:not(pre code) {
                 background: rgba(110, 118, 129, 0.2);
                 padding: 2px 6px;
                 border-radius: 4px;
-                font-family: 'Fira Code', monospace;
+                font-family: 'Fira Code', 'Consolas', monospace;
                 font-size: 0.9em;
+                color: #e6edf3;
+                word-break: break-all;
             }
             
             /* Light mode code */
@@ -910,8 +985,32 @@ const ChatWidget = {
                 color: #57606a;
             }
             
+            html:not(.dark-mode) .whalio-message-bubble .code-copy-btn {
+                border-color: #d0d7de;
+                color: #57606a;
+            }
+            
+            html:not(.dark-mode) .whalio-message-bubble .code-copy-btn:hover {
+                background: #d0d7de;
+                color: #24292f;
+            }
+            
             html:not(.dark-mode) .whalio-message-bubble pre {
                 background: #f6f8fa;
+                scrollbar-color: #d0d7de transparent;
+            }
+            
+            html:not(.dark-mode) .whalio-message-bubble pre::-webkit-scrollbar-thumb {
+                background: #d0d7de;
+            }
+            
+            html:not(.dark-mode) .whalio-message-bubble pre::-webkit-scrollbar-thumb:hover {
+                background: #afb8c1;
+            }
+            
+            html:not(.dark-mode) .whalio-message-bubble code:not(pre code) {
+                background: rgba(175, 184, 193, 0.2);
+                color: #24292f;
             }
             
             /* User message code styling */
@@ -1003,9 +1102,9 @@ const ChatWidget = {
         document.head.appendChild(styles);
     },
     
-    // ==================== CREATE HTML ====================
+    // ==================== CREATE HTML (FROM V2) ====================
     createWidgetHTML() {
-        const html = `
+        const html = this.cleanHTML(`
             <div class="whalio-chat-widget" id="whalio-chat-widget">
                 <!-- Launcher Button -->
                 <button class="whalio-launcher" id="whalio-launcher" aria-label="Open chat">
@@ -1126,7 +1225,7 @@ const ChatWidget = {
                     </div>
                 </div>
             </div>
-        `;
+        `);
         
         document.body.insertAdjacentHTML('beforeend', html);
     },
@@ -1226,9 +1325,9 @@ const ChatWidget = {
         launcher.classList.add('active');
         this.isOpen = true;
         
-        // Load sessions when opening fullscreen
+        // Load sessions when opening fullscreen (with debounce)
         if (this.isFullScreen) {
-            this.loadSessions();
+            this.loadSessionsWithDebounce();
         }
         
         setTimeout(() => {
@@ -1274,8 +1373,8 @@ const ChatWidget = {
             </svg>
         `;
         
-        // Load sessions
-        this.loadSessions();
+        // Load sessions with debounce
+        this.loadSessionsWithDebounce();
     },
     
     exitFullscreen() {
@@ -1301,7 +1400,24 @@ const ChatWidget = {
         this.isSidebarOpen = !sidebar.classList.contains('collapsed');
     },
     
-    // ==================== SESSION MANAGEMENT ====================
+    // ==================== SESSION MANAGEMENT (WITH DEBOUNCE) ====================
+    /**
+     * Load sessions with debounce to prevent 429 errors
+     * Only call API if sessions are empty OR cache TTL expired
+     */
+    loadSessionsWithDebounce() {
+        const now = Date.now();
+        const timeSinceLastLoad = now - this.lastSessionsLoadTime;
+        
+        // Only load if: sessions are empty OR cache expired (60 seconds)
+        if (this.sessions.length === 0 || timeSinceLastLoad > this.SESSIONS_CACHE_TTL) {
+            this.loadSessions();
+        } else {
+            // Use cached data, just re-render
+            this.renderSessionsList();
+        }
+    },
+    
     async loadSessions() {
         try {
             const response = await fetch(this.SESSIONS_ENDPOINT);
@@ -1309,6 +1425,7 @@ const ChatWidget = {
             
             if (data.success && data.sessions) {
                 this.sessions = data.sessions;
+                this.lastSessionsLoadTime = Date.now(); // Update cache time
                 this.renderSessionsList();
             }
         } catch (error) {
@@ -1334,7 +1451,7 @@ const ChatWidget = {
             
             const isActive = session.sessionId === this.currentSessionId;
             
-            return `
+            return this.cleanHTML(`
                 <div class="whalio-session-item ${isActive ? 'active' : ''}" data-session-id="${session.sessionId}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -1349,7 +1466,7 @@ const ChatWidget = {
                         </svg>
                     </button>
                 </div>
-            `;
+            `);
         }).join('');
         
         // Add click listeners
@@ -1402,13 +1519,16 @@ const ChatWidget = {
             const data = await response.json();
             
             if (data.success) {
+                // Remove from local cache
+                this.sessions = this.sessions.filter(s => s.sessionId !== sessionId);
+                
                 // If deleting current session, start new chat
                 if (sessionId === this.currentSessionId) {
                     this.startNewChat();
                 }
                 
-                // Reload sessions list
-                this.loadSessions();
+                // Re-render (no API call needed)
+                this.renderSessionsList();
             }
         } catch (error) {
             console.error('Error deleting session:', error);
@@ -1427,7 +1547,7 @@ const ChatWidget = {
         document.getElementById('whalio-messages').innerHTML = '';
     },
     
-    // ==================== MESSAGING ====================
+    // ==================== MESSAGING (WITH SMART TRIM FROM BACKUP) ====================
     addWelcomeMessage() {
         setTimeout(() => {
             this.addMessage("Xin chào! 👋 Mình là Whalio AI Assistant. Mình có thể giúp bạn tìm hiểu về các tính năng của Whalio, giải đáp thắc mắc, hoặc hỗ trợ lập trình. Hãy hỏi mình bất cứ điều gì!", 'ai', false);
@@ -1436,7 +1556,9 @@ const ChatWidget = {
     
     async handleSendMessage() {
         const textarea = document.getElementById('whalio-textarea');
-        const message = textarea.value.trim();
+        
+        // USE SMART TRIM FROM BACKUP (preserves internal indentation)
+        const message = this.smartTrim(textarea.value);
         
         if ((!message && !this.selectedFile) || this.isTyping) return;
         
@@ -1496,9 +1618,11 @@ const ChatWidget = {
                 if (data.sessionId) {
                     this.currentSessionId = data.sessionId;
                     
-                    // Reload sessions if in fullscreen
+                    // Reload sessions if in fullscreen AND is new session
                     if (this.isFullScreen && data.isNewSession) {
-                        this.loadSessions();
+                        // Force reload sessions (reset cache)
+                        this.lastSessionsLoadTime = 0;
+                        this.loadSessionsWithDebounce();
                     }
                 }
                 
@@ -1541,7 +1665,7 @@ const ChatWidget = {
         const formattedText = this.formatMessage(text);
         
         if (sender === 'ai') {
-            messageDiv.innerHTML = `
+            messageDiv.innerHTML = this.cleanHTML(`
                 <div class="whalio-message-avatar">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
@@ -1551,9 +1675,9 @@ const ChatWidget = {
                     <div class="whalio-message-bubble">${formattedText}</div>
                     <span class="whalio-message-time">${time}</span>
                 </div>
-            `;
+            `);
         } else {
-            messageDiv.innerHTML = `
+            messageDiv.innerHTML = this.cleanHTML(`
                 <div class="whalio-message-content">
                     <div class="whalio-message-bubble">${formattedText}</div>
                     <span class="whalio-message-time">${time}</span>
@@ -1564,7 +1688,7 @@ const ChatWidget = {
                         <circle cx="12" cy="7" r="4"/>
                     </svg>
                 </div>
-            `;
+            `);
         }
         
         container.appendChild(messageDiv);
@@ -1591,7 +1715,7 @@ const ChatWidget = {
             const imageUrl = URL.createObjectURL(file);
             fileContent = `<div class="whalio-message-image"><img src="${imageUrl}" alt="Sent image" /></div>`;
         } else {
-            fileContent = `
+            fileContent = this.cleanHTML(`
                 <div class="whalio-message-file">
                     <div class="whalio-file-icon">
                         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -1603,10 +1727,10 @@ const ChatWidget = {
                         <div class="whalio-file-size">${this.formatFileSize(file.size)}</div>
                     </div>
                 </div>
-            `;
+            `);
         }
         
-        messageDiv.innerHTML = `
+        messageDiv.innerHTML = this.cleanHTML(`
             <div class="whalio-message-content">
                 <div class="whalio-message-bubble">${fileContent}${textContent}</div>
                 <span class="whalio-message-time">${time}</span>
@@ -1617,7 +1741,7 @@ const ChatWidget = {
                     <circle cx="12" cy="7" r="4"/>
                 </svg>
             </div>
-        `;
+        `);
         
         container.appendChild(messageDiv);
         this.scrollToBottom();
@@ -1630,7 +1754,7 @@ const ChatWidget = {
         const typingDiv = document.createElement('div');
         typingDiv.className = 'whalio-message ai';
         typingDiv.id = 'whalio-typing-indicator';
-        typingDiv.innerHTML = `
+        typingDiv.innerHTML = this.cleanHTML(`
             <div class="whalio-message-avatar">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
@@ -1643,7 +1767,7 @@ const ChatWidget = {
                     <span class="whalio-typing-dot"></span>
                 </div>
             </div>
-        `;
+        `);
         
         container.appendChild(typingDiv);
         this.scrollToBottom();
@@ -1661,8 +1785,6 @@ const ChatWidget = {
     },
     
     // ==================== FILE HANDLING ====================
-    selectedFile: null,
-    
     handleFileSelect(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -1731,20 +1853,30 @@ const ChatWidget = {
         return div.innerHTML;
     },
     
+    // ==================== FORMAT MESSAGE (FROM BACKUP - NO INDENTATION ARTIFACTS) ====================
+    /**
+     * Format message with code block support and syntax highlighting
+     * Handles: code blocks (```), inline code (`), bold (**), italic (*), newlines
+     * ENHANCED: Better code block handling without source indentation artifacts
+     */
     formatMessage(text) {
         const generateId = () => 'code-' + Math.random().toString(36).substr(2, 9);
         
-        // Extract code blocks
+        // 1. Extract and preserve code blocks first (```code```)
         const codeBlocks = [];
         let processedText = text.replace(/```(\w+)?\n?([\s\S]*?)```/g, (match, lang, code) => {
             const id = generateId();
             const language = lang || 'plaintext';
-            const escapedCode = code.trim()
+            const trimmedCode = code.trim();
+            
+            // Escape HTML in code
+            const escapedCode = trimmedCode
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;');
             
-            const codeBlockHTML = `
+            // Clean HTML template for code blocks - NO INDENTATION ARTIFACTS
+            const codeBlockHTML = this.cleanHTML(`
                 <div class="code-block-wrapper" id="${id}">
                     <div class="code-block-header">
                         <span class="code-block-lang">${language}</span>
@@ -1758,36 +1890,38 @@ const ChatWidget = {
                     </div>
                     <pre><code class="language-${language}">${escapedCode}</code></pre>
                 </div>
-            `;
+            `);
             
             const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
             codeBlocks.push(codeBlockHTML);
             return placeholder;
         });
         
-        // Escape HTML
+        // 2. Escape remaining HTML for security
         const div = document.createElement('div');
         div.textContent = processedText;
         let safeText = div.innerHTML;
         
-        // Restore code blocks
+        // 3. Restore code blocks (they're already safe)
         codeBlocks.forEach((block, index) => {
             safeText = safeText.replace(`__CODE_BLOCK_${index}__`, block);
         });
         
-        // Inline code
+        // 4. Handle inline code: `code` -> <code>code</code>
         safeText = safeText.replace(/`([^`]+)`/g, '<code>$1</code>');
         
-        // Bold
+        // 5. Handle bold: **text** -> <strong>text</strong>
         safeText = safeText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
         
-        // Italic
+        // 6. Handle italic: *text* -> <em>text</em> (but not inside code)
         safeText = safeText.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
         
-        // Newlines (outside code blocks)
+        // 7. Handle newlines (but not inside code blocks)
         const parts = safeText.split(/(<div class="code-block-wrapper"[\s\S]*?<\/div>\s*<\/div>)/g);
         safeText = parts.map((part, index) => {
+            // Odd indices are code blocks, skip them
             if (index % 2 === 1) return part;
+            // Even indices are regular text, convert newlines
             return part.replace(/\n/g, '<br>');
         }).join('');
         
