@@ -2071,7 +2071,7 @@ app.post('/api/chat', async (req, res) => {
 
         // Initialize the model with system instruction
         const model = genAI.getGenerativeModel({
-            model: 'gemini-1.5-flash-latest',
+            model: 'gemini-1.5-flash',
             systemInstruction: WHALIO_SYSTEM_INSTRUCTION
         });
 
