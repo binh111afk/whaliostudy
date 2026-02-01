@@ -417,6 +417,36 @@ const eventSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+// ChatSession Schema - Lưu lịch sử trò chuyện với Whalio AI
+const chatSessionSchema = new mongoose.Schema({
+    sessionId: { 
+        type: String, 
+        required: true, 
+        unique: true, 
+        index: true,
+        default: () => `chat_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+    },
+    username: { type: String, ref: 'User', index: true }, // Optional: link to user if logged in
+    title: { 
+        type: String, 
+        default: 'Cuộc trò chuyện mới',
+        maxlength: 100
+    },
+    messages: [{
+        role: { type: String, enum: ['user', 'model'], required: true },
+        content: { type: String, required: true },
+        timestamp: { type: Date, default: Date.now },
+        hasAttachment: { type: Boolean, default: false },
+        attachmentType: { type: String } // 'image', 'pdf', 'doc', etc.
+    }],
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+// Index để query nhanh theo thời gian
+chatSessionSchema.index({ createdAt: -1 });
+chatSessionSchema.index({ username: 1, createdAt: -1 });
+
 // Create Models
 const User = mongoose.model('User', userSchema);
 const Document = mongoose.model('Document', documentSchema);
@@ -425,6 +455,7 @@ const Post = mongoose.model('Post', postSchema);
 const Activity = mongoose.model('Activity', activitySchema);
 const Timetable = mongoose.model('Timetable', timetableSchema);
 const Event = mongoose.model('Event', eventSchema);
+const ChatSession = mongoose.model('ChatSession', chatSessionSchema);
 
 // Auto-seed on startup
 async function seedInitialData() {
@@ -2108,12 +2139,124 @@ Phong cách giao tiếp của bạn dựa trên các nguyên tắc sau:
 Mục tiêu cuối cùng là giúp sinh viên không chỉ có đáp án, mà còn hiểu được bản chất vấn đề và cảm thấy được khích lệ.
 `;
 
-// POST /api/chat - Chat with Whalio AI (Hỗ trợ Multimodal: Text + Image + Files)
+// ==================== CHAT SESSION APIs ====================
+
+// GET /api/sessions - Lấy danh sách các cuộc trò chuyện (cho Sidebar)
+app.get('/api/sessions', async (req, res) => {
+    try {
+        const { username, limit = 50 } = req.query;
+        
+        // Build query - nếu có username thì lọc theo user, không thì lấy tất cả
+        const query = username ? { username } : {};
+        
+        const sessions = await ChatSession.find(query)
+            .select('sessionId title createdAt updatedAt')
+            .sort({ updatedAt: -1, createdAt: -1 })
+            .limit(parseInt(limit))
+            .lean();
+        
+        res.json({
+            success: true,
+            sessions: sessions.map(s => ({
+                sessionId: s.sessionId,
+                title: s.title,
+                createdAt: s.createdAt,
+                updatedAt: s.updatedAt
+            }))
+        });
+    } catch (err) {
+        console.error('❌ Error fetching sessions:', err);
+        res.status(500).json({ success: false, message: 'Lỗi khi lấy danh sách cuộc trò chuyện' });
+    }
+});
+
+// GET /api/session/:id - Lấy chi tiết nội dung tin nhắn của một session
+app.get('/api/session/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const session = await ChatSession.findOne({ sessionId: id }).lean();
+        
+        if (!session) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Không tìm thấy cuộc trò chuyện' 
+            });
+        }
+        
+        res.json({
+            success: true,
+            session: {
+                sessionId: session.sessionId,
+                title: session.title,
+                messages: session.messages,
+                createdAt: session.createdAt,
+                updatedAt: session.updatedAt
+            }
+        });
+    } catch (err) {
+        console.error('❌ Error fetching session:', err);
+        res.status(500).json({ success: false, message: 'Lỗi khi lấy nội dung cuộc trò chuyện' });
+    }
+});
+
+// DELETE /api/session/:id - Xóa một cuộc trò chuyện
+app.delete('/api/session/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await ChatSession.findOneAndDelete({ sessionId: id });
+        
+        if (!result) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Không tìm thấy cuộc trò chuyện' 
+            });
+        }
+        
+        console.log(`🗑️ Chat session deleted: ${id}`);
+        res.json({ success: true, message: 'Đã xóa cuộc trò chuyện' });
+    } catch (err) {
+        console.error('❌ Error deleting session:', err);
+        res.status(500).json({ success: false, message: 'Lỗi khi xóa cuộc trò chuyện' });
+    }
+});
+
+// PUT /api/session/:id/title - Đổi tên cuộc trò chuyện
+app.put('/api/session/:id/title', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title } = req.body;
+        
+        if (!title || title.trim() === '') {
+            return res.status(400).json({ success: false, message: 'Tiêu đề không được để trống' });
+        }
+        
+        const session = await ChatSession.findOneAndUpdate(
+            { sessionId: id },
+            { title: title.trim().substring(0, 100), updatedAt: new Date() },
+            { new: true }
+        );
+        
+        if (!session) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc trò chuyện' });
+        }
+        
+        res.json({ success: true, session: { sessionId: session.sessionId, title: session.title } });
+    } catch (err) {
+        console.error('❌ Error updating session title:', err);
+        res.status(500).json({ success: false, message: 'Lỗi khi cập nhật tiêu đề' });
+    }
+});
+
+// POST /api/chat - Chat with Whalio AI (Hỗ trợ Multimodal: Text + Image + Files + Session History)
 // Sử dụng multipart/form-data thay vì JSON để hỗ trợ upload ảnh/file
 // Field name phải là 'image' để khớp với frontend FormData
 app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
     try {
         const message = req.body.message;
+        const sessionId = req.body.sessionId; // Optional: ID của session hiện tại
+        const username = req.body.username; // Optional: username của user
 
         // Kiểm tra message (có thể rỗng nếu chỉ gửi file)
         if ((!message || typeof message !== 'string' || message.trim() === '') && !req.file) {
@@ -2132,14 +2275,62 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             });
         }
 
-        // Initialize the model with system instruction (gemini-2.5-flash hỗ trợ multimodal)
+        // ==================== SESSION MANAGEMENT ====================
+        let session;
+        let isNewSession = false;
+        
+        if (sessionId) {
+            // Tìm session hiện có
+            session = await ChatSession.findOne({ sessionId });
+            if (!session) {
+                console.log(`⚠️ Session ${sessionId} not found, creating new session`);
+            }
+        }
+        
+        if (!session) {
+            // Tạo session mới
+            isNewSession = true;
+            const newSessionId = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            
+            // Lấy 30 ký tự đầu của tin nhắn làm tiêu đề
+            const messageText = message ? message.trim() : 'Phân tích file';
+            const autoTitle = messageText.substring(0, 30) + (messageText.length > 30 ? '...' : '');
+            
+            session = new ChatSession({
+                sessionId: newSessionId,
+                username: username || null,
+                title: autoTitle,
+                messages: []
+            });
+            
+            console.log(`🆕 Created new chat session: ${newSessionId}`);
+        }
+
+        // ==================== BUILD GEMINI HISTORY ====================
+        // Convert stored messages to Gemini format for context
+        const geminiHistory = session.messages.map(msg => ({
+            role: msg.role,
+            parts: [{ text: msg.content }]
+        }));
+
+        // Initialize the model with system instruction
         const model = genAI.getGenerativeModel({
             model: 'gemini-2.5-flash',
             systemInstruction: WHALIO_SYSTEM_INSTRUCTION
         });
 
+        // Start chat with history context
+        const chat = model.startChat({
+            history: geminiHistory,
+            generationConfig: {
+                maxOutputTokens: 8192,
+            }
+        });
+
         // Tạo payload gửi lên Gemini
         let contentParts = [];
+        let hasAttachment = false;
+        let attachmentType = null;
         
         // Thêm text message (nếu có)
         const textMessage = message ? message.trim() : 'Hãy phân tích file này.';
@@ -2147,11 +2338,20 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
 
         // Kiểm tra và xử lý file (nếu có)
         if (req.file) {
+            hasAttachment = true;
             const mimetype = req.file.mimetype;
             const filename = req.file.originalname;
             const fileExt = path.extname(filename).toLowerCase();
             const fileSizeKB = (req.file.size / 1024).toFixed(2);
             const buffer = req.file.buffer;
+            
+            // Xác định loại attachment
+            if (mimetype.startsWith('image/')) attachmentType = 'image';
+            else if (mimetype.includes('pdf')) attachmentType = 'pdf';
+            else if (mimetype.includes('word') || fileExt === '.doc' || fileExt === '.docx') attachmentType = 'word';
+            else if (mimetype.includes('excel') || mimetype.includes('spreadsheet')) attachmentType = 'excel';
+            else if (mimetype.includes('powerpoint') || mimetype.includes('presentation')) attachmentType = 'powerpoint';
+            else attachmentType = 'other';
             
             console.log(`📎 Nhận được file: ${filename} (${mimetype}, ${fileSizeKB} KB)`);
             
@@ -2261,18 +2461,44 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             }
         }
 
-        // Generate response với payload multimodal
-        const result = await model.generateContent(contentParts);
+        // ==================== SEND MESSAGE TO GEMINI ====================
+        // Sử dụng chat.sendMessage để duy trì context
+        const result = await chat.sendMessage(contentParts);
         const response = await result.response;
-        const text = response.text();
+        const aiResponseText = response.text();
+
+        // ==================== SAVE TO DATABASE ====================
+        const userMessageContent = message ? message.trim() : '[Gửi file đính kèm]';
+        
+        // Thêm tin nhắn user vào session
+        session.messages.push({
+            role: 'user',
+            content: userMessageContent,
+            timestamp: new Date(),
+            hasAttachment: hasAttachment,
+            attachmentType: attachmentType
+        });
+        
+        // Thêm phản hồi AI vào session
+        session.messages.push({
+            role: 'model',
+            content: aiResponseText,
+            timestamp: new Date()
+        });
+        
+        // Cập nhật thời gian và lưu
+        session.updatedAt = new Date();
+        await session.save();
 
         const logMessage = message ? message.substring(0, 50) : '[Chỉ gửi file]';
         const hasFile = req.file ? ` + ${req.file.mimetype.startsWith('image/') ? '🖼️' : '📁'}` : '';
-        console.log(`🤖 Whalio AI responded to: "${logMessage}..."${hasFile}`);
+        console.log(`🤖 Whalio AI responded to: "${logMessage}..."${hasFile} [Session: ${session.sessionId}]`);
 
         res.json({
             success: true,
-            response: text
+            response: aiResponseText,
+            sessionId: session.sessionId,
+            isNewSession: isNewSession
         });
 
     } catch (err) {

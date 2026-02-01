@@ -1,77 +1,71 @@
-// ==================== WHALIO AI CHAT WIDGET ====================
-// Floating chat widget connected to Google Gemini AI
-// Supports both Light and Dark mode via CSS variables
-// Enhanced with Syntax Highlighting and Code Programming Support
-// OPTIMIZED for indentation handling and overflow prevention
+// ==================== WHALIO AI CHAT WIDGET V2 ====================
+// Floating chat widget with Full Screen Mode (Gemini-style)
+// Supports: Session History, Light/Dark mode, Syntax Highlighting
+// Author: Whalio Team
 
 const ChatWidget = {
+    // ==================== STATE ====================
     isOpen: false,
+    isFullScreen: false,
     isTyping: false,
-    API_ENDPOINT: '/api/chat',
+    isSidebarOpen: true,
+    currentSessionId: null,
+    sessions: [],
     highlightJsLoaded: false,
     
-    // Fallback responses when API is unavailable
+    // ==================== CONFIG ====================
+    API_ENDPOINT: '/api/chat',
+    SESSIONS_ENDPOINT: '/api/sessions',
+    SESSION_ENDPOINT: '/api/session',
+    
+    // Fallback responses
     fallbackResponses: [
         "Xin lỗi, mình đang gặp sự cố kết nối. Vui lòng thử lại sau nhé! 🙏",
         "Hệ thống đang bận, bạn có thể thử lại sau vài giây không?",
         "Mình chưa thể xử lý yêu cầu ngay bây giờ. Hãy thử lại nhé! 😊"
     ],
     
-    /**
-     * Initialize the chat widget
-     */
+    // ==================== INITIALIZATION ====================
     init() {
         this.loadHighlightJs();
-        this.injectCustomStyles();
+        this.injectStyles();
         this.createWidgetHTML();
         this.setupEventListeners();
         this.addWelcomeMessage();
     },
     
-    /**
-     * Load highlight.js library from CDN
-     */
+    // ==================== LOAD HIGHLIGHT.JS ====================
     loadHighlightJs() {
-        // Check if already loaded
         if (window.hljs) {
             this.highlightJsLoaded = true;
             return;
         }
         
-        // Load CSS theme (GitHub Dark - matches VS Code dark theme)
-        const hljsCss = document.createElement('link');
-        hljsCss.rel = 'stylesheet';
-        hljsCss.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css';
-        hljsCss.id = 'hljs-theme-dark';
-        document.head.appendChild(hljsCss);
+        // Dark theme
+        const hljsCssDark = document.createElement('link');
+        hljsCssDark.rel = 'stylesheet';
+        hljsCssDark.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css';
+        hljsCssDark.id = 'hljs-theme-dark';
+        document.head.appendChild(hljsCssDark);
         
-        // Also load light theme for light mode
+        // Light theme
         const hljsCssLight = document.createElement('link');
         hljsCssLight.rel = 'stylesheet';
         hljsCssLight.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
         hljsCssLight.id = 'hljs-theme-light';
-        hljsCssLight.disabled = true; // Disabled by default
+        hljsCssLight.disabled = true;
         document.head.appendChild(hljsCssLight);
         
-        // Load highlight.js script
+        // Script
         const hljsScript = document.createElement('script');
         hljsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js';
         hljsScript.onload = () => {
             this.highlightJsLoaded = true;
-            console.log('✅ Highlight.js loaded successfully');
-            
-            // Update theme based on current mode
             this.updateHighlightTheme();
-        };
-        hljsScript.onerror = () => {
-            console.warn('⚠️ Failed to load highlight.js');
         };
         document.head.appendChild(hljsScript);
     },
     
-    /**
-     * Update highlight.js theme based on dark/light mode
-     */
     updateHighlightTheme() {
         const isDarkMode = document.documentElement.classList.contains('dark-mode');
         const darkTheme = document.getElementById('hljs-theme-dark');
@@ -83,131 +77,743 @@ const ChatWidget = {
         }
     },
     
-    /**
-     * Inject custom CSS styles for code blocks and textarea
-     */
-    injectCustomStyles() {
-        const customStyles = document.createElement('style');
-        customStyles.id = 'whalio-chat-custom-styles';
-        customStyles.textContent = `
-            /* ==================== CRITICAL OVERFLOW FIX ==================== */
-            /* Chat messages container */
-            #chat-messages.chat-messages {
-                overflow-y: auto;
-                overflow-x: hidden;
-                scrollbar-width: thin;
-                scrollbar-color: var(--border-color, #ccc) transparent;
+    // ==================== INJECT CSS STYLES ====================
+    injectStyles() {
+        const styles = document.createElement('style');
+        styles.id = 'whalio-chat-styles';
+        styles.textContent = `
+            /* ==================== CSS VARIABLES ====================  */
+            :root {
+                --whalio-primary: #6366f1;
+                --whalio-primary-dark: #4f46e5;
+                --whalio-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+                --whalio-gradient-hover: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #9333ea 100%);
             }
             
-            #chat-messages.chat-messages::-webkit-scrollbar {
+            /* ==================== CHAT WIDGET CONTAINER ==================== */
+            .whalio-chat-widget {
+                position: fixed;
+                z-index: 999999;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            }
+            
+            /* ==================== LAUNCHER BUTTON ==================== */
+            .whalio-launcher {
+                position: fixed;
+                bottom: 24px;
+                right: 24px;
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                background: var(--whalio-gradient);
+                border: none;
+                cursor: pointer;
+                box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 1000000;
+            }
+            
+            .whalio-launcher:hover {
+                transform: scale(1.1);
+                box-shadow: 0 6px 30px rgba(99, 102, 241, 0.5);
+            }
+            
+            .whalio-launcher.active {
+                background: var(--whalio-gradient-hover);
+            }
+            
+            .whalio-launcher svg {
+                width: 28px;
+                height: 28px;
+                color: white;
+                transition: transform 0.3s ease;
+            }
+            
+            .whalio-launcher .icon-close {
+                display: none;
+            }
+            
+            .whalio-launcher.active .icon-open {
+                display: none;
+            }
+            
+            .whalio-launcher.active .icon-close {
+                display: block;
+            }
+            
+            /* ==================== CHAT WINDOW (WIDGET MODE) ==================== */
+            .whalio-chat-window {
+                position: fixed;
+                bottom: 100px;
+                right: 24px;
+                width: 400px;
+                height: 550px;
+                background: var(--bg-primary, #ffffff);
+                border-radius: 16px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                opacity: 0;
+                visibility: hidden;
+                transform: translateY(20px) scale(0.95);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 999999;
+                border: 1px solid var(--border-color, #e5e7eb);
+            }
+            
+            .whalio-chat-window.open {
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0) scale(1);
+            }
+            
+            /* ==================== FULLSCREEN MODE ==================== */
+            .whalio-chat-window.fullscreen {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                width: 100%;
+                height: 100%;
+                border-radius: 0;
+                display: flex;
+                flex-direction: row;
+            }
+            
+            /* ==================== SIDEBAR (FULLSCREEN ONLY) ==================== */
+            .whalio-sidebar {
+                width: 280px;
+                min-width: 280px;
+                background: var(--bg-secondary, #f9fafb);
+                border-right: 1px solid var(--border-color, #e5e7eb);
+                display: none;
+                flex-direction: column;
+                transition: all 0.3s ease;
+            }
+            
+            .whalio-chat-window.fullscreen .whalio-sidebar {
+                display: flex;
+            }
+            
+            .whalio-chat-window.fullscreen .whalio-sidebar.collapsed {
+                width: 0;
+                min-width: 0;
+                overflow: hidden;
+                border-right: none;
+            }
+            
+            .whalio-sidebar-header {
+                padding: 16px;
+                border-bottom: 1px solid var(--border-color, #e5e7eb);
+            }
+            
+            .whalio-new-chat-btn {
+                width: 100%;
+                padding: 12px 16px;
+                background: var(--whalio-gradient);
+                color: white;
+                border: none;
+                border-radius: 12px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                transition: all 0.2s ease;
+            }
+            
+            .whalio-new-chat-btn:hover {
+                background: var(--whalio-gradient-hover);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            }
+            
+            .whalio-new-chat-btn svg {
+                width: 18px;
+                height: 18px;
+            }
+            
+            .whalio-sidebar-title {
+                padding: 16px 16px 8px;
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--text-secondary, #6b7280);
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            
+            .whalio-sessions-list {
+                flex: 1;
+                overflow-y: auto;
+                padding: 0 8px 16px;
+            }
+            
+            .whalio-sessions-list::-webkit-scrollbar {
                 width: 6px;
             }
             
-            #chat-messages.chat-messages::-webkit-scrollbar-track {
-                background: transparent;
-            }
-            
-            #chat-messages.chat-messages::-webkit-scrollbar-thumb {
-                background: var(--border-color, #ccc);
+            .whalio-sessions-list::-webkit-scrollbar-thumb {
+                background: var(--border-color, #d1d5db);
                 border-radius: 3px;
             }
             
-            #chat-messages.chat-messages::-webkit-scrollbar-thumb:hover {
-                background: var(--text-secondary, #999);
+            .whalio-session-item {
+                padding: 12px 16px;
+                border-radius: 10px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                transition: all 0.2s ease;
+                margin-bottom: 4px;
+                position: relative;
             }
             
-            /* Chat message row - HIGH SPECIFICITY */
-            #chat-messages .chat-message {
-                max-width: 100%;
-                box-sizing: border-box;
+            .whalio-session-item:hover {
+                background: var(--bg-hover, #f3f4f6);
+            }
+            
+            .whalio-session-item.active {
+                background: rgba(99, 102, 241, 0.1);
+            }
+            
+            .whalio-session-item svg {
+                width: 18px;
+                height: 18px;
+                color: var(--text-secondary, #6b7280);
+                flex-shrink: 0;
+            }
+            
+            .whalio-session-item.active svg {
+                color: var(--whalio-primary);
+            }
+            
+            .whalio-session-info {
+                flex: 1;
+                min-width: 0;
+            }
+            
+            .whalio-session-title {
+                font-size: 14px;
+                color: var(--text-primary, #1f2937);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            
+            .whalio-session-item.active .whalio-session-title {
+                color: var(--whalio-primary);
+                font-weight: 500;
+            }
+            
+            .whalio-session-date {
+                font-size: 11px;
+                color: var(--text-tertiary, #9ca3af);
+                margin-top: 2px;
+            }
+            
+            .whalio-session-delete {
+                position: absolute;
+                right: 8px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 28px;
+                height: 28px;
+                border-radius: 6px;
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                color: var(--text-secondary, #6b7280);
+                transition: all 0.2s ease;
+            }
+            
+            .whalio-session-item:hover .whalio-session-delete {
                 display: flex;
-                margin-bottom: 8px;
+            }
+            
+            .whalio-session-delete:hover {
+                background: rgba(239, 68, 68, 0.1);
+                color: #ef4444;
+            }
+            
+            .whalio-session-delete svg {
+                width: 16px;
+                height: 16px;
+            }
+            
+            .whalio-sessions-empty {
+                padding: 24px 16px;
+                text-align: center;
+                color: var(--text-secondary, #6b7280);
+                font-size: 14px;
+            }
+            
+            /* ==================== MAIN CHAT AREA ==================== */
+            .whalio-main {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+                background: var(--bg-primary, #ffffff);
+            }
+            
+            /* ==================== CHAT HEADER ==================== */
+            .whalio-header {
+                padding: 12px 16px;
+                background: var(--whalio-gradient);
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+            }
+            
+            .whalio-header-left {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            
+            .whalio-toggle-sidebar {
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.1);
+                border: none;
+                cursor: pointer;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                transition: all 0.2s ease;
+            }
+            
+            .whalio-chat-window.fullscreen .whalio-toggle-sidebar {
+                display: flex;
+            }
+            
+            .whalio-toggle-sidebar:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+            
+            .whalio-toggle-sidebar svg {
+                width: 20px;
+                height: 20px;
+            }
+            
+            .whalio-avatar {
+                width: 36px;
+                height: 36px;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .whalio-avatar svg {
+                width: 20px;
+                height: 20px;
+            }
+            
+            .whalio-header-info h4 {
+                font-size: 15px;
+                font-weight: 600;
+                margin: 0;
+            }
+            
+            .whalio-status {
+                font-size: 12px;
+                opacity: 0.9;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            
+            .whalio-status-dot {
+                width: 8px;
+                height: 8px;
+                background: #34d399;
+                border-radius: 50%;
+                animation: pulse 2s infinite;
+            }
+            
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+            }
+            
+            .whalio-header-actions {
+                display: flex;
+                align-items: center;
                 gap: 8px;
             }
             
-            /* User message - BỎ GAP ĐỂ KHÔNG BỊ THỤT */
-            #chat-messages .chat-message.user-message {
-                justify-content: flex-end;
-                gap: 0 !important;
-                margin-left: auto;
-                max-width: fit-content;
+            .whalio-header-btn {
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.1);
+                border: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                transition: all 0.2s ease;
             }
             
-            /* Message content container - KHÔNG GIỚI HẠN */
-            #chat-messages .chat-message .message-content {
+            .whalio-header-btn:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+            
+            .whalio-header-btn svg {
+                width: 18px;
+                height: 18px;
+            }
+            
+            /* ==================== MESSAGES AREA ==================== */
+            .whalio-messages {
+                flex: 1;
+                overflow-y: auto;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+                scroll-behavior: smooth;
+            }
+            
+            .whalio-messages::-webkit-scrollbar {
+                width: 6px;
+            }
+            
+            .whalio-messages::-webkit-scrollbar-thumb {
+                background: var(--border-color, #d1d5db);
+                border-radius: 3px;
+            }
+            
+            /* Centered container for fullscreen */
+            .whalio-chat-window.fullscreen .whalio-messages {
+                padding: 24px;
+                max-width: 900px;
+                margin: 0 auto;
+                width: 100%;
+            }
+            
+            .whalio-message {
+                display: flex;
+                gap: 12px;
+                max-width: 100%;
+            }
+            
+            .whalio-message.user {
+                flex-direction: row-reverse;
+            }
+            
+            .whalio-message-avatar {
+                width: 32px;
+                height: 32px;
+                min-width: 32px;
+                border-radius: 50%;
+                background: var(--whalio-gradient);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+            }
+            
+            .whalio-message-avatar svg {
+                width: 16px;
+                height: 16px;
+            }
+            
+            .whalio-message.user .whalio-message-avatar {
+                background: var(--bg-tertiary, #e5e7eb);
+                color: var(--text-primary, #374151);
+            }
+            
+            .whalio-message-content {
                 display: flex;
                 flex-direction: column;
                 gap: 4px;
+                max-width: calc(100% - 50px);
             }
             
-            /* Message bubble - CHỈ GIỚI HẠN MAX-WIDTH */
-            #chat-messages .chat-message .message-bubble {
-                max-width: 450px !important;
-                display: inline-block;
+            .whalio-message-bubble {
+                padding: 12px 16px;
+                border-radius: 16px;
+                font-size: 14px;
+                line-height: 1.6;
                 word-wrap: break-word;
                 overflow-wrap: break-word;
-                word-break: break-word;
-                box-sizing: border-box;
-                white-space: normal !important;
-                font-family: inherit;
             }
             
-            /* AI message specific */
-            #chat-messages .chat-message.ai-message {
-                justify-content: flex-start;
+            .whalio-message.ai .whalio-message-bubble {
+                background: var(--bg-secondary, #f3f4f6);
+                color: var(--text-primary, #1f2937);
+                border-bottom-left-radius: 4px;
             }
             
-            #chat-messages .ai-message .message-content {
-                align-items: flex-start;
+            .whalio-message.user .whalio-message-bubble {
+                background: var(--whalio-gradient);
+                color: white;
+                border-bottom-right-radius: 4px;
             }
             
-            #chat-messages .ai-message .message-bubble {
-                white-space: normal;
+            .whalio-message-time {
+                font-size: 11px;
+                color: var(--text-tertiary, #9ca3af);
+                padding: 0 4px;
             }
             
-            /* User message specific */
-            #chat-messages .chat-message.user-message {
-                justify-content: flex-end;
+            .whalio-message.user .whalio-message-time {
+                text-align: right;
             }
             
-            #chat-messages .user-message .message-content {
-                align-items: flex-end;
+            /* ==================== TYPING INDICATOR ==================== */
+            .whalio-typing {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                padding: 8px 12px;
             }
             
-            /* ==================== TEXTAREA AUTO-RESIZE STYLES ==================== */
-            .chat-input-wrapper .chat-input {
-                resize: none;
-                min-height: 40px;
-                max-height: 200px;
-                overflow-y: auto;
-                line-height: 1.4;
-                padding: 10px 0;
-                font-family: inherit;
-                scrollbar-width: thin;
+            .whalio-typing-dot {
+                width: 8px;
+                height: 8px;
+                background: var(--text-secondary, #6b7280);
+                border-radius: 50%;
+                animation: typing 1.4s infinite;
             }
             
-            .chat-input-wrapper .chat-input::-webkit-scrollbar {
-                width: 4px;
+            .whalio-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+            .whalio-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+            
+            @keyframes typing {
+                0%, 60%, 100% { transform: translateY(0); }
+                30% { transform: translateY(-8px); }
             }
             
-            .chat-input-wrapper .chat-input::-webkit-scrollbar-thumb {
-                background: var(--border-color);
-                border-radius: 2px;
+            /* ==================== INPUT AREA ==================== */
+            .whalio-input-area {
+                padding: 16px;
+                border-top: 1px solid var(--border-color, #e5e7eb);
+                background: var(--bg-primary, #ffffff);
             }
             
-            /* ==================== CODE BLOCK STYLES - OVERFLOW FIX ==================== */
-            .message-bubble .code-block-wrapper {
+            .whalio-chat-window.fullscreen .whalio-input-area {
+                max-width: 900px;
+                margin: 0 auto;
+                width: 100%;
+                padding: 16px 24px 24px;
+                border-top: none;
+            }
+            
+            /* File Preview */
+            .whalio-file-preview {
+                margin-bottom: 12px;
+                padding: 12px;
+                background: var(--bg-secondary, #f3f4f6);
+                border-radius: 12px;
+                display: none;
                 position: relative;
-                margin: 8px 0;
+            }
+            
+            .whalio-file-preview.active {
+                display: block;
+            }
+            
+            .whalio-file-preview img {
+                max-width: 200px;
+                max-height: 150px;
+                border-radius: 8px;
+                object-fit: cover;
+            }
+            
+            .whalio-file-info {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            
+            .whalio-file-icon {
+                width: 40px;
+                height: 40px;
+                background: var(--whalio-primary);
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+            }
+            
+            .whalio-file-icon svg {
+                width: 20px;
+                height: 20px;
+            }
+            
+            .whalio-file-details {
+                flex: 1;
+            }
+            
+            .whalio-file-name {
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--text-primary, #1f2937);
+            }
+            
+            .whalio-file-size {
+                font-size: 12px;
+                color: var(--text-secondary, #6b7280);
+            }
+            
+            .whalio-file-remove {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                background: rgba(0, 0, 0, 0.5);
+                border: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                transition: all 0.2s ease;
+            }
+            
+            .whalio-file-remove:hover {
+                background: rgba(239, 68, 68, 0.8);
+            }
+            
+            .whalio-file-remove svg {
+                width: 14px;
+                height: 14px;
+            }
+            
+            /* Input Wrapper */
+            .whalio-input-wrapper {
+                display: flex;
+                align-items: flex-end;
+                gap: 12px;
+                padding: 12px 16px;
+                background: var(--bg-secondary, #f3f4f6);
+                border-radius: 24px;
+                border: 2px solid transparent;
+                transition: all 0.2s ease;
+            }
+            
+            .whalio-input-wrapper:focus-within {
+                border-color: var(--whalio-primary);
+                box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+            }
+            
+            .whalio-input-wrapper.drag-over {
+                border-color: var(--whalio-primary);
+                background: rgba(99, 102, 241, 0.05);
+            }
+            
+            .whalio-upload-btn {
+                width: 36px;
+                height: 36px;
+                min-width: 36px;
+                border-radius: 50%;
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--text-secondary, #6b7280);
+                transition: all 0.2s ease;
+            }
+            
+            .whalio-upload-btn:hover {
+                color: var(--whalio-primary);
+                background: rgba(99, 102, 241, 0.1);
+            }
+            
+            .whalio-upload-btn.has-file {
+                color: var(--whalio-primary);
+            }
+            
+            .whalio-upload-btn svg {
+                width: 22px;
+                height: 22px;
+            }
+            
+            .whalio-textarea {
+                flex: 1;
+                border: none;
+                background: transparent;
+                resize: none;
+                font-size: 15px;
+                line-height: 1.5;
+                color: var(--text-primary, #1f2937);
+                min-height: 24px;
+                max-height: 150px;
+                outline: none;
+                font-family: inherit;
+            }
+            
+            .whalio-textarea::placeholder {
+                color: var(--text-tertiary, #9ca3af);
+            }
+            
+            .whalio-send-btn {
+                width: 40px;
+                height: 40px;
+                min-width: 40px;
+                border-radius: 50%;
+                background: var(--whalio-gradient);
+                border: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                transition: all 0.2s ease;
+            }
+            
+            .whalio-send-btn:hover {
+                transform: scale(1.05);
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            }
+            
+            .whalio-send-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                transform: none;
+            }
+            
+            .whalio-send-btn svg {
+                width: 18px;
+                height: 18px;
+                margin-left: 2px;
+            }
+            
+            /* ==================== CODE BLOCKS ==================== */
+            .whalio-message-bubble .code-block-wrapper {
+                margin: 12px 0;
                 border-radius: 8px;
                 overflow: hidden;
                 background: #0d1117;
                 border: 1px solid #30363d;
-                max-width: 100%;
-                box-sizing: border-box;
             }
             
-            .message-bubble .code-block-header {
+            .whalio-message-bubble .code-block-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -216,16 +822,14 @@ const ChatWidget = {
                 border-bottom: 1px solid #30363d;
                 font-size: 12px;
                 color: #8b949e;
-                flex-wrap: wrap;
-                gap: 8px;
             }
             
-            .message-bubble .code-block-lang {
+            .whalio-message-bubble .code-block-lang {
                 font-weight: 500;
                 text-transform: uppercase;
             }
             
-            .message-bubble .code-copy-btn {
+            .whalio-message-bubble .code-copy-btn {
                 display: flex;
                 align-items: center;
                 gap: 4px;
@@ -237,515 +841,359 @@ const ChatWidget = {
                 font-size: 12px;
                 cursor: pointer;
                 transition: all 0.2s ease;
-                flex-shrink: 0;
             }
             
-            .message-bubble .code-copy-btn:hover {
+            .whalio-message-bubble .code-copy-btn:hover {
                 background: #30363d;
                 color: #f0f6fc;
             }
             
-            .message-bubble .code-copy-btn.copied {
+            .whalio-message-bubble .code-copy-btn.copied {
                 background: #238636;
                 border-color: #238636;
                 color: #ffffff;
             }
             
-            .message-bubble .code-copy-btn svg {
+            .whalio-message-bubble .code-copy-btn svg {
                 width: 14px;
                 height: 14px;
             }
             
-            /* Pre and Code - CRITICAL OVERFLOW FIX */
-            .message-bubble pre {
+            .whalio-message-bubble pre {
                 margin: 0;
                 padding: 12px 16px;
                 overflow-x: auto;
-                overflow-y: hidden;
                 background: #0d1117;
-                max-width: 100%;
-                box-sizing: border-box;
-                scrollbar-width: thin;
-                scrollbar-color: #30363d transparent;
             }
             
-            .message-bubble pre::-webkit-scrollbar {
-                height: 6px;
-            }
-            
-            .message-bubble pre::-webkit-scrollbar-track {
-                background: transparent;
-            }
-            
-            .message-bubble pre::-webkit-scrollbar-thumb {
-                background: #30363d;
-                border-radius: 3px;
-            }
-            
-            .message-bubble pre::-webkit-scrollbar-thumb:hover {
-                background: #484f58;
-            }
-            
-            .message-bubble pre code {
-                font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+            .whalio-message-bubble pre code {
+                font-family: 'Fira Code', 'Consolas', monospace;
                 font-size: 13px;
                 line-height: 1.5;
                 background: transparent;
-                padding: 0;
-                border-radius: 0;
                 white-space: pre;
-                word-wrap: normal;
-                display: block;
-                overflow-x: visible;
             }
             
-            .message-bubble pre code.hljs {
-                background: transparent;
-                padding: 0;
-            }
-            
-            /* Inline code */
-            .message-bubble code:not(pre code) {
+            .whalio-message-bubble code:not(pre code) {
                 background: rgba(110, 118, 129, 0.2);
                 padding: 2px 6px;
                 border-radius: 4px;
-                font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+                font-family: 'Fira Code', monospace;
                 font-size: 0.9em;
-                color: #e6edf3;
-                word-break: break-all;
             }
             
-            /* Light mode code styles */
-            html:not(.dark-mode) .message-bubble .code-block-wrapper {
+            /* Light mode code */
+            html:not(.dark-mode) .whalio-message-bubble .code-block-wrapper {
                 background: #f6f8fa;
                 border-color: #d0d7de;
             }
             
-            html:not(.dark-mode) .message-bubble .code-block-header {
+            html:not(.dark-mode) .whalio-message-bubble .code-block-header {
                 background: #f6f8fa;
-                border-bottom-color: #d0d7de;
-                color: #57606a;
-            }
-            
-            html:not(.dark-mode) .message-bubble .code-copy-btn {
                 border-color: #d0d7de;
                 color: #57606a;
             }
             
-            html:not(.dark-mode) .message-bubble .code-copy-btn:hover {
-                background: #d0d7de;
-                color: #24292f;
-            }
-            
-            html:not(.dark-mode) .message-bubble pre {
+            html:not(.dark-mode) .whalio-message-bubble pre {
                 background: #f6f8fa;
-                scrollbar-color: #d0d7de transparent;
             }
             
-            html:not(.dark-mode) .message-bubble pre::-webkit-scrollbar-thumb {
-                background: #d0d7de;
-            }
-            
-            html:not(.dark-mode) .message-bubble pre::-webkit-scrollbar-thumb:hover {
-                background: #afb8c1;
-            }
-            
-            html:not(.dark-mode) .message-bubble code:not(pre code) {
-                background: rgba(175, 184, 193, 0.2);
-                color: #24292f;
-            }
-            
-            /* User message in bubble */
-            .user-message .message-bubble code:not(pre code) {
+            /* User message code styling */
+            .whalio-message.user .whalio-message-bubble code:not(pre code) {
                 background: rgba(255, 255, 255, 0.2);
                 color: white;
             }
             
-            /* ==================== MESSAGE TEXT OVERFLOW ==================== */
-            .message-bubble .message-text {
+            /* ==================== MESSAGE IMAGE & FILE ==================== */
+            .whalio-message-image img {
                 max-width: 100%;
-                overflow-wrap: anywhere;
-                word-break: break-word;
+                max-height: 300px;
+                border-radius: 12px;
+                margin-bottom: 8px;
             }
             
-            /* Image in message */
-            .message-bubble .message-image {
-                max-width: 100%;
+            .whalio-message-file {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 12px;
+                background: rgba(0, 0, 0, 0.05);
+                border-radius: 8px;
+                margin-bottom: 8px;
             }
             
-            .message-bubble .message-image img {
-                max-width: 100%;
-                height: auto;
+            .whalio-message.user .whalio-message-file {
+                background: rgba(255, 255, 255, 0.1);
             }
             
-            /* File in message */
-            .message-bubble .message-file {
-                max-width: 100%;
-                box-sizing: border-box;
+            /* ==================== MOBILE RESPONSIVE ==================== */
+            @media (max-width: 768px) {
+                .whalio-chat-window {
+                    width: calc(100% - 20px);
+                    height: calc(100% - 120px);
+                    bottom: 90px;
+                    right: 10px;
+                    left: 10px;
+                }
+                
+                .whalio-chat-window.fullscreen .whalio-sidebar {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    bottom: 0;
+                    z-index: 10;
+                    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+                }
+                
+                .whalio-chat-window.fullscreen .whalio-sidebar.collapsed {
+                    transform: translateX(-100%);
+                }
+                
+                .whalio-launcher {
+                    bottom: 16px;
+                    right: 16px;
+                    width: 56px;
+                    height: 56px;
+                }
+            }
+            
+            /* ==================== DARK MODE OVERRIDES ==================== */
+            .dark-mode .whalio-chat-window {
+                background: var(--bg-primary, #1f2937);
+                border-color: var(--border-color, #374151);
+            }
+            
+            .dark-mode .whalio-sidebar {
+                background: var(--bg-secondary, #111827);
+                border-color: var(--border-color, #374151);
+            }
+            
+            .dark-mode .whalio-session-item:hover {
+                background: var(--bg-hover, #374151);
+            }
+            
+            .dark-mode .whalio-input-wrapper {
+                background: var(--bg-secondary, #374151);
+            }
+            
+            .dark-mode .whalio-message.ai .whalio-message-bubble {
+                background: var(--bg-secondary, #374151);
+            }
+            
+            .dark-mode .whalio-file-preview {
+                background: var(--bg-secondary, #374151);
             }
         `;
-        document.head.appendChild(customStyles);
+        document.head.appendChild(styles);
     },
     
-    /**
-     * Create and inject the widget HTML into the page
-     * HTML written on single lines to prevent indentation artifacts in DOM
-     */
+    // ==================== CREATE HTML ====================
     createWidgetHTML() {
-        const widgetHTML = this.cleanHTML(`
-            <!-- Whalio AI Chat Widget -->
-            <div id="whalio-chat-widget" class="chat-widget-container">
-                <!-- Floating Launcher Button -->
-                <button id="chat-launcher" class="chat-launcher" aria-label="Open chat">
-                    <svg class="chat-icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.08L2 22l4.92-1.36C8.42 21.5 10.15 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/><circle cx="8" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="16" cy="12" r="1" fill="currentColor"/></svg>
-                    <svg class="chat-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        const html = `
+            <div class="whalio-chat-widget" id="whalio-chat-widget">
+                <!-- Launcher Button -->
+                <button class="whalio-launcher" id="whalio-launcher" aria-label="Open chat">
+                    <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.08L2 22l4.92-1.36C8.42 21.5 10.15 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/>
+                        <circle cx="8" cy="12" r="1" fill="currentColor"/>
+                        <circle cx="12" cy="12" r="1" fill="currentColor"/>
+                        <circle cx="16" cy="12" r="1" fill="currentColor"/>
+                    </svg>
+                    <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
                 </button>
                 
                 <!-- Chat Window -->
-                <div id="chat-window" class="chat-window">
-                    <!-- Header -->
-                    <div class="chat-header">
-                        <div class="chat-header-info">
-                            <div class="chat-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></div>
-                            <div class="chat-header-text"><h4>Whalio AI Assistant</h4><span class="chat-status"><span class="status-dot"></span>Trực tuyến</span></div>
+                <div class="whalio-chat-window" id="whalio-chat-window">
+                    <!-- Sidebar (Fullscreen only) -->
+                    <div class="whalio-sidebar" id="whalio-sidebar">
+                        <div class="whalio-sidebar-header">
+                            <button class="whalio-new-chat-btn" id="whalio-new-chat">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"/>
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                                </svg>
+                                Cuộc trò chuyện mới
+                            </button>
                         </div>
-                        <button id="chat-close-btn" class="chat-close-btn" aria-label="Close chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                        <div class="whalio-sidebar-title">Lịch sử trò chuyện</div>
+                        <div class="whalio-sessions-list" id="whalio-sessions-list">
+                            <div class="whalio-sessions-empty">Chưa có cuộc trò chuyện nào</div>
+                        </div>
                     </div>
                     
-                    <!-- Messages Area -->
-                    <div id="chat-messages" class="chat-messages">
-                        <!-- Messages will be appended here -->
-                    </div>
-                    
-                    <!-- Input Area -->
-                    <div class="chat-input-area">
-                        <!-- File Preview Area (Hiển thị khi chọn file/ảnh) -->
-                        <div id="chat-file-preview" class="chat-file-preview" style="display: none;">
-                            <div class="preview-container">
-                                <!-- Image Preview -->
-                                <img id="chat-preview-img" src="" alt="Preview" style="display: none;" />
-                                <!-- File Info Preview -->
-                                <div id="chat-preview-file" class="file-preview-info" style="display: none;">
-                                    <div class="file-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6z"/><path d="M14 2v6h6"/></svg></div>
-                                    <div class="file-details"><div class="file-name"></div><div class="file-size"></div></div>
+                    <!-- Main Chat Area -->
+                    <div class="whalio-main">
+                        <!-- Header -->
+                        <div class="whalio-header">
+                            <div class="whalio-header-left">
+                                <button class="whalio-toggle-sidebar" id="whalio-toggle-sidebar" aria-label="Toggle sidebar">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="3" y1="6" x2="21" y2="6"/>
+                                        <line x1="3" y1="12" x2="21" y2="12"/>
+                                        <line x1="3" y1="18" x2="21" y2="18"/>
+                                    </svg>
+                                </button>
+                                <div class="whalio-avatar">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                                    </svg>
                                 </div>
-                                <button id="chat-remove-file" class="remove-file-btn" aria-label="Remove file"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+                                <div class="whalio-header-info">
+                                    <h4>Whalio AI</h4>
+                                    <span class="whalio-status">
+                                        <span class="whalio-status-dot"></span>
+                                        Trực tuyến
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="whalio-header-actions">
+                                <button class="whalio-header-btn" id="whalio-fullscreen-btn" aria-label="Toggle fullscreen">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                                    </svg>
+                                </button>
+                                <button class="whalio-header-btn" id="whalio-close-btn" aria-label="Close">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                         
-                        <div class="chat-input-wrapper">
-                            <!-- Hidden File Input for All Types -->
-                            <input type="file" id="chat-file-input" accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.js,.html,.css,.py,.java,.cpp,.c,.ts,.jsx,.tsx,.json,.xml,.yaml,.yml,.md,.sql,.sh,.bash" hidden />
+                        <!-- Messages -->
+                        <div class="whalio-messages" id="whalio-messages"></div>
+                        
+                        <!-- Input Area -->
+                        <div class="whalio-input-area">
+                            <!-- File Preview -->
+                            <div class="whalio-file-preview" id="whalio-file-preview">
+                                <img id="whalio-preview-img" src="" alt="Preview" style="display: none;" />
+                                <div class="whalio-file-info" id="whalio-file-info" style="display: none;">
+                                    <div class="whalio-file-icon">
+                                        <svg viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6z"/>
+                                            <path d="M14 2v6h6" fill="none" stroke="currentColor" stroke-width="1"/>
+                                        </svg>
+                                    </div>
+                                    <div class="whalio-file-details">
+                                        <div class="whalio-file-name"></div>
+                                        <div class="whalio-file-size"></div>
+                                    </div>
+                                </div>
+                                <button class="whalio-file-remove" id="whalio-file-remove" aria-label="Remove file">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M18 6L6 18M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
                             
-                            <!-- File/Image Upload Button -->
-                            <button id="chat-upload-btn" class="chat-upload-btn" aria-label="Attach file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></button>
-                            
-                            <textarea id="chat-input" class="chat-input" placeholder="Hỏi Whalio bất cứ điều gì..." autocomplete="off" rows="1"></textarea>
-                            <button id="chat-send-btn" class="chat-send-btn" aria-label="Send message"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+                            <!-- Input Wrapper -->
+                            <div class="whalio-input-wrapper" id="whalio-input-wrapper">
+                                <input type="file" id="whalio-file-input" accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.js,.html,.css,.py,.java,.cpp,.c,.ts,.jsx,.tsx,.json,.xml,.yaml,.yml,.md,.sql,.sh" hidden />
+                                <button class="whalio-upload-btn" id="whalio-upload-btn" aria-label="Attach file">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <line x1="12" y1="8" x2="12" y2="16"/>
+                                        <line x1="8" y1="12" x2="16" y2="12"/>
+                                    </svg>
+                                </button>
+                                <textarea class="whalio-textarea" id="whalio-textarea" placeholder="Hỏi Whalio bất cứ điều gì..." rows="1"></textarea>
+                                <button class="whalio-send-btn" id="whalio-send-btn" aria-label="Send message">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        `);
+        `;
         
-        // Insert widget into the body
-        document.body.insertAdjacentHTML('beforeend', widgetHTML);
-    },
-
-    /**
-     * Clean HTML template literal - remove extra whitespace and newlines between tags
-     * but preserve intentional spaces within content
-     */
-    cleanHTML(html) {
-        return html
-            // Remove newlines and extra whitespace between tags
-            .replace(/>\s+</g, '><')
-            // Remove leading/trailing whitespace
-            .trim();
+        document.body.insertAdjacentHTML('beforeend', html);
     },
     
-    /**
-     * Set up event listeners
-     */
+    // ==================== EVENT LISTENERS ====================
     setupEventListeners() {
-        const launcher = document.getElementById('chat-launcher');
-        const closeBtn = document.getElementById('chat-close-btn');
-        const sendBtn = document.getElementById('chat-send-btn');
-        const input = document.getElementById('chat-input');
+        // Launcher
+        document.getElementById('whalio-launcher').addEventListener('click', () => this.toggleChat());
         
-        // Toggle chat window
-        launcher.addEventListener('click', () => this.toggleChat());
-        closeBtn.addEventListener('click', () => this.closeChat());
+        // Close button
+        document.getElementById('whalio-close-btn').addEventListener('click', () => this.closeChat());
         
-        // Send message
-        sendBtn.addEventListener('click', () => this.handleSendMessage());
+        // Fullscreen toggle
+        document.getElementById('whalio-fullscreen-btn').addEventListener('click', () => this.toggleFullscreen());
         
-        // ==================== TEXTAREA KEY HANDLING ====================
-        input.addEventListener('keydown', (e) => {
-            // Tab key: Insert 4 spaces
+        // Sidebar toggle
+        document.getElementById('whalio-toggle-sidebar').addEventListener('click', () => this.toggleSidebar());
+        
+        // New chat button
+        document.getElementById('whalio-new-chat').addEventListener('click', () => this.startNewChat());
+        
+        // Send button
+        document.getElementById('whalio-send-btn').addEventListener('click', () => this.handleSendMessage());
+        
+        // Textarea
+        const textarea = document.getElementById('whalio-textarea');
+        textarea.addEventListener('keydown', (e) => {
             if (e.key === 'Tab') {
                 e.preventDefault();
-                const start = input.selectionStart;
-                const end = input.selectionEnd;
-                const spaces = '    '; // 4 spaces
-                
-                input.value = input.value.substring(0, start) + spaces + input.value.substring(end);
-                input.selectionStart = input.selectionEnd = start + spaces.length;
-                
-                // Trigger auto-resize
-                this.autoResizeTextarea(input);
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                textarea.value = textarea.value.substring(0, start) + '    ' + textarea.value.substring(end);
+                textarea.selectionStart = textarea.selectionEnd = start + 4;
+                this.autoResizeTextarea(textarea);
                 return;
             }
             
-            // Enter key handling
-            if (e.key === 'Enter') {
-                if (e.shiftKey) {
-                    // Shift + Enter: New line (default behavior)
-                    // Let it happen naturally, just auto-resize after
-                    setTimeout(() => this.autoResizeTextarea(input), 0);
-                } else {
-                    // Enter only: Send message
-                    e.preventDefault();
-                    this.handleSendMessage();
-                }
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.handleSendMessage();
             }
         });
         
-        // Auto-resize textarea on input
-        input.addEventListener('input', () => {
-            this.autoResizeTextarea(input);
+        textarea.addEventListener('input', () => this.autoResizeTextarea(textarea));
+        
+        // File upload
+        document.getElementById('whalio-upload-btn').addEventListener('click', () => {
+            document.getElementById('whalio-file-input').click();
         });
         
-        // ==================== FILE UPLOAD & DRAG-DROP EVENT LISTENERS ====================
-        const uploadBtn = document.getElementById('chat-upload-btn');
-        const fileInput = document.getElementById('chat-file-input');
-        const removeFileBtn = document.getElementById('chat-remove-file');
-        const inputWrapper = document.querySelector('.chat-input-wrapper');
+        document.getElementById('whalio-file-input').addEventListener('change', (e) => this.handleFileSelect(e));
+        document.getElementById('whalio-file-remove').addEventListener('click', () => this.clearSelectedFile());
         
-        // Click nút upload -> kích hoạt input file
-        uploadBtn.addEventListener('click', () => {
-            fileInput.click();
-        });
-        
-        // Khi chọn file -> hiển thị preview
-        fileInput.addEventListener('change', (e) => {
-            this.handleFileSelect(e);
-        });
-        
-        // Xóa file đã chọn
-        removeFileBtn.addEventListener('click', () => {
-            this.clearSelectedFile();
-        });
-        
-        // ==================== DRAG & DROP EVENT LISTENERS ====================
-        // Prevent default drag behaviors
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            inputWrapper.addEventListener(eventName, (e) => {
+        // Drag & Drop
+        const inputWrapper = document.getElementById('whalio-input-wrapper');
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+            inputWrapper.addEventListener(event, (e) => {
                 e.preventDefault();
                 e.stopPropagation();
             });
         });
         
-        // Highlight drop zone
-        ['dragenter', 'dragover'].forEach(eventName => {
-            inputWrapper.addEventListener(eventName, () => {
-                inputWrapper.classList.add('drag-over');
-            });
+        ['dragenter', 'dragover'].forEach(event => {
+            inputWrapper.addEventListener(event, () => inputWrapper.classList.add('drag-over'));
         });
         
-        ['dragleave', 'drop'].forEach(eventName => {
-            inputWrapper.addEventListener(eventName, () => {
-                inputWrapper.classList.remove('drag-over');
-            });
+        ['dragleave', 'drop'].forEach(event => {
+            inputWrapper.addEventListener(event, () => inputWrapper.classList.remove('drag-over'));
         });
         
-        // Handle dropped files
         inputWrapper.addEventListener('drop', (e) => {
             const files = e.dataTransfer.files;
             if (files.length > 0) {
-                this.handleFileSelect({ target: { files: [files[0]] } }); // Chỉ lấy file đầu tiên
+                this.handleFileSelect({ target: { files: [files[0]] } });
             }
         });
         
-        // Close on outside click (optional)
-        document.addEventListener('click', (e) => {
-            const widget = document.getElementById('whalio-chat-widget');
-            if (this.isOpen && !widget.contains(e.target)) {
-                // Optionally close on outside click
-                // this.closeChat();
-            }
-        });
-        
-        // Listen for theme changes to update highlight.js theme
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === 'class') {
-                    this.updateHighlightTheme();
-                }
-            });
-        });
-        observer.observe(document.documentElement, { attributes: true });
+        // Theme observer
+        const observer = new MutationObserver(() => this.updateHighlightTheme());
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     },
     
-    /**
-     * Auto-resize textarea based on content
-     * @param {HTMLTextAreaElement} textarea 
-     */
-    autoResizeTextarea(textarea) {
-        // Reset height to auto to get the correct scrollHeight
-        textarea.style.height = 'auto';
-        
-        // Calculate new height
-        const minHeight = 40;
-        const maxHeight = 200;
-        const scrollHeight = textarea.scrollHeight;
-        
-        // Set new height within bounds
-        const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
-        textarea.style.height = newHeight + 'px';
-        
-        // Show scrollbar if content exceeds max height
-        textarea.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
-    },
-    
-    /**
-     * Biến lưu trữ file đã chọn (ảnh hoặc file khác)
-     */
-    selectedFile: null,
-    
-    /**
-     * Xử lý khi người dùng chọn file (ảnh hoặc file khác)
-     * @param {Event} e - Change event từ input file hoặc drag & drop
-     */
-    handleFileSelect(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        // Kiểm tra định dạng file
-        const allowedTypes = [
-            // Images
-            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-            // Documents  
-            'application/pdf', 'application/msword', 
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'text/plain',
-            // Spreadsheets
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
-            // Presentations
-            'application/vnd.ms-powerpoint',
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            // Archives
-            'application/zip', 'application/x-rar-compressed',
-            // Code files
-            'application/javascript', 'text/javascript',
-            'text/html', 'text/css',
-            'text/x-python', 'text/x-java',
-            'text/x-c', 'text/x-c++',
-            'application/json', 'application/xml',
-            'text/yaml', 'text/markdown',
-            'application/x-sh'
-        ];
-        
-        const allowedExtensions = [
-            '.jpg', '.jpeg', '.png', '.gif', '.webp', 
-            '.pdf', '.doc', '.docx', '.txt', 
-            '.xls', '.xlsx', '.ppt', '.pptx', 
-            '.zip', '.rar',
-            '.js', '.ts', '.jsx', '.tsx',
-            '.html', '.css', '.scss', '.sass',
-            '.py', '.java', '.cpp', '.c', '.h', '.hpp',
-            '.json', '.xml', '.yaml', '.yml',
-            '.md', '.sql', '.sh', '.bash',
-            '.php', '.rb', '.go', '.rs', '.swift'
-        ];
-        const fileExt = file.name.toLowerCase().substr(file.name.lastIndexOf('.'));
-        
-        if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
-            alert('Loại file không được hỗ trợ! Chỉ chấp nhận: ảnh, PDF, Word, Excel, PowerPoint, ZIP, và các file code.');
-            return;
-        }
-        
-        // Kiểm tra kích thước file (max 50MB)
-        if (file.size > 50 * 1024 * 1024) {
-            alert('File quá lớn! Vui lòng chọn file nhỏ hơn 50MB.');
-            return;
-        }
-        
-        // Lưu file vào biến
-        this.selectedFile = file;
-        
-        // Hiển thị preview
-        const previewContainer = document.getElementById('chat-file-preview');
-        const previewImg = document.getElementById('chat-preview-img');
-        const previewFile = document.getElementById('chat-preview-file');
-        const isImage = file.type.startsWith('image/');
-        
-        if (isImage) {
-            // Hiển thị ảnh
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                previewImg.src = event.target.result;
-                previewImg.style.display = 'block';
-                previewFile.style.display = 'none';
-                previewContainer.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        } else {
-            // Hiển thị thông tin file
-            const fileName = previewFile.querySelector('.file-name');
-            const fileSize = previewFile.querySelector('.file-size');
-            
-            fileName.textContent = file.name;
-            fileSize.textContent = this.formatFileSize(file.size);
-            
-            previewImg.style.display = 'none';
-            previewFile.style.display = 'flex';
-            previewContainer.style.display = 'block';
-        }
-        
-        // Thêm highlight cho upload button
-        document.getElementById('chat-upload-btn').classList.add('has-file');
-    },
-    
-    /**
-     * Xóa file đã chọn và reset preview
-     */
-    clearSelectedFile() {
-        this.selectedFile = null;
-        
-        // Reset input file
-        const fileInput = document.getElementById('chat-file-input');
-        fileInput.value = '';
-        
-        // Ẩn preview
-        const previewContainer = document.getElementById('chat-file-preview');
-        previewContainer.style.display = 'none';
-        
-        // Reset preview elements
-        document.getElementById('chat-preview-img').style.display = 'none';
-        document.getElementById('chat-preview-file').style.display = 'none';
-        
-        // Xóa highlight từ upload button
-        document.getElementById('chat-upload-btn').classList.remove('has-file');
-    },
-    
-    /**
-     * Format file size to human readable
-     * @param {number} bytes 
-     * @returns {string}
-     */
-    formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    },
-    
-    /**
-     * Toggle chat window visibility
-     */
+    // ==================== CHAT CONTROLS ====================
     toggleChat() {
         if (this.isOpen) {
             this.closeChat();
@@ -754,194 +1202,296 @@ const ChatWidget = {
         }
     },
     
-    /**
-     * Open the chat window
-     */
     openChat() {
-        const chatWindow = document.getElementById('chat-window');
-        const launcher = document.getElementById('chat-launcher');
+        const chatWindow = document.getElementById('whalio-chat-window');
+        const launcher = document.getElementById('whalio-launcher');
         
         chatWindow.classList.add('open');
         launcher.classList.add('active');
         this.isOpen = true;
         
-        // Focus on input
+        // Load sessions when opening fullscreen
+        if (this.isFullScreen) {
+            this.loadSessions();
+        }
+        
         setTimeout(() => {
-            const input = document.getElementById('chat-input');
-            input.focus();
-            this.autoResizeTextarea(input);
+            document.getElementById('whalio-textarea').focus();
         }, 300);
     },
     
-    /**
-     * Close the chat window
-     */
     closeChat() {
-        const chatWindow = document.getElementById('chat-window');
-        const launcher = document.getElementById('chat-launcher');
+        const chatWindow = document.getElementById('whalio-chat-window');
+        const launcher = document.getElementById('whalio-launcher');
         
         chatWindow.classList.remove('open');
         launcher.classList.remove('active');
         this.isOpen = false;
+        
+        // Exit fullscreen when closing
+        if (this.isFullScreen) {
+            this.exitFullscreen();
+        }
     },
     
-    /**
-     * Add welcome message on init
-     */
+    toggleFullscreen() {
+        if (this.isFullScreen) {
+            this.exitFullscreen();
+        } else {
+            this.enterFullscreen();
+        }
+    },
+    
+    enterFullscreen() {
+        const chatWindow = document.getElementById('whalio-chat-window');
+        const launcher = document.getElementById('whalio-launcher');
+        const fullscreenBtn = document.getElementById('whalio-fullscreen-btn');
+        
+        chatWindow.classList.add('fullscreen');
+        launcher.style.display = 'none';
+        this.isFullScreen = true;
+        
+        // Change icon to minimize
+        fullscreenBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 14h6m0 0v6m0-6L3 21M20 10h-6m0 0V4m0 6l7-7"/>
+            </svg>
+        `;
+        
+        // Load sessions
+        this.loadSessions();
+    },
+    
+    exitFullscreen() {
+        const chatWindow = document.getElementById('whalio-chat-window');
+        const launcher = document.getElementById('whalio-launcher');
+        const fullscreenBtn = document.getElementById('whalio-fullscreen-btn');
+        
+        chatWindow.classList.remove('fullscreen');
+        launcher.style.display = 'flex';
+        this.isFullScreen = false;
+        
+        // Change icon back to maximize
+        fullscreenBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+        `;
+    },
+    
+    toggleSidebar() {
+        const sidebar = document.getElementById('whalio-sidebar');
+        sidebar.classList.toggle('collapsed');
+        this.isSidebarOpen = !sidebar.classList.contains('collapsed');
+    },
+    
+    // ==================== SESSION MANAGEMENT ====================
+    async loadSessions() {
+        try {
+            const response = await fetch(this.SESSIONS_ENDPOINT);
+            const data = await response.json();
+            
+            if (data.success && data.sessions) {
+                this.sessions = data.sessions;
+                this.renderSessionsList();
+            }
+        } catch (error) {
+            console.error('Error loading sessions:', error);
+        }
+    },
+    
+    renderSessionsList() {
+        const container = document.getElementById('whalio-sessions-list');
+        
+        if (this.sessions.length === 0) {
+            container.innerHTML = '<div class="whalio-sessions-empty">Chưa có cuộc trò chuyện nào</div>';
+            return;
+        }
+        
+        container.innerHTML = this.sessions.map(session => {
+            const date = new Date(session.createdAt);
+            const dateStr = date.toLocaleDateString('vi-VN', { 
+                day: '2-digit', 
+                month: '2-digit',
+                year: 'numeric'
+            });
+            
+            const isActive = session.sessionId === this.currentSessionId;
+            
+            return `
+                <div class="whalio-session-item ${isActive ? 'active' : ''}" data-session-id="${session.sessionId}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <div class="whalio-session-info">
+                        <div class="whalio-session-title">${this.escapeHtml(session.title)}</div>
+                        <div class="whalio-session-date">${dateStr}</div>
+                    </div>
+                    <button class="whalio-session-delete" data-session-id="${session.sessionId}" aria-label="Delete session">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+        }).join('');
+        
+        // Add click listeners
+        container.querySelectorAll('.whalio-session-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('.whalio-session-delete')) return;
+                const sessionId = item.dataset.sessionId;
+                this.loadSession(sessionId);
+            });
+        });
+        
+        container.querySelectorAll('.whalio-session-delete').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const sessionId = btn.dataset.sessionId;
+                this.deleteSession(sessionId);
+            });
+        });
+    },
+    
+    async loadSession(sessionId) {
+        try {
+            const response = await fetch(`${this.SESSION_ENDPOINT}/${sessionId}`);
+            const data = await response.json();
+            
+            if (data.success && data.session) {
+                this.currentSessionId = sessionId;
+                this.clearMessages();
+                
+                // Render messages
+                data.session.messages.forEach(msg => {
+                    this.addMessage(msg.content, msg.role === 'user' ? 'user' : 'ai', false);
+                });
+                
+                this.scrollToBottom();
+                this.renderSessionsList();
+            }
+        } catch (error) {
+            console.error('Error loading session:', error);
+        }
+    },
+    
+    async deleteSession(sessionId) {
+        if (!confirm('Bạn có chắc muốn xóa cuộc trò chuyện này?')) return;
+        
+        try {
+            const response = await fetch(`${this.SESSION_ENDPOINT}/${sessionId}`, {
+                method: 'DELETE'
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                // If deleting current session, start new chat
+                if (sessionId === this.currentSessionId) {
+                    this.startNewChat();
+                }
+                
+                // Reload sessions list
+                this.loadSessions();
+            }
+        } catch (error) {
+            console.error('Error deleting session:', error);
+        }
+    },
+    
+    startNewChat() {
+        this.currentSessionId = null;
+        this.clearMessages();
+        this.addWelcomeMessage();
+        this.renderSessionsList();
+        document.getElementById('whalio-textarea').focus();
+    },
+    
+    clearMessages() {
+        document.getElementById('whalio-messages').innerHTML = '';
+    },
+    
+    // ==================== MESSAGING ====================
     addWelcomeMessage() {
         setTimeout(() => {
-            this.addMessage("Xin chào! 👋 Mình là Whalio AI Assistant. Mình có thể giúp bạn tìm hiểu về các tính năng của Whalio, giải đáp thắc mắc, hoặc hỗ trợ lập trình. Hãy hỏi mình bất cứ điều gì!", 'ai');
-        }, 500);
+            this.addMessage("Xin chào! 👋 Mình là Whalio AI Assistant. Mình có thể giúp bạn tìm hiểu về các tính năng của Whalio, giải đáp thắc mắc, hoặc hỗ trợ lập trình. Hãy hỏi mình bất cứ điều gì!", 'ai', false);
+        }, 300);
     },
     
-    /**
-     * Handle sending a message - Connected to Gemini AI API
-     * Hỗ trợ gửi cả text và ảnh (Multimodal)
-     * ENHANCED: Smart trimming - only trim start/end, preserve internal spacing/tabs
-     */
     async handleSendMessage() {
-        const input = document.getElementById('chat-input');
-        const rawMessage = input.value;
+        const textarea = document.getElementById('whalio-textarea');
+        const message = textarea.value.trim();
         
-        // Smart trim: Only remove leading/trailing whitespace, preserve internal indentation
-        const message = this.smartTrim(rawMessage);
-        
-        // Kiểm tra: phải có message hoặc file, và không đang typing
         if ((!message && !this.selectedFile) || this.isTyping) return;
         
-        // Hiển thị tin nhắn người dùng (bao gồm cả file nếu có)
+        // Display user message
         if (this.selectedFile) {
-            // Nếu có file, hiển thị file trong tin nhắn
             this.addMessageWithFile(message, this.selectedFile, 'user');
         } else {
-            // Chỉ có text
             this.addMessage(message, 'user');
         }
         
-        // Clear input và reset textarea height
-        input.value = '';
-        input.style.height = '40px';
-        input.style.overflowY = 'hidden';
+        // Clear input
+        textarea.value = '';
+        textarea.style.height = 'auto';
         
-        // Show typing indicator
+        // Show typing
         this.showTypingIndicator();
         
         try {
-            // ==================== SỬ DỤNG FORMDATA THAY VÌ JSON ====================
-            // Tạo FormData để gửi multipart/form-data
             const formData = new FormData();
-            
-            // Append message (luôn gửi, có thể rỗng)
             formData.append('message', message);
             
-            // Append file/image với key 'image' để khớp với backend multer
+            // Attach sessionId if exists
+            if (this.currentSessionId) {
+                formData.append('sessionId', this.currentSessionId);
+            }
+            
+            // Attach file
             if (this.selectedFile) {
                 formData.append('image', this.selectedFile);
             }
             
-            // Gửi request (KHÔNG set Content-Type header, để browser tự xử lý boundary)
             const response = await fetch(this.API_ENDPOINT, {
                 method: 'POST',
                 body: formData
-                // Lưu ý: Không set headers Content-Type, browser sẽ tự thêm với boundary
             });
             
             const data = await response.json();
             
-            // Hide typing indicator
             this.hideTypingIndicator();
             
-            if (data.success && data.response) {
-                // Display AI response
+            if (data.success) {
+                // Update session ID
+                if (data.sessionId) {
+                    this.currentSessionId = data.sessionId;
+                    
+                    // Reload sessions if in fullscreen
+                    if (this.isFullScreen && data.isNewSession) {
+                        this.loadSessions();
+                    }
+                }
+                
                 this.addMessage(data.response, 'ai');
             } else {
-                // Handle API error response
-                const errorMessage = data.response || data.message || 'Xin lỗi, mình không thể xử lý yêu cầu này. Hãy thử lại nhé! 😊';
+                const errorMessage = data.response || data.message || 'Xin lỗi, mình không thể xử lý yêu cầu này.';
                 this.addMessage(errorMessage, 'ai');
             }
             
         } catch (error) {
             console.error('Chat API Error:', error);
-            
-            // Hide typing indicator
             this.hideTypingIndicator();
-            
-            // Show fallback error message
-            const fallbackIndex = Math.floor(Math.random() * this.fallbackResponses.length);
-            this.addMessage(this.fallbackResponses[fallbackIndex], 'ai');
+            const fallback = this.fallbackResponses[Math.floor(Math.random() * this.fallbackResponses.length)];
+            this.addMessage(fallback, 'ai');
         } finally {
-            // ==================== LUÔN CLEAR FILE SAU KHI GỬI ====================
-            // Dù thành công hay lỗi, luôn reset file input và preview
             this.clearSelectedFile();
         }
     },
-
-    /**
-     * Smart trimming - only remove leading/trailing whitespace and newlines
-     * but preserve internal spacing, tabs, and intentional indentation
-     * @param {string} text 
-     * @returns {string}
-     */
-    smartTrim(text) {
-        if (!text) return text;
-        
-        // Remove only leading and trailing whitespace/newlines
-        // This preserves internal tabs, spaces, and multi-line formatting
-        return text.replace(/^[\s\n\r]+|[\s\n\r]+$/g, '');
-    },
     
-    /**
-     * Thêm tin nhắn kèm file vào chat
-     * @param {string} text - Nội dung text
-     * @param {File} file - File đính kèm
-     * @param {string} sender - 'user' hoặc 'ai'
-     */
-    addMessageWithFile(text, file, sender) {
-        const messagesContainer = document.getElementById('chat-messages');
+    addMessage(text, sender, scroll = true) {
+        const container = document.getElementById('whalio-messages');
         const messageDiv = document.createElement('div');
-        messageDiv.className = `chat-message ${sender}-message`;
-        
-        const time = new Date().toLocaleTimeString('vi-VN', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-        });
-        
-        const textContent = text ? `<div class="message-text">${this.formatMessage(text)}</div>` : '';
-        const isImage = file.type.startsWith('image/');
-        let fileContent = '';
-        
-        if (isImage) {
-            const imageUrl = URL.createObjectURL(file);
-            fileContent = `<div class="message-image"><img src="${imageUrl}" alt="Sent image" onload="this.parentElement.classList.add('loaded')" /></div>`;
-        } else {
-            fileContent = this.cleanHTML(`
-                <div class="message-file">
-                    <div class="file-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6z"/><path d="M14 2v6h6"/></svg></div>
-                    <div class="file-info"><div class="file-name">${file.name}</div><div class="file-size">${this.formatFileSize(file.size)}</div></div>
-                </div>
-            `);
-        }
-        
-        messageDiv.innerHTML = this.cleanHTML(`
-            <div class="message-content">
-                <div class="message-bubble">${fileContent}${textContent}</div>
-                <span class="message-time">${time}</span>
-            </div>
-        `);
-        
-        messagesContainer.appendChild(messageDiv);
-        this.scrollToBottom();
-    },
-    
-    /**
-     * Add a message to the chat
-     * @param {string} text - Message text
-     * @param {string} sender - 'user' or 'ai'
-     */
-    addMessage(text, sender) {
-        const messagesContainer = document.getElementById('chat-messages');
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `chat-message ${sender}-message`;
+        messageDiv.className = `whalio-message ${sender}`;
         
         const time = new Date().toLocaleTimeString('vi-VN', { 
             hour: '2-digit', 
@@ -951,50 +1501,275 @@ const ChatWidget = {
         const formattedText = this.formatMessage(text);
         
         if (sender === 'ai') {
-            messageDiv.innerHTML = this.cleanHTML(`
-                <div class="message-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></div>
-                <div class="message-content"><div class="message-bubble">${formattedText}</div><span class="message-time">${time}</span></div>
-            `);
+            messageDiv.innerHTML = `
+                <div class="whalio-message-avatar">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                    </svg>
+                </div>
+                <div class="whalio-message-content">
+                    <div class="whalio-message-bubble">${formattedText}</div>
+                    <span class="whalio-message-time">${time}</span>
+                </div>
+            `;
         } else {
-            messageDiv.innerHTML = this.cleanHTML(`
-                <div class="message-content"><div class="message-bubble">${formattedText}</div><span class="message-time">${time}</span></div>
-            `);
+            messageDiv.innerHTML = `
+                <div class="whalio-message-content">
+                    <div class="whalio-message-bubble">${formattedText}</div>
+                    <span class="whalio-message-time">${time}</span>
+                </div>
+                <div class="whalio-message-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
+            `;
         }
         
-        messagesContainer.appendChild(messageDiv);
-        
-        // Apply syntax highlighting to code blocks
+        container.appendChild(messageDiv);
         this.applyHighlighting(messageDiv);
         
+        if (scroll) this.scrollToBottom();
+    },
+    
+    addMessageWithFile(text, file, sender) {
+        const container = document.getElementById('whalio-messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `whalio-message ${sender}`;
+        
+        const time = new Date().toLocaleTimeString('vi-VN', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        const textContent = text ? `<div class="whalio-message-text">${this.formatMessage(text)}</div>` : '';
+        const isImage = file.type.startsWith('image/');
+        let fileContent = '';
+        
+        if (isImage) {
+            const imageUrl = URL.createObjectURL(file);
+            fileContent = `<div class="whalio-message-image"><img src="${imageUrl}" alt="Sent image" /></div>`;
+        } else {
+            fileContent = `
+                <div class="whalio-message-file">
+                    <div class="whalio-file-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6z"/>
+                        </svg>
+                    </div>
+                    <div class="whalio-file-details">
+                        <div class="whalio-file-name">${this.escapeHtml(file.name)}</div>
+                        <div class="whalio-file-size">${this.formatFileSize(file.size)}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        messageDiv.innerHTML = `
+            <div class="whalio-message-content">
+                <div class="whalio-message-bubble">${fileContent}${textContent}</div>
+                <span class="whalio-message-time">${time}</span>
+            </div>
+            <div class="whalio-message-avatar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+            </div>
+        `;
+        
+        container.appendChild(messageDiv);
         this.scrollToBottom();
     },
     
-    /**
-     * Apply syntax highlighting to code blocks in a message
-     * @param {HTMLElement} container 
-     */
+    showTypingIndicator() {
+        this.isTyping = true;
+        const container = document.getElementById('whalio-messages');
+        
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'whalio-message ai';
+        typingDiv.id = 'whalio-typing-indicator';
+        typingDiv.innerHTML = `
+            <div class="whalio-message-avatar">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                </svg>
+            </div>
+            <div class="whalio-message-content">
+                <div class="whalio-typing">
+                    <span class="whalio-typing-dot"></span>
+                    <span class="whalio-typing-dot"></span>
+                    <span class="whalio-typing-dot"></span>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(typingDiv);
+        this.scrollToBottom();
+    },
+    
+    hideTypingIndicator() {
+        this.isTyping = false;
+        const indicator = document.getElementById('whalio-typing-indicator');
+        if (indicator) indicator.remove();
+    },
+    
+    scrollToBottom() {
+        const container = document.getElementById('whalio-messages');
+        container.scrollTop = container.scrollHeight;
+    },
+    
+    // ==================== FILE HANDLING ====================
+    selectedFile: null,
+    
+    handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Check size (50MB max)
+        if (file.size > 50 * 1024 * 1024) {
+            alert('File quá lớn! Vui lòng chọn file nhỏ hơn 50MB.');
+            return;
+        }
+        
+        this.selectedFile = file;
+        
+        const preview = document.getElementById('whalio-file-preview');
+        const previewImg = document.getElementById('whalio-preview-img');
+        const fileInfo = document.getElementById('whalio-file-info');
+        
+        const isImage = file.type.startsWith('image/');
+        
+        if (isImage) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                previewImg.src = event.target.result;
+                previewImg.style.display = 'block';
+                fileInfo.style.display = 'none';
+                preview.classList.add('active');
+            };
+            reader.readAsDataURL(file);
+        } else {
+            fileInfo.querySelector('.whalio-file-name').textContent = file.name;
+            fileInfo.querySelector('.whalio-file-size').textContent = this.formatFileSize(file.size);
+            previewImg.style.display = 'none';
+            fileInfo.style.display = 'flex';
+            preview.classList.add('active');
+        }
+        
+        document.getElementById('whalio-upload-btn').classList.add('has-file');
+    },
+    
+    clearSelectedFile() {
+        this.selectedFile = null;
+        document.getElementById('whalio-file-input').value = '';
+        document.getElementById('whalio-file-preview').classList.remove('active');
+        document.getElementById('whalio-preview-img').style.display = 'none';
+        document.getElementById('whalio-file-info').style.display = 'none';
+        document.getElementById('whalio-upload-btn').classList.remove('has-file');
+    },
+    
+    // ==================== UTILITIES ====================
+    autoResizeTextarea(textarea) {
+        textarea.style.height = 'auto';
+        const newHeight = Math.min(Math.max(textarea.scrollHeight, 24), 150);
+        textarea.style.height = newHeight + 'px';
+    },
+    
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    },
+    
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    },
+    
+    formatMessage(text) {
+        const generateId = () => 'code-' + Math.random().toString(36).substr(2, 9);
+        
+        // Extract code blocks
+        const codeBlocks = [];
+        let processedText = text.replace(/```(\w+)?\n?([\s\S]*?)```/g, (match, lang, code) => {
+            const id = generateId();
+            const language = lang || 'plaintext';
+            const escapedCode = code.trim()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            
+            const codeBlockHTML = `
+                <div class="code-block-wrapper" id="${id}">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">${language}</span>
+                        <button class="code-copy-btn" onclick="ChatWidget.copyCodeToClipboard(this)" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                            Copy
+                        </button>
+                    </div>
+                    <pre><code class="language-${language}">${escapedCode}</code></pre>
+                </div>
+            `;
+            
+            const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+            codeBlocks.push(codeBlockHTML);
+            return placeholder;
+        });
+        
+        // Escape HTML
+        const div = document.createElement('div');
+        div.textContent = processedText;
+        let safeText = div.innerHTML;
+        
+        // Restore code blocks
+        codeBlocks.forEach((block, index) => {
+            safeText = safeText.replace(`__CODE_BLOCK_${index}__`, block);
+        });
+        
+        // Inline code
+        safeText = safeText.replace(/`([^`]+)`/g, '<code>$1</code>');
+        
+        // Bold
+        safeText = safeText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        
+        // Italic
+        safeText = safeText.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+        
+        // Newlines (outside code blocks)
+        const parts = safeText.split(/(<div class="code-block-wrapper"[\s\S]*?<\/div>\s*<\/div>)/g);
+        safeText = parts.map((part, index) => {
+            if (index % 2 === 1) return part;
+            return part.replace(/\n/g, '<br>');
+        }).join('');
+        
+        return safeText;
+    },
+    
     applyHighlighting(container) {
         if (!this.highlightJsLoaded || !window.hljs) return;
         
         const codeBlocks = container.querySelectorAll('pre code');
         codeBlocks.forEach(block => {
-            // Use requestAnimationFrame to avoid blocking
             requestAnimationFrame(() => {
                 hljs.highlightElement(block);
             });
         });
     },
     
-    /**
-     * Copy code to clipboard
-     * @param {HTMLButtonElement} button 
-     */
     copyCodeToClipboard(button) {
         const codeBlock = button.closest('.code-block-wrapper').querySelector('code');
         const code = codeBlock.textContent;
         
         navigator.clipboard.writeText(code).then(() => {
-            // Visual feedback
             const originalHTML = button.innerHTML;
             button.innerHTML = `
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1011,129 +1786,13 @@ const ChatWidget = {
         }).catch(err => {
             console.error('Failed to copy code:', err);
         });
-    },
-    
-    /**
-     * Show typing indicator
-     */
-    showTypingIndicator() {
-        this.isTyping = true;
-        const messagesContainer = document.getElementById('chat-messages');
-        
-        const typingDiv = document.createElement('div');
-        typingDiv.className = 'chat-message ai-message typing-indicator-wrapper';
-        typingDiv.id = 'typing-indicator';
-        typingDiv.innerHTML = this.cleanHTML(`
-            <div class="message-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></div>
-            <div class="message-content"><div class="typing-indicator"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>
-        `);
-        
-        messagesContainer.appendChild(typingDiv);
-        this.scrollToBottom();
-    },
-    
-    /**
-     * Hide typing indicator
-     */
-    hideTypingIndicator() {
-        this.isTyping = false;
-        const typingIndicator = document.getElementById('typing-indicator');
-        if (typingIndicator) {
-            typingIndicator.remove();
-        }
-    },
-    
-    /**
-     * Auto-scroll to the bottom of messages
-     */
-    scrollToBottom() {
-        const messagesContainer = document.getElementById('chat-messages');
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    },
-    
-    /**
-     * Format message with code block support and syntax highlighting
-     * Handles: code blocks (```), inline code (`), bold (**), italic (*), newlines
-     * ENHANCED: Better code block handling without source indentation artifacts
-     * @param {string} text 
-     * @returns {string}
-     */
-    formatMessage(text) {
-        // Generate unique ID for copy button callbacks
-        const generateId = () => 'code-' + Math.random().toString(36).substr(2, 9);
-        
-        // 1. Extract and preserve code blocks first (```code```)
-        const codeBlocks = [];
-        let processedText = text.replace(/```(\w+)?\n?([\s\S]*?)```/g, (match, lang, code) => {
-            const id = generateId();
-            const language = lang || 'plaintext';
-            const trimmedCode = code.trim();
-            
-            // Escape HTML in code
-            const escapedCode = trimmedCode
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
-            
-            // Clean HTML template for code blocks - NO INDENTATION ARTIFACTS
-            const codeBlockHTML = this.cleanHTML(`
-                <div class="code-block-wrapper" id="${id}">
-                    <div class="code-block-header">
-                        <span class="code-block-lang">${language}</span>
-                        <button class="code-copy-btn" onclick="ChatWidget.copyCodeToClipboard(this)" type="button">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                            </svg>
-                            Copy
-                        </button>
-                    </div>
-                    <pre><code class="language-${language}">${escapedCode}</code></pre>
-                </div>
-            `);
-            
-            const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
-            codeBlocks.push(codeBlockHTML);
-            return placeholder;
-        });
-        
-        // 2. Escape remaining HTML for security
-        const div = document.createElement('div');
-        div.textContent = processedText;
-        let safeText = div.innerHTML;
-        
-        // 3. Restore code blocks (they're already safe)
-        codeBlocks.forEach((block, index) => {
-            safeText = safeText.replace(`__CODE_BLOCK_${index}__`, block);
-        });
-        
-        // 4. Handle inline code: `code` -> <code>code</code>
-        safeText = safeText.replace(/`([^`]+)`/g, '<code>$1</code>');
-        
-        // 5. Handle bold: **text** -> <strong>text</strong>
-        safeText = safeText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-        
-        // 6. Handle italic: *text* -> <em>text</em> (but not inside code)
-        safeText = safeText.replace(/(?<!`)\*([^*]+)\*(?!`)/g, '<em>$1</em>');
-        
-        // 7. Handle newlines (but not inside code blocks)
-        // Split by code blocks, process each part, then rejoin
-        const parts = safeText.split(/(<div class="code-block-wrapper"[\s\S]*?<\/div>\s*<\/div>)/g);
-        safeText = parts.map((part, index) => {
-            // Odd indices are code blocks, skip them
-            if (index % 2 === 1) return part;
-            // Even indices are regular text, convert newlines
-            return part.replace(/\n/g, '<br>');
-        }).join('');
-        
-        return safeText;
     }
 };
 
-// Initialize widget when DOM is ready
+// Initialize when DOM ready
 document.addEventListener('DOMContentLoaded', () => {
     ChatWidget.init();
 });
 
-// Export for global access
+// Export globally
 window.ChatWidget = ChatWidget;
