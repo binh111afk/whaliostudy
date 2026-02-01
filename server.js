@@ -2124,8 +2124,12 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // ==================== EXPONENTIAL BACKOFF UTILITY ====================
 // Utility function for exponential backoff retry
+// OPTIMIZED: Tăng delay để giảm rate limit errors (2s → 5s → 10s)
 async function retryWithExponentialBackoff(fn, maxRetries = 3, baseDelay = 2000) {
     let lastError;
+    
+    // Custom delays: 2s, 5s, 10s thay vì 2s, 4s, 8s
+    const delays = [2000, 5000, 10000];
     
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
@@ -2145,8 +2149,8 @@ async function retryWithExponentialBackoff(fn, maxRetries = 3, baseDelay = 2000)
                 throw error; // Don't retry non-retryable errors or last attempt
             }
             
-            // Calculate delay with exponential backoff + jitter
-            const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
+            // Use custom delay with small jitter
+            const delay = delays[attempt] + Math.random() * 500;
             console.log(`🔄 Gemini API rate limited, retrying in ${(delay/1000).toFixed(1)}s... (Attempt ${attempt + 1}/${maxRetries})`);
             
             await new Promise(resolve => setTimeout(resolve, delay));
@@ -2326,8 +2330,9 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             isNewSession = true;
             const newSessionId = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
             
-            // Lấy 30 ký tự đầu của tin nhắn làm tiêu đề
-            const messageText = message ? message.trim() : 'Phân tích file';
+            // OPTIMIZED: Lấy 30 ký tự đầu của tin nhắn làm tiêu đề (KHÔNG dùng AI)
+            // Tiết kiệm 50% request API so với việc gọi AI tạo title
+            const messageText = message ? message.trim() : (req.file ? `Phân tích ${req.file.originalname}` : 'Cuộc trò chuyện mới');
             const autoTitle = messageText.substring(0, 30) + (messageText.length > 30 ? '...' : '');
             
             session = new ChatSession({
@@ -2337,15 +2342,21 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                 messages: []
             });
             
-            console.log(`🆕 Created new chat session: ${newSessionId}`);
+            console.log(`🆕 Created new chat session: ${newSessionId} (Title: "${autoTitle}")`);
         }
 
         // ==================== BUILD GEMINI HISTORY ====================
+        // OPTIMIZED: Chỉ gửi 20 tin nhắn gần nhất để tránh payload quá nặng và token limit
         // Convert stored messages to Gemini format for context
-        const geminiHistory = session.messages.map(msg => ({
+        const recentMessages = session.messages.slice(-20); // Lấy 20 tin nhắn cuối
+        const geminiHistory = recentMessages.map(msg => ({
             role: msg.role,
             parts: [{ text: msg.content }]
         }));
+
+        if (session.messages.length > 20) {
+            console.log(`📊 Session has ${session.messages.length} messages, sending last 20 to Gemini`);
+        }
 
         // Initialize the model with system instruction
         const model = genAI.getGenerativeModel({
@@ -2353,7 +2364,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             systemInstruction: WHALIO_SYSTEM_INSTRUCTION
         });
 
-        // Start chat with history context
+        // Start chat with history context (max 20 recent messages)
         const chat = model.startChat({
             history: geminiHistory,
             generationConfig: {
@@ -2496,10 +2507,10 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
         }
 
         // ==================== SEND MESSAGE TO GEMINI ====================
-        // Sử dụng chat.sendMessage với exponential backoff retry
+        // OPTIMIZED: Sử dụng chat.sendMessage với exponential backoff retry (2s → 5s → 10s)
         const result = await retryWithExponentialBackoff(async () => {
             return await chat.sendMessage(contentParts);
-        }, 3, 2000); // 3 attempts, starting with 2s delay
+        }, 3, 2000); // 3 attempts, với delays tùy chỉnh: 2s, 5s, 10s
         
         const response = await result.response;
         const aiResponseText = response.text();
