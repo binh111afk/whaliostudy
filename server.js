@@ -21,7 +21,7 @@ cloudinary.config({
 console.log('☁️  Cloudinary configured:', process.env.CLOUDINARY_CLOUD_NAME ? '✅' : '❌');
 
 // ==================== MONGODB CONNECTION ====================
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/whalio';
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/whalio';
 
 mongoose.connect(MONGO_URI, {
     useNewUrlParser: true,
