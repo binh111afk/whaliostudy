@@ -8,6 +8,12 @@ const mongoose = require('mongoose');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// ==================== FILE PARSING LIBRARIES ====================
+const mammoth = require('mammoth');  // Đọc file Word (.docx)
+const XLSX = require('xlsx');         // Đọc file Excel (.xlsx, .xls)
+const pdfParse = require('pdf-parse'); // Đọc file PDF
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -2135,25 +2141,117 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
 
         // Kiểm tra và xử lý file (nếu có)
         if (req.file) {
-            const isImage = req.file.mimetype.startsWith('image/');
+            const mimetype = req.file.mimetype;
+            const filename = req.file.originalname;
+            const fileExt = path.extname(filename).toLowerCase();
             const fileSizeKB = (req.file.size / 1024).toFixed(2);
+            const buffer = req.file.buffer;
             
-            console.log(`📎 Nhận được ${isImage ? '🖼️ ảnh' : '📁 file'}: ${req.file.originalname} (${req.file.mimetype}, ${fileSizeKB} KB)`);
+            console.log(`📎 Nhận được file: ${filename} (${mimetype}, ${fileSizeKB} KB)`);
             
-            if (isImage) {
-                // Xử lý ảnh với Gemini Multimodal
-                const base64Image = req.file.buffer.toString('base64');
-                contentParts.push({
-                    inlineData: {
-                        data: base64Image,
-                        mimeType: req.file.mimetype
+            let extractedContent = null;
+            let fileTypeIcon = '📁';
+            
+            try {
+                // ==================== XỬ LÝ ẢNH ====================
+                if (mimetype.startsWith('image/')) {
+                    fileTypeIcon = '🖼️';
+                    console.log(`   🖼️ Xử lý ảnh với Gemini Multimodal...`);
+                    const base64Data = buffer.toString('base64');
+                    contentParts.push({
+                        inlineData: {
+                            data: base64Data,
+                            mimeType: mimetype
+                        }
+                    });
+                }
+                // ==================== XỬ LÝ PDF ====================
+                else if (mimetype === 'application/pdf' || fileExt === '.pdf') {
+                    fileTypeIcon = '📄';
+                    console.log(`   📄 Đang đọc nội dung PDF...`);
+                    const pdfData = await pdfParse(buffer);
+                    extractedContent = pdfData.text;
+                    console.log(`   ✅ Đã trích xuất ${extractedContent.length} ký tự từ PDF`);
+                }
+                // ==================== XỬ LÝ WORD (.docx) ====================
+                else if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || fileExt === '.docx') {
+                    fileTypeIcon = '📝';
+                    console.log(`   📝 Đang đọc nội dung Word (.docx)...`);
+                    const result = await mammoth.extractRawText({ buffer: buffer });
+                    extractedContent = result.value;
+                    console.log(`   ✅ Đã trích xuất ${extractedContent.length} ký tự từ Word`);
+                }
+                // ==================== XỬ LÝ WORD CŨ (.doc) ====================
+                else if (mimetype === 'application/msword' || fileExt === '.doc') {
+                    fileTypeIcon = '📝';
+                    console.log(`   📝 File Word cũ (.doc) - thử đọc như text...`);
+                    // .doc cũ khó đọc hơn, thử extract text cơ bản
+                    try {
+                        const result = await mammoth.extractRawText({ buffer: buffer });
+                        extractedContent = result.value;
+                    } catch {
+                        extractedContent = `[File .doc cũ - không thể đọc trực tiếp. Vui lòng chuyển sang .docx hoặc PDF]`;
                     }
-                });
-            } else {
-                // Xử lý file khác (PDF, Word, v.v.)
-                // Gemini hiện tại chủ yếu hỗ trợ ảnh, với file khác ta sẽ chỉ thông báo thông tin file
-                const fileInfo = `\n\n📎 File đính kèm: ${req.file.originalname}\n📊 Loại: ${req.file.mimetype}\n📏 Kích thước: ${fileSizeKB} KB\n\n`;
-                contentParts[0] = textMessage + fileInfo + "Xin lỗi, hiện tại mình chỉ có thể xem và phân tích ảnh. Với file này, mình chỉ có thể cung cấp thông tin cơ bản về file.";
+                }
+                // ==================== XỬ LÝ EXCEL (.xlsx, .xls) ====================
+                else if (mimetype.includes('spreadsheet') || mimetype.includes('excel') || fileExt === '.xlsx' || fileExt === '.xls') {
+                    fileTypeIcon = '📊';
+                    console.log(`   📊 Đang đọc nội dung Excel...`);
+                    const workbook = XLSX.read(buffer, { type: 'buffer' });
+                    let excelContent = '';
+                    
+                    workbook.SheetNames.forEach((sheetName, index) => {
+                        const sheet = workbook.Sheets[sheetName];
+                        const csvData = XLSX.utils.sheet_to_csv(sheet);
+                        excelContent += `\n--- Sheet ${index + 1}: ${sheetName} ---\n${csvData}\n`;
+                    });
+                    
+                    extractedContent = excelContent;
+                    console.log(`   ✅ Đã trích xuất ${extractedContent.length} ký tự từ ${workbook.SheetNames.length} sheet Excel`);
+                }
+                // ==================== XỬ LÝ POWERPOINT ====================
+                else if (mimetype.includes('presentation') || mimetype.includes('powerpoint') || fileExt === '.pptx' || fileExt === '.ppt') {
+                    fileTypeIcon = '📽️';
+                    console.log(`   📽️ File PowerPoint - không hỗ trợ đọc trực tiếp...`);
+                    extractedContent = `[File PowerPoint: ${filename}]\nKích thước: ${fileSizeKB} KB\n\n⚠️ Hiện tại mình chưa hỗ trợ đọc nội dung PowerPoint trực tiếp. Bạn có thể:\n1. Chuyển sang PDF\n2. Copy nội dung text vào tin nhắn\n3. Chụp ảnh các slide quan trọng`;
+                }
+                // ==================== XỬ LÝ FILE TEXT ====================
+                else if (mimetype.startsWith('text/') || 
+                         mimetype === 'application/javascript' ||
+                         mimetype === 'application/json' ||
+                         mimetype === 'application/xml' ||
+                         ['.txt', '.html', '.css', '.js', '.json', '.xml', '.csv', '.md', '.py', '.java', '.c', '.cpp', '.h', '.php', '.sql', '.sh', '.bat', '.yaml', '.yml', '.ini', '.cfg', '.log'].includes(fileExt)) {
+                    fileTypeIcon = '📝';
+                    console.log(`   📝 Đang đọc file text/code...`);
+                    extractedContent = buffer.toString('utf-8');
+                    console.log(`   ✅ Đã đọc ${extractedContent.length} ký tự`);
+                }
+                // ==================== XỬ LÝ ZIP/RAR ====================
+                else if (mimetype.includes('zip') || mimetype.includes('rar') || fileExt === '.zip' || fileExt === '.rar') {
+                    fileTypeIcon = '🗜️';
+                    console.log(`   🗜️ File nén - không thể đọc nội dung...`);
+                    extractedContent = `[File nén: ${filename}]\nKích thước: ${fileSizeKB} KB\n\n⚠️ Mình không thể đọc nội dung file nén. Vui lòng giải nén và gửi từng file riêng.`;
+                }
+                // ==================== FILE KHÁC ====================
+                else {
+                    console.log(`   ⚠️ Loại file không xác định: ${mimetype}`);
+                    extractedContent = `[File: ${filename}]\nLoại: ${mimetype}\nKích thước: ${fileSizeKB} KB\n\n⚠️ Mình không thể đọc trực tiếp loại file này.`;
+                }
+                
+                // Nếu có nội dung được trích xuất (không phải ảnh), thêm vào message
+                if (extractedContent && !mimetype.startsWith('image/')) {
+                    // Giới hạn độ dài để tránh quá tải
+                    const maxLength = 100000; // 100K ký tự
+                    const truncatedContent = extractedContent.length > maxLength 
+                        ? extractedContent.substring(0, maxLength) + '\n\n... [Nội dung đã được cắt bớt do quá dài]'
+                        : extractedContent;
+                    
+                    contentParts[0] = `${textMessage}\n\n${fileTypeIcon} Nội dung file "${filename}":\n\`\`\`\n${truncatedContent}\n\`\`\``;
+                }
+                
+            } catch (parseError) {
+                console.error(`   ❌ Lỗi khi đọc file:`, parseError.message);
+                contentParts[0] = `${textMessage}\n\n📎 File đính kèm: ${filename}\n📊 Loại: ${mimetype}\n📏 Kích thước: ${fileSizeKB} KB\n\n⚠️ Đã xảy ra lỗi khi đọc file: ${parseError.message}`;
             }
         }
 
