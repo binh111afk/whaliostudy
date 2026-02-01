@@ -2122,6 +2122,40 @@ app.delete('/api/events/:id', async (req, res) => {
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+// ==================== EXPONENTIAL BACKOFF UTILITY ====================
+// Utility function for exponential backoff retry
+async function retryWithExponentialBackoff(fn, maxRetries = 3, baseDelay = 2000) {
+    let lastError;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            return await fn();
+        } catch (error) {
+            lastError = error;
+            
+            // Check if error is retryable (429, quota, rate limit)
+            const isRetryableError = 
+                error.message?.includes('429') ||
+                error.message?.includes('quota') ||
+                error.message?.includes('Too Many Requests') ||
+                error.message?.includes('RATE_LIMIT') ||
+                error.message?.includes('Resource has been exhausted');
+            
+            if (!isRetryableError || attempt === maxRetries - 1) {
+                throw error; // Don't retry non-retryable errors or last attempt
+            }
+            
+            // Calculate delay with exponential backoff + jitter
+            const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
+            console.log(`🔄 Gemini API rate limited, retrying in ${(delay/1000).toFixed(1)}s... (Attempt ${attempt + 1}/${maxRetries})`);
+            
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+    
+    throw lastError;
+}
+
 // System instruction for Whalio Bot personality
 const WHALIO_SYSTEM_INSTRUCTION = `
 Bạn là Whalio, một trợ lý của web Whalio Study và nhiệm vụ của bạn là hướng dẫn người dùng sử dụng các tính năng đang có trong web, linh hoạt và có chút hóm hỉnh dành cho sinh viên. 
@@ -2462,8 +2496,11 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
         }
 
         // ==================== SEND MESSAGE TO GEMINI ====================
-        // Sử dụng chat.sendMessage để duy trì context
-        const result = await chat.sendMessage(contentParts);
+        // Sử dụng chat.sendMessage với exponential backoff retry
+        const result = await retryWithExponentialBackoff(async () => {
+            return await chat.sendMessage(contentParts);
+        }, 3, 2000); // 3 attempts, starting with 2s delay
+        
         const response = await result.response;
         const aiResponseText = response.text();
 
@@ -2520,11 +2557,11 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             });
         }
 
-        if (err.message?.includes('429') || err.message?.includes('quota') || err.message?.includes('Too Many Requests')) {
+        if (err.message?.includes('429') || err.message?.includes('quota') || err.message?.includes('Too Many Requests') || err.message?.includes('RATE_LIMIT') || err.message?.includes('Resource has been exhausted')) {
             return res.status(429).json({
                 success: false,
-                message: 'Whalio đang bận, vui lòng thử lại sau vài giây nhé! 😊',
-                response: 'Xin lỗi, mình đang nhận được quá nhiều tin nhắn. Hãy thử lại sau ít phút nhé! 🙏'
+                message: 'Hệ thống đang quá tải, bạn vui lòng đợi vài giây rồi thử lại nhé! 🐳',
+                response: 'Hệ thống đang quá tải, bạn vui lòng đợi vài giây rồi thử lại nhé! 🐳'
             });
         }
 

@@ -486,20 +486,32 @@ const ChatWidget = {
             .whalio-messages {
                 flex: 1;
                 overflow-y: auto;
+                overflow-x: hidden;
                 padding: 20px;
                 display: flex;
                 flex-direction: column;
                 gap: 16px;
                 scroll-behavior: smooth;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
             }
             
             .whalio-messages::-webkit-scrollbar {
                 width: 6px;
             }
             
+            .whalio-messages::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            
             .whalio-messages::-webkit-scrollbar-thumb {
-                background: var(--border-color, #d1d5db);
+                background: rgba(99, 102, 241, 0.3);
                 border-radius: 3px;
+                transition: background 0.2s ease;
+            }
+            
+            .whalio-messages::-webkit-scrollbar-thumb:hover {
+                background: rgba(99, 102, 241, 0.5);
             }
             
             /* Centered container for fullscreen */
