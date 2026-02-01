@@ -10518,10 +10518,8 @@ html.dark-mode footer {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    max-width: 85%;
     width: fit-content;
     min-width: 0;
-    overflow: hidden;
 }
 
 .message-bubble {
@@ -10534,7 +10532,7 @@ html.dark-mode footer {
     word-break: break-word;
     white-space: normal;
     font-family: inherit;
-    max-width: 100%;
+    max-width: 400px;
     width: fit-content;
     box-sizing: border-box;
 }

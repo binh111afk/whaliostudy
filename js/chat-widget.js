@@ -129,14 +129,13 @@ const ChatWidget = {
                 display: flex;
                 flex-direction: column;
                 gap: 4px;
-                max-width: 85%;
                 width: fit-content;
                 min-width: 0;
             }
             
-            /* Message bubble - Use 100% of parent, parent controls max-width */
+            /* Message bubble - Giới hạn chiều rộng tối đa */
             #chat-messages .chat-message .message-bubble {
-                max-width: 100%;
+                max-width: 400px;
                 width: fit-content;
                 word-wrap: break-word;
                 overflow-wrap: break-word;
@@ -166,13 +165,6 @@ const ChatWidget = {
             
             #chat-messages .user-message .message-content {
                 align-items: flex-end;
-            }
-            
-            #chat-messages .user-message .message-bubble {
-                max-width: 100%;
-                width: fit-content;
-                white-space: normal;
-                text-align: left;
             }
             
             /* ==================== TEXTAREA AUTO-RESIZE STYLES ==================== */
