@@ -10489,7 +10489,7 @@ html.dark-mode footer {
 }
 
 .chat-message.user-message {
-    align-self: flex-end;
+    justify-content: flex-end;
     flex-direction: row-reverse;
 }
 
@@ -10518,7 +10518,8 @@ html.dark-mode footer {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    max-width: 100%;
+    max-width: 85%;
+    width: fit-content;
     min-width: 0;
     overflow: hidden;
 }
@@ -10529,11 +10530,12 @@ html.dark-mode footer {
     font-size: 14px;
     line-height: 1.5;
     word-wrap: break-word;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     word-break: break-word;
-    white-space: pre-wrap;
+    white-space: normal;
     font-family: inherit;
-    max-width: 85%;
+    max-width: 100%;
+    width: fit-content;
     box-sizing: border-box;
 }
 

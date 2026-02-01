@@ -116,62 +116,59 @@ const ChatWidget = {
                 background: var(--text-secondary, #999);
             }
             
-            /* Chat message row */
-            .chat-message {
+            /* Chat message row - HIGH SPECIFICITY */
+            #chat-messages .chat-message {
                 max-width: 100%;
                 box-sizing: border-box;
                 display: flex;
                 margin-bottom: 8px;
             }
             
-            /* Message bubble - FIX: Use fit-content to prevent unnecessary wrapping */
-            .chat-message .message-bubble {
+            /* Message content container - KEY FIX */
+            #chat-messages .chat-message .message-content {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
                 max-width: 85%;
+                width: fit-content;
+                min-width: 0;
+            }
+            
+            /* Message bubble - Use 100% of parent, parent controls max-width */
+            #chat-messages .chat-message .message-bubble {
+                max-width: 100%;
                 width: fit-content;
                 word-wrap: break-word;
                 overflow-wrap: break-word;
                 word-break: break-word;
                 box-sizing: border-box;
-                white-space: normal; /* Normal text wrapping */
-                overflow-x: auto;
+                white-space: normal;
                 font-family: inherit;
             }
             
             /* AI message specific */
-            .ai-message {
+            #chat-messages .chat-message.ai-message {
                 justify-content: flex-start;
             }
             
-            .ai-message .message-content {
-                max-width: 85%;
-                min-width: 0;
-                display: flex;
-                flex-direction: column;
+            #chat-messages .ai-message .message-content {
                 align-items: flex-start;
             }
             
-            .ai-message .message-bubble {
+            #chat-messages .ai-message .message-bubble {
                 white-space: normal;
-                font-family: inherit;
-                max-width: 100%;
-                width: fit-content;
-                overflow: hidden;
             }
             
             /* User message specific */
-            .user-message {
+            #chat-messages .chat-message.user-message {
                 justify-content: flex-end;
             }
             
-            .user-message .message-content {
-                max-width: 85%;
-                min-width: 0;
-                display: flex;
-                flex-direction: column;
+            #chat-messages .user-message .message-content {
                 align-items: flex-end;
             }
             
-            .user-message .message-bubble {
+            #chat-messages .user-message .message-bubble {
                 max-width: 100%;
                 width: fit-content;
                 white-space: normal;
