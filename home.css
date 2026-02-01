@@ -10652,6 +10652,131 @@ html.dark-mode footer {
     margin-left: 2px;
 }
 
+/* ==================== IMAGE UPLOAD BUTTON STYLES ==================== */
+.chat-upload-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+}
+
+.chat-upload-btn:hover {
+    background: var(--bg-card);
+    color: #667eea;
+}
+
+.chat-upload-btn:active {
+    transform: scale(0.95);
+}
+
+.chat-upload-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Highlight khi đã chọn ảnh */
+.chat-upload-btn.has-image {
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+}
+
+/* ==================== IMAGE PREVIEW STYLES ==================== */
+.chat-image-preview {
+    padding: 8px 0 0 0;
+    margin-bottom: 8px;
+}
+
+.chat-image-preview .preview-container {
+    position: relative;
+    display: inline-block;
+    max-width: 120px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.chat-image-preview img {
+    display: block;
+    max-width: 100%;
+    max-height: 100px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+/* Nút xóa ảnh */
+.chat-image-preview .remove-image-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.9);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.chat-image-preview .remove-image-btn:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+}
+
+.chat-image-preview .remove-image-btn svg {
+    width: 14px;
+    height: 14px;
+    color: white;
+}
+
+/* ==================== MESSAGE WITH IMAGE STYLES ==================== */
+.message-image {
+    margin-bottom: 8px;
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 200px;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.message-image.loaded {
+    opacity: 1;
+}
+
+.message-image img {
+    display: block;
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.message-text {
+    margin-top: 4px;
+}
+
+/* User message với ảnh - không cần text border */
+.user-message .message-bubble .message-image img {
+    border-radius: 8px;
+}
+
+/* AI message với ảnh */
+.ai-message .message-bubble .message-image img {
+    border: 1px solid var(--border-color);
+}
+
 /* Mobile Responsive */
 @media (max-width: 480px) {
     .chat-widget-container {
@@ -10676,6 +10801,33 @@ html.dark-mode footer {
         bottom: 70px;
         right: 0;
     }
+    
+    /* Image upload responsive */
+    .chat-upload-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .chat-upload-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .chat-image-preview .preview-container {
+        max-width: 100px;
+    }
+    
+    .chat-image-preview img {
+        max-height: 80px;
+    }
+    
+    .message-image {
+        max-width: 160px;
+    }
+    
+    .message-image img {
+        max-height: 150px;
+    }
 }
 
 /* Dark Mode Specific Adjustments */
@@ -10685,4 +10837,13 @@ html.dark-mode .chat-window {
 
 html.dark-mode .chat-input-wrapper:focus-within {
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+html.dark-mode .chat-upload-btn:hover {
+    background: var(--bg-body);
+}
+
+html.dark-mode .chat-image-preview .preview-container {
+    border-color: var(--border-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }

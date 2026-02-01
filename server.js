@@ -499,6 +499,25 @@ const storage = new CloudinaryStorage({
     }
 });
 
+// ==================== MEMORY STORAGE FOR CHAT IMAGES ====================
+// Sử dụng memoryStorage để lưu ảnh chat tạm vào RAM (không upload lên Cloudinary)
+// Tối ưu tốc độ phản hồi cho chatbot
+const chatImageStorage = multer.memoryStorage();
+
+const chatImageUpload = multer({
+    storage: chatImageStorage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // Giới hạn 10MB cho ảnh chat
+    fileFilter: (req, file, cb) => {
+        // Chỉ cho phép các định dạng ảnh
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (allowedMimes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Chỉ hỗ trợ file ảnh (JPEG, PNG, GIF, WebP)!'), false);
+        }
+    }
+});
+
 // 2. Bộ lọc kiểm duyệt (Giữ nguyên cái xịn lúc nãy)
 const upload = multer({
     storage,
@@ -2048,15 +2067,17 @@ Bạn có thể giúp sinh viên với:
 - Động viên khi sinh viên gặp khó khăn
 Hãy sử dụng emoji phù hợp để tạo cảm giác thân thiện.`;
 
-// POST /api/chat - Chat with Whalio AI
-app.post('/api/chat', async (req, res) => {
+// POST /api/chat - Chat with Whalio AI (Hỗ trợ Multimodal: Text + Image)
+// Sử dụng multipart/form-data thay vì JSON để hỗ trợ upload ảnh
+app.post('/api/chat', chatImageUpload.single('image'), async (req, res) => {
     try {
-        const { message } = req.body;
+        const message = req.body.message;
 
-        if (!message || typeof message !== 'string' || message.trim() === '') {
+        // Kiểm tra message (có thể rỗng nếu chỉ gửi ảnh)
+        if ((!message || typeof message !== 'string' || message.trim() === '') && !req.file) {
             return res.status(400).json({
                 success: false,
-                message: 'Message is required'
+                message: 'Vui lòng nhập tin nhắn hoặc gửi ảnh'
             });
         }
 
@@ -2069,18 +2090,43 @@ app.post('/api/chat', async (req, res) => {
             });
         }
 
-        // Initialize the model with system instruction
+        // Initialize the model with system instruction (gemini-2.5-flash hỗ trợ multimodal)
         const model = genAI.getGenerativeModel({
             model: 'gemini-2.5-flash',
             systemInstruction: WHALIO_SYSTEM_INSTRUCTION
         });
 
-        // Generate response
-        const result = await model.generateContent(message.trim());
+        // Tạo payload gửi lên Gemini
+        let contentParts = [];
+        
+        // Thêm text message (nếu có)
+        const textMessage = message ? message.trim() : 'Hãy mô tả ảnh này.';
+        contentParts.push(textMessage);
+
+        // Kiểm tra và xử lý ảnh (nếu có)
+        if (req.file) {
+            console.log(`📷 Nhận được ảnh: ${req.file.originalname} (${req.file.mimetype}, ${(req.file.size / 1024).toFixed(2)} KB)`);
+            
+            // Chuyển đổi buffer ảnh sang base64
+            const base64Image = req.file.buffer.toString('base64');
+            
+            // Thêm ảnh vào payload với định dạng Gemini yêu cầu
+            contentParts.push({
+                inlineData: {
+                    data: base64Image,
+                    mimeType: req.file.mimetype
+                }
+            });
+        }
+
+        // Generate response với payload multimodal
+        const result = await model.generateContent(contentParts);
         const response = await result.response;
         const text = response.text();
 
-        console.log(`🤖 Whalio AI responded to: "${message.substring(0, 50)}..."`);
+        const logMessage = message ? message.substring(0, 50) : '[Chỉ gửi ảnh]';
+        const hasImage = req.file ? ' + 📷' : '';
+        console.log(`🤖 Whalio AI responded to: "${logMessage}..."${hasImage}`);
 
         res.json({
             success: true,
@@ -2111,6 +2157,15 @@ app.post('/api/chat', async (req, res) => {
                 success: false,
                 message: 'Whalio đang bận, vui lòng thử lại sau vài giây nhé! 😊',
                 response: 'Xin lỗi, mình đang nhận được quá nhiều tin nhắn. Hãy thử lại sau ít phút nhé! 🙏'
+            });
+        }
+
+        // Handle image-related errors
+        if (err.message?.includes('image') || err.message?.includes('media')) {
+            return res.status(400).json({
+                success: false,
+                message: 'Không thể xử lý ảnh này',
+                response: 'Xin lỗi, mình không thể xử lý ảnh này. Hãy thử với ảnh khác nhé! 📷'
             });
         }
 
