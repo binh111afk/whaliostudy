@@ -2138,6 +2138,33 @@ app.use((err, req, res, next) => {
     res.status(err.status || 500).send('Something went wrong!');
 });
 
+// ==================== DEBUG: CHECK AVAILABLE MODELS ====================
+async function checkAvailableModels() {
+    try {
+        console.log("🔍 Đang kiểm tra danh sách Model từ Google...");
+        const key = process.env.GEMINI_API_KEY;
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+        const data = await response.json();
+        
+        if (data.models) {
+            console.log("✅ DANH SÁCH MODEL KHẢ DỤNG:");
+            data.models.forEach(m => {
+                // Chỉ hiện các model hỗ trợ generateContent
+                if (m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent")) {
+                    console.log(`   - ${m.name.replace('models/', '')} (${m.displayName})`);
+                }
+            });
+        } else {
+            console.log("⚠️ Không lấy được danh sách model:", data);
+        }
+    } catch (error) {
+        console.error("❌ Lỗi khi kiểm tra model:", error.message);
+    }
+}
+
+// Gọi hàm này khi server chạy
+checkAvailableModels();
+
 // ==================== SERVER START ====================
 app.listen(PORT, () => {
     console.log(`✅ Server is running on port ${PORT}`);
