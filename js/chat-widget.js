@@ -706,13 +706,14 @@ const ChatWidget = {
             /* Input Wrapper */
             .whalio-input-wrapper {
                 display: flex;
-                align-items: flex-end;
+                align-items: center;
                 gap: 12px;
-                padding: 12px 16px;
+                padding: 8px 12px;
                 background: var(--bg-secondary, #f3f4f6);
                 border-radius: 24px;
                 border: 2px solid transparent;
                 transition: all 0.2s ease;
+                min-height: 48px;
             }
             
             .whalio-input-wrapper:focus-within {
@@ -726,9 +727,9 @@ const ChatWidget = {
             }
             
             .whalio-upload-btn {
-                width: 36px;
-                height: 36px;
-                min-width: 36px;
+                width: 40px;
+                height: 40px;
+                min-width: 40px;
                 border-radius: 50%;
                 background: transparent;
                 border: none;
@@ -738,6 +739,7 @@ const ChatWidget = {
                 justify-content: center;
                 color: var(--text-secondary, #6b7280);
                 transition: all 0.2s ease;
+                flex-shrink: 0;
             }
             
             .whalio-upload-btn:hover {
@@ -762,10 +764,11 @@ const ChatWidget = {
                 font-size: 15px;
                 line-height: 1.5;
                 color: var(--text-primary, #1f2937);
-                min-height: 24px;
+                min-height: 28px;
                 max-height: 150px;
                 outline: none;
                 font-family: inherit;
+                padding: 6px 0;
             }
             
             .whalio-textarea::placeholder {
@@ -785,6 +788,7 @@ const ChatWidget = {
                 justify-content: center;
                 color: white;
                 transition: all 0.2s ease;
+                flex-shrink: 0;
             }
             
             .whalio-send-btn:hover {
@@ -1673,7 +1677,7 @@ const ChatWidget = {
     // ==================== UTILITIES ====================
     autoResizeTextarea(textarea) {
         textarea.style.height = 'auto';
-        const newHeight = Math.min(Math.max(textarea.scrollHeight, 24), 150);
+        const newHeight = Math.min(Math.max(textarea.scrollHeight, 28), 150);
         textarea.style.height = newHeight + 'px';
     },
     
