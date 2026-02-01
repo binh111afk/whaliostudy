@@ -20,9 +20,9 @@ const ChatWidget = {
     
     // Fallback responses
     fallbackResponses: [
-        "Xin lỗi, mình đang gặp sự cố kết nối. Vui lòng thử lại sau nhé! 🙏",
-        "Hệ thống đang bận, bạn có thể thử lại sau vài giây không?",
-        "Mình chưa thể xử lý yêu cầu ngay bây giờ. Hãy thử lại nhé! 😊"
+        "Có vẻ như server đang bận. Hãy thử lại sau vài giây nhé! 🙏",
+        "Mình đang gặp chút vấn đề kỹ thuật. Vui lòng thử lại! 😊",
+        "Xin lỗi, có lỗi xảy ra. Hãy refresh trang và thử lại nhé! 🔄"
     ],
     
     // ==================== INITIALIZATION ====================
@@ -1461,11 +1461,25 @@ const ChatWidget = {
                 body: formData
             });
             
-            const data = await response.json();
-            
             this.hideTypingIndicator();
             
-            if (data.success) {
+            // Check if response is ok
+            if (!response.ok) {
+                if (response.status === 429) {
+                    this.addMessage('Whalio đang bận, vui lòng thử lại sau vài giây nhé! 😊', 'ai');
+                    return;
+                } else if (response.status >= 500) {
+                    this.addMessage('Server đang gặp sự cố, vui lòng thử lại sau nhé! 🙏', 'ai');
+                    return;
+                } else {
+                    this.addMessage('Có lỗi xảy ra, vui lòng thử lại! 😅', 'ai');
+                    return;
+                }
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.response) {
                 // Update session ID
                 if (data.sessionId) {
                     this.currentSessionId = data.sessionId;
@@ -1477,16 +1491,26 @@ const ChatWidget = {
                 }
                 
                 this.addMessage(data.response, 'ai');
+            } else if (data.response) {
+                // API returned error but with response message
+                this.addMessage(data.response, 'ai');
             } else {
-                const errorMessage = data.response || data.message || 'Xin lỗi, mình không thể xử lý yêu cầu này.';
+                // API returned error without response
+                const errorMessage = data.message || 'Xin lỗi, mình không thể xử lý yêu cầu này. Hãy thử lại nhé! 😊';
                 this.addMessage(errorMessage, 'ai');
             }
             
         } catch (error) {
             console.error('Chat API Error:', error);
             this.hideTypingIndicator();
-            const fallback = this.fallbackResponses[Math.floor(Math.random() * this.fallbackResponses.length)];
-            this.addMessage(fallback, 'ai');
+            
+            // Check if it's a network error
+            if (error instanceof TypeError && error.message.includes('fetch')) {
+                this.addMessage('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng! 🌐', 'ai');
+            } else {
+                const fallback = this.fallbackResponses[Math.floor(Math.random() * this.fallbackResponses.length)];
+                this.addMessage(fallback, 'ai');
+            }
         } finally {
             this.clearSelectedFile();
         }
