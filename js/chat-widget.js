@@ -120,42 +120,62 @@ const ChatWidget = {
             .chat-message {
                 max-width: 100%;
                 box-sizing: border-box;
+                display: flex;
+                margin-bottom: 8px;
             }
             
-            /* Message bubble - CRITICAL FIX with PRE-WRAP for indentation preservation */
+            /* Message bubble - FIX: Use fit-content to prevent unnecessary wrapping */
             .chat-message .message-bubble {
                 max-width: 85%;
+                width: fit-content;
                 word-wrap: break-word;
-                overflow-wrap: anywhere;
+                overflow-wrap: break-word;
                 word-break: break-word;
                 box-sizing: border-box;
-                white-space: pre-wrap; /* PRESERVE USER INDENTATION */
-                overflow-x: auto; /* Handle horizontal overflow */
+                white-space: normal; /* Normal text wrapping */
+                overflow-x: auto;
                 font-family: inherit;
             }
             
             /* AI message specific */
+            .ai-message {
+                justify-content: flex-start;
+            }
+            
             .ai-message .message-content {
-                max-width: 100%;
+                max-width: 85%;
                 min-width: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
             }
             
             .ai-message .message-bubble {
-                white-space: pre-wrap; /* PRESERVE AI RESPONSE INDENTATION */
+                white-space: normal;
                 font-family: inherit;
-                max-width: 85%;
+                max-width: 100%;
+                width: fit-content;
                 overflow: hidden;
             }
             
             /* User message specific */
+            .user-message {
+                justify-content: flex-end;
+            }
+            
             .user-message .message-content {
-                max-width: 100%;
+                max-width: 85%;
                 min-width: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
             }
             
             .user-message .message-bubble {
-                max-width: 85%;
-                white-space: pre-wrap; /* PRESERVE USER MESSAGE INDENTATION */
+                max-width: 100%;
+                width: fit-content;
+                white-space: normal;
+                text-align: left;
             }
             
             /* ==================== TEXTAREA AUTO-RESIZE STYLES ==================== */
