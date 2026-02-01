@@ -499,21 +499,50 @@ const storage = new CloudinaryStorage({
     }
 });
 
-// ==================== MEMORY STORAGE FOR CHAT IMAGES ====================
-// Sử dụng memoryStorage để lưu ảnh chat tạm vào RAM (không upload lên Cloudinary)
+// ==================== MEMORY STORAGE FOR CHAT FILES & IMAGES ====================
+// Sử dụng memoryStorage để lưu ảnh/file chat tạm vào RAM (không upload lên Cloudinary)
 // Tối ưu tốc độ phản hồi cho chatbot
-const chatImageStorage = multer.memoryStorage();
+const chatFileStorage = multer.memoryStorage();
 
-const chatImageUpload = multer({
-    storage: chatImageStorage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // Giới hạn 10MB cho ảnh chat
+const chatFileUpload = multer({
+    storage: chatFileStorage,
+    limits: { fileSize: 50 * 1024 * 1024 }, // Giới hạn 50MB cho file chat
     fileFilter: (req, file, cb) => {
-        // Chỉ cho phép các định dạng ảnh
-        const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (allowedMimes.includes(file.mimetype)) {
+        console.log(`📂 Checking chat file: ${file.originalname} (${file.mimetype})`);
+        
+        // Cho phép ảnh và các loại file phổ biến
+        const allowedMimes = [
+            // Images
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            // Documents
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain',
+            // Spreadsheets
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            // Presentations
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            // Archives
+            'application/zip',
+            'application/x-rar-compressed',
+            // Code files
+            'application/javascript',
+            'text/html',
+            'text/css'
+        ];
+        
+        const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.txt', '.xls', '.xlsx', '.ppt', '.pptx', '.zip', '.rar', '.js', '.html', '.css'];
+        const ext = require('path').extname(file.originalname).toLowerCase();
+        
+        if (allowedMimes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
+            console.log(`   ✅ File allowed: ${file.originalname}`);
             cb(null, true);
         } else {
-            cb(new Error('Chỉ hỗ trợ file ảnh (JPEG, PNG, GIF, WebP)!'), false);
+            console.log(`   ❌ File rejected: ${file.originalname} (${file.mimetype})`);
+            cb(new Error('Loại file không được hỗ trợ! Chỉ chấp nhận: ảnh, PDF, Word, Excel, PowerPoint, ZIP, văn bản.'), false);
         }
     }
 });
@@ -2067,17 +2096,17 @@ Bạn có thể giúp sinh viên với:
 - Động viên khi sinh viên gặp khó khăn
 Hãy sử dụng emoji phù hợp để tạo cảm giác thân thiện.`;
 
-// POST /api/chat - Chat with Whalio AI (Hỗ trợ Multimodal: Text + Image)
-// Sử dụng multipart/form-data thay vì JSON để hỗ trợ upload ảnh
-app.post('/api/chat', chatImageUpload.single('image'), async (req, res) => {
+// POST /api/chat - Chat with Whalio AI (Hỗ trợ Multimodal: Text + Image + Files)
+// Sử dụng multipart/form-data thay vì JSON để hỗ trợ upload ảnh/file
+app.post('/api/chat', chatFileUpload.single('file'), async (req, res) => {
     try {
         const message = req.body.message;
 
-        // Kiểm tra message (có thể rỗng nếu chỉ gửi ảnh)
+        // Kiểm tra message (có thể rỗng nếu chỉ gửi file)
         if ((!message || typeof message !== 'string' || message.trim() === '') && !req.file) {
             return res.status(400).json({
                 success: false,
-                message: 'Vui lòng nhập tin nhắn hoặc gửi ảnh'
+                message: 'Vui lòng nhập tin nhắn hoặc gửi file'
             });
         }
 
@@ -2100,23 +2129,31 @@ app.post('/api/chat', chatImageUpload.single('image'), async (req, res) => {
         let contentParts = [];
         
         // Thêm text message (nếu có)
-        const textMessage = message ? message.trim() : 'Hãy mô tả ảnh này.';
+        const textMessage = message ? message.trim() : 'Hãy phân tích file này.';
         contentParts.push(textMessage);
 
-        // Kiểm tra và xử lý ảnh (nếu có)
+        // Kiểm tra và xử lý file (nếu có)
         if (req.file) {
-            console.log(`📷 Nhận được ảnh: ${req.file.originalname} (${req.file.mimetype}, ${(req.file.size / 1024).toFixed(2)} KB)`);
+            const isImage = req.file.mimetype.startsWith('image/');
+            const fileSizeKB = (req.file.size / 1024).toFixed(2);
             
-            // Chuyển đổi buffer ảnh sang base64
-            const base64Image = req.file.buffer.toString('base64');
+            console.log(`📎 Nhận được ${isImage ? '🖼️ ảnh' : '📁 file'}: ${req.file.originalname} (${req.file.mimetype}, ${fileSizeKB} KB)`);
             
-            // Thêm ảnh vào payload với định dạng Gemini yêu cầu
-            contentParts.push({
-                inlineData: {
-                    data: base64Image,
-                    mimeType: req.file.mimetype
-                }
-            });
+            if (isImage) {
+                // Xử lý ảnh với Gemini Multimodal
+                const base64Image = req.file.buffer.toString('base64');
+                contentParts.push({
+                    inlineData: {
+                        data: base64Image,
+                        mimeType: req.file.mimetype
+                    }
+                });
+            } else {
+                // Xử lý file khác (PDF, Word, v.v.)
+                // Gemini hiện tại chủ yếu hỗ trợ ảnh, với file khác ta sẽ chỉ thông báo thông tin file
+                const fileInfo = `\n\n📎 File đính kèm: ${req.file.originalname}\n📊 Loại: ${req.file.mimetype}\n📏 Kích thước: ${fileSizeKB} KB\n\n`;
+                contentParts[0] = textMessage + fileInfo + "Xin lỗi, hiện tại mình chỉ có thể xem và phân tích ảnh. Với file này, mình chỉ có thể cung cấp thông tin cơ bản về file.";
+            }
         }
 
         // Generate response với payload multimodal
@@ -2124,9 +2161,9 @@ app.post('/api/chat', chatImageUpload.single('image'), async (req, res) => {
         const response = await result.response;
         const text = response.text();
 
-        const logMessage = message ? message.substring(0, 50) : '[Chỉ gửi ảnh]';
-        const hasImage = req.file ? ' + 📷' : '';
-        console.log(`🤖 Whalio AI responded to: "${logMessage}..."${hasImage}`);
+        const logMessage = message ? message.substring(0, 50) : '[Chỉ gửi file]';
+        const hasFile = req.file ? ` + ${req.file.mimetype.startsWith('image/') ? '🖼️' : '📁'}` : '';
+        console.log(`🤖 Whalio AI responded to: "${logMessage}..."${hasFile}`);
 
         res.json({
             success: true,
@@ -2164,8 +2201,8 @@ app.post('/api/chat', chatImageUpload.single('image'), async (req, res) => {
         if (err.message?.includes('image') || err.message?.includes('media')) {
             return res.status(400).json({
                 success: false,
-                message: 'Không thể xử lý ảnh này',
-                response: 'Xin lỗi, mình không thể xử lý ảnh này. Hãy thử với ảnh khác nhé! 📷'
+                message: 'Không thể xử lý file này',
+                response: 'Xin lỗi, mình không thể xử lý file này. Hãy thử với file khác nhé! 📁'
             });
         }
 

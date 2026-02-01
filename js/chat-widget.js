@@ -75,11 +75,25 @@ const ChatWidget = {
                     
                     <!-- Input Area -->
                     <div class="chat-input-area">
-                        <!-- Image Preview Area (Hiển thị khi chọn ảnh) -->
-                        <div id="chat-image-preview" class="chat-image-preview" style="display: none;">
+                        <!-- File Preview Area (Hiển thị khi chọn file/ảnh) -->
+                        <div id="chat-file-preview" class="chat-file-preview" style="display: none;">
                             <div class="preview-container">
-                                <img id="chat-preview-img" src="" alt="Preview" />
-                                <button id="chat-remove-image" class="remove-image-btn" aria-label="Remove image">
+                                <!-- Image Preview -->
+                                <img id="chat-preview-img" src="" alt="Preview" style="display: none;" />
+                                <!-- File Info Preview -->
+                                <div id="chat-preview-file" class="file-preview-info" style="display: none;">
+                                    <div class="file-icon">
+                                        <svg viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6z"/>
+                                            <path d="M14 2v6h6"/>
+                                        </svg>
+                                    </div>
+                                    <div class="file-details">
+                                        <div class="file-name"></div>
+                                        <div class="file-size"></div>
+                                    </div>
+                                </div>
+                                <button id="chat-remove-file" class="remove-file-btn" aria-label="Remove file">
                                     <svg viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                                     </svg>
@@ -88,20 +102,20 @@ const ChatWidget = {
                         </div>
                         
                         <div class="chat-input-wrapper">
-                            <!-- Hidden File Input -->
+                            <!-- Hidden File Input for All Types -->
                             <input 
                                 type="file" 
-                                id="chat-image-input" 
-                                accept="image/*" 
+                                id="chat-file-input" 
+                                accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.js,.html,.css" 
                                 hidden
                             />
                             
-                            <!-- Image Upload Button -->
-                            <button id="chat-upload-btn" class="chat-upload-btn" aria-label="Attach image">
+                            <!-- File/Image Upload Button -->
+                            <button id="chat-upload-btn" class="chat-upload-btn" aria-label="Attach file">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                                    <circle cx="8.5" cy="8.5" r="1.5"/>
-                                    <polyline points="21 15 16 10 5 21"/>
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <line x1="12" y1="8" x2="12" y2="16"/>
+                                    <line x1="8" y1="12" x2="16" y2="12"/>
                                 </svg>
                             </button>
                             
@@ -149,24 +163,56 @@ const ChatWidget = {
             }
         });
         
-        // ==================== IMAGE UPLOAD EVENT LISTENERS ====================
+        // ==================== FILE UPLOAD & DRAG-DROP EVENT LISTENERS ====================
         const uploadBtn = document.getElementById('chat-upload-btn');
-        const imageInput = document.getElementById('chat-image-input');
-        const removeImageBtn = document.getElementById('chat-remove-image');
+        const fileInput = document.getElementById('chat-file-input');
+        const removeFileBtn = document.getElementById('chat-remove-file');
+        const inputWrapper = document.querySelector('.chat-input-wrapper');
+        const chatInput = document.getElementById('chat-input');
         
         // Click nút upload -> kích hoạt input file
         uploadBtn.addEventListener('click', () => {
-            imageInput.click();
+            fileInput.click();
         });
         
         // Khi chọn file -> hiển thị preview
-        imageInput.addEventListener('change', (e) => {
-            this.handleImageSelect(e);
+        fileInput.addEventListener('change', (e) => {
+            this.handleFileSelect(e);
         });
         
-        // Xóa ảnh đã chọn
-        removeImageBtn.addEventListener('click', () => {
-            this.clearSelectedImage();
+        // Xóa file đã chọn
+        removeFileBtn.addEventListener('click', () => {
+            this.clearSelectedFile();
+        });
+        
+        // ==================== DRAG & DROP EVENT LISTENERS ====================
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            inputWrapper.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+        
+        // Highlight drop zone
+        ['dragenter', 'dragover'].forEach(eventName => {
+            inputWrapper.addEventListener(eventName, () => {
+                inputWrapper.classList.add('drag-over');
+            });
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            inputWrapper.addEventListener(eventName, () => {
+                inputWrapper.classList.remove('drag-over');
+            });
+        });
+        
+        // Handle dropped files
+        inputWrapper.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                this.handleFileSelect({ target: { files: [files[0]] } }); // Chỉ lấy file đầu tiên
+            }
         });
         
         // Close on outside click (optional)
@@ -180,65 +226,121 @@ const ChatWidget = {
     },
     
     /**
-     * Biến lưu trữ file ảnh đã chọn
+     * Biến lưu trữ file đã chọn (ảnh hoặc file khác)
      */
-    selectedImage: null,
+    selectedFile: null,
     
     /**
-     * Xử lý khi người dùng chọn ảnh
-     * @param {Event} e - Change event từ input file
+     * Xử lý khi người dùng chọn file (ảnh hoặc file khác)
+     * @param {Event} e - Change event từ input file hoặc drag & drop
      */
-    handleImageSelect(e) {
+    handleFileSelect(e) {
         const file = e.target.files[0];
         if (!file) return;
         
         // Kiểm tra định dạng file
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (!allowedTypes.includes(file.type)) {
-            alert('Chỉ hỗ trợ file ảnh (JPEG, PNG, GIF, WebP)!');
+        const allowedTypes = [
+            // Images
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            // Documents  
+            'application/pdf', 'application/msword', 
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain',
+            // Spreadsheets
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
+            // Presentations
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            // Archives
+            'application/zip', 'application/x-rar-compressed',
+            // Code
+            'application/javascript', 'text/html', 'text/css'
+        ];
+        
+        const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.txt', '.xls', '.xlsx', '.ppt', '.pptx', '.zip', '.rar', '.js', '.html', '.css'];
+        const fileExt = file.name.toLowerCase().substr(file.name.lastIndexOf('.'));
+        
+        if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
+            alert('Loại file không được hỗ trợ! Chỉ chấp nhận: ảnh, PDF, Word, Excel, PowerPoint, ZIP, văn bản.');
             return;
         }
         
-        // Kiểm tra kích thước file (max 10MB)
-        if (file.size > 10 * 1024 * 1024) {
-            alert('File ảnh quá lớn! Vui lòng chọn ảnh nhỏ hơn 10MB.');
+        // Kiểm tra kích thước file (max 50MB)
+        if (file.size > 50 * 1024 * 1024) {
+            alert('File quá lớn! Vui lòng chọn file nhỏ hơn 50MB.');
             return;
         }
         
         // Lưu file vào biến
-        this.selectedImage = file;
+        this.selectedFile = file;
         
         // Hiển thị preview
-        const previewContainer = document.getElementById('chat-image-preview');
+        const previewContainer = document.getElementById('chat-file-preview');
         const previewImg = document.getElementById('chat-preview-img');
+        const previewFile = document.getElementById('chat-preview-file');
+        const isImage = file.type.startsWith('image/');
         
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            previewImg.src = event.target.result;
+        if (isImage) {
+            // Hiển thị ảnh
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                previewImg.src = event.target.result;
+                previewImg.style.display = 'block';
+                previewFile.style.display = 'none';
+                previewContainer.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            // Hiển thị thông tin file
+            const fileName = previewFile.querySelector('.file-name');
+            const fileSize = previewFile.querySelector('.file-size');
+            
+            fileName.textContent = file.name;
+            fileSize.textContent = this.formatFileSize(file.size);
+            
+            previewImg.style.display = 'none';
+            previewFile.style.display = 'flex';
             previewContainer.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
+        }
         
         // Thêm highlight cho upload button
-        document.getElementById('chat-upload-btn').classList.add('has-image');
+        document.getElementById('chat-upload-btn').classList.add('has-file');
     },
     
     /**
-     * Xóa ảnh đã chọn và reset preview
+     * Xóa file đã chọn và reset preview
      */
-    clearSelectedImage() {
-        this.selectedImage = null;
+    clearSelectedFile() {
+        this.selectedFile = null;
         
         // Reset input file
-        const imageInput = document.getElementById('chat-image-input');
-        imageInput.value = '';
+        const fileInput = document.getElementById('chat-file-input');
+        fileInput.value = '';
         
         // Ẩn preview
-        const previewContainer = document.getElementById('chat-image-preview');
+        const previewContainer = document.getElementById('chat-file-preview');
         previewContainer.style.display = 'none';
         
+        // Reset preview elements
+        document.getElementById('chat-preview-img').style.display = 'none';
+        document.getElementById('chat-preview-file').style.display = 'none';
+        
         // Xóa highlight từ upload button
-        document.getElementById('chat-upload-btn').classList.remove('has-image');
+        document.getElementById('chat-upload-btn').classList.remove('has-file');
+    },
+    
+    /**
+     * Format file size to human readable
+     * @param {number} bytes 
+     * @returns {string}
+     */
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     },
     
     /**
@@ -298,13 +400,13 @@ const ChatWidget = {
         const input = document.getElementById('chat-input');
         const message = input.value.trim();
         
-        // Kiểm tra: phải có message hoặc ảnh, và không đang typing
-        if ((!message && !this.selectedImage) || this.isTyping) return;
+        // Kiểm tra: phải có message hoặc file, và không đang typing
+        if ((!message && !this.selectedFile) || this.isTyping) return;
         
-        // Hiển thị tin nhắn người dùng (bao gồm cả ảnh nếu có)
-        if (this.selectedImage) {
-            // Nếu có ảnh, hiển thị ảnh trong tin nhắn
-            this.addMessageWithImage(message, this.selectedImage, 'user');
+        // Hiển thị tin nhắn người dùng (bao gồm cả file nếu có)
+        if (this.selectedFile) {
+            // Nếu có file, hiển thị file trong tin nhắn
+            this.addMessageWithFile(message, this.selectedFile, 'user');
         } else {
             // Chỉ có text
             this.addMessage(message, 'user');
@@ -324,9 +426,9 @@ const ChatWidget = {
             // Append message (luôn gửi, có thể rỗng)
             formData.append('message', message);
             
-            // Append ảnh nếu có
-            if (this.selectedImage) {
-                formData.append('image', this.selectedImage);
+            // Append file nếu có
+            if (this.selectedFile) {
+                formData.append('file', this.selectedFile);
             }
             
             // Gửi request (KHÔNG set Content-Type header, để browser tự xử lý boundary)
@@ -336,8 +438,8 @@ const ChatWidget = {
                 // Lưu ý: Không set headers Content-Type, browser sẽ tự thêm với boundary
             });
             
-            // Clear selected image SAU khi gửi request thành công
-            this.clearSelectedImage();
+            // Clear selected file SAU khi gửi request thành công
+            this.clearSelectedFile();
             
             const data = await response.json();
             
@@ -356,8 +458,8 @@ const ChatWidget = {
         } catch (error) {
             console.error('Chat API Error:', error);
             
-            // Clear selected image khi có lỗi
-            this.clearSelectedImage();
+            // Clear selected file khi có lỗi
+            this.clearSelectedFile();
             
             // Hide typing indicator
             this.hideTypingIndicator();
@@ -369,12 +471,12 @@ const ChatWidget = {
     },
     
     /**
-     * Thêm tin nhắn kèm ảnh vào chat
+     * Thêm tin nhắn kèm file vào chat
      * @param {string} text - Nội dung text
-     * @param {File} imageFile - File ảnh
+     * @param {File} file - File đính kèm
      * @param {string} sender - 'user' hoặc 'ai'
      */
-    addMessageWithImage(text, imageFile, sender) {
+    addMessageWithFile(text, file, sender) {
         const messagesContainer = document.getElementById('chat-messages');
         const messageDiv = document.createElement('div');
         messageDiv.className = `chat-message ${sender}-message`;
@@ -384,17 +486,36 @@ const ChatWidget = {
             minute: '2-digit' 
         });
         
-        // Tạo URL tạm cho ảnh
-        const imageUrl = URL.createObjectURL(imageFile);
-        
-        // Tạo nội dung tin nhắn với ảnh
         const textContent = text ? `<div class="message-text">${this.formatMessage(text)}</div>` : '';
-        const imageContent = `<div class="message-image"><img src="${imageUrl}" alt="Sent image" onload="this.parentElement.classList.add('loaded')" /></div>`;
+        const isImage = file.type.startsWith('image/');
+        let fileContent = '';
+        
+        if (isImage) {
+            // Hiển thị ảnh như trước
+            const imageUrl = URL.createObjectURL(file);
+            fileContent = `<div class="message-image"><img src="${imageUrl}" alt="Sent image" onload="this.parentElement.classList.add('loaded')" /></div>`;
+        } else {
+            // Hiển thị thông tin file
+            fileContent = `
+                <div class="message-file">
+                    <div class="file-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6z"/>
+                            <path d="M14 2v6h6"/>
+                        </svg>
+                    </div>
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">${this.formatFileSize(file.size)}</div>
+                    </div>
+                </div>
+            `;
+        }
         
         messageDiv.innerHTML = `
             <div class="message-content">
                 <div class="message-bubble">
-                    ${imageContent}
+                    ${fileContent}
                     ${textContent}
                 </div>
                 <span class="message-time">${time}</span>

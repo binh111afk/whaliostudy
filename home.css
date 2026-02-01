@@ -10652,7 +10652,7 @@ html.dark-mode footer {
     margin-left: 2px;
 }
 
-/* ==================== IMAGE UPLOAD BUTTON STYLES ==================== */
+/* ==================== FILE UPLOAD & DRAG-DROP BUTTON STYLES ==================== */
 .chat-upload-btn {
     width: 36px;
     height: 36px;
@@ -10682,29 +10682,40 @@ html.dark-mode footer {
     height: 20px;
 }
 
-/* Highlight khi đã chọn ảnh */
-.chat-upload-btn.has-image {
+/* Highlight khi đã chọn file */
+.chat-upload-btn.has-file {
     color: #667eea;
     background: rgba(102, 126, 234, 0.1);
 }
 
-/* ==================== IMAGE PREVIEW STYLES ==================== */
-.chat-image-preview {
+/* ==================== DRAG & DROP ZONE STYLES ==================== */
+.chat-input-wrapper.drag-over {
+    border-color: #667eea !important;
+    background: rgba(102, 126, 234, 0.05);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+}
+
+.chat-input-wrapper.drag-over .chat-input::placeholder {
+    color: #667eea;
+}
+
+/* ==================== FILE PREVIEW STYLES ==================== */
+.chat-file-preview {
     padding: 8px 0 0 0;
     margin-bottom: 8px;
 }
 
-.chat-image-preview .preview-container {
+.chat-file-preview .preview-container {
     position: relative;
     display: inline-block;
-    max-width: 120px;
+    max-width: 200px;
     border-radius: 12px;
     overflow: hidden;
     border: 2px solid var(--border-color);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.chat-image-preview img {
+.chat-file-preview img {
     display: block;
     max-width: 100%;
     max-height: 100px;
@@ -10712,8 +10723,50 @@ html.dark-mode footer {
     border-radius: 10px;
 }
 
-/* Nút xóa ảnh */
-.chat-image-preview .remove-image-btn {
+/* File info preview */
+.file-preview-info {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: var(--bg-card);
+    gap: 10px;
+    min-width: 180px;
+}
+
+.file-preview-info .file-icon {
+    width: 32px;
+    height: 32px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.file-preview-info .file-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.file-preview-info .file-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-preview-info .file-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.file-preview-info .file-size {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Nút xóa file */
+.chat-file-preview .remove-file-btn {
     position: absolute;
     top: 4px;
     right: 4px;
@@ -10730,18 +10783,18 @@ html.dark-mode footer {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.chat-image-preview .remove-image-btn:hover {
+.chat-file-preview .remove-file-btn:hover {
     background: #dc2626;
     transform: scale(1.1);
 }
 
-.chat-image-preview .remove-image-btn svg {
+.chat-file-preview .remove-file-btn svg {
     width: 14px;
     height: 14px;
     color: white;
 }
 
-/* ==================== MESSAGE WITH IMAGE STYLES ==================== */
+/* ==================== MESSAGE WITH FILE STYLES ==================== */
 .message-image {
     margin-bottom: 8px;
     border-radius: 12px;
@@ -10763,21 +10816,82 @@ html.dark-mode footer {
     border-radius: 8px;
 }
 
+.message-file {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: rgba(102, 126, 234, 0.05);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    max-width: 280px;
+}
+
+.message-file .file-icon {
+    width: 32px;
+    height: 32px;
+    color: #667eea;
+    flex-shrink: 0;
+}
+
+.message-file .file-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.message-file .file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.message-file .file-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.message-file .file-size {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
 .message-text {
     margin-top: 4px;
 }
 
-/* User message với ảnh - không cần text border */
+/* User message với file */
 .user-message .message-bubble .message-image img {
     border-radius: 8px;
 }
 
-/* AI message với ảnh */
+.user-message .message-file {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.user-message .message-file .file-name {
+    color: white;
+}
+
+.user-message .message-file .file-size {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.user-message .message-file .file-icon {
+    color: white;
+}
+
+/* AI message với file */
 .ai-message .message-bubble .message-image img {
     border: 1px solid var(--border-color);
 }
 
-/* Mobile Responsive */
+/* Mobile Responsive cho file upload */
 @media (max-width: 480px) {
     .chat-widget-container {
         bottom: 80px;
@@ -10802,7 +10916,7 @@ html.dark-mode footer {
         right: 0;
     }
     
-    /* Image upload responsive */
+    /* File upload responsive */
     .chat-upload-btn {
         width: 32px;
         height: 32px;
@@ -10813,12 +10927,30 @@ html.dark-mode footer {
         height: 18px;
     }
     
-    .chat-image-preview .preview-container {
-        max-width: 100px;
+    .chat-file-preview .preview-container {
+        max-width: 160px;
     }
     
-    .chat-image-preview img {
+    .chat-file-preview img {
         max-height: 80px;
+    }
+    
+    .file-preview-info {
+        min-width: 140px;
+        padding: 10px;
+    }
+    
+    .file-preview-info .file-icon {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .file-preview-info .file-name {
+        font-size: 13px;
+    }
+    
+    .file-preview-info .file-size {
+        font-size: 11px;
     }
     
     .message-image {
@@ -10827,6 +10959,24 @@ html.dark-mode footer {
     
     .message-image img {
         max-height: 150px;
+    }
+    
+    .message-file {
+        max-width: 220px;
+        padding: 10px;
+    }
+    
+    .message-file .file-icon {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .message-file .file-name {
+        font-size: 13px;
+    }
+    
+    .message-file .file-size {
+        font-size: 11px;
     }
 }
 
@@ -10843,7 +10993,20 @@ html.dark-mode .chat-upload-btn:hover {
     background: var(--bg-body);
 }
 
-html.dark-mode .chat-image-preview .preview-container {
+html.dark-mode .chat-file-preview .preview-container {
     border-color: var(--border-color);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+html.dark-mode .file-preview-info {
+    background: var(--bg-body);
+}
+
+html.dark-mode .message-file {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: rgba(102, 126, 234, 0.3);
+}
+
+html.dark-mode .chat-input-wrapper.drag-over {
+    background: rgba(102, 126, 234, 0.08);
 }
