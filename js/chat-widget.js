@@ -465,7 +465,7 @@ const ChatWidget = {
                             <textarea 
                                 id="chat-input" 
                                 class="chat-input" 
-                                placeholder="Nhập tin nhắn... (Enter gửi, Shift+Enter xuống dòng, Tab thêm 4 spaces)" 
+                                placeholder="Hỏi Whalio bất cứ điều gì..." 
                                 autocomplete="off"
                                 rows="1"
                             ></textarea>
