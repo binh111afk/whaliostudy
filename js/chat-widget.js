@@ -455,131 +455,182 @@ const ChatWidget = {
     },
     
     /**
-     * Create the main widget HTML structure
+     * Create and inject the widget HTML into the page
+     * HTML written on single lines to prevent indentation artifacts in DOM
      */
     createWidgetHTML() {
-        const widgetHTML = `
-            <div id="chat-widget" class="chat-widget">
-                <button id="chat-toggle" class="chat-toggle" aria-label="Toggle chat">
-                    <svg class="chat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                    <svg class="close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
+        const widgetHTML = this.cleanHTML(`
+            <!-- Whalio AI Chat Widget -->
+            <div id="whalio-chat-widget" class="chat-widget-container">
+                <!-- Floating Launcher Button -->
+                <button id="chat-launcher" class="chat-launcher" aria-label="Open chat">
+                    <svg class="chat-icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.08L2 22l4.92-1.36C8.42 21.5 10.15 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/><circle cx="8" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="16" cy="12" r="1" fill="currentColor"/></svg>
+                    <svg class="chat-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
                 
-                <div id="chat-container" class="chat-container">
+                <!-- Chat Window -->
+                <div id="chat-window" class="chat-window">
+                    <!-- Header -->
                     <div class="chat-header">
                         <div class="chat-header-info">
-                            <div class="chat-avatar">
-                                <svg viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 class="chat-title">Whalio AI</h3>
-                                <p class="chat-status">Online</p>
-                            </div>
+                            <div class="chat-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></div>
+                            <div class="chat-header-text"><h4>Whalio AI Assistant</h4><span class="chat-status"><span class="status-dot"></span>Trực tuyến</span></div>
                         </div>
-                        <button id="chat-minimize" class="chat-minimize" aria-label="Minimize chat">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                        </button>
+                        <button id="chat-close-btn" class="chat-close-btn" aria-label="Close chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
                     </div>
                     
-                    <div id="chat-messages" class="chat-messages"></div>
+                    <!-- Messages Area -->
+                    <div id="chat-messages" class="chat-messages">
+                        <!-- Messages will be appended here -->
+                    </div>
                     
-                    <div class="chat-input-container">
-                        <div id="file-preview-container"></div>
-                        <div class="chat-input-wrapper">
-                            <textarea 
-                                id="chat-input" 
-                                class="chat-input" 
-                                placeholder="Nhập tin nhắn..."
-                                rows="1"
-                            ></textarea>
-                            <div class="chat-actions">
-                                <label class="attach-btn" aria-label="Attach file">
-                                    <input type="file" id="file-input" accept="image/*,.pdf,.doc,.docx,.txt" style="display: none;">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-                                    </svg>
-                                </label>
-                                <button id="send-btn" class="send-btn" aria-label="Send message">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                                    </svg>
-                                </button>
+                    <!-- Input Area -->
+                    <div class="chat-input-area">
+                        <!-- File Preview Area (Hiển thị khi chọn file/ảnh) -->
+                        <div id="chat-file-preview" class="chat-file-preview" style="display: none;">
+                            <div class="preview-container">
+                                <!-- Image Preview -->
+                                <img id="chat-preview-img" src="" alt="Preview" style="display: none;" />
+                                <!-- File Info Preview -->
+                                <div id="chat-preview-file" class="file-preview-info" style="display: none;">
+                                    <div class="file-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6z"/><path d="M14 2v6h6"/></svg></div>
+                                    <div class="file-details"><div class="file-name"></div><div class="file-size"></div></div>
+                                </div>
+                                <button id="chat-remove-file" class="remove-file-btn" aria-label="Remove file"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
                             </div>
+                        </div>
+                        
+                        <div class="chat-input-wrapper">
+                            <!-- Hidden File Input for All Types -->
+                            <input type="file" id="chat-file-input" accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.js,.html,.css,.py,.java,.cpp,.c,.ts,.jsx,.tsx,.json,.xml,.yaml,.yml,.md,.sql,.sh,.bash" hidden />
+                            
+                            <!-- File/Image Upload Button -->
+                            <button id="chat-upload-btn" class="chat-upload-btn" aria-label="Attach file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></button>
+                            
+                            <textarea id="chat-input" class="chat-input" placeholder="Hỏi Whalio bất cứ điều gì..." autocomplete="off" rows="1"></textarea>
+                            <button id="chat-send-btn" class="chat-send-btn" aria-label="Send message"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
                         </div>
                     </div>
                 </div>
             </div>
-        `;
+        `);
         
+        // Insert widget into the body
         document.body.insertAdjacentHTML('beforeend', widgetHTML);
     },
     
     /**
-     * Set up event listeners for chat interactions
+     * Set up event listeners
      */
     setupEventListeners() {
-        const chatToggle = document.getElementById('chat-toggle');
-        const chatMinimize = document.getElementById('chat-minimize');
-        const chatInput = document.getElementById('chat-input');
-        const sendBtn = document.getElementById('send-btn');
-        const fileInput = document.getElementById('file-input');
+        const launcher = document.getElementById('chat-launcher');
+        const closeBtn = document.getElementById('chat-close-btn');
+        const sendBtn = document.getElementById('chat-send-btn');
+        const input = document.getElementById('chat-input');
         
         // Toggle chat window
-        chatToggle.addEventListener('click', () => this.toggleChat());
-        chatMinimize.addEventListener('click', () => this.toggleChat());
+        launcher.addEventListener('click', () => this.toggleChat());
+        closeBtn.addEventListener('click', () => this.closeChat());
         
-        // Send message on button click
+        // Send message
         sendBtn.addEventListener('click', () => this.handleSendMessage());
         
-        // Send message on Enter (Shift+Enter for new line)
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                this.handleSendMessage();
-            }
-            
-            // Handle Tab key for indentation
+        // ==================== TEXTAREA KEY HANDLING ====================
+        input.addEventListener('keydown', (e) => {
+            // Tab key: Insert 4 spaces
             if (e.key === 'Tab') {
                 e.preventDefault();
-                const start = chatInput.selectionStart;
-                const end = chatInput.selectionEnd;
-                const value = chatInput.value;
+                const start = input.selectionStart;
+                const end = input.selectionEnd;
+                const spaces = '    '; // 4 spaces
                 
-                // Insert 4 spaces at cursor position
-                chatInput.value = value.substring(0, start) + '    ' + value.substring(end);
-                chatInput.selectionStart = chatInput.selectionEnd = start + 4;
+                input.value = input.value.substring(0, start) + spaces + input.value.substring(end);
+                input.selectionStart = input.selectionEnd = start + spaces.length;
+                
+                // Trigger auto-resize
+                this.autoResizeTextarea(input);
+                return;
+            }
+            
+            // Enter key handling
+            if (e.key === 'Enter') {
+                if (e.shiftKey) {
+                    // Shift + Enter: New line (default behavior)
+                    // Let it happen naturally, just auto-resize after
+                    setTimeout(() => this.autoResizeTextarea(input), 0);
+                } else {
+                    // Enter only: Send message
+                    e.preventDefault();
+                    this.handleSendMessage();
+                }
             }
         });
         
-        // Auto-resize textarea
-        chatInput.addEventListener('input', () => {
-            this.autoResizeTextarea(chatInput);
+        // Auto-resize textarea on input
+        input.addEventListener('input', () => {
+            this.autoResizeTextarea(input);
         });
         
-        // File upload handling
+        // ==================== FILE UPLOAD & DRAG-DROP EVENT LISTENERS ====================
+        const uploadBtn = document.getElementById('chat-upload-btn');
+        const fileInput = document.getElementById('chat-file-input');
+        const removeFileBtn = document.getElementById('chat-remove-file');
+        const inputWrapper = document.querySelector('.chat-input-wrapper');
+        
+        // Click nút upload -> kích hoạt input file
+        uploadBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // Khi chọn file -> hiển thị preview
         fileInput.addEventListener('change', (e) => {
             this.handleFileSelect(e);
         });
         
-        // Listen for dark mode changes
-        const observer = new MutationObserver(() => {
-            this.updateHighlightTheme();
+        // Xóa file đã chọn
+        removeFileBtn.addEventListener('click', () => {
+            this.clearSelectedFile();
         });
         
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ['class']
+        // ==================== DRAG & DROP EVENT LISTENERS ====================
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            inputWrapper.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
         });
+        
+        // Highlight drop zone
+        ['dragenter', 'dragover'].forEach(eventName => {
+            inputWrapper.addEventListener(eventName, () => {
+                inputWrapper.classList.add('drag-over');
+            });
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            inputWrapper.addEventListener(eventName, () => {
+                inputWrapper.classList.remove('drag-over');
+            });
+        });
+        
+        // Handle dropped files
+        inputWrapper.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                this.handleFileSelect({ target: { files: [files[0]] } }); // Chỉ lấy file đầu tiên
+            }
+        });
+        
+        // Listen for theme changes to update highlight.js theme
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'class') {
+                    this.updateHighlightTheme();
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true });
     },
     
     /**
@@ -587,81 +638,207 @@ const ChatWidget = {
      * @param {HTMLTextAreaElement} textarea 
      */
     autoResizeTextarea(textarea) {
+        // Reset height to auto to get the correct scrollHeight
         textarea.style.height = 'auto';
-        const newHeight = Math.min(textarea.scrollHeight, 200);
+        
+        // Calculate new height
+        const minHeight = 40;
+        const maxHeight = 200;
+        const scrollHeight = textarea.scrollHeight;
+        
+        // Set new height within bounds
+        const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
         textarea.style.height = newHeight + 'px';
+        
+        // Show scrollbar if content exceeds max height
+        textarea.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
     },
     
     /**
-     * Toggle chat widget open/close
+     * Biến lưu trữ file đã chọn (ảnh hoặc file khác)
+     */
+    selectedFile: null,
+    
+    /**
+     * Xử lý khi người dùng chọn file (ảnh hoặc file khác)
+     * @param {Event} e - Change event từ input file hoặc drag & drop
+     */
+    handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Kiểm tra định dạng file
+        const allowedTypes = [
+            // Images
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            // Documents  
+            'application/pdf', 'application/msword', 
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain',
+            // Spreadsheets
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
+            // Presentations
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            // Archives
+            'application/zip', 'application/x-rar-compressed',
+            // Code files
+            'application/javascript', 'text/javascript',
+            'text/html', 'text/css',
+            'text/x-python', 'text/x-java',
+            'text/x-c', 'text/x-c++',
+            'application/json', 'application/xml',
+            'text/yaml', 'text/markdown',
+            'application/x-sh'
+        ];
+        
+        const allowedExtensions = [
+            '.jpg', '.jpeg', '.png', '.gif', '.webp', 
+            '.pdf', '.doc', '.docx', '.txt', 
+            '.xls', '.xlsx', '.ppt', '.pptx', 
+            '.zip', '.rar',
+            '.js', '.ts', '.jsx', '.tsx',
+            '.html', '.css', '.scss', '.sass',
+            '.py', '.java', '.cpp', '.c', '.h', '.hpp',
+            '.json', '.xml', '.yaml', '.yml',
+            '.md', '.sql', '.sh', '.bash',
+            '.php', '.rb', '.go', '.rs', '.swift'
+        ];
+        const fileExt = file.name.toLowerCase().substr(file.name.lastIndexOf('.'));
+        
+        if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
+            alert('Loại file không được hỗ trợ! Chỉ chấp nhận: ảnh, PDF, Word, Excel, PowerPoint, ZIP, và các file code.');
+            return;
+        }
+        
+        // Kiểm tra kích thước file (max 50MB)
+        if (file.size > 50 * 1024 * 1024) {
+            alert('File quá lớn! Vui lòng chọn file nhỏ hơn 50MB.');
+            return;
+        }
+        
+        // Lưu file vào biến
+        this.selectedFile = file;
+        
+        // Hiển thị preview
+        const previewContainer = document.getElementById('chat-file-preview');
+        const previewImg = document.getElementById('chat-preview-img');
+        const previewFile = document.getElementById('chat-preview-file');
+        const isImage = file.type.startsWith('image/');
+        
+        if (isImage) {
+            // Hiển thị ảnh
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                previewImg.src = event.target.result;
+                previewImg.style.display = 'block';
+                previewFile.style.display = 'none';
+                previewContainer.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            // Hiển thị thông tin file
+            const fileName = previewFile.querySelector('.file-name');
+            const fileSize = previewFile.querySelector('.file-size');
+            
+            fileName.textContent = file.name;
+            fileSize.textContent = this.formatFileSize(file.size);
+            
+            previewImg.style.display = 'none';
+            previewFile.style.display = 'flex';
+            previewContainer.style.display = 'block';
+        }
+        
+        // Thêm highlight cho upload button
+        document.getElementById('chat-upload-btn').classList.add('has-file');
+    },
+    
+    /**
+     * Xóa file đã chọn và reset preview
+     */
+    clearSelectedFile() {
+        this.selectedFile = null;
+        
+        // Ẩn preview
+        const previewContainer = document.getElementById('chat-file-preview');
+        const previewImg = document.getElementById('chat-preview-img');
+        const previewFile = document.getElementById('chat-preview-file');
+        
+        previewContainer.style.display = 'none';
+        previewImg.src = '';
+        previewImg.style.display = 'none';
+        previewFile.style.display = 'none';
+        
+        // Reset file input
+        const fileInput = document.getElementById('chat-file-input');
+        fileInput.value = '';
+        
+        // Remove highlight
+        document.getElementById('chat-upload-btn').classList.remove('has-file');
+    },
+    
+    /**
+     * Format file size to human readable
+     * @param {number} bytes 
+     * @returns {string}
+     */
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    },
+    
+    /**
+     * Toggle chat window visibility
      */
     toggleChat() {
-        this.isOpen = !this.isOpen;
-        const chatWidget = document.getElementById('chat-widget');
-        
         if (this.isOpen) {
-            chatWidget.classList.add('open');
-            document.getElementById('chat-input').focus();
+            this.closeChat();
         } else {
-            chatWidget.classList.remove('open');
+            this.openChat();
         }
     },
     
     /**
-     * Add welcome message when chat initializes
+     * Open the chat window
+     */
+    openChat() {
+        const chatWindow = document.getElementById('chat-window');
+        const launcher = document.getElementById('chat-launcher');
+        
+        chatWindow.classList.add('open');
+        launcher.classList.add('active');
+        this.isOpen = true;
+        
+        // Focus on input
+        setTimeout(() => {
+            const input = document.getElementById('chat-input');
+            input.focus();
+            this.autoResizeTextarea(input);
+        }, 300);
+    },
+    
+    /**
+     * Close the chat window
+     */
+    closeChat() {
+        const chatWindow = document.getElementById('chat-window');
+        const launcher = document.getElementById('chat-launcher');
+        
+        chatWindow.classList.remove('open');
+        launcher.classList.remove('active');
+        this.isOpen = false;
+    },
+    
+    /**
+     * Add welcome message on init
      */
     addWelcomeMessage() {
-        const welcomeMessage = "Xin chào! Mình là Whalio AI. Mình có thể giúp gì cho bạn hôm nay? 😊";
+        const welcomeMessage = "Xin chào! 👋 Mình là **Whalio AI Assistant**. Mình có thể giúp bạn:\n\n• Trả lời câu hỏi\n• Viết code và giải thích lập trình\n• Phân tích file và hình ảnh\n• Tạo nội dung sáng tạo\n\nHãy hỏi mình bất cứ điều gì nhé! 😊";
         this.addMessage(welcomeMessage, 'ai');
-    },
-    
-    /**
-     * Handle file selection
-     * @param {Event} event 
-     */
-    handleFileSelect(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        this.selectedFile = file;
-        this.showFilePreview(file);
-    },
-    
-    /**
-     * Show file preview in input area
-     * @param {File} file 
-     */
-    showFilePreview(file) {
-        const previewContainer = document.getElementById('file-preview-container');
-        const fileSize = (file.size / 1024).toFixed(1) + ' KB';
-        
-        previewContainer.innerHTML = this.cleanHTML(`
-            <div class="file-preview">
-                <svg class="file-preview-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                    <polyline points="13 2 13 9 20 9"></polyline>
-                </svg>
-                <div class="file-preview-info">
-                    <div class="file-preview-name">${file.name}</div>
-                    <div class="file-preview-size">${fileSize}</div>
-                </div>
-                <button class="file-preview-remove" onclick="ChatWidget.removeFilePreview()" type="button">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-        `);
-    },
-    
-    /**
-     * Remove file preview
-     */
-    removeFilePreview() {
-        this.selectedFile = null;
-        document.getElementById('file-preview-container').innerHTML = '';
-        document.getElementById('file-input').value = '';
     },
     
     /**
@@ -684,7 +861,7 @@ const ChatWidget = {
         // Clear input and file
         chatInput.value = '';
         chatInput.style.height = 'auto';
-        this.removeFilePreview();
+        this.clearSelectedFile();
         
         // Show typing indicator
         this.showTypingIndicator();
@@ -764,10 +941,10 @@ const ChatWidget = {
     },
     
     /**
-     * Add message with file attachment to chat
-     * @param {string} text 
-     * @param {File} file 
-     * @param {string} sender 
+     * Thêm tin nhắn kèm file vào chat
+     * @param {string} text - Nội dung text
+     * @param {File} file - File đính kèm
+     * @param {string} sender - 'user' hoặc 'ai'
      */
     addMessageWithFile(text, file, sender) {
         const messagesContainer = document.getElementById('chat-messages');
@@ -779,35 +956,20 @@ const ChatWidget = {
             minute: '2-digit' 
         });
         
-        const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+        const textContent = text ? `<div class="message-text">${this.formatMessage(text)}</div>` : '';
         const isImage = file.type.startsWith('image/');
-        
-        let filePreviewHTML = '';
+        let fileContent = '';
         
         if (isImage) {
             const imageUrl = URL.createObjectURL(file);
-            filePreviewHTML = `<img src="${imageUrl}" alt="${file.name}" class="message-image" style="max-width: 200px;">`;
+            fileContent = `<div class="message-image"><img src="${imageUrl}" alt="Sent image" onload="this.parentElement.classList.add('loaded')" /></div>`;
         } else {
-            filePreviewHTML = this.cleanHTML(`
-                <div class="message-file-info">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                        <polyline points="13 2 13 9 20 9"></polyline>
-                    </svg>
-                    <div>
-                        <div class="message-file-name">${file.name}</div>
-                        <div class="message-file-size">${fileSize}</div>
-                    </div>
-                </div>
-            `);
+            fileContent = `<div class="message-file"><div class="file-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6z"/><path d="M14 2v6h6"/></svg></div><div class="file-info"><div class="file-name">${file.name}</div><div class="file-size">${this.formatFileSize(file.size)}</div></div></div>`;
         }
         
-        const formattedText = text ? this.formatMessage(text) : '';
-        
-        messageDiv.innerHTML = `<div class="message-content"><div class="message-bubble">${filePreviewHTML}${formattedText}</div><span class="message-time">${time}</span></div>`.trim();
+        messageDiv.innerHTML = `<div class="message-content"><div class="message-bubble">${fileContent}${textContent}</div><span class="message-time">${time}</span></div>`.trim();
         
         messagesContainer.appendChild(messageDiv);
-        this.applyHighlighting(messageDiv);
         this.scrollToBottom();
     },
     
