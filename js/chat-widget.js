@@ -2,7 +2,7 @@
 // Floating chat widget connected to Google Gemini AI
 // Supports both Light and Dark mode via CSS variables
 // Enhanced with Syntax Highlighting and Code Programming Support
-// FIXED: Wrapping issues, unwanted indentation, and proper pre-wrap handling
+// OPTIMIZED for indentation handling and overflow prevention
 
 const ChatWidget = {
     isOpen: false,
@@ -122,11 +122,9 @@ const ChatWidget = {
                 box-sizing: border-box;
             }
             
-            /* Message bubble - CRITICAL FIX with PRE-WRAP and FIT-CONTENT */
+            /* Message bubble - CRITICAL FIX with PRE-WRAP for indentation preservation */
             .chat-message .message-bubble {
                 max-width: 85%;
-                width: fit-content;
-                display: inline-block;
                 word-wrap: break-word;
                 overflow-wrap: anywhere;
                 word-break: break-word;
@@ -146,8 +144,6 @@ const ChatWidget = {
                 white-space: pre-wrap; /* PRESERVE AI RESPONSE INDENTATION */
                 font-family: inherit;
                 max-width: 85%;
-                width: fit-content;
-                display: inline-block;
                 overflow: hidden;
             }
             
@@ -159,8 +155,6 @@ const ChatWidget = {
             
             .user-message .message-bubble {
                 max-width: 85%;
-                width: fit-content;
-                display: inline-block;
                 white-space: pre-wrap; /* PRESERVE USER MESSAGE INDENTATION */
             }
             
@@ -204,14 +198,15 @@ const ChatWidget = {
                 padding: 8px 12px;
                 background: #161b22;
                 border-bottom: 1px solid #30363d;
+                font-size: 12px;
+                color: #8b949e;
+                flex-wrap: wrap;
+                gap: 8px;
             }
             
             .message-bubble .code-block-lang {
-                font-size: 12px;
-                font-weight: 600;
-                color: #8b949e;
+                font-weight: 500;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
             }
             
             .message-bubble .code-copy-btn {
@@ -219,23 +214,25 @@ const ChatWidget = {
                 align-items: center;
                 gap: 4px;
                 padding: 4px 8px;
-                background: #21262d;
+                background: transparent;
                 border: 1px solid #30363d;
-                border-radius: 4px;
-                color: #c9d1d9;
+                border-radius: 6px;
+                color: #8b949e;
                 font-size: 12px;
                 cursor: pointer;
-                transition: all 0.2s;
+                transition: all 0.2s ease;
+                flex-shrink: 0;
             }
             
             .message-bubble .code-copy-btn:hover {
                 background: #30363d;
-                border-color: #8b949e;
+                color: #f0f6fc;
             }
             
             .message-bubble .code-copy-btn.copied {
                 background: #238636;
-                border-color: #2ea043;
+                border-color: #238636;
+                color: #ffffff;
             }
             
             .message-bubble .code-copy-btn svg {
@@ -243,215 +240,135 @@ const ChatWidget = {
                 height: 14px;
             }
             
-            .message-bubble .code-block-wrapper pre {
+            /* Pre and Code - CRITICAL OVERFLOW FIX */
+            .message-bubble pre {
                 margin: 0;
-                padding: 12px;
+                padding: 12px 16px;
                 overflow-x: auto;
+                overflow-y: hidden;
                 background: #0d1117;
-                scrollbar-width: thin;
-                scrollbar-color: #30363d #0d1117;
                 max-width: 100%;
                 box-sizing: border-box;
+                scrollbar-width: thin;
+                scrollbar-color: #30363d transparent;
             }
             
-            .message-bubble .code-block-wrapper pre::-webkit-scrollbar {
-                height: 8px;
+            .message-bubble pre::-webkit-scrollbar {
+                height: 6px;
             }
             
-            .message-bubble .code-block-wrapper pre::-webkit-scrollbar-track {
-                background: #0d1117;
+            .message-bubble pre::-webkit-scrollbar-track {
+                background: transparent;
             }
             
-            .message-bubble .code-block-wrapper pre::-webkit-scrollbar-thumb {
+            .message-bubble pre::-webkit-scrollbar-thumb {
                 background: #30363d;
-                border-radius: 4px;
+                border-radius: 3px;
             }
             
-            .message-bubble .code-block-wrapper pre::-webkit-scrollbar-thumb:hover {
+            .message-bubble pre::-webkit-scrollbar-thumb:hover {
                 background: #484f58;
             }
             
-            .message-bubble .code-block-wrapper code {
-                font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            .message-bubble pre code {
+                font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
                 font-size: 13px;
                 line-height: 1.5;
-                color: #c9d1d9;
                 background: transparent;
                 padding: 0;
                 border-radius: 0;
                 white-space: pre;
+                word-wrap: normal;
                 display: block;
-                min-width: max-content;
+                overflow-x: visible;
+            }
+            
+            .message-bubble pre code.hljs {
+                background: transparent;
+                padding: 0;
             }
             
             /* Inline code */
-            .message-bubble code:not(.code-block-wrapper code) {
-                background: var(--code-bg, #f6f8fa);
-                color: var(--code-text, #24292f);
+            .message-bubble code:not(pre code) {
+                background: rgba(110, 118, 129, 0.2);
                 padding: 2px 6px;
                 border-radius: 4px;
-                font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+                font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
                 font-size: 0.9em;
-                border: 1px solid var(--border-color, #d0d7de);
+                color: #e6edf3;
+                word-break: break-all;
             }
             
-            /* Dark mode inline code */
-            .dark-mode .message-bubble code:not(.code-block-wrapper code) {
-                background: #161b22;
-                color: #c9d1d9;
-                border-color: #30363d;
+            /* Light mode code styles */
+            html:not(.dark-mode) .message-bubble .code-block-wrapper {
+                background: #f6f8fa;
+                border-color: #d0d7de;
             }
             
-            /* ==================== TYPING INDICATOR ==================== */
-            .typing-indicator {
-                display: flex;
-                align-items: center;
-                gap: 4px;
-                padding: 10px 16px;
-                background: var(--ai-bubble-bg, #f0f0f0);
-                border-radius: 18px;
-                width: fit-content;
+            html:not(.dark-mode) .message-bubble .code-block-header {
+                background: #f6f8fa;
+                border-bottom-color: #d0d7de;
+                color: #57606a;
             }
             
-            .typing-dot {
-                width: 8px;
-                height: 8px;
-                background: var(--text-secondary, #888);
-                border-radius: 50%;
-                animation: typing-bounce 1.4s infinite ease-in-out;
+            html:not(.dark-mode) .message-bubble .code-copy-btn {
+                border-color: #d0d7de;
+                color: #57606a;
             }
             
-            .typing-dot:nth-child(1) {
-                animation-delay: -0.32s;
+            html:not(.dark-mode) .message-bubble .code-copy-btn:hover {
+                background: #d0d7de;
+                color: #24292f;
             }
             
-            .typing-dot:nth-child(2) {
-                animation-delay: -0.16s;
+            html:not(.dark-mode) .message-bubble pre {
+                background: #f6f8fa;
+                scrollbar-color: #d0d7de transparent;
             }
             
-            @keyframes typing-bounce {
-                0%, 80%, 100% {
-                    transform: scale(0.8);
-                    opacity: 0.5;
-                }
-                40% {
-                    transform: scale(1);
-                    opacity: 1;
-                }
+            html:not(.dark-mode) .message-bubble pre::-webkit-scrollbar-thumb {
+                background: #d0d7de;
             }
             
-            /* ==================== FILE UPLOAD PREVIEW ==================== */
-            .file-preview {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin-top: 8px;
-                padding: 8px 12px;
-                background: var(--bg-secondary, #f5f5f5);
-                border-radius: 8px;
-                font-size: 13px;
+            html:not(.dark-mode) .message-bubble pre::-webkit-scrollbar-thumb:hover {
+                background: #afb8c1;
             }
             
-            .file-preview-icon {
-                width: 20px;
-                height: 20px;
-                flex-shrink: 0;
+            html:not(.dark-mode) .message-bubble code:not(pre code) {
+                background: rgba(175, 184, 193, 0.2);
+                color: #24292f;
             }
             
-            .file-preview-info {
-                flex: 1;
-                min-width: 0;
+            /* User message in bubble */
+            .user-message .message-bubble code:not(pre code) {
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
             }
             
-            .file-preview-name {
-                font-weight: 500;
-                color: var(--text-primary);
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-            
-            .file-preview-size {
-                color: var(--text-secondary);
-                font-size: 11px;
-            }
-            
-            .file-preview-remove {
-                width: 20px;
-                height: 20px;
-                padding: 0;
-                background: none;
-                border: none;
-                color: var(--text-secondary);
-                cursor: pointer;
-                flex-shrink: 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 4px;
-                transition: all 0.2s;
-            }
-            
-            .file-preview-remove:hover {
-                background: var(--border-color);
-                color: var(--text-primary);
-            }
-            
-            .file-preview-remove svg {
-                width: 16px;
-                height: 16px;
-            }
-            
-            /* ==================== MESSAGE IMAGE PREVIEW ==================== */
-            .message-image {
+            /* ==================== MESSAGE TEXT OVERFLOW ==================== */
+            .message-bubble .message-text {
                 max-width: 100%;
-                border-radius: 8px;
-                margin: 4px 0;
-                display: block;
+                overflow-wrap: anywhere;
+                word-break: break-word;
             }
             
-            .message-file-info {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                padding: 8px 12px;
-                background: var(--bg-secondary, #f5f5f5);
-                border-radius: 8px;
-                margin: 4px 0;
-                font-size: 13px;
+            /* Image in message */
+            .message-bubble .message-image {
+                max-width: 100%;
             }
             
-            .message-file-info svg {
-                width: 20px;
-                height: 20px;
-                flex-shrink: 0;
+            .message-bubble .message-image img {
+                max-width: 100%;
+                height: auto;
             }
             
-            .message-file-name {
-                font-weight: 500;
-                color: var(--text-primary);
-            }
-            
-            .message-file-size {
-                color: var(--text-secondary);
-                font-size: 11px;
+            /* File in message */
+            .message-bubble .message-file {
+                max-width: 100%;
+                box-sizing: border-box;
             }
         `;
-        
         document.head.appendChild(customStyles);
-    },
-    
-    /**
-     * Clean HTML by removing indentation artifacts from template literals
-     * @param {string} html 
-     * @returns {string}
-     */
-    cleanHTML(html) {
-        return html
-            .split('\n')
-            .map(line => line.trim())
-            .filter(line => line.length > 0)
-            .join('');
     },
     
     /**
@@ -517,6 +434,18 @@ const ChatWidget = {
         
         // Insert widget into the body
         document.body.insertAdjacentHTML('beforeend', widgetHTML);
+    },
+
+    /**
+     * Clean HTML template literal - remove extra whitespace and newlines between tags
+     * but preserve intentional spaces within content
+     */
+    cleanHTML(html) {
+        return html
+            // Remove newlines and extra whitespace between tags
+            .replace(/>\s+</g, '><')
+            // Remove leading/trailing whitespace
+            .trim();
     },
     
     /**
@@ -619,6 +548,15 @@ const ChatWidget = {
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 this.handleFileSelect({ target: { files: [files[0]] } }); // Chỉ lấy file đầu tiên
+            }
+        });
+        
+        // Close on outside click (optional)
+        document.addEventListener('click', (e) => {
+            const widget = document.getElementById('whalio-chat-widget');
+            if (this.isOpen && !widget.contains(e.target)) {
+                // Optionally close on outside click
+                // this.closeChat();
             }
         });
         
@@ -760,21 +698,19 @@ const ChatWidget = {
     clearSelectedFile() {
         this.selectedFile = null;
         
-        // Ẩn preview
-        const previewContainer = document.getElementById('chat-file-preview');
-        const previewImg = document.getElementById('chat-preview-img');
-        const previewFile = document.getElementById('chat-preview-file');
-        
-        previewContainer.style.display = 'none';
-        previewImg.src = '';
-        previewImg.style.display = 'none';
-        previewFile.style.display = 'none';
-        
-        // Reset file input
+        // Reset input file
         const fileInput = document.getElementById('chat-file-input');
         fileInput.value = '';
         
-        // Remove highlight
+        // Ẩn preview
+        const previewContainer = document.getElementById('chat-file-preview');
+        previewContainer.style.display = 'none';
+        
+        // Reset preview elements
+        document.getElementById('chat-preview-img').style.display = 'none';
+        document.getElementById('chat-preview-file').style.display = 'none';
+        
+        // Xóa highlight từ upload button
         document.getElementById('chat-upload-btn').classList.remove('has-file');
     },
     
@@ -837,107 +773,105 @@ const ChatWidget = {
      * Add welcome message on init
      */
     addWelcomeMessage() {
-        const welcomeMessage = "Xin chào! 👋 Mình là **Whalio AI Assistant**. Mình có thể giúp bạn:\n\n• Trả lời câu hỏi\n• Viết code và giải thích lập trình\n• Phân tích file và hình ảnh\n• Tạo nội dung sáng tạo\n\nHãy hỏi mình bất cứ điều gì nhé! 😊";
-        this.addMessage(welcomeMessage, 'ai');
+        setTimeout(() => {
+            this.addMessage("Xin chào! 👋 Mình là Whalio AI Assistant. Mình có thể giúp bạn tìm hiểu về các tính năng của Whalio, giải đáp thắc mắc, hoặc hỗ trợ lập trình. Hãy hỏi mình bất cứ điều gì!", 'ai');
+        }, 500);
     },
     
     /**
-     * Handle sending a message (with or without file)
+     * Handle sending a message - Connected to Gemini AI API
+     * Hỗ trợ gửi cả text và ảnh (Multimodal)
+     * ENHANCED: Smart trimming - only trim start/end, preserve internal spacing/tabs
      */
     async handleSendMessage() {
-        const chatInput = document.getElementById('chat-input');
-        const message = chatInput.value.trim(); // TRIM to remove accidental leading/trailing newlines
+        const input = document.getElementById('chat-input');
+        const rawMessage = input.value;
         
-        if (!message && !this.selectedFile) return;
-        if (this.isTyping) return;
+        // Smart trim: Only remove leading/trailing whitespace, preserve internal indentation
+        const message = this.smartTrim(rawMessage);
         
-        // Add user message
+        // Kiểm tra: phải có message hoặc file, và không đang typing
+        if ((!message && !this.selectedFile) || this.isTyping) return;
+        
+        // Hiển thị tin nhắn người dùng (bao gồm cả file nếu có)
         if (this.selectedFile) {
+            // Nếu có file, hiển thị file trong tin nhắn
             this.addMessageWithFile(message, this.selectedFile, 'user');
         } else {
+            // Chỉ có text
             this.addMessage(message, 'user');
         }
         
-        // Clear input and file
-        chatInput.value = '';
-        chatInput.style.height = 'auto';
-        this.clearSelectedFile();
+        // Clear input và reset textarea height
+        input.value = '';
+        input.style.height = '40px';
+        input.style.overflowY = 'hidden';
         
         // Show typing indicator
         this.showTypingIndicator();
         
         try {
-            let response;
+            // ==================== SỬ DỤNG FORMDATA THAY VÌ JSON ====================
+            // Tạo FormData để gửi multipart/form-data
+            const formData = new FormData();
             
+            // Append message (luôn gửi, có thể rỗng)
+            formData.append('message', message);
+            
+            // Append file/image với key 'image' để khớp với backend multer
             if (this.selectedFile) {
-                response = await this.sendMessageWithFile(message, this.selectedFile);
-            } else {
-                response = await this.sendMessage(message);
+                formData.append('image', this.selectedFile);
             }
             
+            // Gửi request (KHÔNG set Content-Type header, để browser tự xử lý boundary)
+            const response = await fetch(this.API_ENDPOINT, {
+                method: 'POST',
+                body: formData
+                // Lưu ý: Không set headers Content-Type, browser sẽ tự thêm với boundary
+            });
+            
+            const data = await response.json();
+            
+            // Hide typing indicator
             this.hideTypingIndicator();
-            this.addMessage(response, 'ai');
+            
+            if (data.success && data.response) {
+                // Display AI response
+                this.addMessage(data.response, 'ai');
+            } else {
+                // Handle API error response
+                const errorMessage = data.response || data.message || 'Xin lỗi, mình không thể xử lý yêu cầu này. Hãy thử lại nhé! 😊';
+                this.addMessage(errorMessage, 'ai');
+            }
             
         } catch (error) {
-            console.error('Error sending message:', error);
+            console.error('Chat API Error:', error);
+            
+            // Hide typing indicator
             this.hideTypingIndicator();
             
-            // Show fallback message
-            const fallback = this.fallbackResponses[
-                Math.floor(Math.random() * this.fallbackResponses.length)
-            ];
-            this.addMessage(fallback, 'ai');
+            // Show fallback error message
+            const fallbackIndex = Math.floor(Math.random() * this.fallbackResponses.length);
+            this.addMessage(this.fallbackResponses[fallbackIndex], 'ai');
+        } finally {
+            // ==================== LUÔN CLEAR FILE SAU KHI GỬI ====================
+            // Dù thành công hay lỗi, luôn reset file input và preview
+            this.clearSelectedFile();
         }
     },
-    
+
     /**
-     * Send text message to API
-     * @param {string} message 
-     * @returns {Promise<string>}
+     * Smart trimming - only remove leading/trailing whitespace and newlines
+     * but preserve internal spacing, tabs, and intentional indentation
+     * @param {string} text 
+     * @returns {string}
      */
-    async sendMessage(message) {
-        const response = await fetch(this.API_ENDPOINT, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-                message,
-                model: 'gemini-2.5-flash'
-            })
-        });
+    smartTrim(text) {
+        if (!text) return text;
         
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        
-        const data = await response.json();
-        return data.reply || data.message || 'Xin lỗi, mình không thể trả lời ngay bây giờ.';
-    },
-    
-    /**
-     * Send message with file to API
-     * @param {string} message 
-     * @param {File} file 
-     * @returns {Promise<string>}
-     */
-    async sendMessageWithFile(message, file) {
-        const formData = new FormData();
-        formData.append('message', message);
-        formData.append('file', file);
-        formData.append('model', 'gemini-2.5-flash');
-        
-        const response = await fetch(this.API_ENDPOINT, {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        
-        const data = await response.json();
-        return data.reply || data.message || 'Xin lỗi, mình không thể xử lý file này.';
+        // Remove only leading and trailing whitespace/newlines
+        // This preserves internal tabs, spaces, and multi-line formatting
+        return text.replace(/^[\s\n\r]+|[\s\n\r]+$/g, '');
     },
     
     /**
@@ -964,18 +898,28 @@ const ChatWidget = {
             const imageUrl = URL.createObjectURL(file);
             fileContent = `<div class="message-image"><img src="${imageUrl}" alt="Sent image" onload="this.parentElement.classList.add('loaded')" /></div>`;
         } else {
-            fileContent = `<div class="message-file"><div class="file-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6z"/><path d="M14 2v6h6"/></svg></div><div class="file-info"><div class="file-name">${file.name}</div><div class="file-size">${this.formatFileSize(file.size)}</div></div></div>`;
+            fileContent = this.cleanHTML(`
+                <div class="message-file">
+                    <div class="file-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6z"/><path d="M14 2v6h6"/></svg></div>
+                    <div class="file-info"><div class="file-name">${file.name}</div><div class="file-size">${this.formatFileSize(file.size)}</div></div>
+                </div>
+            `);
         }
         
-        messageDiv.innerHTML = `<div class="message-content"><div class="message-bubble">${fileContent}${textContent}</div><span class="message-time">${time}</span></div>`.trim();
+        messageDiv.innerHTML = this.cleanHTML(`
+            <div class="message-content">
+                <div class="message-bubble">${fileContent}${textContent}</div>
+                <span class="message-time">${time}</span>
+            </div>
+        `);
         
         messagesContainer.appendChild(messageDiv);
         this.scrollToBottom();
     },
     
     /**
-     * Add a text message to the chat
-     * @param {string} text 
+     * Add a message to the chat
+     * @param {string} text - Message text
      * @param {string} sender - 'user' or 'ai'
      */
     addMessage(text, sender) {
@@ -991,9 +935,14 @@ const ChatWidget = {
         const formattedText = this.formatMessage(text);
         
         if (sender === 'ai') {
-            messageDiv.innerHTML = `<div class="message-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></div><div class="message-content"><div class="message-bubble">${formattedText}</div><span class="message-time">${time}</span></div>`.trim();
+            messageDiv.innerHTML = this.cleanHTML(`
+                <div class="message-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></div>
+                <div class="message-content"><div class="message-bubble">${formattedText}</div><span class="message-time">${time}</span></div>
+            `);
         } else {
-            messageDiv.innerHTML = `<div class="message-content"><div class="message-bubble">${formattedText}</div><span class="message-time">${time}</span></div>`.trim();
+            messageDiv.innerHTML = this.cleanHTML(`
+                <div class="message-content"><div class="message-bubble">${formattedText}</div><span class="message-time">${time}</span></div>
+            `);
         }
         
         messagesContainer.appendChild(messageDiv);
@@ -1031,7 +980,12 @@ const ChatWidget = {
         navigator.clipboard.writeText(code).then(() => {
             // Visual feedback
             const originalHTML = button.innerHTML;
-            button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>Copied!`.trim();
+            button.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Copied!
+            `;
             button.classList.add('copied');
             
             setTimeout(() => {
@@ -1053,7 +1007,10 @@ const ChatWidget = {
         const typingDiv = document.createElement('div');
         typingDiv.className = 'chat-message ai-message typing-indicator-wrapper';
         typingDiv.id = 'typing-indicator';
-        typingDiv.innerHTML = `<div class="message-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></div><div class="message-content"><div class="typing-indicator"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>`.trim();
+        typingDiv.innerHTML = this.cleanHTML(`
+            <div class="message-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></div>
+            <div class="message-content"><div class="typing-indicator"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>
+        `);
         
         messagesContainer.appendChild(typingDiv);
         this.scrollToBottom();
@@ -1081,7 +1038,7 @@ const ChatWidget = {
     /**
      * Format message with code block support and syntax highlighting
      * Handles: code blocks (```), inline code (`), bold (**), italic (*), newlines
-     * FIXED: Removed .replace(/\n/g, '<br>') to prevent double line breaks with pre-wrap
+     * ENHANCED: Better code block handling without source indentation artifacts
      * @param {string} text 
      * @returns {string}
      */
@@ -1103,7 +1060,21 @@ const ChatWidget = {
                 .replace(/>/g, '&gt;');
             
             // Clean HTML template for code blocks - NO INDENTATION ARTIFACTS
-            const codeBlockHTML = `<div class="code-block-wrapper" id="${id}"><div class="code-block-header"><span class="code-block-lang">${language}</span><button class="code-copy-btn" onclick="ChatWidget.copyCodeToClipboard(this)" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>Copy</button></div><pre><code class="language-${language}">${escapedCode}</code></pre></div>`;
+            const codeBlockHTML = this.cleanHTML(`
+                <div class="code-block-wrapper" id="${id}">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">${language}</span>
+                        <button class="code-copy-btn" onclick="ChatWidget.copyCodeToClipboard(this)" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                            Copy
+                        </button>
+                    </div>
+                    <pre><code class="language-${language}">${escapedCode}</code></pre>
+                </div>
+            `);
             
             const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
             codeBlocks.push(codeBlockHTML);
@@ -1129,9 +1100,15 @@ const ChatWidget = {
         // 6. Handle italic: *text* -> <em>text</em> (but not inside code)
         safeText = safeText.replace(/(?<!`)\*([^*]+)\*(?!`)/g, '<em>$1</em>');
         
-        // 7. CRITICAL FIX: DO NOT convert \n to <br> because pre-wrap already handles it
-        // The previous code had: safeText = safeText.replace(/\n/g, '<br>');
-        // This caused double line breaks. With white-space: pre-wrap, newlines are preserved naturally.
+        // 7. Handle newlines (but not inside code blocks)
+        // Split by code blocks, process each part, then rejoin
+        const parts = safeText.split(/(<div class="code-block-wrapper"[\s\S]*?<\/div>\s*<\/div>)/g);
+        safeText = parts.map((part, index) => {
+            // Odd indices are code blocks, skip them
+            if (index % 2 === 1) return part;
+            // Even indices are regular text, convert newlines
+            return part.replace(/\n/g, '<br>');
+        }).join('');
         
         return safeText;
     }
