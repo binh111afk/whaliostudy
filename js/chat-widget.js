@@ -254,14 +254,14 @@ const ChatWidget = {
                     </svg>
                 </div>
                 <div class="message-content">
-                    <div class="message-bubble">${this.escapeHTML(text)}</div>
+                    <div class="message-bubble">${this.formatMessage(text)}</div>
                     <span class="message-time">${time}</span>
                 </div>
             `;
         } else {
             messageDiv.innerHTML = `
                 <div class="message-content">
-                    <div class="message-bubble">${this.escapeHTML(text)}</div>
+                    <div class="message-bubble">${this.formatMessage(text)}</div>
                     <span class="message-time">${time}</span>
                 </div>
             `;
@@ -320,14 +320,24 @@ const ChatWidget = {
     },
     
     /**
-     * Escape HTML to prevent XSS
-     * @param {string} text - Text to escape
-     * @returns {string} Escaped text
+     * Format message: Escape HTML -> Convert Markdown -> Handle Newlines
      */
-    escapeHTML(text) {
+    formatMessage(text) {
+        // 1. Bảo mật: Chuyển các ký tự nguy hiểm thành text an toàn trước
         const div = document.createElement('div');
         div.textContent = text;
-        return div.innerHTML;
+        let safeText = div.innerHTML;
+
+        // 2. Xử lý in đậm: Đổi **text** thành <strong>text</strong>
+        safeText = safeText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        // 3. Xử lý in nghiêng: Đổi *text* thành <em>text</em>
+        safeText = safeText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+        // 4. Xử lý xuống dòng: Đổi \n thành <br>
+        safeText = safeText.replace(/\n/g, '<br>');
+
+        return safeText;
     }
 };
 
