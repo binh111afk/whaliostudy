@@ -892,7 +892,7 @@ app.post('/api/upload-document', (req, res, next) => {
 
         // 👇 BẮT ĐẦU SỬA LỖI: "Nắn dòng" link ảnh thành link file thô (raw)
         // Microsoft Viewer bắt buộc phải là link /raw/upload/ mới đọc được file văn phòng
-        const rawFormats = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.rar', '.zip'];
+        const rawFormats = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.rar', '.zip', '.pdf'];
         const fileExt = require('path').extname(file.originalname).toLowerCase();
 
         if (rawFormats.includes(fileExt)) {
@@ -901,7 +901,7 @@ app.post('/api/upload-document', (req, res, next) => {
             console.log(`🔧 Đã fix link Cloudinary thành dạng RAW: ${cloudinaryUrl}`);
         }
         // 👆 KẾT THÚC SỬA LỖI
-        
+
         const newDoc = new Document({
             name: name || decodedOriginalName.replace(/\.[^/.]+$/, ""),
             uploader: uploader || "Ẩn danh",
