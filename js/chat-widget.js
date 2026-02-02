@@ -391,6 +391,8 @@ const ChatWidget = {
                 display: flex;
                 flex-direction: column;
                 min-width: 0;
+                min-height: 0;
+                overflow: hidden;
                 background: var(--bg-primary, #ffffff);
             }
             
@@ -512,8 +514,10 @@ const ChatWidget = {
             
             /* ==================== MESSAGES AREA ==================== */
             .whalio-messages {
-                flex: 1;
-                overflow-y: scroll !important;
+                flex: 1 1 0;
+                min-height: 0;
+                height: 100%;
+                overflow-y: auto !important;
                 overflow-x: hidden;
                 padding: 20px;
                 padding-right: 12px;
