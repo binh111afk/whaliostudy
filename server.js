@@ -888,7 +888,7 @@ app.post('/api/upload-document', (req, res, next) => {
         const decodedOriginalName = file.originalname || file.decodedOriginalName || decodeFileName(file.originalname);
 
         // Cloudinary provides the secure_url directly
-        const cloudinaryUrl = file.path; // This is the secure_url from Cloudinary
+        let cloudinaryUrl = file.path; // This is the secure_url from Cloudinary
 
         // 👇 BẮT ĐẦU SỬA LỖI: "Nắn dòng" link ảnh thành link file thô (raw)
         // Microsoft Viewer bắt buộc phải là link /raw/upload/ mới đọc được file văn phòng
