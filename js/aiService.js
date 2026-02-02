@@ -227,7 +227,7 @@ async function callGroq(prompt) {
         // Tạo Promise gọi API
         // Lưu ý: Groq dùng SDK của OpenAI nên cú pháp là chat.completions.create
         const groqPromise = groqClient.chat.completions.create({
-            model: "llama3-70b-8192", // Model mạnh nhất Free của Groq hiện tại
+            model: "llama-3.3-70b-versatile", // Model mạnh nhất Free của Groq hiện tại
             messages: [
                 { role: "system", content: WHALIO_SYSTEM_INSTRUCTION }, // Nhớ đảm bảo biến này đã khai báo ở trên
                 { role: "user", content: prompt }
