@@ -1162,7 +1162,6 @@ const ChatWidget = {
             .dark-mode .whalio-input-wrapper:focus-within {
                 border-color: #6366f1;
                 box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-                background: #333333;
             }
             
             .dark-mode .whalio-textarea {
@@ -1786,7 +1785,7 @@ const ChatWidget = {
     // ==================== MESSAGING (WITH SMART TRIM FROM BACKUP) ====================
     addWelcomeMessage() {
         setTimeout(() => {
-            this.addMessage("Xin chào! 👋 Mình là Whalio AI Assistant. Mình có thể giúp bạn tìm hiểu về các tính năng của Whalio, giải đáp thắc mắc, hoặc hỗ trợ lập trình. Hãy hỏi mình bất cứ điều gì!", 'ai', true);
+            this.addMessage("Xin chào! 👋 Mình là Whalio AI Assistant. Mình có thể giúp bạn tìm hiểu về các tính năng của Whalio, giải đáp thắc mắc, hoặc tâm sự mỏng. Hãy hỏi mình bất cứ điều gì!", 'ai', true);
         }, 300);
     },
     
