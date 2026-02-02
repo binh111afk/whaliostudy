@@ -513,34 +513,40 @@ const ChatWidget = {
             /* ==================== MESSAGES AREA ==================== */
             .whalio-messages {
                 flex: 1;
-                overflow-y: auto !important;
+                overflow-y: scroll !important;
                 overflow-x: hidden;
                 padding: 20px;
+                padding-right: 12px;
                 display: flex;
                 flex-direction: column;
                 gap: 16px;
                 scroll-behavior: smooth;
-                scrollbar-width: thin;
-                scrollbar-color: rgba(99, 102, 241, 0.5) rgba(99, 102, 241, 0.1);
+                scrollbar-width: auto;
+                scrollbar-color: rgba(99, 102, 241, 0.6) rgba(99, 102, 241, 0.15);
             }
             
             .whalio-messages::-webkit-scrollbar {
-                width: 8px;
+                width: 10px;
+                display: block !important;
             }
             
             .whalio-messages::-webkit-scrollbar-track {
-                background: rgba(99, 102, 241, 0.05);
-                border-radius: 4px;
+                background: rgba(99, 102, 241, 0.1);
+                border-radius: 5px;
+                margin: 4px 0;
             }
             
             .whalio-messages::-webkit-scrollbar-thumb {
-                background: rgba(99, 102, 241, 0.4);
-                border-radius: 4px;
-                transition: background 0.2s ease;
+                background: linear-gradient(180deg, #6366f1, #8b5cf6);
+                border-radius: 5px;
+                border: 2px solid transparent;
+                background-clip: padding-box;
+                min-height: 40px;
             }
             
             .whalio-messages::-webkit-scrollbar-thumb:hover {
-                background: rgba(99, 102, 241, 0.6);
+                background: linear-gradient(180deg, #4f46e5, #7c3aed);
+                background-clip: padding-box;
             }
             
             /* Centered container for fullscreen */
@@ -1078,6 +1084,27 @@ const ChatWidget = {
                 }
             }
             
+            /* Overlay để đóng sidebar khi click bên ngoài trên mobile */
+            .whalio-sidebar-overlay {
+                display: none;
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 9;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            
+            @media (max-width: 768px) {
+                .whalio-chat-window.fullscreen .whalio-sidebar-overlay.active {
+                    display: block;
+                    opacity: 1;
+                }
+            }
+            
             /* ==================== DARK MODE OVERRIDES ==================== */
             .dark-mode .whalio-chat-window {
                 background: var(--bg-primary, #1f2937);
@@ -1127,6 +1154,9 @@ const ChatWidget = {
                 
                 <!-- Chat Window -->
                 <div class="whalio-chat-window" id="whalio-chat-window">
+                    <!-- Overlay để đóng sidebar trên mobile -->
+                    <div class="whalio-sidebar-overlay" id="whalio-sidebar-overlay"></div>
+                    
                     <!-- Sidebar (Fullscreen only) -->
                     <div class="whalio-sidebar" id="whalio-sidebar">
                         <div class="whalio-sidebar-header">
@@ -1249,6 +1279,9 @@ const ChatWidget = {
         
         // Sidebar toggle
         document.getElementById('whalio-toggle-sidebar').addEventListener('click', () => this.toggleSidebar());
+        
+        // Overlay click để đóng sidebar trên mobile
+        document.getElementById('whalio-sidebar-overlay').addEventListener('click', () => this.closeSidebar());
         
         // New chat button
         document.getElementById('whalio-new-chat').addEventListener('click', () => this.startNewChat());
@@ -1394,10 +1427,14 @@ const ChatWidget = {
         const chatWindow = document.getElementById('whalio-chat-window');
         const launcher = document.getElementById('whalio-launcher');
         const fullscreenBtn = document.getElementById('whalio-fullscreen-btn');
+        const overlay = document.getElementById('whalio-sidebar-overlay');
         
         chatWindow.classList.remove('fullscreen');
         launcher.style.display = 'flex';
         this.isFullScreen = false;
+        
+        // Ẩn overlay khi thoát fullscreen
+        overlay.classList.remove('active');
         
         // Change icon back to maximize
         fullscreenBtn.innerHTML = `
@@ -1409,8 +1446,29 @@ const ChatWidget = {
     
     toggleSidebar() {
         const sidebar = document.getElementById('whalio-sidebar');
+        const overlay = document.getElementById('whalio-sidebar-overlay');
+        
         sidebar.classList.toggle('collapsed');
         this.isSidebarOpen = !sidebar.classList.contains('collapsed');
+        
+        // Trên mobile, hiển thị/ẩn overlay khi toggle sidebar
+        if (window.innerWidth <= 768) {
+            if (this.isSidebarOpen) {
+                overlay.classList.add('active');
+            } else {
+                overlay.classList.remove('active');
+            }
+        }
+    },
+    
+    // Đóng sidebar khi click overlay
+    closeSidebar() {
+        const sidebar = document.getElementById('whalio-sidebar');
+        const overlay = document.getElementById('whalio-sidebar-overlay');
+        
+        sidebar.classList.add('collapsed');
+        overlay.classList.remove('active');
+        this.isSidebarOpen = false;
     },
     
     // ==================== SESSION MANAGEMENT (WITH DEBOUNCE) ====================
