@@ -19,6 +19,20 @@ const ChatWidget = {
     lastSessionsLoadTime: 0,
     SESSIONS_CACHE_TTL: 60000, // 60 seconds cache
     
+    // ==================== HELPER: Get Current Username ====================
+    getCurrentUsername() {
+        try {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                const user = JSON.parse(savedUser);
+                return user.username || null;
+            }
+        } catch (e) {
+            console.error('Error getting current user:', e);
+        }
+        return null;
+    },
+    
     // ==================== CONFIG ====================
     API_ENDPOINT: '/api/chat',
     SESSIONS_ENDPOINT: '/api/sessions',
@@ -1656,7 +1670,11 @@ const ChatWidget = {
     
     async loadSessions() {
         try {
-            const response = await fetch(this.SESSIONS_ENDPOINT);
+            const username = this.getCurrentUsername();
+            const url = username 
+                ? `${this.SESSIONS_ENDPOINT}?username=${encodeURIComponent(username)}`
+                : this.SESSIONS_ENDPOINT;
+            const response = await fetch(url);
             const data = await response.json();
             
             if (data.success && data.sessions) {
@@ -1725,7 +1743,11 @@ const ChatWidget = {
     
     async loadSession(sessionId) {
         try {
-            const response = await fetch(`${this.SESSION_ENDPOINT}/${sessionId}`);
+            const username = this.getCurrentUsername();
+            const url = username
+                ? `${this.SESSION_ENDPOINT}/${sessionId}?username=${encodeURIComponent(username)}`
+                : `${this.SESSION_ENDPOINT}/${sessionId}`;
+            const response = await fetch(url);
             const data = await response.json();
             
             if (data.success && data.session) {
@@ -1749,7 +1771,11 @@ const ChatWidget = {
         if (!confirm('Bạn có chắc muốn xóa cuộc trò chuyện này?')) return;
         
         try {
-            const response = await fetch(`${this.SESSION_ENDPOINT}/${sessionId}`, {
+            const username = this.getCurrentUsername();
+            const url = username
+                ? `${this.SESSION_ENDPOINT}/${sessionId}?username=${encodeURIComponent(username)}`
+                : `${this.SESSION_ENDPOINT}/${sessionId}`;
+            const response = await fetch(url, {
                 method: 'DELETE'
             });
             const data = await response.json();
@@ -1815,6 +1841,12 @@ const ChatWidget = {
         try {
             const formData = new FormData();
             formData.append('message', message);
+            
+            // Attach username for session ownership
+            const username = this.getCurrentUsername();
+            if (username) {
+                formData.append('username', username);
+            }
             
             // Attach sessionId if exists
             if (this.currentSessionId) {

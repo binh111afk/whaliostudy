@@ -2373,10 +2373,16 @@ app.get('/api/sessions', async (req, res) => {
     try {
         const { username, limit = 50 } = req.query;
         
-        // Build query - nếu có username thì lọc theo user, không thì lấy tất cả
-        const query = username ? { username } : {};
+        // SECURITY: Chỉ trả về sessions của user cụ thể
+        // Nếu không có username, trả về mảng rỗng (guest không có lịch sử)
+        if (!username) {
+            return res.json({
+                success: true,
+                sessions: []
+            });
+        }
         
-        const sessions = await ChatSession.find(query)
+        const sessions = await ChatSession.find({ username })
             .select('sessionId title createdAt updatedAt')
             .sort({ updatedAt: -1, createdAt: -1 })
             .limit(parseInt(limit))
@@ -2401,8 +2407,15 @@ app.get('/api/sessions', async (req, res) => {
 app.get('/api/session/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        const { username } = req.query;
         
-        const session = await ChatSession.findOne({ sessionId: id }).lean();
+        // Build query - kiểm tra cả sessionId và username nếu có
+        const query = { sessionId: id };
+        if (username) {
+            query.username = username;
+        }
+        
+        const session = await ChatSession.findOne(query).lean();
         
         if (!session) {
             return res.status(404).json({ 
@@ -2431,8 +2444,15 @@ app.get('/api/session/:id', async (req, res) => {
 app.delete('/api/session/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        const { username } = req.query;
         
-        const result = await ChatSession.findOneAndDelete({ sessionId: id });
+        // Build query - kiểm tra cả sessionId và username nếu có
+        const query = { sessionId: id };
+        if (username) {
+            query.username = username;
+        }
+        
+        const result = await ChatSession.findOneAndDelete(query);
         
         if (!result) {
             return res.status(404).json({ 
