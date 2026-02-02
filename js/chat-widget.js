@@ -1149,6 +1149,10 @@ const ChatWidget = {
                 border-color: rgba(99, 102, 241, 0.5);
                 color: #ffffff;
             }
+
+            .dark-mode .whalio-session-title {
+                color: #ffffff;
+            }
             
             .dark-mode .whalio-input-wrapper {
                 background: #2d2d2d;
