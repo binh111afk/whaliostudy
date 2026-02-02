@@ -521,6 +521,33 @@ function normalizeFileName(str) {
 }
 
 // ==================== CLOUDINARY STORAGE CONFIGURATION ====================
+// 📌 Helper function to determine the correct resource_type for Cloudinary
+function getCloudinaryResourceType(filename) {
+    const ext = path.extname(filename).toLowerCase();
+    
+    // Images: Use 'image' resource_type (Cloudinary optimizes these)
+    const imageFormats = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
+    if (imageFormats.includes(ext)) {
+        return 'image';
+    }
+    
+    // Videos: Use 'video' resource_type
+    const videoFormats = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
+    if (videoFormats.includes(ext)) {
+        return 'video';
+    }
+    
+    // PDFs: Use 'image' (Cloudinary treats PDFs as image for thumbnails)
+    // But we'll handle URL properly in upload route
+    if (ext === '.pdf') {
+        return 'image';
+    }
+    
+    // Everything else (Office, Archives, etc.): Use 'raw'
+    // This ensures they're stored correctly and URLs work without modification
+    return 'raw';
+}
+
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: (req, file) => {
@@ -530,11 +557,18 @@ const storage = new CloudinaryStorage({
 
         // Lưu lại tên gốc
         file.decodedOriginalName = decodedName;
+        
+        // Determine the correct resource_type based on file extension
+        const resourceType = getCloudinaryResourceType(file.originalname);
+        
+        console.log(`☁️ Cloudinary upload: ${file.originalname} → resource_type: ${resourceType}`);
 
         return {
             folder: 'whalio-documents',
-            resource_type: 'auto', // Tự động nhận diện (Ảnh/Video/File)
+            resource_type: resourceType, // Explicitly set based on file type
             public_id: safeName,
+            // For PDFs: ensure the format is preserved
+            ...(path.extname(file.originalname).toLowerCase() === '.pdf' && { format: 'pdf' })
         };
     }
 });
@@ -889,18 +923,68 @@ app.post('/api/upload-document', (req, res, next) => {
 
         // Cloudinary provides the secure_url directly
         let cloudinaryUrl = file.path; // This is the secure_url from Cloudinary
+        const fileExt = path.extname(file.originalname).toLowerCase();
 
-        // 👇 BẮT ĐẦU SỬA LỖI: "Nắn dòng" link ảnh thành link file thô (raw)
-        // Microsoft Viewer bắt buộc phải là link /raw/upload/ mới đọc được file văn phòng
-        const rawFormats = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.rar', '.zip'];
-        const fileExt = require('path').extname(file.originalname).toLowerCase();
+        // ==================== CLOUDINARY URL FIX LOGIC ====================
+        // 📌 PROBLEM: With resource_type: 'auto', Cloudinary decides storage:
+        //    - Images (.jpg, .png, etc.) → /image/upload/ ✅ Works
+        //    - PDFs → /image/upload/ (Cloudinary treats as image) ⚠️ Needs extension
+        //    - Office files → Often /image/upload/ but MUST be /raw/upload/ for viewers
+        //    - Archives → /raw/upload/ ✅ Usually works
+        //
+        // 📌 SOLUTION: Fix URLs based on file type for proper viewing/downloading
 
-        if (rawFormats.includes(fileExt)) {
-            // Thay thế '/image/upload/' thành '/raw/upload/'
+        // 1️⃣ OFFICE FILES: Must use /raw/upload/ for Microsoft Viewer
+        const officeFormats = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls'];
+        
+        // 2️⃣ ARCHIVE FILES: Must use /raw/upload/
+        const archiveFormats = ['.rar', '.zip', '.7z', '.tar', '.gz'];
+        
+        // 3️⃣ IMAGE FILES: Keep as /image/upload/ (default behavior is correct)
+        const imageFormats = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'];
+
+        if (officeFormats.includes(fileExt)) {
+            // Office files: Force /raw/upload/ for Microsoft Office Viewer compatibility
             cloudinaryUrl = cloudinaryUrl.replace('/image/upload/', '/raw/upload/');
-            console.log(`🔧 Đã fix link Cloudinary thành dạng RAW: ${cloudinaryUrl}`);
+            console.log(`📄 OFFICE FILE - Fixed to RAW: ${cloudinaryUrl}`);
+            
+        } else if (archiveFormats.includes(fileExt)) {
+            // Archive files: Force /raw/upload/ for direct download
+            cloudinaryUrl = cloudinaryUrl.replace('/image/upload/', '/raw/upload/');
+            console.log(`📦 ARCHIVE FILE - Fixed to RAW: ${cloudinaryUrl}`);
+            
+        } else if (fileExt === '.pdf') {
+            // 🔥 PDF FIX: Cloudinary stores PDFs as "image" but we need proper handling
+            // The URL must end with .pdf extension for browsers to recognize it
+            // Keep as /image/upload/ (Cloudinary's PDF handling) but ensure .pdf extension
+            
+            // Check if URL already ends with .pdf
+            if (!cloudinaryUrl.toLowerCase().endsWith('.pdf')) {
+                // Add .pdf extension if missing (Cloudinary sometimes omits it)
+                cloudinaryUrl = cloudinaryUrl + '.pdf';
+            }
+            
+            // Alternative: Use /raw/upload/ for PDFs (more reliable for download)
+            // Uncomment below if PDFs still fail with image path:
+            // cloudinaryUrl = cloudinaryUrl.replace('/image/upload/', '/raw/upload/');
+            
+            console.log(`📕 PDF FILE - URL: ${cloudinaryUrl}`);
+            
+        } else if (imageFormats.includes(fileExt)) {
+            // Image files: Keep default /image/upload/ - no changes needed
+            console.log(`🖼️ IMAGE FILE - Using default: ${cloudinaryUrl}`);
+            
+        } else {
+            // Unknown/other files: Use /raw/upload/ to be safe
+            cloudinaryUrl = cloudinaryUrl.replace('/image/upload/', '/raw/upload/');
+            console.log(`📎 OTHER FILE - Fixed to RAW: ${cloudinaryUrl}`);
         }
-        // 👆 KẾT THÚC SỬA LỖI
+        
+        // Log the resource_type if available from Cloudinary response
+        if (file.resource_type) {
+            console.log(`☁️ Cloudinary resource_type: ${file.resource_type}`);
+        }
+        // ==================== END URL FIX LOGIC ====================
 
         const newDoc = new Document({
             name: name || decodedOriginalName.replace(/\.[^/.]+$/, ""),
