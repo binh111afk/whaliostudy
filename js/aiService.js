@@ -116,6 +116,23 @@ try {
     console.error('❌ Lỗi khởi tạo Gemini:', error.message);
 }
 
+// 2. Khởi tạo Groq (Fallback 1)
+let groqClient = null;
+
+try {
+    if (process.env.GROQ_API_KEY) {
+        groqClient = new OpenAI({
+            apiKey: process.env.GROQ_API_KEY,
+            baseURL: 'https://api.groq.com/openai/v1'
+        });
+        console.log('✅ [Layer 2] Groq AI (Llama 3) đã sẵn sàng');
+    } else {
+        console.warn('⚠️ Chưa cấu hình GROQ_API_KEY');
+    }
+} catch (error) {
+    console.error('❌ Lỗi khởi tạo Groq:', error.message);
+}
+
 /**
  * Khởi tạo DeepSeek AI Client
  * API Key lấy từ biến môi trường DEEPSEEK_API_KEY
@@ -194,6 +211,68 @@ async function callGemini(prompt) {
 }
 
 /**
+ * Gọi Groq AI (Llama 3) để sinh text
+ * * @param {string} prompt - Câu hỏi/yêu cầu từ người dùng
+ * @returns {Promise<string>} - Câu trả lời từ AI
+ * @throws {Error} - Ném lỗi nếu gọi API thất bại
+ */
+async function callGroq(prompt) {
+    if (!groqClient) {
+        throw new Error('GROQ_NOT_INITIALIZED');
+    }
+
+    console.log('🟠 Đang gọi Groq AI (Llama 3)...');
+
+    try {
+        // Tạo Promise gọi API
+        // Lưu ý: Groq dùng SDK của OpenAI nên cú pháp là chat.completions.create
+        const groqPromise = groqClient.chat.completions.create({
+            model: "llama3-70b-8192", // Model mạnh nhất Free của Groq hiện tại
+            messages: [
+                { role: "system", content: WHALIO_SYSTEM_INSTRUCTION }, // Nhớ đảm bảo biến này đã khai báo ở trên
+                { role: "user", content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 2048
+        });
+        
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('TIMEOUT')), REQUEST_TIMEOUT);
+        });
+
+        // Race giữa API call và timeout
+        const completion = await Promise.race([groqPromise, timeoutPromise]);
+        const text = completion.choices[0].message.content;
+
+        console.log('✅ Groq AI phản hồi thành công');
+        return text;
+
+    } catch (error) {
+        // Xác định loại lỗi
+        if (error.message === 'TIMEOUT') {
+            console.warn('⏱️ Groq AI timeout sau 30 giây');
+            throw new Error('GROQ_TIMEOUT');
+        }
+
+        // Kiểm tra lỗi 429 (Rate Limit)
+        // Thư viện OpenAI thường trả về error.status hoặc message chứa '429'
+        if (error.status === 429 || (error.message && (
+            error.message.includes('429') ||
+            error.message.includes('rate limit') ||
+            error.message.includes('quota') ||
+            error.message.includes('Too Many Requests')
+        ))) {
+            console.warn('⚠️ Groq AI bị Rate Limit (429)');
+            throw new Error('GROQ_RATE_LIMIT');
+        }
+
+        // Các lỗi khác
+        console.error('❌ Lỗi khi gọi Groq:', error.message);
+        throw new Error(`GROQ_ERROR: ${error.message}`);
+    }
+}
+
+/**
  * Gọi DeepSeek AI để sinh text (Fallback)
  * 
  * @param {string} prompt - Câu hỏi/yêu cầu từ người dùng
@@ -254,14 +333,12 @@ async function callDeepSeek(prompt) {
 }
 
 /**
- * Hàm chính - Gọi AI với Fallback thông minh
- * 
- * Luồng hoạt động:
- * 1. Thử gọi Gemini trước (model chính)
- * 2. Nếu Gemini lỗi 429 -> Tự động chuyển sang DeepSeek
- * 3. Nếu cả hai đều lỗi -> Trả về thông báo thân thiện
- * 
- * @param {string} userMessage - Tin nhắn từ người dùng
+ * Hàm chính - Gọi AI với Fallback thông minh 3 lớp (3-Layer Defense)
+ * * Luồng hoạt động:
+ * 1. 🟢 Ưu tiên: Gemini 2.5 Flash (Free Tier)
+ * 2. 🟡 Dự phòng 1: Groq (Llama 3 - Free Beta) - Khi Gemini lỗi 429/Timeout
+ * 3. 🔴 Dự phòng 2: DeepSeek V3 (Giá rẻ) - Khi cả Gemini và Groq đều sập
+ * * @param {string} userMessage - Tin nhắn từ người dùng
  * @returns {Promise<Object>} - Object chứa response và metadata
  */
 async function generateAIResponse(userMessage) {
@@ -276,10 +353,11 @@ async function generateAIResponse(userMessage) {
     }
 
     const startTime = Date.now();
-    let usedModel = null;
     let response = null;
+    let usedModel = null;
+    let errorLog = {}; // Lưu lại lỗi để debug nếu cần
 
-    // ============ BƯỚC 1: Thử gọi Gemini (Model chính) ============
+    // ============ BƯỚC 1: Thử gọi GEMINI (Main) ============
     try {
         response = await callGemini(userMessage);
         usedModel = 'Gemini 2.5 Flash';
@@ -294,47 +372,15 @@ async function generateAIResponse(userMessage) {
 
     } catch (geminiError) {
         console.warn(`⚠️ Gemini thất bại: ${geminiError.message}`);
+        errorLog.gemini = geminiError.message;
 
-        // ============ BƯỚC 2: Nếu Gemini lỗi 429 -> Fallback sang DeepSeek ============
-        if (geminiError.message.includes('RATE_LIMIT') || geminiError.message.includes('429')) {
-            console.log('🔄 Đang chuyển sang DeepSeek AI...');
+        // ============ BƯỚC 2: Fallback sang GROQ (Dự phòng 1) ============
+        // Chúng ta thử Groq ngay cả khi lỗi không phải là 429 để đảm bảo user luôn có câu trả lời
+        console.log('🔄 Đang chuyển sang Groq AI (Llama 3)...');
 
-            try {
-                response = await callDeepSeek(userMessage);
-                usedModel = 'DeepSeek V3 (Fallback)';
-
-                return {
-                    success: true,
-                    message: response,
-                    model: usedModel,
-                    responseTime: Date.now() - startTime,
-                    error: null,
-                    fallback: true // Đánh dấu là đã fallback
-                };
-
-            } catch (deepseekError) {
-                console.error(`❌ DeepSeek cũng thất bại: ${deepseekError.message}`);
-
-                // ============ BƯỚC 3: Cả hai đều lỗi -> Trả về thông báo thân thiện ============
-                return {
-                    success: false,
-                    message: '😔 Xin lỗi, hệ thống AI đang quá tải. Vui lòng thử lại sau vài phút nhé!',
-                    model: null,
-                    responseTime: Date.now() - startTime,
-                    error: 'BOTH_MODELS_FAILED',
-                    details: {
-                        gemini: geminiError.message,
-                        deepseek: deepseekError.message
-                    }
-                };
-            }
-        }
-
-        // ============ Gemini lỗi KHÔNG PHẢI 429 -> Thử DeepSeek luôn ============
-        console.log('🔄 Gemini lỗi, đang thử DeepSeek...');
         try {
-            response = await callDeepSeek(userMessage);
-            usedModel = 'DeepSeek V3 (Fallback)';
+            response = await callGroq(userMessage);
+            usedModel = 'Groq (Llama 3)';
 
             return {
                 success: true,
@@ -342,21 +388,43 @@ async function generateAIResponse(userMessage) {
                 model: usedModel,
                 responseTime: Date.now() - startTime,
                 error: null,
-                fallback: true
+                fallback: true // Đánh dấu là đã fallback
             };
 
-        } catch (deepseekError) {
-            return {
-                success: false,
-                message: '😔 Xin lỗi, tôi đang gặp sự cố kỹ thuật. Vui lòng thử lại sau! 🔧',
-                model: null,
-                responseTime: Date.now() - startTime,
-                error: 'BOTH_MODELS_FAILED',
-                details: {
-                    gemini: geminiError.message,
-                    deepseek: deepseekError.message
-                }
-            };
+        } catch (groqError) {
+            console.warn(`⚠️ Groq cũng thất bại: ${groqError.message}`);
+            errorLog.groq = groqError.message;
+
+            // ============ BƯỚC 3: Fallback sang DEEPSEEK (Dự phòng 2 - Chốt chặn cuối) ============
+            console.log('🔄 Đang chuyển sang DeepSeek AI...');
+
+            try {
+                response = await callDeepSeek(userMessage);
+                usedModel = 'DeepSeek V3';
+
+                return {
+                    success: true,
+                    message: response,
+                    model: usedModel,
+                    responseTime: Date.now() - startTime,
+                    error: null,
+                    fallback: true
+                };
+
+            } catch (deepseekError) {
+                console.error(`❌ DeepSeek cũng thất bại: ${deepseekError.message}`);
+                errorLog.deepseek = deepseekError.message;
+
+                // ============ CẢ 3 ĐỀU THẤT BẠI ============
+                return {
+                    success: false,
+                    message: '😔 Hic, hiện tại cả 3 "bộ não" của Whalio đều đang quá tải hoặc gặp sự cố. Bạn vui lòng đợi 1-2 phút rồi thử lại nhé!',
+                    model: null,
+                    responseTime: Date.now() - startTime,
+                    error: 'ALL_MODELS_FAILED',
+                    details: errorLog
+                };
+            }
         }
     }
 }
@@ -364,14 +432,17 @@ async function generateAIResponse(userMessage) {
 /**
  * Kiểm tra trạng thái của các AI services
  * Hữu ích cho việc monitoring và debugging
- * 
- * @returns {Object} - Trạng thái của từng service
+ * * @returns {Object} - Trạng thái của từng service
  */
 function getServiceStatus() {
     return {
         gemini: {
             initialized: geminiModel !== null,
             apiKeyConfigured: !!process.env.GEMINI_API_KEY
+        },
+        groq: {
+            initialized: groqClient !== null,
+            apiKeyConfigured: !!process.env.GROQ_API_KEY
         },
         deepseek: {
             initialized: deepseekClient !== null,
