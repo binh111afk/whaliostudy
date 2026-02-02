@@ -2,8 +2,9 @@
   "name": "studyweb",
   "version": "1.0.0",
   "description": "",
-  "main": "study.js",
+  "main": "server.js",  
   "scripts": {
+    "start": "node server.js",  
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -12,6 +13,7 @@
   "type": "commonjs",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "openai": "^4.28.0",
     "cloudinary": "^1.41.3",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
