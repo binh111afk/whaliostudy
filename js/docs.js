@@ -483,9 +483,11 @@ export const DocumentManager = {
                 </div>
             `;
 
-            // 👇 CẬP NHẬT: Dùng viewUrl (đã bọc Viewer) và downloadUrl (link gốc)
+            // 👇 CẬP NHẬT: Dùng route /document/:id để xem trong khung bao quanh
+            const documentViewUrl = `/document/${doc.id}`;
+            
             return `
-                <div class="doc-card" data-id="${doc.id}" onclick="window.open('${viewUrl}', '_blank')">
+                <div class="doc-card" data-id="${doc.id}" onclick="window.location.href='${documentViewUrl}'">
                     ${deleteBtn}
                     <div class="doc-card-header">
                         <div class="doc-card-icon ${fileType.class}" style="background-color: ${fileType.color}20; color: ${fileType.color}">
@@ -514,7 +516,7 @@ export const DocumentManager = {
                                 ${Utils.formatFileSize(doc.size)}</div>` : ''}
                         </div>
                         <div class="doc-card-actions">
-                            <button class="doc-card-btn btn-view" onclick="event.stopPropagation(); window.open('${viewUrl}', '_blank')">
+                            <button class="doc-card-btn btn-view" onclick="event.stopPropagation(); window.location.href='${documentViewUrl}'">
                                 ${ICON_EYE}
                                 <span>Xem</span>
                             </button>
