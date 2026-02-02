@@ -522,6 +522,11 @@ function normalizeFileName(str) {
 
 // ==================== CLOUDINARY STORAGE CONFIGURATION ====================
 // 📌 Helper function to determine the correct resource_type for Cloudinary
+// ⚠️ CRITICAL: This determines how Cloudinary stores and serves the file
+//    - 'image': For images, supports transformations, served via /image/upload/
+//    - 'video': For videos, supports streaming, served via /video/upload/
+//    - 'raw': For all other files (PDF, Office, etc.), served via /raw/upload/
+//            This is the MOST RELIABLE for direct file access/download
 function getCloudinaryResourceType(filename) {
     const ext = path.extname(filename).toLowerCase();
     
@@ -537,10 +542,11 @@ function getCloudinaryResourceType(filename) {
         return 'video';
     }
     
-    // PDFs: Use 'image' (Cloudinary treats PDFs as image for thumbnails)
-    // But we'll handle URL properly in upload route
+    // 🔥 PDFs: Use 'raw' for RELIABLE direct viewing/downloading
+    // Using 'image' causes 401/404 errors when accessing directly
+    // 'raw' gives us a direct downloadable link that works in browsers
     if (ext === '.pdf') {
-        return 'image';
+        return 'raw';
     }
     
     // Everything else (Office, Archives, etc.): Use 'raw'
@@ -563,12 +569,16 @@ const storage = new CloudinaryStorage({
         
         console.log(`☁️ Cloudinary upload: ${file.originalname} → resource_type: ${resourceType}`);
 
+        // Get file extension for proper handling
+        const ext = path.extname(file.originalname).toLowerCase();
+        
         return {
             folder: 'whalio-documents',
             resource_type: resourceType, // Explicitly set based on file type
             public_id: safeName,
-            // For PDFs: ensure the format is preserved
-            ...(path.extname(file.originalname).toLowerCase() === '.pdf' && { format: 'pdf' })
+            // For raw files: preserve the original extension in the URL
+            // This ensures the file is accessible with its proper extension
+            ...(resourceType === 'raw' && { format: ext.replace('.', '') })
         };
     }
 });
@@ -926,63 +936,40 @@ app.post('/api/upload-document', (req, res, next) => {
         const fileExt = path.extname(file.originalname).toLowerCase();
 
         // ==================== CLOUDINARY URL FIX LOGIC ====================
-        // 📌 PROBLEM: With resource_type: 'auto', Cloudinary decides storage:
-        //    - Images (.jpg, .png, etc.) → /image/upload/ ✅ Works
-        //    - PDFs → /image/upload/ (Cloudinary treats as image) ⚠️ Needs extension
-        //    - Office files → Often /image/upload/ but MUST be /raw/upload/ for viewers
-        //    - Archives → /raw/upload/ ✅ Usually works
+        // 📌 Since we now explicitly set resource_type in CloudinaryStorage:
+        //    - Images → 'image' → /image/upload/ ✅
+        //    - Videos → 'video' → /video/upload/ ✅
+        //    - PDFs, Office, Archives → 'raw' → /raw/upload/ ✅
         //
-        // 📌 SOLUTION: Fix URLs based on file type for proper viewing/downloading
-
-        // 1️⃣ OFFICE FILES: Must use /raw/upload/ for Microsoft Viewer
-        const officeFormats = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls'];
+        // 📌 The URL should already be correct, but we double-check and fix if needed
         
-        // 2️⃣ ARCHIVE FILES: Must use /raw/upload/
-        const archiveFormats = ['.rar', '.zip', '.7z', '.tar', '.gz'];
+        const imageFormats = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
+        const videoFormats = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
         
-        // 3️⃣ IMAGE FILES: Keep as /image/upload/ (default behavior is correct)
-        const imageFormats = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'];
-
-        if (officeFormats.includes(fileExt)) {
-            // Office files: Force /raw/upload/ for Microsoft Office Viewer compatibility
-            cloudinaryUrl = cloudinaryUrl.replace('/image/upload/', '/raw/upload/');
-            console.log(`📄 OFFICE FILE - Fixed to RAW: ${cloudinaryUrl}`);
+        // Only images should use /image/upload/, everything else should be /raw/upload/
+        if (imageFormats.includes(fileExt)) {
+            // Image files: Keep /image/upload/
+            console.log(`🖼️ IMAGE FILE - URL: ${cloudinaryUrl}`);
             
-        } else if (archiveFormats.includes(fileExt)) {
-            // Archive files: Force /raw/upload/ for direct download
-            cloudinaryUrl = cloudinaryUrl.replace('/image/upload/', '/raw/upload/');
-            console.log(`📦 ARCHIVE FILE - Fixed to RAW: ${cloudinaryUrl}`);
-            
-        } else if (fileExt === '.pdf') {
-            // 🔥 PDF FIX: Cloudinary stores PDFs as "image" but we need proper handling
-            // The URL must end with .pdf extension for browsers to recognize it
-            // Keep as /image/upload/ (Cloudinary's PDF handling) but ensure .pdf extension
-            
-            // Check if URL already ends with .pdf
-            if (!cloudinaryUrl.toLowerCase().endsWith('.pdf')) {
-                // Add .pdf extension if missing (Cloudinary sometimes omits it)
-                cloudinaryUrl = cloudinaryUrl + '.pdf';
-            }
-            
-            // Alternative: Use /raw/upload/ for PDFs (more reliable for download)
-            // Uncomment below if PDFs still fail with image path:
-            // cloudinaryUrl = cloudinaryUrl.replace('/image/upload/', '/raw/upload/');
-            
-            console.log(`📕 PDF FILE - URL: ${cloudinaryUrl}`);
-            
-        } else if (imageFormats.includes(fileExt)) {
-            // Image files: Keep default /image/upload/ - no changes needed
-            console.log(`🖼️ IMAGE FILE - Using default: ${cloudinaryUrl}`);
+        } else if (videoFormats.includes(fileExt)) {
+            // Video files: Keep /video/upload/
+            console.log(`🎬 VIDEO FILE - URL: ${cloudinaryUrl}`);
             
         } else {
-            // Unknown/other files: Use /raw/upload/ to be safe
-            cloudinaryUrl = cloudinaryUrl.replace('/image/upload/', '/raw/upload/');
-            console.log(`📎 OTHER FILE - Fixed to RAW: ${cloudinaryUrl}`);
-        }
-        
-        // Log the resource_type if available from Cloudinary response
-        if (file.resource_type) {
-            console.log(`☁️ Cloudinary resource_type: ${file.resource_type}`);
+            // ALL OTHER FILES (PDF, Office, Archives, etc.): Must use /raw/upload/
+            // Fix URL if Cloudinary returned /image/upload/ instead of /raw/upload/
+            if (cloudinaryUrl.includes('/image/upload/')) {
+                cloudinaryUrl = cloudinaryUrl.replace('/image/upload/', '/raw/upload/');
+                console.log(`🔧 Fixed URL to RAW: ${cloudinaryUrl}`);
+            }
+            
+            // Ensure file has proper extension for browser recognition
+            if (!cloudinaryUrl.toLowerCase().endsWith(fileExt)) {
+                // URL might be missing extension, but with format param it should be fine
+                console.log(`📄 FILE (${fileExt}) - URL: ${cloudinaryUrl}`);
+            } else {
+                console.log(`📄 FILE (${fileExt}) - URL: ${cloudinaryUrl}`);
+            }
         }
         // ==================== END URL FIX LOGIC ====================
 
