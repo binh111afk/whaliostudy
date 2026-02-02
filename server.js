@@ -471,6 +471,10 @@ app.use(express.json());
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ==================== EJS TEMPLATE ENGINE ====================
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
 // Fix encoding middleware
 app.use((req, res, next) => {
     if (req.method === 'POST') {
@@ -697,19 +701,23 @@ async function uploadToCloudinary(buffer, originalFilename, mimeType) {
     const decodedName = decodeFileName(originalFilename);
     const safeName = normalizeFileName(decodedName);
     
-    // Determine resource_type
+    // ==================== RESOURCE TYPE LOGIC ====================
+    // 📌 RULES:
+    //    - Images (.jpg, .png, etc.) → 'image' → Keep /image/upload/ URL
+    //    - PDFs → 'auto' → Cloudinary stores as 'image' → Keep /image/upload/ URL ✅
+    //    - Videos → 'video' → Keep /video/upload/ URL
+    //    - Office/Archives → 'auto' → Need to force /raw/upload/ for viewers
+    
     const imageFormats = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
     const videoFormats = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
     
-    // 🔥 CRITICAL FIX: Upload ALL files (including PDF) as 'auto' 
-    // This lets Cloudinary decide the best resource_type
-    // For PDFs, Cloudinary will store as 'image' which allows public access
+    // 🔥 Use 'auto' for all - Cloudinary will decide best storage
     let resourceType = 'auto';
     
     console.log(`☁️ Uploading to Cloudinary: ${originalFilename}`);
     console.log(`   → resource_type: ${resourceType}, extension: ${ext}`);
     
-    // 🔥 Convert buffer to base64 Data URI - More reliable than stream
+    // Convert buffer to base64 Data URI
     const base64Data = buffer.toString('base64');
     const dataUri = `data:${mimeType || 'application/octet-stream'};base64,${base64Data}`;
     
@@ -718,7 +726,6 @@ async function uploadToCloudinary(buffer, originalFilename, mimeType) {
             folder: 'whalio-documents',
             resource_type: resourceType,
             public_id: safeName,
-            // Note: 'type' defaults to 'upload' which is public
         });
         
         console.log(`✅ Cloudinary upload success!`);
@@ -726,21 +733,37 @@ async function uploadToCloudinary(buffer, originalFilename, mimeType) {
         console.log(`   → Resource type: ${result.resource_type}`);
         console.log(`   → Format: ${result.format}`);
         
-        // 🔥 For non-image files, we may need to adjust the URL
+        // ==================== URL FIX LOGIC ====================
+        // 🔥 WHITELIST: Only these formats need /raw/upload/ for Microsoft Viewer
+        const rawFormats = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.rar', '.zip', '.7z'];
+        
+        // Use 'let' to allow reassignment
         let finalUrl = result.secure_url;
         
-        // Office files: Change to /raw/upload/ for Microsoft Viewer
-        const officeFormats = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls'];
-        if (officeFormats.includes(ext)) {
+        if (rawFormats.includes(ext)) {
+            // Office & Archive files: Force /raw/upload/ for Microsoft Office Viewer
             finalUrl = finalUrl.replace('/image/upload/', '/raw/upload/');
-            console.log(`   → Fixed for Office: ${finalUrl}`);
+            console.log(`   📄 Office/Archive file → Fixed to RAW: ${finalUrl}`);
+        } else if (ext === '.pdf') {
+            // PDF: Keep original URL (/image/upload/) - Cloudinary allows PDF delivery
+            console.log(`   📕 PDF file → Keep original: ${finalUrl}`);
+        } else if (imageFormats.includes(ext)) {
+            // Images: Keep original URL
+            console.log(`   🖼️ Image file → Keep original: ${finalUrl}`);
+        } else if (videoFormats.includes(ext)) {
+            // Videos: Keep original URL
+            console.log(`   🎬 Video file → Keep original: ${finalUrl}`);
+        } else {
+            // Unknown files: Force /raw/upload/ to be safe
+            finalUrl = finalUrl.replace('/image/upload/', '/raw/upload/');
+            console.log(`   📎 Other file → Fixed to RAW: ${finalUrl}`);
         }
+        // ==================== END URL FIX LOGIC ====================
         
-        // Return result with potentially modified URL
         return {
             ...result,
             secure_url: finalUrl,
-            original_secure_url: result.secure_url // Keep original for reference
+            original_secure_url: result.secure_url
         };
     } catch (error) {
         console.error('❌ Cloudinary upload error:', error);
@@ -978,6 +1001,22 @@ app.get('/api/documents', async (req, res) => {
     } catch (err) {
         console.error('Get documents error:', err);
         res.status(500).json([]);
+    }
+});
+
+// 📄 Document Detail View (Zen Mode Viewer)
+app.get('/document/:id', async (req, res) => {
+    try {
+        const doc = await Document.findById(req.params.id).lean();
+        if (!doc) {
+            return res.status(404).send('Không tìm thấy tài liệu');
+        }
+        // Add id field for frontend compatibility
+        doc.id = doc._id.toString();
+        res.render('document-detail', { document: doc });
+    } catch (err) {
+        console.error('Document detail error:', err);
+        res.status(500).send('Lỗi server');
     }
 });
 
