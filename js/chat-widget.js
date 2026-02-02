@@ -425,15 +425,9 @@ const ChatWidget = {
                 transition: all 0.2s ease;
             }
             
+            /* Chỉ hiển thị nút toggle khi ở chế độ fullscreen */
             .whalio-chat-window.fullscreen .whalio-toggle-sidebar {
                 display: flex;
-            }
-            
-            /* Hiển thị toggle button trên mobile */
-            @media (max-width: 768px) {
-                .whalio-toggle-sidebar {
-                    display: flex;
-                }
             }
             
             .whalio-toggle-sidebar:hover {
@@ -1569,7 +1563,7 @@ const ChatWidget = {
     // ==================== MESSAGING (WITH SMART TRIM FROM BACKUP) ====================
     addWelcomeMessage() {
         setTimeout(() => {
-            this.addMessage("Xin chào! 👋 Mình là Whalio AI Assistant. Mình có thể giúp bạn tìm hiểu về các tính năng của Whalio, giải đáp thắc mắc, hoặc hỗ trợ lập trình. Hãy hỏi mình bất cứ điều gì!", 'ai', false);
+            this.addMessage("Xin chào! 👋 Mình là Whalio AI Assistant. Mình có thể giúp bạn tìm hiểu về các tính năng của Whalio, giải đáp thắc mắc, hoặc hỗ trợ lập trình. Hãy hỏi mình bất cứ điều gì!", 'ai', true);
         }, 300);
     },
     
@@ -1789,7 +1783,8 @@ const ChatWidget = {
         `);
         
         container.appendChild(typingDiv);
-        this.scrollToBottom();
+        // Scroll sau khi thêm typing indicator
+        setTimeout(() => this.scrollToBottom(), 50);
     },
     
     hideTypingIndicator() {
@@ -1800,7 +1795,19 @@ const ChatWidget = {
     
     scrollToBottom() {
         const container = document.getElementById('whalio-messages');
-        container.scrollTop = container.scrollHeight;
+        if (!container) return;
+        
+        // Sử dụng setTimeout để đảm bảo DOM đã render xong
+        setTimeout(() => {
+            // Phương pháp 1: scrollTop (fallback)
+            container.scrollTop = container.scrollHeight;
+            
+            // Phương pháp 2: scrollIntoView cho smooth scroll tốt hơn
+            const lastMessage = container.lastElementChild;
+            if (lastMessage) {
+                lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+        }, 50);
     },
     
     // ==================== FILE HANDLING ====================
