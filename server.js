@@ -576,6 +576,8 @@ const storage = new CloudinaryStorage({
             folder: 'whalio-documents',
             resource_type: resourceType, // Explicitly set based on file type
             public_id: safeName,
+            access_mode: 'public', // 🔥 CRITICAL: Allow public access to raw files
+            type: 'upload', // Ensure it's a public upload, not private/authenticated
             // For raw files: preserve the original extension in the URL
             // This ensures the file is accessible with its proper extension
             ...(resourceType === 'raw' && { format: ext.replace('.', '') })
@@ -666,6 +668,77 @@ const upload = multer({
         cb(new Error(`Định dạng file không hỗ trợ!`), false);
     }
 });
+
+// ==================== DOCUMENT UPLOAD WITH DIRECT CLOUDINARY SDK ====================
+// 🔥 Sử dụng memory storage + Cloudinary SDK để có full control
+const documentMemoryStorage = multer.memoryStorage();
+const documentUpload = multer({
+    storage: documentMemoryStorage,
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+    fileFilter: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        const allowedExtensions = [
+            '.pdf', '.doc', '.docx', '.txt', '.rtf',
+            '.jpg', '.jpeg', '.png', '.gif', '.webp',
+            '.xls', '.xlsx', '.ppt', '.pptx',
+            '.zip', '.rar'
+        ];
+        if (allowedExtensions.includes(ext)) {
+            cb(null, true);
+        } else {
+            cb(new Error(`Định dạng file không hỗ trợ: ${ext}`), false);
+        }
+    }
+});
+
+// Helper: Upload buffer to Cloudinary with full control
+async function uploadToCloudinary(buffer, originalFilename) {
+    const ext = path.extname(originalFilename).toLowerCase();
+    const decodedName = decodeFileName(originalFilename);
+    const safeName = normalizeFileName(decodedName);
+    
+    // Determine resource_type
+    const imageFormats = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
+    const videoFormats = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
+    
+    let resourceType = 'raw'; // Default: raw for PDF, Office, Archives, etc.
+    if (imageFormats.includes(ext)) {
+        resourceType = 'image';
+    } else if (videoFormats.includes(ext)) {
+        resourceType = 'video';
+    }
+    
+    console.log(`☁️ Uploading to Cloudinary: ${originalFilename} → resource_type: ${resourceType}`);
+    
+    return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            {
+                folder: 'whalio-documents',
+                resource_type: resourceType,
+                public_id: safeName,
+                access_mode: 'public', // 🔥 CRITICAL: Public access
+                type: 'upload',
+                format: ext.replace('.', ''), // Preserve file extension
+            },
+            (error, result) => {
+                if (error) {
+                    console.error('❌ Cloudinary upload error:', error);
+                    reject(error);
+                } else {
+                    console.log(`✅ Cloudinary upload success: ${result.secure_url}`);
+                    resolve(result);
+                }
+            }
+        );
+        
+        // Write buffer to stream
+        const Readable = require('stream').Readable;
+        const readableStream = new Readable();
+        readableStream.push(buffer);
+        readableStream.push(null);
+        readableStream.pipe(uploadStream);
+    });
+}
 
 // ==================== ACTIVITY LOGGING (MongoDB) ====================
 async function logActivity(username, action, target, link, type) {
@@ -901,8 +974,8 @@ app.get('/api/documents', async (req, res) => {
 });
 
 app.post('/api/upload-document', (req, res, next) => {
-    // Wrap multer middleware to catch errors and return JSON
-    upload.single('file')(req, res, (err) => {
+    // 🔥 SỬ DỤNG MEMORY STORAGE + CLOUDINARY SDK TRỰC TIẾP
+    documentUpload.single('file')(req, res, (err) => {
         if (err) {
             console.error('Multer error:', err);
             if (err.code === 'LIMIT_FILE_SIZE') {
@@ -929,49 +1002,18 @@ app.post('/api/upload-document', (req, res, next) => {
             return res.status(400).json({ success: false, message: "Chưa chọn file!" });
         }
 
-        const decodedOriginalName = file.originalname || file.decodedOriginalName || decodeFileName(file.originalname);
-
-        // Cloudinary provides the secure_url directly
-        let cloudinaryUrl = file.path; // This is the secure_url from Cloudinary
-        const fileExt = path.extname(file.originalname).toLowerCase();
-
-        // ==================== CLOUDINARY URL FIX LOGIC ====================
-        // 📌 Since we now explicitly set resource_type in CloudinaryStorage:
-        //    - Images → 'image' → /image/upload/ ✅
-        //    - Videos → 'video' → /video/upload/ ✅
-        //    - PDFs, Office, Archives → 'raw' → /raw/upload/ ✅
-        //
-        // 📌 The URL should already be correct, but we double-check and fix if needed
+        const decodedOriginalName = decodeFileName(file.originalname);
         
-        const imageFormats = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
-        const videoFormats = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
+        // 🔥 UPLOAD TRỰC TIẾP QUA CLOUDINARY SDK với full control
+        const cloudinaryResult = await uploadToCloudinary(file.buffer, file.originalname);
+        let cloudinaryUrl = cloudinaryResult.secure_url;
         
-        // Only images should use /image/upload/, everything else should be /raw/upload/
-        if (imageFormats.includes(fileExt)) {
-            // Image files: Keep /image/upload/
-            console.log(`🖼️ IMAGE FILE - URL: ${cloudinaryUrl}`);
-            
-        } else if (videoFormats.includes(fileExt)) {
-            // Video files: Keep /video/upload/
-            console.log(`🎬 VIDEO FILE - URL: ${cloudinaryUrl}`);
-            
-        } else {
-            // ALL OTHER FILES (PDF, Office, Archives, etc.): Must use /raw/upload/
-            // Fix URL if Cloudinary returned /image/upload/ instead of /raw/upload/
-            if (cloudinaryUrl.includes('/image/upload/')) {
-                cloudinaryUrl = cloudinaryUrl.replace('/image/upload/', '/raw/upload/');
-                console.log(`🔧 Fixed URL to RAW: ${cloudinaryUrl}`);
-            }
-            
-            // Ensure file has proper extension for browser recognition
-            if (!cloudinaryUrl.toLowerCase().endsWith(fileExt)) {
-                // URL might be missing extension, but with format param it should be fine
-                console.log(`📄 FILE (${fileExt}) - URL: ${cloudinaryUrl}`);
-            } else {
-                console.log(`📄 FILE (${fileExt}) - URL: ${cloudinaryUrl}`);
-            }
-        }
-        // ==================== END URL FIX LOGIC ====================
+        console.log(`☁️ Cloudinary result:`, {
+            url: cloudinaryUrl,
+            resource_type: cloudinaryResult.resource_type,
+            format: cloudinaryResult.format,
+            public_id: cloudinaryResult.public_id
+        });
 
         const newDoc = new Document({
             name: name || decodedOriginalName.replace(/\.[^/.]+$/, ""),
