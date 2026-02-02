@@ -105,7 +105,7 @@ try {
     if (process.env.GEMINI_API_KEY) {
         geminiClient = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         geminiModel = geminiClient.getGenerativeModel({
-            model: "gemini-2.0-flash-exp", // Gemini 2.5 Flash (hoặc version mới nhất)
+            model: "gemini-2.5-flash", // Gemini 2.5 Flash - đồng bộ với server.js
             systemInstruction: WHALIO_SYSTEM_INSTRUCTION
         });
         console.log('✅ Gemini AI đã được khởi tạo thành công');

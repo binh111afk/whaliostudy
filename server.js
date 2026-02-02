@@ -14,6 +14,9 @@ const mammoth = require('mammoth');  // Đọc file Word (.docx)
 const XLSX = require('xlsx');         // Đọc file Excel (.xlsx, .xls)
 const pdfParse = require('pdf-parse'); // Đọc file PDF
 
+// ==================== AI SERVICE ====================
+const aiService = require('./js/aiService'); // Module xử lý AI với Fallback Gemini ↔ DeepSeek
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -2408,21 +2411,8 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             console.log(`📊 Session has ${session.messages.length} messages, sending last 20 to Gemini`);
         }
 
-        // Initialize the model with system instruction
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-2.5-flash',
-            systemInstruction: WHALIO_SYSTEM_INSTRUCTION
-        });
-
-        // Start chat with history context (max 20 recent messages)
-        const chat = model.startChat({
-            history: geminiHistory,
-            generationConfig: {
-                maxOutputTokens: 8192,
-            }
-        });
-
-        // Tạo payload gửi lên Gemini
+        // ==================== XÂY DỰNG MESSAGE CUỐI CÙNG ====================
+        // Kết hợp history + message hiện tại để gửi cho AI Service
         let contentParts = [];
         let hasAttachment = false;
         let attachmentType = null;
@@ -2556,14 +2546,84 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             }
         }
 
-        // ==================== SEND MESSAGE TO GEMINI ====================
-        // OPTIMIZED: Sử dụng chat.sendMessage với exponential backoff retry (2s → 5s → 10s)
-        const result = await retryWithExponentialBackoff(async () => {
-            return await chat.sendMessage(contentParts);
-        }, 3, 2000); // 3 attempts, với delays tùy chỉnh: 2s, 5s, 10s
+        // ==================== GỌI AI SERVICE (Gemini → DeepSeek Fallback) ====================
+        // Kết hợp history context với message hiện tại
+        let finalMessage = '';
         
-        const response = await result.response;
-        const aiResponseText = response.text();
+        // Nếu có lịch sử chat, thêm context
+        if (geminiHistory.length > 0) {
+            finalMessage = '--- Lịch sử cuộc trò chuyện (để tham khảo context) ---\n';
+            geminiHistory.forEach(msg => {
+                const role = msg.role === 'user' ? '👤 User' : '🤖 Whalio';
+                const content = msg.parts[0].text;
+                finalMessage += `${role}: ${content}\n\n`;
+            });
+            finalMessage += '--- Tin nhắn hiện tại ---\n';
+        }
+        
+        // Thêm tin nhắn hiện tại (có thể là text + nội dung file đã extract)
+        if (typeof contentParts[0] === 'string') {
+            finalMessage += contentParts[0];
+        } else if (contentParts[0]?.text) {
+            finalMessage += contentParts[0].text;
+        }
+        
+        // Nếu có ảnh trong contentParts, xử lý riêng
+        let hasImageData = false;
+        if (contentParts.length > 1 && contentParts[1]?.inlineData) {
+            // Với ảnh, ta cần fallback về Gemini trực tiếp (vì DeepSeek chưa hỗ trợ multimodal tốt)
+            hasImageData = true;
+            console.log('🖼️ Phát hiện ảnh - sẽ sử dụng Gemini trực tiếp (multimodal)');
+        }
+        
+        let aiResponseText;
+        let modelUsed = 'Unknown';
+        
+        // Nếu có ảnh, dùng Gemini trực tiếp (vì DeepSeek không tốt với vision)
+        if (hasImageData) {
+            console.log('📸 Xử lý ảnh với Gemini Multimodal...');
+            const model = genAI.getGenerativeModel({
+                model: 'gemini-2.5-flash',
+                systemInstruction: WHALIO_SYSTEM_INSTRUCTION
+            });
+            
+            const chat = model.startChat({
+                history: geminiHistory,
+                generationConfig: {
+                    maxOutputTokens: 8192,
+                }
+            });
+            
+            const result = await retryWithExponentialBackoff(async () => {
+                return await chat.sendMessage(contentParts);
+            }, 3, 2000);
+            
+            const response = await result.response;
+            aiResponseText = response.text();
+            modelUsed = 'Gemini 2.5 Flash (Multimodal)';
+        } else {
+            // Không có ảnh -> Dùng aiService với fallback thông minh
+            console.log('💬 Gọi AI Service với Fallback (Gemini → DeepSeek)...');
+            const aiResult = await aiService.generateAIResponse(finalMessage);
+            
+            if (!aiResult.success) {
+                // Cả hai models đều thất bại
+                console.error('❌ AI Service thất bại:', aiResult.error);
+                return res.status(500).json({
+                    success: false,
+                    message: aiResult.message,
+                    error: aiResult.error
+                });
+            }
+            
+            aiResponseText = aiResult.message;
+            modelUsed = aiResult.model;
+            
+            // Log nếu đã fallback
+            if (aiResult.fallback) {
+                console.log(`🔄 Đã fallback sang ${modelUsed}`);
+            }
+        }
 
         // ==================== SAVE TO DATABASE ====================
         const userMessageContent = message ? message.trim() : '[Gửi file đính kèm]';
@@ -2596,7 +2656,8 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             success: true,
             response: aiResponseText,
             sessionId: session.sessionId,
-            isNewSession: isNewSession
+            isNewSession: isNewSession,
+            modelUsed: modelUsed // Thông tin model đã sử dụng (Gemini hoặc DeepSeek)
         });
 
     } catch (err) {
