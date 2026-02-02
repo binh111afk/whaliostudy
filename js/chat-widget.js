@@ -429,6 +429,13 @@ const ChatWidget = {
                 display: flex;
             }
             
+            /* Hiển thị toggle button trên mobile */
+            @media (max-width: 768px) {
+                .whalio-toggle-sidebar {
+                    display: flex;
+                }
+            }
+            
             .whalio-toggle-sidebar:hover {
                 background: rgba(255, 255, 255, 0.2);
             }
@@ -512,7 +519,7 @@ const ChatWidget = {
             /* ==================== MESSAGES AREA ==================== */
             .whalio-messages {
                 flex: 1;
-                overflow-y: auto;
+                overflow-y: auto !important;
                 overflow-x: hidden;
                 padding: 20px;
                 display: flex;
@@ -520,25 +527,26 @@ const ChatWidget = {
                 gap: 16px;
                 scroll-behavior: smooth;
                 scrollbar-width: thin;
-                scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
+                scrollbar-color: rgba(99, 102, 241, 0.5) rgba(99, 102, 241, 0.1);
             }
             
             .whalio-messages::-webkit-scrollbar {
-                width: 6px;
+                width: 8px;
             }
             
             .whalio-messages::-webkit-scrollbar-track {
-                background: transparent;
+                background: rgba(99, 102, 241, 0.05);
+                border-radius: 4px;
             }
             
             .whalio-messages::-webkit-scrollbar-thumb {
-                background: rgba(99, 102, 241, 0.3);
-                border-radius: 3px;
+                background: rgba(99, 102, 241, 0.4);
+                border-radius: 4px;
                 transition: background 0.2s ease;
             }
             
             .whalio-messages::-webkit-scrollbar-thumb:hover {
-                background: rgba(99, 102, 241, 0.5);
+                background: rgba(99, 102, 241, 0.6);
             }
             
             /* Centered container for fullscreen */
@@ -1058,10 +1066,14 @@ const ChatWidget = {
                     bottom: 0;
                     z-index: 10;
                     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+                    /* Mặc định ẩn sidebar trên mobile */
+                    transform: translateX(-100%);
+                    transition: transform 0.3s ease;
                 }
                 
-                .whalio-chat-window.fullscreen .whalio-sidebar.collapsed {
-                    transform: translateX(-100%);
+                /* Hiển thị sidebar khi KHÔNG collapsed (khi user click toggle) */
+                .whalio-chat-window.fullscreen .whalio-sidebar:not(.collapsed) {
+                    transform: translateX(0);
                 }
                 
                 .whalio-launcher {
@@ -1361,10 +1373,17 @@ const ChatWidget = {
         const chatWindow = document.getElementById('whalio-chat-window');
         const launcher = document.getElementById('whalio-launcher');
         const fullscreenBtn = document.getElementById('whalio-fullscreen-btn');
+        const sidebar = document.getElementById('whalio-sidebar');
         
         chatWindow.classList.add('fullscreen');
         launcher.style.display = 'none';
         this.isFullScreen = true;
+        
+        // Trên mobile, mặc định ẩn sidebar khi vào fullscreen
+        if (window.innerWidth <= 768) {
+            sidebar.classList.add('collapsed');
+            this.isSidebarOpen = false;
+        }
         
         // Change icon to minimize
         fullscreenBtn.innerHTML = `
