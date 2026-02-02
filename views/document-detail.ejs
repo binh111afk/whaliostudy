@@ -208,9 +208,105 @@
         
         .viewer-embed {
             width: 100%;
-            height: 100%;
+            height: calc(100% - 80px);
             border: none;
             background: #ffffff;
+        }
+        
+        /* ==================== DOCUMENT FRAME HEADER ==================== */
+        .doc-frame-header {
+            height: 80px;
+            background: #ffffff;
+            border-bottom: 2px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            gap: 16px;
+        }
+        
+        .doc-frame-logo {
+            width: 52px;
+            height: 52px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        .doc-frame-logo i {
+            font-size: 1.6rem;
+            color: #ffffff;
+        }
+        
+        .doc-frame-title-wrapper {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .doc-frame-brand {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .doc-frame-brand img {
+            height: 16px;
+            width: auto;
+        }
+        
+        .doc-frame-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+            line-height: 1.4;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .doc-frame-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        
+        @media (max-width: 768px) {
+            .doc-frame-header {
+                height: 70px;
+                padding: 10px 16px;
+                gap: 12px;
+            }
+            
+            .doc-frame-logo {
+                width: 44px;
+                height: 44px;
+            }
+            
+            .doc-frame-logo i {
+                font-size: 1.3rem;
+            }
+            
+            .doc-frame-title {
+                font-size: 1rem;
+            }
+            
+            .viewer-embed {
+                height: calc(100% - 70px);
+            }
         }
         
         /* ==================== IMAGE VIEWER ==================== */
@@ -607,12 +703,27 @@
             
             <% if (isPDF) { %>
                 <!-- ===== PDF VIEWER ===== -->
+                <!-- Document Frame Header -->
+                <div class="doc-frame-header">
+                    <div class="doc-frame-logo">
+                        <i class="bi bi-journal-richtext"></i>
+                    </div>
+                    <div class="doc-frame-title-wrapper">
+                        <div class="doc-frame-brand">
+                            <i class="bi bi-mortarboard-fill" style="color: #667eea;"></i>
+                            Học online tại Whalio Study
+                        </div>
+                        <h2 class="doc-frame-title" title="<%= docName %>"><%= docName %></h2>
+                    </div>
+                </div>
+                
                 <!-- Desktop: Native embed -->
-                <div class="desktop-viewer" style="width:100%; height:100%;">
+                <div class="desktop-viewer" style="width:100%; height:calc(100% - 80px);">
                     <embed 
                         src="<%= docPath %>#toolbar=1&navpanes=0&scrollbar=1" 
                         type="application/pdf"
                         class="viewer-embed"
+                        style="height: 100%;"
                         title="<%= docName %>"
                     >
                 </div>
@@ -640,17 +751,46 @@
                 
             <% } else if (isImage) { %>
                 <!-- ===== IMAGE VIEWER ===== -->
-                <div class="image-viewer">
+                <!-- Document Frame Header -->
+                <div class="doc-frame-header">
+                    <div class="doc-frame-logo">
+                        <i class="bi bi-image"></i>
+                    </div>
+                    <div class="doc-frame-title-wrapper">
+                        <div class="doc-frame-brand">
+                            <i class="bi bi-mortarboard-fill" style="color: #667eea;"></i>
+                            Học online tại Whalio Study
+                        </div>
+                        <h2 class="doc-frame-title" title="<%= docName %>"><%= docName %></h2>
+                    </div>
+                </div>
+                
+                <div class="image-viewer" style="height: calc(100% - 80px);">
                     <img src="<%= docPath %>" alt="<%= docName %>" loading="lazy">
                 </div>
                 
             <% } else if (isOffice) { %>
                 <!-- ===== OFFICE VIEWER (Microsoft Online) ===== -->
+                <!-- Document Frame Header -->
+                <div class="doc-frame-header">
+                    <div class="doc-frame-logo">
+                        <i class="bi bi-journal-richtext"></i>
+                    </div>
+                    <div class="doc-frame-title-wrapper">
+                        <div class="doc-frame-brand">
+                            <i class="bi bi-mortarboard-fill" style="color: #667eea;"></i>
+                            Học online tại Whalio Study
+                        </div>
+                        <h2 class="doc-frame-title" title="<%= docName %>"><%= docName %></h2>
+                    </div>
+                </div>
+                
                 <!-- Desktop: MS Viewer iframe -->
-                <div class="desktop-viewer" style="width:100%; height:100%;">
+                <div class="desktop-viewer" style="width:100%; height:calc(100% - 80px);">
                     <iframe 
                         src="<%= msViewerUrl %>"
                         class="viewer-embed"
+                        style="height: 100%;"
                         title="<%= docName %>"
                         allowfullscreen
                     ></iframe>
