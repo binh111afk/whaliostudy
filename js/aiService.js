@@ -138,20 +138,24 @@ try {
  * API Key lấy từ biến môi trường DEEPSEEK_API_KEY
  * DeepSeek sử dụng chuẩn OpenAI API, nên ta dùng thư viện 'openai'
  */
-let deepseekClient = null;
-
+let openRouterClient = null;
 try {
-    if (process.env.DEEPSEEK_API_KEY) {
-        deepseekClient = new OpenAI({
-            apiKey: process.env.DEEPSEEK_API_KEY,
-            baseURL: 'https://api.deepseek.com' // Base URL của DeepSeek API
+    if (process.env.OPENROUTER_API_KEY) {
+        openRouterClient = new OpenAI({
+            apiKey: process.env.OPENROUTER_API_KEY,
+            baseURL: 'https://openrouter.ai/api/v1',
+            // OpenRouter yêu cầu thêm 2 header này để định danh app của ông (để họ biết ai đang dùng Free)
+            defaultHeaders: {
+                "HTTP-Referer": "https://whalio.com", // Thay bằng link web của ông (hoặc để vậy cũng được)
+                "X-Title": "Whalio Study",
+            }
         });
-        console.log('✅ DeepSeek AI đã được khởi tạo thành công');
+        console.log('✅ [Layer 3] OpenRouter (Free Models) đã sẵn sàng');
     } else {
-        console.warn('⚠️ DEEPSEEK_API_KEY không tồn tại trong .env');
+        console.warn('⚠️ Chưa cấu hình OPENROUTER_API_KEY');
     }
 } catch (error) {
-    console.error('❌ Lỗi khởi tạo DeepSeek:', error.message);
+    console.error('❌ Lỗi khởi tạo OpenRouter:', error.message);
 }
 
 // ======================== CORE FUNCTIONS ========================
@@ -273,23 +277,23 @@ async function callGroq(prompt) {
 }
 
 /**
- * Gọi DeepSeek AI để sinh text (Fallback)
- * 
- * @param {string} prompt - Câu hỏi/yêu cầu từ người dùng
+ * Gọi OpenRouter AI (Gemma 2 - Free) để sinh text
+ * Thay thế cho DeepSeek ở vị trí Fallback 2
+ * * @param {string} prompt - Câu hỏi/yêu cầu từ người dùng
  * @returns {Promise<string>} - Câu trả lời từ AI
  * @throws {Error} - Ném lỗi nếu gọi API thất bại
  */
-async function callDeepSeek(prompt) {
-    if (!deepseekClient) {
-        throw new Error('DEEPSEEK_NOT_INITIALIZED');
+async function callOpenRouter(prompt) {
+    if (!openRouterClient) {
+        throw new Error('OPENROUTER_NOT_INITIALIZED');
     }
 
-    console.log('🟢 Đang gọi DeepSeek AI (Fallback)...');
+    console.log('🔵 [3] Đang gọi OpenRouter (Gemma 2 - Free)...');
 
     try {
-        // Tạo Promise với timeout
-        const deepseekPromise = deepseekClient.chat.completions.create({
-            model: 'deepseek-chat', // DeepSeek V3 model
+        // Tạo Promise gọi API OpenRouter
+        const openRouterPromise = openRouterClient.chat.completions.create({
+            model: "google/gemma-2-9b-it:free", // Model miễn phí chất lượng cao của Google
             messages: [
                 {
                     role: 'system',
@@ -300,35 +304,47 @@ async function callDeepSeek(prompt) {
                     content: prompt
                 }
             ],
+            // OpenRouter đôi khi yêu cầu referer trong header (đã config lúc init), nhưng thêm vào đây cho chắc nếu cần
+            extra_headers: {
+                "HTTP-Referer": "https://whalio-study.onrender.com",
+                "X-Title": "Whalio Study"
+            },
             temperature: 0.7,
             max_tokens: 2000
         });
 
+        // Tạo Promise Timeout
         const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('TIMEOUT')), REQUEST_TIMEOUT);
         });
 
         // Race giữa API call và timeout
-        const completion = await Promise.race([deepseekPromise, timeoutPromise]);
+        const completion = await Promise.race([openRouterPromise, timeoutPromise]);
+        
+        // Kiểm tra xem OpenRouter có trả về lỗi trong body không
+        if (completion.error) {
+            throw new Error(completion.error.message);
+        }
+
         const text = completion.choices[0].message.content;
 
-        console.log('✅ DeepSeek AI phản hồi thành công');
+        console.log('✅ OpenRouter phản hồi thành công');
         return text;
 
     } catch (error) {
         if (error.message === 'TIMEOUT') {
-            console.warn('⏱️ DeepSeek AI timeout sau 30 giây');
-            throw new Error('DEEPSEEK_TIMEOUT');
+            console.warn('⏱️ OpenRouter timeout sau 30 giây');
+            throw new Error('OPENROUTER_TIMEOUT');
         }
 
-        // Kiểm tra lỗi 429
+        // Kiểm tra lỗi 429 (Rate Limit)
         if (error.status === 429 || (error.message && error.message.includes('429'))) {
-            console.warn('⚠️ DeepSeek AI bị Rate Limit (429)');
-            throw new Error('DEEPSEEK_RATE_LIMIT');
+            console.warn('⚠️ OpenRouter bị Rate Limit (429)');
+            throw new Error('OPENROUTER_RATE_LIMIT');
         }
 
-        console.error('❌ Lỗi khi gọi DeepSeek:', error.message);
-        throw new Error(`DEEPSEEK_ERROR: ${error.message}`);
+        console.error('❌ Lỗi khi gọi OpenRouter:', error.message);
+        throw new Error(`OPENROUTER_ERROR: ${error.message}`);
     }
 }
 
@@ -396,11 +412,11 @@ async function generateAIResponse(userMessage) {
             errorLog.groq = groqError.message;
 
             // ============ BƯỚC 3: Fallback sang DEEPSEEK (Dự phòng 2 - Chốt chặn cuối) ============
-            console.log('🔄 Đang chuyển sang DeepSeek AI...');
+            console.log('🔄 Đang chuyển sang OpenRouter (Gemma 2)...');
 
             try {
-                response = await callDeepSeek(userMessage);
-                usedModel = 'DeepSeek V3';
+                response = await callOpenRouter(userMessage);
+                usedModel = 'OpenRouter (Gemma 2)';
 
                 return {
                     success: true,
@@ -411,9 +427,9 @@ async function generateAIResponse(userMessage) {
                     fallback: true
                 };
 
-            } catch (deepseekError) {
-                console.error(`❌ DeepSeek cũng thất bại: ${deepseekError.message}`);
-                errorLog.deepseek = deepseekError.message;
+            } catch (openRouterError) {
+                console.error(`❌ OpenRouter cũng thất bại: ${openRouterError.message}`);
+                errorLog.openRouter = openRouterError.message;
 
                 // ============ CẢ 3 ĐỀU THẤT BẠI ============
                 return {
@@ -444,9 +460,9 @@ function getServiceStatus() {
             initialized: groqClient !== null,
             apiKeyConfigured: !!process.env.GROQ_API_KEY
         },
-        deepseek: {
-            initialized: deepseekClient !== null,
-            apiKeyConfigured: !!process.env.DEEPSEEK_API_KEY
+        openRouter: {
+            initialized: openRouterClient !== null,
+            apiKeyConfigured: !!process.env.OPENROUTER_API_KEY
         }
     };
 }
