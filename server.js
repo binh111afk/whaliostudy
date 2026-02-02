@@ -2580,27 +2580,79 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
         let modelUsed = 'Unknown';
         
         // Nếu có ảnh, dùng Gemini trực tiếp (vì DeepSeek không tốt với vision)
+        // Nếu có ảnh, dùng Gemini trước -> Nếu lỗi thì Fallback sang Groq Vision
         if (hasImageData) {
-            console.log('📸 Xử lý ảnh với Gemini Multimodal...');
-            const model = genAI.getGenerativeModel({
-                model: 'gemini-2.5-flash',
-                systemInstruction: WHALIO_SYSTEM_INSTRUCTION
-            });
+            console.log('📸 Xử lý ảnh: Thử Gemini Multimodal trước...');
             
-            const chat = model.startChat({
-                history: geminiHistory,
-                generationConfig: {
-                    maxOutputTokens: 8192,
+            try {
+                // --- LỚP 1: GEMINI VISION ---
+                const model = genAI.getGenerativeModel({
+                    model: 'gemini-2.5-flash',
+                    systemInstruction: WHALIO_SYSTEM_INSTRUCTION
+                });
+                
+                const chat = model.startChat({
+                    history: geminiHistory,
+                });
+                
+                // Thử gọi Gemini
+                const result = await chat.sendMessage(contentParts);
+                const response = await result.response;
+                aiResponseText = response.text();
+                modelUsed = 'Gemini 2.5 Flash (Vision)';
+
+            } catch (geminiErr) {
+                console.warn(`⚠️ Gemini Vision lỗi: ${geminiErr.message}`);
+                
+                // Chỉ fallback nếu lỗi là quá tải (429) hoặc lỗi mạng
+                if (geminiErr.message.includes('429') || geminiErr.message.includes('Rate Limit') || geminiErr.message.includes('fetch failed')) {
+                    console.log('🔄 Đang chuyển sang Groq Vision (Llama 3.2)...');
+                    
+                    try {
+                        // --- LỚP 2: GROQ VISION (LLAMA 3.2) ---
+                        // Cần chuẩn bị dữ liệu ảnh đúng chuẩn OpenAI/Groq
+                        const base64Image = contentParts[1].inlineData.data; // Lấy lại base64 từ contentParts đã tạo ở trên
+                        const mimeType = contentParts[1].inlineData.mimeType;
+                        
+                        // Gọi Groq Vision
+                        const OpenAI = require('openai');
+                        const groq = new OpenAI({
+                            apiKey: process.env.GROQ_API_KEY,
+                            baseURL: 'https://api.groq.com/openai/v1'
+                        });
+
+                        const completion = await groq.chat.completions.create({
+                            model: "llama-3.2-11b-vision-preview", // Model Vision Free của Groq
+                            messages: [
+                                {
+                                    role: "user",
+                                    content: [
+                                        { type: "text", text: finalMessage || "Hãy phân tích hình ảnh này" },
+                                        {
+                                            type: "image_url",
+                                            image_url: {
+                                                url: `data:${mimeType};base64,${base64Image}`
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            temperature: 0.7,
+                            max_tokens: 1024
+                        });
+
+                        aiResponseText = completion.choices[0].message.content;
+                        modelUsed = 'Groq Llama 3.2 (Vision Fallback)';
+                        console.log('✅ Groq Vision đã cứu bàn thua trông thấy!');
+
+                    } catch (groqErr) {
+                        console.error('❌ Groq Vision cũng thất bại:', groqErr.message);
+                        throw geminiErr; // Ném lại lỗi cũ để báo User
+                    }
+                } else {
+                    throw geminiErr; // Nếu lỗi khác (VD: ảnh sex, ảnh lỗi) thì không fallback
                 }
-            });
-            
-            const result = await retryWithExponentialBackoff(async () => {
-                return await chat.sendMessage(contentParts);
-            }, 3, 2000);
-            
-            const response = await result.response;
-            aiResponseText = response.text();
-            modelUsed = 'Gemini 2.5 Flash (Multimodal)';
+            }
         } else {
             // Không có ảnh -> Dùng aiService với fallback thông minh
             console.log('💬 Gọi AI Service với Fallback (Gemini → DeepSeek)...');
