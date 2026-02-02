@@ -2622,7 +2622,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                         });
 
                         const completion = await groq.chat.completions.create({
-                            model: "llama-3.2-11b-vision-preview", // Model Vision Free của Groq
+                            model: "meta-llama/llama-4-scout-17b-16e-instruct", // Model Vision Free của Groq
                             messages: [
                                 {
                                     role: "user",
