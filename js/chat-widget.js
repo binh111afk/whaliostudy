@@ -301,6 +301,9 @@ const ChatWidget = {
                 transition: all 0.2s ease;
                 margin-bottom: 4px;
                 position: relative;
+                color: var(--text-primary, #1f2937);
+                background: transparent;
+                border: 1px solid transparent;
             }
             
             .whalio-session-item:hover {
@@ -824,9 +827,10 @@ const ChatWidget = {
                 color: var(--text-primary, #1f2937);
                 min-height: 28px;
                 max-height: 150px;
-                outline: none;
+                outline: none !important;
                 font-family: inherit;
                 padding: 6px 0;
+                box-shadow: none !important;
             }
             
             .whalio-textarea::placeholder {
@@ -1129,15 +1133,32 @@ const ChatWidget = {
                 color: #ffffff;
                 border-radius: 8px;
                 margin-bottom: 4px;
+                border: 1px solid #404040;
+                background: #2a2a2a;
             }
             
             .dark-mode .whalio-session-item:hover {
-                background: #2d2d2d;
+                background: #3d3d3d;
+                border-color: #555555;
+                transform: translateX(2px);
+                transition: all 0.2s ease;
+            }
+            
+            .dark-mode .whalio-session-item.active {
+                background: rgba(99, 102, 241, 0.2);
+                border-color: rgba(99, 102, 241, 0.5);
+                color: #ffffff;
             }
             
             .dark-mode .whalio-input-wrapper {
                 background: #2d2d2d;
                 border-color: #404040;
+            }
+            
+            .dark-mode .whalio-input-wrapper:focus-within {
+                border-color: #6366f1;
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+                background: #333333;
             }
             
             .dark-mode .whalio-textarea {
