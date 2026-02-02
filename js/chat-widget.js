@@ -1111,115 +1111,165 @@ const ChatWidget = {
             
             /* ==================== DARK MODE OVERRIDES ==================== */
             .dark-mode .whalio-chat-window {
-                background: var(--bg-primary, #1f2937);
-                border-color: var(--border-color, #374151);
-                color: var(--text-primary, #f9fafb);
+                background: #1a1a1a;
+                border-color: #2d2d2d;
+                color: #ffffff;
             }
             
             .dark-mode .whalio-sidebar {
-                background: var(--bg-secondary, #111827);
-                border-color: var(--border-color, #374151);
+                background: #0f0f0f;
+                border-color: #2d2d2d;
+            }
+            
+            .dark-mode .whalio-main {
+                background: #1a1a1a;
+            }
+            
+            .dark-mode .whalio-session-item {
+                color: #ffffff;
+                border-radius: 8px;
+                margin-bottom: 4px;
             }
             
             .dark-mode .whalio-session-item:hover {
-                background: var(--bg-hover, #374151);
+                background: #2d2d2d;
             }
             
             .dark-mode .whalio-input-wrapper {
-                background: var(--bg-secondary, #374151);
-                border-color: var(--border-color, #4b5563);
+                background: #2d2d2d;
+                border-color: #404040;
             }
             
             .dark-mode .whalio-textarea {
                 background: transparent;
-                color: var(--text-primary, #f9fafb);
+                color: #ffffff;
+                border: none;
             }
             
             .dark-mode .whalio-textarea::placeholder {
-                color: var(--text-secondary, #9ca3af);
+                color: #888888;
             }
             
             .dark-mode .whalio-message.ai .whalio-message-bubble {
-                background: var(--bg-secondary, #374151);
-                color: var(--text-primary, #f9fafb);
+                background: #2d2d2d;
+                color: #ffffff;
+                border: 1px solid #404040;
             }
             
             .dark-mode .whalio-message.user .whalio-message-bubble {
-                background: rgba(99, 102, 241, 0.2);
-                color: var(--text-primary, #f9fafb);
+                background: rgba(99, 102, 241, 0.15);
+                color: #ffffff;
+                border: 1px solid rgba(99, 102, 241, 0.3);
             }
             
             .dark-mode .whalio-file-preview {
-                background: var(--bg-secondary, #374151);
-                border-color: var(--border-color, #4b5563);
+                background: #2d2d2d;
+                border-color: #404040;
             }
             
             .dark-mode .whalio-input-area {
-                background: var(--bg-primary, #1f2937);
-                border-color: var(--border-color, #374151);
+                background: #1a1a1a;
+                border-color: #2d2d2d;
             }
             
             .dark-mode .whalio-header {
                 background: var(--whalio-gradient);
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
             }
             
             .dark-mode .whalio-message-time {
-                color: var(--text-secondary, #9ca3af);
+                color: #888888;
             }
             
             .dark-mode .whalio-typing {
-                background: var(--bg-secondary, #374151);
+                background: #2d2d2d;
+                border: 1px solid #404040;
             }
             
             .dark-mode .whalio-typing-dot {
-                background: var(--text-secondary, #9ca3af);
+                background: #888888;
             }
             
             .dark-mode .whalio-sessions-empty {
-                color: var(--text-secondary, #9ca3af);
+                color: #888888;
             }
             
             .dark-mode .whalio-sidebar-title {
-                color: var(--text-secondary, #9ca3af);
+                color: #888888;
+                font-weight: 600;
             }
             
             .dark-mode .whalio-session-item {
-                color: var(--text-primary, #f9fafb);
+                color: #ffffff;
             }
             
             .dark-mode .whalio-session-item:hover {
-                background: var(--bg-hover, #4b5563);
+                background: #2d2d2d;
+                transform: translateX(2px);
+                transition: all 0.2s ease;
             }
             
             .dark-mode .whalio-upload-btn,
             .dark-mode .whalio-file-remove {
-                background: var(--bg-secondary, #374151);
-                color: var(--text-primary, #f9fafb);
-                border-color: var(--border-color, #4b5563);
+                background: #2d2d2d;
+                color: #ffffff;
+                border-color: #404040;
             }
             
             .dark-mode .whalio-upload-btn:hover,
             .dark-mode .whalio-file-remove:hover {
-                background: var(--bg-hover, #4b5563);
+                background: #404040;
+                border-color: #555555;
             }
             
             .dark-mode .whalio-file-info {
-                color: var(--text-primary, #f9fafb);
+                color: #ffffff;
+            }
+            
+            .dark-mode .whalio-file-name {
+                color: #ffffff;
             }
             
             .dark-mode .whalio-file-size {
-                color: var(--text-secondary, #9ca3af);
+                color: #888888;
+            }
+            
+            /* Dark mode cho scrollbar */
+            .dark-mode .whalio-messages::-webkit-scrollbar-track {
+                background: #1a1a1a;
+            }
+            
+            .dark-mode .whalio-messages::-webkit-scrollbar-thumb {
+                background: #404040;
+                border-radius: 4px;
+            }
+            
+            .dark-mode .whalio-messages::-webkit-scrollbar-thumb:hover {
+                background: #555555;
             }
             
             /* Dark mode cho code blocks */
             .dark-mode .whalio-message-bubble code:not(pre code) {
-                background: rgba(156, 163, 175, 0.2);
-                color: var(--text-primary, #f9fafb);
+                background: rgba(255, 255, 255, 0.1);
+                color: #ffffff;
+                border: 1px solid #404040;
             }
             
             /* Dark mode cho overlay */
             .dark-mode .whalio-sidebar-overlay {
-                background: rgba(0, 0, 0, 0.7);
+                background: rgba(0, 0, 0, 0.8);
+            }
+            
+            /* Cải thiện header buttons */
+            .dark-mode .whalio-toggle-sidebar,
+            .dark-mode .whalio-header-btn {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+            }
+            
+            .dark-mode .whalio-toggle-sidebar:hover,
+            .dark-mode .whalio-header-btn:hover {
+                background: rgba(255, 255, 255, 0.2);
             }
         `;
         document.head.appendChild(styles);
