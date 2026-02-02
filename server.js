@@ -701,15 +701,13 @@ async function uploadToCloudinary(buffer, originalFilename, mimeType) {
     const imageFormats = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
     const videoFormats = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
     
-    let resourceType = 'raw'; // Default: raw for PDF, Office, Archives, etc.
-    if (imageFormats.includes(ext)) {
-        resourceType = 'image';
-    } else if (videoFormats.includes(ext)) {
-        resourceType = 'video';
-    }
+    // 🔥 CRITICAL FIX: Upload ALL files (including PDF) as 'auto' 
+    // This lets Cloudinary decide the best resource_type
+    // For PDFs, Cloudinary will store as 'image' which allows public access
+    let resourceType = 'auto';
     
     console.log(`☁️ Uploading to Cloudinary: ${originalFilename}`);
-    console.log(`   → resource_type: ${resourceType}, format: ${ext.replace('.', '')}`);
+    console.log(`   → resource_type: ${resourceType}, extension: ${ext}`);
     
     // 🔥 Convert buffer to base64 Data URI - More reliable than stream
     const base64Data = buffer.toString('base64');
@@ -721,7 +719,6 @@ async function uploadToCloudinary(buffer, originalFilename, mimeType) {
             resource_type: resourceType,
             public_id: safeName,
             // Note: 'type' defaults to 'upload' which is public
-            // Do NOT use access_mode for raw files - it may cause issues
         });
         
         console.log(`✅ Cloudinary upload success!`);
@@ -729,7 +726,22 @@ async function uploadToCloudinary(buffer, originalFilename, mimeType) {
         console.log(`   → Resource type: ${result.resource_type}`);
         console.log(`   → Format: ${result.format}`);
         
-        return result;
+        // 🔥 For non-image files, we may need to adjust the URL
+        let finalUrl = result.secure_url;
+        
+        // Office files: Change to /raw/upload/ for Microsoft Viewer
+        const officeFormats = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls'];
+        if (officeFormats.includes(ext)) {
+            finalUrl = finalUrl.replace('/image/upload/', '/raw/upload/');
+            console.log(`   → Fixed for Office: ${finalUrl}`);
+        }
+        
+        // Return result with potentially modified URL
+        return {
+            ...result,
+            secure_url: finalUrl,
+            original_secure_url: result.secure_url // Keep original for reference
+        };
     } catch (error) {
         console.error('❌ Cloudinary upload error:', error);
         throw error;
