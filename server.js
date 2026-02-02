@@ -692,7 +692,7 @@ const documentUpload = multer({
 });
 
 // Helper: Upload buffer to Cloudinary with full control
-async function uploadToCloudinary(buffer, originalFilename) {
+async function uploadToCloudinary(buffer, originalFilename, mimeType) {
     const ext = path.extname(originalFilename).toLowerCase();
     const decodedName = decodeFileName(originalFilename);
     const safeName = normalizeFileName(decodedName);
@@ -708,36 +708,32 @@ async function uploadToCloudinary(buffer, originalFilename) {
         resourceType = 'video';
     }
     
-    console.log(`☁️ Uploading to Cloudinary: ${originalFilename} → resource_type: ${resourceType}`);
+    console.log(`☁️ Uploading to Cloudinary: ${originalFilename}`);
+    console.log(`   → resource_type: ${resourceType}, format: ${ext.replace('.', '')}`);
     
-    return new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-            {
-                folder: 'whalio-documents',
-                resource_type: resourceType,
-                public_id: safeName,
-                access_mode: 'public', // 🔥 CRITICAL: Public access
-                type: 'upload',
-                format: ext.replace('.', ''), // Preserve file extension
-            },
-            (error, result) => {
-                if (error) {
-                    console.error('❌ Cloudinary upload error:', error);
-                    reject(error);
-                } else {
-                    console.log(`✅ Cloudinary upload success: ${result.secure_url}`);
-                    resolve(result);
-                }
-            }
-        );
+    // 🔥 Convert buffer to base64 Data URI - More reliable than stream
+    const base64Data = buffer.toString('base64');
+    const dataUri = `data:${mimeType || 'application/octet-stream'};base64,${base64Data}`;
+    
+    try {
+        const result = await cloudinary.uploader.upload(dataUri, {
+            folder: 'whalio-documents',
+            resource_type: resourceType,
+            public_id: safeName,
+            // Note: 'type' defaults to 'upload' which is public
+            // Do NOT use access_mode for raw files - it may cause issues
+        });
         
-        // Write buffer to stream
-        const Readable = require('stream').Readable;
-        const readableStream = new Readable();
-        readableStream.push(buffer);
-        readableStream.push(null);
-        readableStream.pipe(uploadStream);
-    });
+        console.log(`✅ Cloudinary upload success!`);
+        console.log(`   → URL: ${result.secure_url}`);
+        console.log(`   → Resource type: ${result.resource_type}`);
+        console.log(`   → Format: ${result.format}`);
+        
+        return result;
+    } catch (error) {
+        console.error('❌ Cloudinary upload error:', error);
+        throw error;
+    }
 }
 
 // ==================== ACTIVITY LOGGING (MongoDB) ====================
@@ -1005,7 +1001,7 @@ app.post('/api/upload-document', (req, res, next) => {
         const decodedOriginalName = decodeFileName(file.originalname);
         
         // 🔥 UPLOAD TRỰC TIẾP QUA CLOUDINARY SDK với full control
-        const cloudinaryResult = await uploadToCloudinary(file.buffer, file.originalname);
+        const cloudinaryResult = await uploadToCloudinary(file.buffer, file.originalname, file.mimetype);
         let cloudinaryUrl = cloudinaryResult.secure_url;
         
         console.log(`☁️ Cloudinary result:`, {
