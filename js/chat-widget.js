@@ -1113,6 +1113,7 @@ const ChatWidget = {
             .dark-mode .whalio-chat-window {
                 background: var(--bg-primary, #1f2937);
                 border-color: var(--border-color, #374151);
+                color: var(--text-primary, #f9fafb);
             }
             
             .dark-mode .whalio-sidebar {
@@ -1126,14 +1127,99 @@ const ChatWidget = {
             
             .dark-mode .whalio-input-wrapper {
                 background: var(--bg-secondary, #374151);
+                border-color: var(--border-color, #4b5563);
+            }
+            
+            .dark-mode .whalio-textarea {
+                background: transparent;
+                color: var(--text-primary, #f9fafb);
+            }
+            
+            .dark-mode .whalio-textarea::placeholder {
+                color: var(--text-secondary, #9ca3af);
             }
             
             .dark-mode .whalio-message.ai .whalio-message-bubble {
                 background: var(--bg-secondary, #374151);
+                color: var(--text-primary, #f9fafb);
+            }
+            
+            .dark-mode .whalio-message.user .whalio-message-bubble {
+                background: rgba(99, 102, 241, 0.2);
+                color: var(--text-primary, #f9fafb);
             }
             
             .dark-mode .whalio-file-preview {
                 background: var(--bg-secondary, #374151);
+                border-color: var(--border-color, #4b5563);
+            }
+            
+            .dark-mode .whalio-input-area {
+                background: var(--bg-primary, #1f2937);
+                border-color: var(--border-color, #374151);
+            }
+            
+            .dark-mode .whalio-header {
+                background: var(--whalio-gradient);
+            }
+            
+            .dark-mode .whalio-message-time {
+                color: var(--text-secondary, #9ca3af);
+            }
+            
+            .dark-mode .whalio-typing {
+                background: var(--bg-secondary, #374151);
+            }
+            
+            .dark-mode .whalio-typing-dot {
+                background: var(--text-secondary, #9ca3af);
+            }
+            
+            .dark-mode .whalio-sessions-empty {
+                color: var(--text-secondary, #9ca3af);
+            }
+            
+            .dark-mode .whalio-sidebar-title {
+                color: var(--text-secondary, #9ca3af);
+            }
+            
+            .dark-mode .whalio-session-item {
+                color: var(--text-primary, #f9fafb);
+            }
+            
+            .dark-mode .whalio-session-item:hover {
+                background: var(--bg-hover, #4b5563);
+            }
+            
+            .dark-mode .whalio-upload-btn,
+            .dark-mode .whalio-file-remove {
+                background: var(--bg-secondary, #374151);
+                color: var(--text-primary, #f9fafb);
+                border-color: var(--border-color, #4b5563);
+            }
+            
+            .dark-mode .whalio-upload-btn:hover,
+            .dark-mode .whalio-file-remove:hover {
+                background: var(--bg-hover, #4b5563);
+            }
+            
+            .dark-mode .whalio-file-info {
+                color: var(--text-primary, #f9fafb);
+            }
+            
+            .dark-mode .whalio-file-size {
+                color: var(--text-secondary, #9ca3af);
+            }
+            
+            /* Dark mode cho code blocks */
+            .dark-mode .whalio-message-bubble code:not(pre code) {
+                background: rgba(156, 163, 175, 0.2);
+                color: var(--text-primary, #f9fafb);
+            }
+            
+            /* Dark mode cho overlay */
+            .dark-mode .whalio-sidebar-overlay {
+                background: rgba(0, 0, 0, 0.7);
             }
         `;
         document.head.appendChild(styles);
