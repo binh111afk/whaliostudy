@@ -987,3 +987,5 @@ export const ExamManager = {
         console.log('Filter by subject:', subject);
     }
 };
+
+module.exports = mongoose.model('Exam', examSchema);

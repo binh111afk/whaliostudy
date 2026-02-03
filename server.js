@@ -1,7 +1,8 @@
 require('dotenv').config();
 console.log("🔑 KEY CHECK:", process.env.GEMINI_API_KEY ? "Đã tìm thấy Key!" : "❌ KHÔNG THẤY KEY");
 const express = require('express');
-const fs = require('fs').promises;
+const Exam = require('./js/exam');
+const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
 const mongoose = require('mongoose');
@@ -1252,19 +1253,14 @@ app.get('/api/stats', async (req, res) => {
 // 7. Exam APIs
 app.get('/api/exams', async (req, res) => {
     try {
-        const exams = await Exam.find().sort({ createdAt: -1 }).lean();
-        const examList = exams.map(e => ({
-            id: e.examId,
-            title: e.title,
-            subject: e.subject,
-            questions: e.questions,
-            time: e.time,
-            image: e.image,
-            createdBy: e.createdBy,
-            questionBank: e.questionBank || [], // Include question bank
-            createdAt: e.createdAt
-        }));
-        res.json(examList);
+        // Tuyệt chiêu: Lấy mọi thứ TRỪ questions và questionBank
+        const exams = await Exam.find()
+            .select('-questions -questionBank') 
+            .sort({ createdAt: -1 })
+            .lean();
+        
+        // Giờ dữ liệu trả về cực nhẹ, Koyeb sẽ không bao giờ báo Unhealthy nữa
+        res.json(exams); 
     } catch (err) {
         console.error('Get exams error:', err);
         res.json([]);
@@ -2956,6 +2952,7 @@ async function checkAvailableModels() {
 checkAvailableModels();
 
 // ==================== SERVER START ====================
+// Thêm cái '0.0.0.0' vào vị trí thứ 2
 app.listen(PORT, () => {
     console.log(`✅ Server is running on port ${PORT}`);
     console.log(`📡 API ready at http://localhost:${PORT}`);
