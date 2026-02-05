@@ -40,13 +40,17 @@ export const examService = {
             }
         } 
         
-        // Logic cũ cho đề tự tạo (giữ nguyên)
+        // Logic cho đề tự tạo - gọi API chi tiết
         try {
-            const res = await fetch('/api/exams');
-            const exams = await res.json();
-            const foundExam = exams.find(e => String(e.id) === String(examId));
-            return foundExam ? (foundExam.questions || foundExam.questionBank || []) : [];
+            const res = await fetch(`/api/exams/${examId}`);
+            if (!res.ok) return [];
+            const data = await res.json();
+            if (data.success && data.exam) {
+                return data.exam.questionBank || [];
+            }
+            return [];
         } catch (e) {
+            console.error("Lỗi lấy câu hỏi từ API:", e);
             return [];
         }
     },

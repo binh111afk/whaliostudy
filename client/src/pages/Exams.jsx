@@ -72,10 +72,16 @@ const Exams = () => {
   };
 
   const handleCreateSuccess = async (newExam) => {
-    console.log('📥 Nhận exam mới:', newExam); // 👈 DEBUG
-    console.log('📊 Số câu hỏi:', newExam.questions?.length); // 👈 DEBUG
-    console.log('🔍 Chi tiết questions:', newExam.questions); // 👈 DEBUG
-    await examService.createExam(newExam);
+    console.log('📥 Nhận exam mới:', newExam);
+    console.log('📊 Số câu hỏi:', newExam.questions?.length);
+    
+    // Thêm username để server biết ai tạo đề
+    const examWithUser = {
+      ...newExam,
+      username: user?.username || 'anonymous'
+    };
+    
+    await examService.createExam(examWithUser);
     setCreatorOpen(false);
     loadExams();
   };
@@ -289,7 +295,7 @@ const Exams = () => {
                 <span className="w-1 h-1 bg-white rounded-full"></span>
                 <span>{activeExam.time}</span>
                 <span className="w-1 h-1 bg-white rounded-full"></span>
-                <span>{activeExam.questions?.length} câu</span>
+                <span>{activeExam.limit || (Array.isArray(activeExam.questions) ? activeExam.questions.length : 0)} câu</span>
               </div>
             </div>
 

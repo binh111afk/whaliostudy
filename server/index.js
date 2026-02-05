@@ -1380,13 +1380,28 @@ app.get('/api/stats', async (req, res) => {
 // 7. Exam APIs
 app.get('/api/exams', async (req, res) => {
     try {
-        // Tuyệt chiêu: Lấy mọi thứ TRỪ questions và questionBank
+        // Lấy tất cả exam, bao gồm cả questionBank để đếm số câu
         const exams = await Exam.find()
-            .select('-questionBank') 
             .sort({ createdAt: -1 })
             .lean();
         
-        res.json(exams); 
+        // Map lại để thêm thông tin cần thiết cho client
+        const mappedExams = exams.map(exam => ({
+            id: exam.examId || exam._id,
+            examId: exam.examId || exam._id,
+            title: exam.title,
+            subject: exam.subject,
+            time: exam.time,
+            image: exam.image,
+            createdBy: exam.createdBy,
+            createdAt: exam.createdAt,
+            isStatic: false,
+            // Gửi cả mảng questions để ExamRunner dùng trực tiếp
+            questions: exam.questionBank || [],
+            limit: Array.isArray(exam.questionBank) ? exam.questionBank.length : (exam.questions || 0)
+        }));
+        
+        res.json(mappedExams); 
     } catch (err) {
         console.error('Get exams error:', err);
         res.json([]);
