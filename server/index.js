@@ -259,6 +259,75 @@ async function seedExamsFromJSON(forceReseed = false) {
     }
 }
 
+// ==================== USER SEEDING (CẬP NHẬT QUYỀN TỪ JSON) ====================
+async function seedUsersFromJSON() {
+    console.log('\n👤 STARTING USER SYNC FROM JSON...');
+    try {
+        const usersFilePath = path.join(__dirname, '..', 'data', 'users.json');
+        
+        if (!fs.existsSync(usersFilePath)) {
+            console.log('   ⚠️ Không tìm thấy file users.json, bỏ qua.');
+            return;
+        }
+
+        const usersRaw = fs.readFileSync(usersFilePath, 'utf8');
+        const usersData = JSON.parse(usersRaw);
+
+        for (const u of usersData) {
+            // Tìm user trong Database theo username
+            const userInDb = await User.findOne({ username: u.username });
+
+            if (userInDb) {
+                // 🏫 TRƯỜNG HỢP 1: USER ĐÃ TỒN TẠI (Giống trường đại học)
+                let hasChange = false;
+                
+                // Cập nhật ROLE (Ông vẫn giữ quyền set Admin/Member qua file JSON)
+                if (u.role && userInDb.role !== u.role) {
+                    console.log(`   🔄 Update ROLE cho [${u.username}]: ${userInDb.role} -> ${u.role}`);
+                    userInDb.role = u.role;
+                    hasChange = true;
+                }
+
+                // Cập nhật TÊN HIỂN THỊ (Nếu ông muốn đổi tên cho chuyên nghiệp)
+                if (u.fullName && userInDb.fullName !== u.fullName) {
+                    console.log(`   🔄 Update TÊN cho [${u.username}]: -> ${u.fullName}`);
+                    userInDb.fullName = u.fullName;
+                    hasChange = true;
+                }
+
+                // 🛡️ BẢO MẬT: Không cập nhật password ở đây. 
+                // Nếu user đã tự đổi mật khẩu trên giao diện web, mật khẩu đó sẽ được giữ nguyên.
+
+                if (hasChange) {
+                    await userInDb.save();
+                    console.log(`   ✅ Đã đồng bộ thông tin cho ${u.username}`);
+                } else {
+                    console.log(`   ok User [${u.username}] đã khớp cấu hình.`);
+                }
+
+            } else {
+                // 🆕 TRƯỜNG HỢP 2: USER CHƯA CÓ -> TẠO MỚI (Cấp tài khoản lần đầu)
+                const newUser = new User({
+                    username: u.username,
+                    password: u.password || "123456", // Lấy pass trong JSON, nếu ko có thì để 123456
+                    fullName: u.fullName || u.username,
+                    role: u.role || "member",
+                    email: u.email || `${u.username}@whalio.edu.vn`,
+                    avatar: '/img/avt.png',
+                    savedDocs: []
+                });
+
+                await newUser.save();
+                console.log(`   🆕 Đã cấp tài khoản mới thành công cho: ${u.username} (Pass: ${u.password || "123456"})`);
+            }
+        }
+        console.log('👤 USER SYNC COMPLETED.\n');
+
+    } catch (err) {
+        console.error('❌ Lỗi khi đồng bộ User từ JSON:', err.message);
+    }
+}
+
 // ==================== MONGOOSE SCHEMAS & MODELS ====================
 
 // User Schema
@@ -510,6 +579,7 @@ const GpaModel = mongoose.model('Gpa', gpaSchema);
 async function seedInitialData() {
     console.log('\n🔄 AUTO-SEED: Running automatic database seeding on startup...');
     await seedExamsFromJSON(false);
+    await seedUsersFromJSON();
 }
 
 // Middleware
@@ -964,18 +1034,29 @@ app.post('/api/register', async (req, res) => {
 // 2. Profile APIs
 app.post('/api/update-profile', async (req, res) => {
     try {
-        const { username, ...updateData } = req.body;
-        const user = await User.findOneAndUpdate(
-            { username },
-            { ...updateData, updatedAt: new Date() },
-            { new: true }
-        ).lean();
+        // 1. Chỉ lấy những trường được phép update
+        const { username, fullName, email, avatar } = req.body;
 
+        // 2. Kiểm tra xem user có tồn tại không
+        const user = await User.findOne({ username });
         if (!user) {
             return res.status(404).json({ success: false, message: "Không tìm thấy user" });
         }
 
-        const { password: _, ...safeUser } = user;
+        // 3. Cập nhật thủ công từng trường (Loại bỏ role, password ra khỏi danh sách)
+        if (fullName) user.fullName = fullName;
+        if (email) user.email = email;
+        if (avatar) user.avatar = avatar;
+        
+        user.updatedAt = new Date();
+        
+        // 4. Lưu lại
+        await user.save();
+
+        // 5. Trả về kết quả (đã lọc bỏ password)
+        const safeUser = user.toObject();
+        delete safeUser.password;
+        
         res.json({ success: true, user: safeUser });
     } catch (err) {
         console.error('Update profile error:', err);
@@ -1301,11 +1382,10 @@ app.get('/api/exams', async (req, res) => {
     try {
         // Tuyệt chiêu: Lấy mọi thứ TRỪ questions và questionBank
         const exams = await Exam.find()
-            .select('-questions -questionBank') 
+            .select('-questionBank') 
             .sort({ createdAt: -1 })
             .lean();
         
-        // Giờ dữ liệu trả về cực nhẹ, Koyeb sẽ không bao giờ báo Unhealthy nữa
         res.json(exams); 
     } catch (err) {
         console.error('Get exams error:', err);
@@ -1343,40 +1423,51 @@ app.get('/api/exams/:id', async (req, res) => {
     }
 });
 
+// [UPDATED] Xử lý xóa đề thi với Log chi tiết
 app.post('/api/delete-exam', async (req, res) => {
     try {
-        console.log('📤 DELETE EXAM REQUEST:', req.body); // Debug log
+        console.log('📤 DELETE EXAM REQUEST:', req.body); 
         const { examId, username } = req.body;
         
+        // Chuyển examId về String để so sánh cho chuẩn (tránh lệch kiểu số/chữ)
+        const targetExamId = String(examId);
+
         if (!examId || !username) {
-            console.log('❌ Missing required fields:', { examId, username });
             return res.status(400).json({ success: false, message: "Thiếu thông tin cần thiết!" });
         }
 
         const user = await User.findOne({ username });
         if (!user) {
-            console.log('❌ User not found:', username);
             return res.status(403).json({ success: false, message: "⛔ Người dùng không tồn tại!" });
         }
 
-        const exam = await Exam.findOne({ examId });
+        // Tìm đề thi (So sánh examId string)
+        const exam = await Exam.findOne({ examId: targetExamId });
+        
         if (!exam) {
-            console.log('❌ Exam not found:', examId);
-            return res.status(404).json({ success: false, message: "Không tìm thấy đề thi!" });
+            console.log(`❌ Exam not found in DB with ID: ${targetExamId}`);
+            return res.status(404).json({ success: false, message: "Không tìm thấy đề thi trong cơ sở dữ liệu!" });
         }
 
         const isAdmin = user.role === 'admin';
         const isCreator = exam.createdBy === username;
+        
+        // Log để ông debug xem tại sao bị 403
+        console.log(`🔍 DEBUG QUYỀN: User=[${username}], Role=[${user.role}], ExamCreator=[${exam.createdBy}]`);
 
-        console.log('🔍 Permission check:', { isAdmin, isCreator, examCreatedBy: exam.createdBy, username });
-
+        // 🔥 LOGIC QUYỀN: Admin xóa tất, User xóa của mình, SYSTEM thì chặn nếu không phải Admin
         if (!isAdmin && !isCreator) {
-            return res.status(403).json({ success: false, message: "⛔ Bạn chỉ có thể xóa đề thi do chính mình tạo!" });
+            console.log("⛔ BỊ CHẶN: Không đủ quyền xóa.");
+            return res.status(403).json({ 
+                success: false, 
+                message: `⛔ Bạn không thể xóa đề này! (Được tạo bởi: ${exam.createdBy})` 
+            });
         }
 
-        await Exam.findOneAndDelete({ examId });
-        console.log(`🗑️ ${username} đã xóa đề thi ID: ${examId}`);
+        await Exam.findOneAndDelete({ examId: targetExamId });
+        console.log(`🗑️ ${username} đã xóa đề thi ID: ${targetExamId}`);
         res.json({ success: true, message: "Đã xóa đề thi thành công!" });
+
     } catch (err) {
         console.error('❌ Delete exam error:', err);
         res.status(500).json({ success: false, message: "Lỗi server khi xóa đề" });
