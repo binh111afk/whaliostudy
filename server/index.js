@@ -1345,19 +1345,30 @@ app.get('/api/exams/:id', async (req, res) => {
 
 app.post('/api/delete-exam', async (req, res) => {
     try {
+        console.log('📤 DELETE EXAM REQUEST:', req.body); // Debug log
         const { examId, username } = req.body;
+        
+        if (!examId || !username) {
+            console.log('❌ Missing required fields:', { examId, username });
+            return res.status(400).json({ success: false, message: "Thiếu thông tin cần thiết!" });
+        }
+
         const user = await User.findOne({ username });
         if (!user) {
+            console.log('❌ User not found:', username);
             return res.status(403).json({ success: false, message: "⛔ Người dùng không tồn tại!" });
         }
 
         const exam = await Exam.findOne({ examId });
         if (!exam) {
+            console.log('❌ Exam not found:', examId);
             return res.status(404).json({ success: false, message: "Không tìm thấy đề thi!" });
         }
 
         const isAdmin = user.role === 'admin';
         const isCreator = exam.createdBy === username;
+
+        console.log('🔍 Permission check:', { isAdmin, isCreator, examCreatedBy: exam.createdBy, username });
 
         if (!isAdmin && !isCreator) {
             return res.status(403).json({ success: false, message: "⛔ Bạn chỉ có thể xóa đề thi do chính mình tạo!" });
@@ -1367,7 +1378,7 @@ app.post('/api/delete-exam', async (req, res) => {
         console.log(`🗑️ ${username} đã xóa đề thi ID: ${examId}`);
         res.json({ success: true, message: "Đã xóa đề thi thành công!" });
     } catch (err) {
-        console.error('Delete exam error:', err);
+        console.error('❌ Delete exam error:', err);
         res.status(500).json({ success: false, message: "Lỗi server khi xóa đề" });
     }
 });
