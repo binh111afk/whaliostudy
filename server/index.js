@@ -1,7 +1,7 @@
 require('dotenv').config();
 console.log("🔑 KEY CHECK:", process.env.GEMINI_API_KEY ? "Đã tìm thấy Key!" : "❌ KHÔNG THẤY KEY");
 const express = require('express');
-const Exam = require('./js/exam');
+const cors = require('cors');
 const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
@@ -16,9 +16,14 @@ const XLSX = require('xlsx');         // Đọc file Excel (.xlsx, .xls)
 const pdfParse = require('pdf-parse'); // Đọc file PDF
 
 // ==================== AI SERVICE ====================
-const aiService = require('./js/aiService'); // Module xử lý AI với Fallback Gemini ↔ DeepSeek
+const { generateAIResponse } = require('./aiService'); // Bỏ cái /js/ đi là xong
 
 const app = express();
+// 1. CHỈ CẦN MỘT DÒNG NÀY LÀ ĐỦ CÂN CẢ THẾ GIỚI CORS
+app.use(cors()); 
+
+// 2. Middleware xử lý JSON (để nhận tin nhắn và ảnh)
+app.use(express.json({ limit: '10mb' }));
 const PORT = process.env.PORT || 3000;
 
 // ==================== CLOUDINARY CONFIGURATION ====================
@@ -79,7 +84,7 @@ async function seedExamsFromJSON(forceReseed = false) {
 
         // Step 2: Resolve file paths
         console.log('\n📁 Step 2: Resolving JSON file paths...');
-        const examsFilePath = path.join(__dirname, 'exams.json');
+        const examsFilePath = path.join(__dirname, 'data', 'exams.json');
         const questionsFilePath = path.join(__dirname, 'questions.json');
 
         console.log(`   Exams file path: ${examsFilePath}`);
@@ -264,6 +269,43 @@ const userSchema = new mongoose.Schema({
     role: { type: String, default: 'member', enum: ['member', 'admin'] },
     savedDocs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Document' }],
     createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+// --- Study Session Schema (Lưu lịch sử học tập) ---
+const studySessionSchema = new mongoose.Schema({
+    username: { type: String, required: true, index: true },
+    duration: { type: Number, required: true }, // Thời gian học (phút)
+    date: { type: Date, default: Date.now }, // Ngày học
+    createdAt: { type: Date, default: Date.now }
+});
+
+const StudySession = mongoose.model('StudySession', studySessionSchema);
+
+// --- GPA Schema ---
+// --- GPA Schema (ĐÃ SỬA: KHỚP 100% VỚI FRONTEND) ---
+const gpaSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true }, 
+    semesters: [{
+        id: Number,
+        name: String,
+        isExpanded: { type: Boolean, default: true }, // Thêm cái này để lưu trạng thái đóng/mở
+        
+        // 👇 ĐỔI TÊN 'courses' -> 'subjects'
+        subjects: [{         
+            id: Number,
+            name: String,
+            credits: Number,
+            type: { type: String, default: 'general' }, // 'general' hoặc 'major'
+            
+            // 👇 THÊM 'components' để lưu điểm thành phần (Quan trọng!)
+            components: [{   
+                id: Number,
+                score: String, // Lưu string vì frontend gửi cả chuỗi rỗng ""
+                weight: Number
+            }]
+        }]
+    }],
     updatedAt: { type: Date, default: Date.now }
 });
 
@@ -460,6 +502,7 @@ const Activity = mongoose.model('Activity', activitySchema);
 const Timetable = mongoose.model('Timetable', timetableSchema);
 const Event = mongoose.model('Event', eventSchema);
 const ChatSession = mongoose.model('ChatSession', chatSessionSchema);
+const GpaModel = mongoose.model('Gpa', gpaSchema);
 
 // Auto-seed on startup
 async function seedInitialData() {
@@ -471,6 +514,7 @@ async function seedInitialData() {
 app.use(express.json());
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/img', express.static(path.join(__dirname, '../img')));
 
 // ==================== EJS TEMPLATE ENGINE ====================
 app.set('view engine', 'ejs');
@@ -900,7 +944,7 @@ app.post('/api/register', async (req, res) => {
             password,
             fullName,
             email,
-            avatar: fullName.trim().charAt(0).toUpperCase(),
+            avatar: '/img/avt.png',
             role: "member",
             savedDocs: []
         });
@@ -1861,6 +1905,76 @@ app.post('/api/delete-reply', async (req, res) => {
     }
 });
 
+// ==================== STUDY TIMER APIs ====================
+
+// 1. Lưu phiên học (Gọi khi bấm Dừng hoặc Hết giờ)
+app.post('/api/study/save', async (req, res) => {
+    try {
+        const { username, duration } = req.body; // duration tính bằng PHÚT
+        if (!username || !duration) return res.status(400).json({ success: false });
+
+        const newSession = new StudySession({
+            username,
+            duration,
+            date: new Date()
+        });
+
+        await newSession.save();
+        console.log(`⏱️ Đã lưu ${duration} phút học cho ${username}`);
+        res.json({ success: true, message: "Đã lưu thời gian học!" });
+    } catch (err) {
+        console.error('Save study session error:', err);
+        res.status(500).json({ success: false });
+    }
+});
+
+// 2. Lấy dữ liệu cho Biểu đồ Dashboard (7 ngày gần nhất)
+app.get('/api/study/stats', async (req, res) => {
+    try {
+        const { username } = req.query;
+        if (!username) return res.status(400).json({ success: false });
+
+        // Lấy dữ liệu 7 ngày qua
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const sessions = await StudySession.find({
+            username,
+            date: { $gte: sevenDaysAgo }
+        }).sort({ date: 1 });
+
+        // Gom nhóm theo ngày (Format: DD/MM)
+        const stats = {};
+        
+        // Tạo khung 7 ngày (để ngày nào không học vẫn hiện 0)
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const key = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+            stats[key] = 0;
+        }
+
+        // Cộng dồn thời gian
+        sessions.forEach(session => {
+            const key = new Date(session.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+            if (stats[key] !== undefined) {
+                stats[key] += session.duration;
+            }
+        });
+
+        // Chuyển về mảng cho Recharts
+        const chartData = Object.keys(stats).map(date => ({
+            name: date,
+            minutes: stats[date]
+        }));
+
+        res.json({ success: true, data: chartData });
+    } catch (err) {
+        console.error('Get study stats error:', err);
+        res.status(500).json({ success: false });
+    }
+});
+
 // 9. Timetable APIs
 app.post('/api/timetable', async (req, res) => {
     try {
@@ -2337,7 +2451,7 @@ let WHALIO_SYSTEM_INSTRUCTION;
 try {
     const fs = require('fs');
     const path = require('path');
-    const promptPath = path.join(__dirname, 'whalio_prompt.txt');
+    const promptPath = path.join(__dirname, '..', 'whalio_prompt.txt');
     WHALIO_SYSTEM_INSTRUCTION = fs.readFileSync(promptPath, 'utf8');
     console.log('✅ Đã tải thành công Whalio System Prompt từ file');
 } catch (error) {
@@ -2400,24 +2514,30 @@ app.get('/api/sessions', async (req, res) => {
 });
 
 // GET /api/session/:id - Lấy chi tiết nội dung tin nhắn của một session
+// GET /api/session/:id - Lấy chi tiết (ĐÃ BẢO MẬT)
 app.get('/api/session/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { username } = req.query;
+        const { username } = req.query; // Lấy username người đang xem
         
-        // Build query - kiểm tra cả sessionId và username nếu có
-        const query = { sessionId: id };
-        if (username) {
-            query.username = username;
-        }
-        
-        const session = await ChatSession.findOne(query).lean();
+        // 1. Tìm session theo ID trước
+        const session = await ChatSession.findOne({ sessionId: id }).lean();
         
         if (!session) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Không tìm thấy cuộc trò chuyện' 
-            });
+            return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc trò chuyện' });
+        }
+
+        // 2. 🔥 KIỂM TRA BẢO MẬT (QUAN TRỌNG) 🔥
+        // Nếu session này có chủ sở hữu (không phải guest/ẩn danh)
+        if (session.username && session.username !== 'guest') {
+            // Nếu người xem không cung cấp username HOẶC username không khớp
+            if (!username || session.username !== username) {
+                console.warn(`⛔ Cảnh báo bảo mật: ${username || 'Ẩn danh'} cố xem chat của ${session.username}`);
+                return res.status(403).json({ 
+                    success: false, 
+                    message: '⛔ Bạn không có quyền xem cuộc trò chuyện này!' 
+                });
+            }
         }
         
         res.json({
@@ -2432,7 +2552,7 @@ app.get('/api/session/:id', async (req, res) => {
         });
     } catch (err) {
         console.error('❌ Error fetching session:', err);
-        res.status(500).json({ success: false, message: 'Lỗi khi lấy nội dung cuộc trò chuyện' });
+        res.status(500).json({ success: false, message: 'Lỗi server' });
     }
 });
 
@@ -2492,11 +2612,63 @@ app.put('/api/session/:id/title', async (req, res) => {
     }
 });
 
+// ==================== GPA APIs ====================
+
+// 1. Lấy dữ liệu GPA của user
+app.get('/api/gpa', async (req, res) => {
+    try {
+        const { username } = req.query;
+        if (!username) return res.status(400).json({ success: false });
+
+        let gpaData = await GpaModel.findOne({ username });
+        
+        // Nếu chưa có dữ liệu, trả về mảng rỗng để frontend tự tạo
+        if (!gpaData) {
+            return res.json({ success: true, semesters: [] });
+        }
+
+        res.json({ success: true, semesters: gpaData.semesters });
+    } catch (err) {
+        console.error('Get GPA error:', err);
+        res.status(500).json({ success: false });
+    }
+});
+
+// 2. Lưu dữ liệu GPA
+app.post('/api/gpa', async (req, res) => {
+    try {
+        const { username, semesters } = req.body;
+        
+        // Dùng findOneAndUpdate với option upsert: true (Nếu chưa có thì tạo mới, có rồi thì update)
+        await GpaModel.findOneAndUpdate(
+            { username },
+            { username, semesters, updatedAt: new Date() },
+            { upsert: true, new: true }
+        );
+
+        res.json({ success: true, message: 'Đã lưu bảng điểm!' });
+    } catch (err) {
+        console.error('Save GPA error:', err);
+        res.status(500).json({ success: false, message: 'Lỗi lưu dữ liệu' });
+    }
+});
+
 // POST /api/chat - Chat with Whalio AI (Hỗ trợ Multimodal: Text + Image + Files + Session History)
 // Sử dụng multipart/form-data thay vì JSON để hỗ trợ upload ảnh/file
 // Field name phải là 'image' để khớp với frontend FormData
 app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
     try {
+        if (!req.file && req.body.image && req.body.image.startsWith('data:')) {
+            const matches = req.body.image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+            if (matches) {
+                req.file = {
+                    mimetype: matches[1],
+                    buffer: Buffer.from(matches[2], 'base64'),
+                    originalname: 'upload_image.png',
+                    size: Buffer.from(matches[2], 'base64').length
+                };
+            }
+        }
         const message = req.body.message;
         const sessionId = req.body.sessionId; // Optional: ID của session hiện tại
         const username = req.body.username; // Optional: username của user
@@ -2808,13 +2980,14 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
         } else {
             // Không có ảnh -> Dùng aiService với fallback thông minh
             console.log('💬 Gọi AI Service với Fallback (Gemini → DeepSeek)...');
-            const aiResult = await aiService.generateAIResponse(finalMessage);
+            const aiResult = await generateAIResponse(finalMessage);
             
             if (!aiResult.success) {
                 // Cả hai models đều thất bại
                 console.error('❌ AI Service thất bại:', aiResult.error);
                 return res.status(500).json({
                     success: false,
+                    text: 'Đã xảy ra lỗi khi xử lý yêu cầu',
                     message: aiResult.message,
                     error: aiResult.error
                 });
@@ -2858,6 +3031,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
 
         res.json({
             success: true,
+            text: aiResponseText,
             response: aiResponseText,
             sessionId: session.sessionId,
             isNewSession: isNewSession,

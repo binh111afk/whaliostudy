@@ -25,7 +25,7 @@ const path = require('path');
 let WHALIO_SYSTEM_INSTRUCTION;
 
 try {
-    const promptPath = path.join(__dirname, '..', 'whalio_prompt.txt');
+    const promptPath = path.join(__dirname, 'whalio_prompt.txt');
     WHALIO_SYSTEM_INSTRUCTION = fs.readFileSync(promptPath, 'utf8');
     console.log('✅ Đã tải thành công Whalio System Prompt từ file');
 } catch (error) {
@@ -321,7 +321,7 @@ async function callOpenRouter(prompt) {
  * * @param {string} userMessage - Tin nhắn từ người dùng
  * @returns {Promise<Object>} - Object chứa response và metadata
  */
-async function generateAIResponse(userMessage) {
+async function generateAIResponse(userMessage, imageBase64 = null) {
     // Validate input
     if (!userMessage || typeof userMessage !== 'string' || userMessage.trim() === '') {
         return {

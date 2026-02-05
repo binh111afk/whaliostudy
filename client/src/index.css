@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  /* Khai báo lại màu xanh thương hiệu của Whalio */
+  --color-primary: #134691;
+}
+
+/* Reset nhẹ để nền web không bị đen */
+:root {
+  background-color: #f3f4f6;
+  color: #1a1a1a;
+}

@@ -1,32 +1,8 @@
 {
-  "name": "studyweb",
-  "version": "1.0.0",
-  "description": "",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "cloudinary": "^1.41.3",
-    "dotenv": "^17.2.3",
-    "ejs": "^4.0.1",
-    "express": "^5.2.1",
-    "mammoth": "^1.11.0",
-    "mongoose": "^8.21.0",
-    "multer": "^2.0.2",
-    "multer-storage-cloudinary": "^4.0.0",
-    "openai": "^4.28.0",
-    "pdf-parse": "^2.4.5",
-    "sweetalert2": "^11.26.17",
-    "xlsx": "^0.18.5"
-  },
-  "devDependencies": {
-    "eslint": "^9.39.2"
+    "@tailwindcss/postcss": "^4.1.18",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.563.0",
+    "recharts": "^3.7.0"
   }
 }

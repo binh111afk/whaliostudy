@@ -1,0 +1,51 @@
+export const documentService = {
+    // Lấy danh sách tài liệu
+    async getDocuments() {
+      const res = await fetch('/api/documents');
+      return await res.json();
+    },
+  
+    // Tải lên tài liệu (FormData)
+    async uploadDocument(formData) {
+      try {
+          const res = await fetch('/api/upload-document', {
+              method: 'POST',
+              body: formData // Tự động set Content-Type
+          });
+          return await res.json();
+      } catch (error) {
+          console.error("Upload error:", error);
+          return { success: false, message: "Lỗi kết nối server" };
+      }
+    },
+  
+    // Cập nhật thông tin
+    async updateDocument(data) {
+      const res = await fetch('/api/update-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return await res.json();
+    },
+  
+    // Xóa tài liệu
+    async deleteDocument(docId, username) {
+      const res = await fetch('/api/delete-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docId, username })
+      });
+      return await res.json();
+    },
+  
+    // Lưu / Bỏ lưu
+    async toggleSave(docId, username) {
+      const res = await fetch('/api/toggle-save-doc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docId, username })
+      });
+      return await res.json();
+    }
+  };
