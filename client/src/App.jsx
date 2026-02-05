@@ -13,6 +13,7 @@ import Community from './pages/Community';
 import StudyTimer from './pages/StudyTimer';
 import Timetable from './pages/Timetable';
 import Documents from './pages/Documents';
+import Exams from './pages/Exams';
 
 function App() {
   // 1. Khai báo State quản lý User và Modal
@@ -70,6 +71,7 @@ function App() {
               <Route path="/timer" element={<StudyTimer />} />
               <Route path="/timetable" element={<Timetable />} />
               <Route path="/documents" element={<Documents />} />
+              <Route path="/exams" element={<Exams />} />
             </Routes>
           </main>
         </div>

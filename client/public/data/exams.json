@@ -14,7 +14,8 @@
     "subject": "Pháp luật",
     "questions": 40,
     "time": "60 phút",
-    "image": "./img/pldc-pic.png"
+    "image": "./img/pldc-pic.png",
+    "isStatic": true
   },
   {
     "id": 2,
@@ -22,6 +23,7 @@
     "subject": "Tâm lý",
     "questions": 25,
     "time": "30 phút",
-    "image": "./img/tlhdc-pic.png"
+    "image": "./img/tlhdc-pic.png",
+    "isStatic": true
   }
 ]

@@ -3,6 +3,7 @@
     "@tailwindcss/postcss": "^4.1.18",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.563.0",
+    "mammoth": "^1.11.0",
     "recharts": "^3.7.0"
   }
 }

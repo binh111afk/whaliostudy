@@ -24,6 +24,8 @@ app.use(cors());
 
 // 2. Middleware xử lý JSON (để nhận tin nhắn và ảnh)
 app.use(express.json({ limit: '10mb' }));
+
+app.use('/static-data', express.static(path.join(__dirname, 'data')));
 const PORT = process.env.PORT || 3000;
 
 // ==================== CLOUDINARY CONFIGURATION ====================
