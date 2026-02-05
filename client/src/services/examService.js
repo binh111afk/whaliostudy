@@ -62,11 +62,24 @@ export const examService = {
     },
 
     async deleteExam(examId, username) {
-        const res = await fetch('/api/delete-exam', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ examId, username })
-        });
-        return await res.json();
+        try {
+            const res = await fetch('/api/delete-exam', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ examId, username })
+            });
+            
+            if (!res.ok) {
+                if (res.status === 404) {
+                    return { success: false, message: "Không tìm thấy API xóa đề thi!" };
+                }
+                return { success: false, message: `Lỗi server: ${res.status}` };
+            }
+            
+            return await res.json();
+        } catch (error) {
+            console.error("Lỗi kết nối API delete-exam:", error);
+            return { success: false, message: "Không thể kết nối đến server!" };
+        }
     }
 };

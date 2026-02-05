@@ -7,7 +7,7 @@ import { Search, Plus, BookOpen, Trophy, Clock, FileText, X, Trash2 } from 'luci
 const SUBJECTS = ["Tất cả", "Toán học", "Vật lý", "Hóa học", "Tiếng Anh", "Sinh học", "Lịch sử"];
 
 const Exams = () => {
-    const user = JSON.parse(localStorage.getItem('user'));
+    const [user, setUser] = useState(null);
     
     // State
     const [exams, setExams] = useState([]);
@@ -21,6 +21,16 @@ const Exams = () => {
     const [showModeModal, setShowModeModal] = useState(false); // Modal chọn chế độ
 
     useEffect(() => {
+        // Load user from localStorage
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            try {
+                setUser(JSON.parse(storedUser));
+            } catch (error) {
+                console.error("Lỗi parse user data:", error);
+                setUser(null);
+            }
+        }
         loadExams();
     }, []);
 
@@ -40,9 +50,31 @@ const Exams = () => {
     };
 
     const handleDelete = async (examId) => {
+        console.log('🗑️ Deleting exam:', { examId, user });
+        
+        if (!user || !user.username) {
+            alert("Vui lòng đăng nhập để xóa đề thi!");
+            return;
+        }
+        
+        if (!examId) {
+            alert("Không tìm thấy ID đề thi!");
+            return;
+        }
+        
         if(confirm("Xóa đề này?")) {
-            await examService.deleteExam(examId, user.username);
-            loadExams();
+            try {
+                const result = await examService.deleteExam(examId, user.username);
+                console.log('📤 Delete result:', result);
+                if (result.success) {
+                    loadExams();
+                } else {
+                    alert(result.message || "Có lỗi khi xóa đề thi!");
+                }
+            } catch (error) {
+                console.error("Lỗi xóa đề thi:", error);
+                alert("Không thể kết nối đến server!");
+            }
         }
     };
 
@@ -121,7 +153,7 @@ const Exams = () => {
                         {/* 👇 NÚT XÓA: Chỉ hiện khi di chuột (group-hover:opacity-100) */}
                         {!exam.isStatic && (
                             <button 
-                                onClick={(e) => { e.stopPropagation(); handleDelete(exam.id); }}
+                                onClick={(e) => { e.stopPropagation(); handleDelete(exam.examId || exam.id); }}
                                 className="absolute top-4 right-4 p-2 bg-white text-gray-400 hover:text-red-600 rounded-lg shadow-sm border border-gray-100 opacity-0 group-hover:opacity-100 transition-all z-10"
                                 title="Xóa đề thi này"
                             >
@@ -182,6 +214,7 @@ const Exams = () => {
                         <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Card Luyện tập */}
                             <button 
+                                key="practice-mode"
                                 onClick={() => { setShowModeModal(false); setExamMode('practice'); }}
                                 className="border-2 border-gray-100 rounded-2xl p-6 text-center hover:border-blue-500 hover:bg-blue-50 transition-all group"
                             >
@@ -196,6 +229,7 @@ const Exams = () => {
 
                             {/* Card Thi thật */}
                             <button 
+                                key="real-mode"
                                 onClick={() => { setShowModeModal(false); setExamMode('real'); }}
                                 className="border-2 border-gray-100 rounded-2xl p-6 text-center hover:border-purple-500 hover:bg-purple-50 transition-all group"
                             >
