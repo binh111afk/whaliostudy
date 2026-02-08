@@ -15,12 +15,12 @@ import {
 
 const SUBJECTS = [
   "Tất cả",
-  "Toán học",
-  "Vật lý",
-  "Hóa học",
-  "Tiếng Anh",
-  "Sinh học",
-  "Lịch sử",
+  "Pháp luật",
+  "Tâm lý",
+  "Triết học",
+  "Chủ nghĩa xã hội",
+  "Tâm lý học giáo dục",
+  "Kinh tế chính trị",
 ];
 
 const Exams = () => {

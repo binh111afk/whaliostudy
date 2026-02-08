@@ -16,7 +16,7 @@ import mammoth from "mammoth";
 export const ExamCreator = ({ onClose, onSuccess }) => {
   // --- STATE QUẢN LÝ DỮ LIỆU ---
   const [title, setTitle] = useState("");
-  const [subject, setSubject] = useState("Toán học");
+  const [subject, setSubject] = useState("Pháp luật");
   const [time, setTime] = useState(45);
 
   // Mặc định có 1 câu hỏi rỗng để không bị lỗi UI
@@ -427,14 +427,14 @@ const parseHtmlToQuestions = (htmlString) => {
                   className="w-full p-2.5 bg-gray-50 border rounded-xl outline-none"
                 >
                   {[
-                    "Toán học",
-                    "Vật lý",
-                    "Hóa học",
-                    "Tiếng Anh",
-                    "Sinh học",
-                    "Lịch sử",
-                    "Tin học",
-                    "GDCD",
+                    "Pháp luật",
+                    "Tâm lý",
+                    "Triết học",
+                    "Chủ nghĩa xã hội",
+                    "Tâm lý học giáo dục",
+                    "Kinh tế chính trị",
+                    "Cơ sở Toán",
+                    "Lập trình cơ bản",
                   ].map((s) => (
                     <option key={s} value={s}>
                       {s}

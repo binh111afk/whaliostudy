@@ -1,9 +1,11 @@
 {
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.18",
+    "@tailwindcss/typography": "^0.5.19",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.563.0",
     "mammoth": "^1.11.0",
-    "recharts": "^3.7.0"
+    "recharts": "^3.7.0",
+    "remark-gfm": "^4.0.1"
   }
 }

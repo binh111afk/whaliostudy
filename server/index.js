@@ -531,6 +531,7 @@ const eventSchema = new mongoose.Schema({
     title: { type: String, required: true },
     date: { type: Date, required: true },
     type: { type: String, default: 'exam', enum: ['exam', 'deadline', 'other'] },
+    isDone: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -2493,6 +2494,24 @@ app.post('/api/events', async (req, res) => {
     }
 });
 
+app.put('/api/events/toggle', async (req, res) => {
+    try {
+        const { id, username } = req.body;
+        const event = await Event.findById(id);
+
+        if (!event) return res.status(404).json({ success: false, message: "Không tìm thấy" });
+        if (event.username !== username) return res.status(403).json({ success: false });
+
+        event.isDone = !event.isDone; // Đảo ngược trạng thái (Chưa xong <-> Xong)
+        await event.save();
+
+        res.json({ success: true, isDone: event.isDone });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false });
+    }
+});
+
 // DELETE /api/events/:id - Delete an event
 app.delete('/api/events/:id', async (req, res) => {
     try {
@@ -2570,7 +2589,7 @@ let WHALIO_SYSTEM_INSTRUCTION;
 try {
     const fs = require('fs');
     const path = require('path');
-    const promptPath = path.join(__dirname, '..', 'whalio_prompt.txt');
+    const promptPath = path.join(__dirname, 'whalio_prompt.txt');
     WHALIO_SYSTEM_INSTRUCTION = fs.readFileSync(promptPath, 'utf8');
     console.log('✅ Đã tải thành công Whalio System Prompt từ file');
 } catch (error) {
