@@ -47,5 +47,21 @@ export const documentService = {
         body: JSON.stringify({ docId, username })
       });
       return await res.json();
+    },
+
+    async viewDocument(docId) {
+      try {
+        const res = await fetch(`/api/documents/view/${docId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        return await res.json();
+      } catch (error) {
+        console.error('Error viewing document:', error);
+        return { success: false };
+      }
     }
+
   };

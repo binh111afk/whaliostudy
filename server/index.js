@@ -1149,6 +1149,19 @@ app.get('/document/:id', async (req, res) => {
     }
 });
 
+// [MỚI] API tăng lượt xem (Sử dụng trường downloadCount làm view count)
+app.post('/api/documents/view/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        // Đổi thành viewCount thay vì downloadCount
+        await Document.findByIdAndUpdate(id, { $inc: { viewCount: 1 } });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('❌ Increase view error:', err);
+        res.status(500).json({ success: false });
+    }
+});
+
 app.post('/api/upload-document', (req, res, next) => {
     // 🔥 SỬ DỤNG MEMORY STORAGE + CLOUDINARY SDK TRỰC TIẾP
     documentUpload.single('file')(req, res, (err) => {

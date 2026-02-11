@@ -31,7 +31,7 @@ const AiChat = () => {
     {
       id: 1,
       role: "model",
-      text: "Chào Bình! Tôi là **Whalio AI**. Tôi có thể giúp gì cho việc học tập của ông hôm nay? (Giải toán, Code C++, hay Lên kế hoạch ôn thi?)",
+      text: "Chào bạn! Tôi là **Whalio AI**. Tôi có thể giúp gì cho việc học tập của ông hôm nay? (Giải toán, tâm sự, hay Lên kế hoạch ôn thi?)",
     },
   ]);
   const [input, setInput] = useState("");
@@ -158,7 +158,7 @@ const AiChat = () => {
       {
         id: 1,
         role: "model",
-        text: "Chào Bình! Tôi là **Whalio AI**. Tôi có thể giúp gì cho việc học tập của ông hôm nay? (Giải toán, Code C++, hay Lên kế hoạch ôn thi?)",
+        text: "Chào bạn! Tôi là **Whalio AI**. Tôi có thể giúp gì cho việc học tập của ông hôm nay? (Giải toán, tâm sự, hay Lên kế hoạch ôn thi?)",
       },
     ]);
     setInput("");
