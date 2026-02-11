@@ -21,7 +21,24 @@ function App() {
   const [user, setUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // 2. Giữ đăng nhập khi F5 (Load lại trang)
+  // 2. Dark Mode State (Mặc định Light Mode)
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    return saved === 'dark'; // Chỉ true nếu đã lưu là 'dark'
+  });
+
+  // 3. Áp dụng Dark Mode vào HTML
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [darkMode]);
+
+  // 4. Giữ đăng nhập khi F5 (Load lại trang)
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
@@ -57,12 +74,14 @@ function App() {
             user={user} 
             onLoginClick={() => setIsModalOpen(true)} 
             onLogoutClick={handleLogout}
+            darkMode={darkMode}
+            onToggleDarkMode={() => setDarkMode(!darkMode)}
           /> 
 
           {/* Main content */}
           <main className="flex-1 overflow-y-auto p-6 scroll-smooth">
             <Routes>
-            <Route path="/" element={<Dashboard user={user} />} />
+            <Route path="/" element={<Dashboard user={user} darkMode={darkMode} setDarkMode={setDarkMode} />} />
               <Route path="/gpa" element={<GpaCalc />} />
               <Route path="/ai-assistant" element={<AiChat />} />
               <Route path="/profile" element={

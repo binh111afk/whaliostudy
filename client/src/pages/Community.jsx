@@ -124,17 +124,17 @@ const Community = () => {
         <div className="xl:col-span-3 w-full max-w-3xl mx-auto xl:max-w-none space-y-6">
             
             {/* Header Tabs */}
-            <div className="flex items-center justify-between top-[5px] bg-gray-50/95 backdrop-blur z-20 py-2 rounded-xl">
-                <div className="flex bg-white p-1 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between top-[5px] bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur z-20 py-2 rounded-xl">
+                <div className="flex bg-white dark:bg-gray-700 p-1 rounded-xl shadow-sm border border-gray-200 dark:border-gray-600">
                     <button 
                         onClick={() => setActiveTab('feed')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'feed' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'feed' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600'}`}
                     >
                         <Users size={18}/> <span className="hidden sm:inline cursor-pointer">Cộng đồng</span>
                     </button>
                     <button 
                         onClick={() => setActiveTab('saved')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'saved' ? 'bg-purple-100 text-purple-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'saved' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600'}`}
                     >
                         <Bookmark size={18}/> <span className="hidden sm:inline cursor-pointer">Đã lưu</span>
                     </button>

@@ -4,6 +4,7 @@ import {
   Search,
   Bell,
   Moon,
+  Sun,
   LogIn,
   User,
   Settings,
@@ -12,7 +13,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-const Header = ({ user, onLoginClick, onLogoutClick }) => {
+const Header = ({ user, onLoginClick, onLogoutClick, darkMode, onToggleDarkMode }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -63,16 +64,20 @@ const Header = ({ user, onLoginClick, onLogoutClick }) => {
 
       {/* 3. KHU VỰC CÁ NHÂN */}
       <div className="flex items-center space-x-3">
-        <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-all">
-          <Moon size={20} />
+        <button 
+          onClick={onToggleDarkMode}
+          className="p-2 text-gray-400 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-all"
+          title={darkMode ? "Chế độ sáng" : "Chế độ tối"}
+        >
+          {darkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
 
-        <div className="h-6 w-[1px] bg-gray-200 mx-1"></div>
+        <div className="h-6 w-[1px] bg-gray-200 dark:bg-gray-700 mx-1"></div>
 
         {user ? (
           // ✅ CÓ USER -> HIỆN AVATAR VÀ DROPDOWN
           <div className="flex items-center gap-2 relative" ref={dropdownRef}>
-            <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-all relative mr-2">
+            <button className="p-2 text-gray-400 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-all relative mr-2">
               <Bell size={20} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
             </button>
@@ -83,14 +88,14 @@ const Header = ({ user, onLoginClick, onLogoutClick }) => {
                 console.log("Đã bấm vào avatar!");
                 setIsDropdownOpen(!isDropdownOpen);
               }}
-              className="flex items-center gap-2 hover:bg-gray-50 p-1 pr-2 rounded-full transition-all border border-transparent hover:border-gray-200 select-none"
+              className="flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 p-1 pr-2 rounded-full transition-all border border-transparent hover:border-gray-200 dark:hover:border-gray-600 select-none"
             >
               {/* 1. Ưu tiên hiển thị ảnh (nếu user có đường dẫn ảnh chứa dấu /) */}
               {user.avatar && user.avatar.includes("/") && (
                 <img
                   src={user.avatar}
                   alt="Avatar"
-                  className="w-9 h-9 rounded-full border border-gray-200 bg-white object-cover"
+                  className="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 object-cover"
                   onError={(e) => {
                     // MAGIC: Nếu ảnh lỗi (404), ẩn ảnh đi và hiện chữ cái bên dưới lên
                     e.target.style.display = "none";
@@ -101,7 +106,7 @@ const Header = ({ user, onLoginClick, onLogoutClick }) => {
 
               {/* 2. Fallback: Chữ cái đầu tên (Mặc định ẩn nếu đang có ảnh, chỉ hiện khi không có ảnh hoặc ảnh lỗi) */}
               <div
-                className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 border border-blue-200 flex items-center justify-center font-bold"
+                className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-700 flex items-center justify-center font-bold"
                 // Logic: Nếu có link ảnh thì ẩn cái này đi trước, chờ ảnh load lỗi mới hiện lại
                 style={{
                   display:
@@ -114,7 +119,7 @@ const Header = ({ user, onLoginClick, onLogoutClick }) => {
               {/* Icon mũi tên */}
               <ChevronDown
                 size={16}
-                className={`text-gray-400 transition-transform duration-200 ${
+                className={`text-gray-400 dark:text-gray-500 transition-transform duration-200 ${
                   isDropdownOpen ? "rotate-180" : ""
                 }`}
               />
@@ -122,16 +127,16 @@ const Header = ({ user, onLoginClick, onLogoutClick }) => {
 
             {/* 👇 MENU DROPDOWN ĐÂY 👇 */}
             {isDropdownOpen && (
-              <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-[100] origin-top-right transform transition-all">
+              <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 py-2 z-[100] origin-top-right transform transition-all">
                 {/* Header Menu */}
-                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/50">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mb-1">
                     Đang đăng nhập
                   </p>
-                  <p className="font-bold text-gray-800 text-base truncate">
+                  <p className="font-bold text-gray-800 dark:text-white text-base truncate">
                     {user.fullName}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                     @{user.username}
                   </p>
                 </div>
@@ -142,23 +147,23 @@ const Header = ({ user, onLoginClick, onLogoutClick }) => {
                     <NavLink
                       to="/profile"
                       onClick={() => setIsDropdownOpen(false)}
-                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 flex items-center gap-3 transition-colors"
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-3 transition-colors"
                     >
                       <User size={18} /> Hồ sơ cá nhân
                     </NavLink>
                   </li>
                   <li>
-                    <button className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 flex items-center gap-3 transition-colors">
+                    <button className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-3 transition-colors">
                       <Settings size={18} /> Cài đặt
                     </button>
                   </li>
                   <li>
-                    <button className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 flex items-center gap-3 transition-colors">
+                    <button className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-3 transition-colors">
                       <Save size={18} /> Sao lưu & Khôi phục
                     </button>
                   </li>
 
-                  <li className="my-1 border-t border-gray-100"></li>
+                  <li className="my-1 border-t border-gray-100 dark:border-gray-700"></li>
 
                   <li>
                     <button
@@ -166,7 +171,7 @@ const Header = ({ user, onLoginClick, onLogoutClick }) => {
                         setIsDropdownOpen(false);
                         onLogoutClick();
                       }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors font-medium"
+                      className="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors font-medium"
                     >
                       <LogOut size={18} /> Đăng xuất
                     </button>

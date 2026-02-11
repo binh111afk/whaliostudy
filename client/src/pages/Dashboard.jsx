@@ -1165,7 +1165,7 @@ const DailyScheduleTab = ({ user }) => {
 };
 
 // --- MAIN DASHBOARD ---
-const Dashboard = ({ user }) => {
+const Dashboard = ({ user, darkMode, setDarkMode }) => {
   const [activeTab, setActiveTab] = useState("overview");
   const [chartData, setChartData] = useState([]);
   const [totalStudyHours, setTotalStudyHours] = useState(0);
@@ -1177,22 +1177,6 @@ const Dashboard = ({ user }) => {
   const [deadlines, setDeadlines] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
-
-  // --- DARK MODE LOGIC ---
-  const [darkMode, setDarkMode] = useState(() => {
-    // Lấy trạng thái từ LocalStorage hoặc mặc định là false (Light)
-    return localStorage.getItem('theme') === 'dark';
-});
-
-useEffect(() => {
-    if (darkMode) {
-        document.documentElement.classList.add('dark');
-        localStorage.setItem('theme', 'dark');
-    } else {
-        document.documentElement.classList.remove('dark');
-        localStorage.setItem('theme', 'light');
-    }
-}, [darkMode]);
 
   // State GPA & Credits
   const [gpaMetrics, setGpaMetrics] = useState({

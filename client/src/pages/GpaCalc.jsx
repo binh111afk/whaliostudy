@@ -500,14 +500,14 @@ const GpaCalc = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
-      <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-center gap-3 animate-pulse-slow shadow-sm">
-        <div className="p-2 bg-white rounded-lg text-amber-600 shrink-0 shadow-sm">
+      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 p-4 rounded-2xl flex items-center gap-3 animate-pulse-slow shadow-sm">
+        <div className="p-2 bg-white dark:bg-gray-800 rounded-lg text-amber-600 dark:text-amber-400 shrink-0 shadow-sm">
           <AlertTriangle size={20} />
         </div>
-        <p className="text-amber-800 text-sm font-bold leading-relaxed">
-          ⚠️ <span className="uppercase text-amber-900">Cảnh báo:</span> Bạn nhớ
+        <p className="text-amber-800 dark:text-amber-200 text-sm font-bold leading-relaxed">
+          ⚠️ <span className="uppercase text-amber-900 dark:text-amber-100">Cảnh báo:</span> Bạn nhớ
           bấm{" "}
-          <span className="underline decoration-2 underline-offset-4 text-amber-900">
+          <span className="underline decoration-2 underline-offset-4 text-amber-900 dark:text-amber-100">
             "Lưu tất cả"
           </span>{" "}
           trước khi thoát tab, nếu không toàn bộ dữ liệu điểm vừa nhập sẽ "bay
@@ -515,26 +515,26 @@ const GpaCalc = () => {
         </p>
       </div>
       {/* HEADER: Mục tiêu GPA */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
         <div>
-          <h1 className="text-2xl font-black text-gray-800 flex items-center gap-2">
-            <Calculator className="text-primary" /> Tính GPA (Theo Kỳ)
+          <h1 className="text-2xl font-black text-gray-800 dark:text-white flex items-center gap-2">
+            <Calculator className="text-primary dark:text-blue-400" /> Tính GPA (Theo Kỳ)
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
             Quản lý lộ trình học tập chi tiết từng học kỳ.
           </p>
         </div>
 
-        <div className="flex items-center gap-4 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
-          <Target className="text-blue-600" size={20} />
+        <div className="flex items-center gap-4 bg-blue-50 dark:bg-blue-900/30 px-4 py-2 rounded-xl border border-blue-100 dark:border-blue-700">
+          <Target className="text-blue-600 dark:text-blue-400" size={20} />
           <div>
-            <p className="text-xs text-blue-600 font-bold uppercase">
+            <p className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase">
               Mục tiêu GPA
             </p>
             <input
               type="number"
               placeholder="VD: 3.6"
-              className="bg-transparent font-black text-blue-800 w-20 outline-none text-lg placeholder-blue-300"
+              className="bg-transparent font-black text-blue-800 dark:text-blue-300 w-20 outline-none text-lg placeholder-blue-300 dark:placeholder-blue-600"
               value={targetGpa}
               onChange={(e) => setTargetGpa(e.target.value)}
             />
@@ -547,7 +547,7 @@ const GpaCalc = () => {
           className={`px-5 py-2 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2 cursor-pointer ${
             isSaving
               ? "bg-gray-400 cursor-not-allowed"
-              : "bg-gray-900 text-white hover:bg-black"
+              : "bg-gray-900 dark:bg-gray-700 text-white hover:bg-black dark:hover:bg-gray-600"
           }`}
         >
           <Save size={18} />
@@ -561,21 +561,20 @@ const GpaCalc = () => {
           {semesters.map((sem) => (
             <div
               key={sem.id}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all"
-            >
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all">
               {/* HEADER KỲ HỌC (Click để ẩn/hiện) */}
               <div
-                className="p-4 bg-gray-50 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors"
+                className="p-4 bg-gray-50 dark:bg-gray-750 flex items-center justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 onClick={() => toggleSemester(sem.id)}
               >
                 <div className="flex items-center gap-3">
                   {sem.isExpanded ? (
-                    <ChevronDown size={20} className="text-gray-500" />
+                    <ChevronDown size={20} className="text-gray-500 dark:text-gray-400" />
                   ) : (
-                    <ChevronRight size={20} className="text-gray-500" />
+                    <ChevronRight size={20} className="text-gray-500 dark:text-gray-400" />
                   )}
                   <input
-                    className="font-bold text-gray-800 bg-transparent outline-none text-lg"
+                    className="font-bold text-gray-800 dark:text-white bg-transparent outline-none text-lg"
                     value={sem.name}
                     onClick={(e) => e.stopPropagation()} // Để không bị đóng tab khi sửa tên
                     onChange={(e) => {
@@ -585,7 +584,7 @@ const GpaCalc = () => {
                       setSemesters(newSems);
                     }}
                   />
-                  <span className="text-xs bg-white border px-2 py-1 rounded-full text-gray-500 font-medium">
+                  <span className="text-xs bg-white dark:bg-gray-700 border dark:border-gray-600 px-2 py-1 rounded-full text-gray-500 dark:text-gray-400 font-medium">
                     {sem.subjects.length} môn
                   </span>
                 </div>
@@ -594,7 +593,7 @@ const GpaCalc = () => {
                     e.stopPropagation();
                     removeSemester(sem.id);
                   }}
-                  className="text-gray-400 hover:text-red-500 p-2"
+                  className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-2"
                 >
                   <Trash2 size={18} />
                 </button>

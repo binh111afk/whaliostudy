@@ -328,7 +328,7 @@ const AiChat = () => {
       </div>
     ) : (
       <code
-        className={`${className} bg-gray-100 text-red-600 px-1 py-0.5 rounded text-sm font-mono border border-gray-200`}
+        className={`${className} bg-gray-100 dark:bg-gray-700 text-red-600 dark:text-red-400 px-1 py-0.5 rounded text-sm font-mono border border-gray-200 dark:border-gray-600`}
         {...props}
       >
         {children}
@@ -337,26 +337,26 @@ const AiChat = () => {
   };
 
   return (
-    <div className="absolute inset-0 flex bg-white text-gray-800 overflow-hidden">
+    <div className="absolute inset-0 flex bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 overflow-hidden">
       {/* SIDEBAR LỊCH SỬ CHAT - HIỆN/ẨN BẰNG NÚT MENU */}
       <div
         className={`${
           sidebarOpen ? "w-64" : "w-0"
-        } bg-white border-r border-gray-200 transition-all duration-300 flex flex-col h-full shrink-0 overflow-hidden`}
+        } bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col h-full shrink-0 overflow-hidden`}
       >
-        <div className="p-4 shrink-0 border-b border-gray-100">
+        <div className="p-4 shrink-0 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-800">LỊCH SỬ CHAT</h2>
+            <h2 className="text-lg font-bold text-gray-800 dark:text-white">LỊCH SỪTHAT</h2>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="p-1 hover:bg-gray-100 rounded-lg text-gray-500"
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400"
             >
               <X size={20} />
             </button>
           </div>
           <button
             onClick={handleNewChat}
-            className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-blue-600 px-4 py-3 rounded-xl border border-dashed border-gray-300 hover:border-blue-500 transition-all font-bold shadow-sm group cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-blue-600 dark:text-blue-400 px-4 py-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 transition-all font-bold shadow-sm group cursor-pointer"
           >
             <Plus
               size={18}
@@ -368,7 +368,7 @@ const AiChat = () => {
 
         <div className="flex-1 min-h-0 overflow-y-auto px-3 space-y-1 py-4">
           {sessions.length === 0 ? (
-            <div className="text-center text-gray-400 mt-10 text-sm px-3">
+            <div className="text-center text-gray-400 dark:text-gray-500 mt-10 text-sm px-3">
               Chưa có lịch sử
             </div>
           ) : (
@@ -378,20 +378,20 @@ const AiChat = () => {
                 onClick={() => handleSelectSession(session.sessionId)}
                 className={`group flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer transition-colors text-sm font-medium ${
                   currentSessionId === session.sessionId
-                    ? "bg-blue-50 text-blue-700 border border-blue-200"
-                    : "text-gray-600 hover:bg-gray-100 border border-transparent"
+                    ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700"
+                    : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent"
                 }`}
               >
                 <MessageSquare
                   size={16}
-                  className="shrink-0 text-gray-400 group-hover:text-blue-600 transition-colors"
+                  className="shrink-0 text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"
                 />
                 <span className="truncate flex-1 min-w-0">
                   {session.title || "Cuộc trò chuyện mới"}
                 </span>
                 <button
                   onClick={(e) => handleDeleteSession(session.sessionId, e)}
-                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity shrink-0"
+                  className="opacity-0 group-hover:opacity-100 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-opacity shrink-0"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -401,15 +401,15 @@ const AiChat = () => {
         </div>
 
         {/* User Info */}
-        <div className="p-4 border-t border-gray-100 shrink-0">
-          <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-100 to-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-bold text-xs shrink-0">
+        <div className="p-4 border-t border-gray-100 dark:border-gray-700 shrink-0">
+          <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-100 to-blue-50 dark:from-blue-900/50 dark:to-blue-800/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
               {user ? user.username.substring(0, 2).toUpperCase() : "QB"}
             </div>
-            <div className="flex-1 text-sm font-bold text-gray-700 truncate min-w-0">
+            <div className="flex-1 text-sm font-bold text-gray-700 dark:text-gray-200 truncate min-w-0">
               {user ? user.username : "Quang Bình"}
             </div>
-            <MoreVertical size={18} className="text-gray-400 shrink-0" />
+            <MoreVertical size={18} className="text-gray-400 dark:text-gray-500 shrink-0" />
           </div>
         </div>
       </div>
@@ -417,25 +417,25 @@ const AiChat = () => {
       {/* MAIN CHAT AREA */}
       <div className="flex-1 flex flex-col min-h-0 h-full">
         {/* SIMPLE HEADER - chỉ có logo và nút menu */}
-        <div className="h-16 border-b border-gray-200 flex items-center justify-between px-6 bg-white shrink-0">
+        <div className="h-16 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6 bg-white dark:bg-gray-800 shrink-0">
           {/* Bên trái: Nút menu và logo */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-100 rounded-lg text-gray-500"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400"
               title="Mở lịch sử chat"
             >
               <Menu size={20} />
             </button>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-800 text-lg flex items-center gap-2">
+              <span className="font-bold text-gray-800 dark:text-white text-lg flex items-center gap-2">
                 Whalio AI{" "}
                 <Sparkles
                   size={16}
                   className="text-yellow-500 fill-yellow-500"
                 />
               </span>
-              <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold border border-blue-100">
+              <span className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full font-bold border border-blue-100 dark:border-blue-700">
                 Flash 2.5
               </span>
             </div>
@@ -456,7 +456,7 @@ const AiChat = () => {
         {/* Chat Messages Container */}
         <div
           ref={chatContainerRef}
-          className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 space-y-8"
+          className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 space-y-8 bg-gray-50 dark:bg-gray-900"
         >
           {messages.map((msg) => (
             <div
@@ -469,8 +469,8 @@ const AiChat = () => {
               <div
                 className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm border ${
                   msg.role === "model"
-                    ? "bg-white border-gray-200 text-blue-600"
-                    : "bg-blue-600 border-transparent text-white"
+                    ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-blue-600 dark:text-blue-400"
+                    : "bg-blue-600 dark:bg-blue-500 border-transparent text-white"
                 }`}
               >
                 {msg.role === "model" ? (
@@ -485,8 +485,8 @@ const AiChat = () => {
                 <div
                   className={`text-xs font-bold mb-1 ${
                     msg.role === "user"
-                      ? "text-right text-gray-400"
-                      : "text-left text-blue-600"
+                      ? "text-right text-gray-400 dark:text-gray-500"
+                      : "text-left text-blue-600 dark:text-blue-400"
                   }`}
                 >
                   {msg.role === "model" ? "Whalio AI" : "Bạn"}
@@ -495,15 +495,15 @@ const AiChat = () => {
                 <div
                   className={`px-6 py-4 rounded-2xl shadow-sm leading-relaxed text-[15px] break-words max-w-full ${
                     msg.role === "user"
-                      ? "bg-white text-gray-800 rounded-tr-sm border border-gray-100"
-                      : "bg-white text-gray-800 rounded-tl-sm border border-gray-100"
+                      ? "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-tr-sm border border-gray-100 dark:border-gray-700"
+                      : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-gray-700"
                   }`}
                 >
                   {msg.image && (
                     <img
                       src={msg.image}
                       alt="Upload"
-                      className="max-w-full md:max-w-xs h-auto rounded-lg mb-4 border border-gray-200 shadow-sm"
+                      className="max-w-full md:max-w-xs h-auto rounded-lg mb-4 border border-gray-200 dark:border-gray-700 shadow-sm"
                     />
                   )}
 
@@ -556,10 +556,10 @@ const AiChat = () => {
           {/* Loading Indicator */}
           {isLoading && (
             <div className="flex gap-4 max-w-4xl mx-auto animate-pulse">
-              <div className="w-9 h-9 rounded-full bg-white border border-gray-200 flex items-center justify-center shrink-0">
-                <Sparkles size={18} className="text-blue-600" />
+              <div className="w-9 h-9 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center shrink-0">
+                <Sparkles size={18} className="text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="bg-white px-5 py-4 rounded-2xl rounded-tl-sm border border-gray-100 flex items-center gap-2 shadow-sm">
+              <div className="bg-white dark:bg-gray-800 px-5 py-4 rounded-2xl rounded-tl-sm border border-gray-100 dark:border-gray-700 flex items-center gap-2 shadow-sm">
                 <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
                 <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-75"></div>
                 <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-150"></div>
@@ -571,11 +571,11 @@ const AiChat = () => {
         </div>
 
         {/* Input Area */}
-        <div className="border-t border-gray-200 bg-white shrink-0">
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0">
           <div className="max-w-4xl mx-auto p-4 relative">
             {/* Preview ảnh */}
             {filePreview && (
-              <div className="absolute bottom-full left-0 mb-3 p-2 bg-white rounded-xl border border-gray-200 flex items-start gap-2 shadow-lg z-10 max-w-[calc(100%-2rem)]">
+              <div className="absolute bottom-full left-0 mb-3 p-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex items-start gap-2 shadow-lg z-10 max-w-[calc(100%-2rem)]">
                 <img
                   src={filePreview}
                   alt="Preview"
@@ -583,7 +583,7 @@ const AiChat = () => {
                 />
                 <button
                   onClick={removeFile}
-                  className="p-1 bg-gray-100 hover:bg-red-50 text-gray-500 hover:text-red-500 rounded-full transition-colors shrink-0"
+                  className="p-1 bg-gray-100 dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-full transition-colors shrink-0"
                 >
                   <X size={14} />
                 </button>
@@ -591,7 +591,7 @@ const AiChat = () => {
             )}
 
             {/* Thanh nhập liệu */}
-            <div className="flex items-end gap-2 bg-white p-2 rounded-2xl border border-gray-200 focus-within:border-blue-500/50 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all shadow-sm hover:shadow-md">
+            <div className="flex items-end gap-2 bg-white dark:bg-gray-750 p-2 rounded-2xl border border-gray-200 dark:border-gray-600 focus-within:border-blue-500/50 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all shadow-sm hover:shadow-md">
               <input
                 type="file"
                 ref={fileInputRef}
@@ -604,8 +604,8 @@ const AiChat = () => {
                 onClick={() => fileInputRef.current?.click()}
                 className={`p-3 rounded-xl transition-colors shrink-0 cursor-pointer ${
                   selectedFile
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-400 hover:text-blue-600 hover:bg-gray-50"
+                    ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30"
+                    : "text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
                 title="Gửi ảnh"
               >
@@ -626,7 +626,7 @@ const AiChat = () => {
                   }
                 }}
                 placeholder="Hỏi Whalio bất kì điều gì ..."
-                className="flex-1 bg-transparent text-gray-800 border-none outline-none resize-none py-3 max-h-[120px] min-h-[48px] placeholder-gray-400 text-base break-words min-w-0"
+                className="flex-1 bg-transparent text-gray-800 dark:text-gray-100 border-none outline-none resize-none py-3 max-h-[120px] min-h-[48px] placeholder-gray-400 dark:placeholder-gray-500 text-base break-words min-w-0"
                 rows={1}
                 onInput={(e) => {
                   e.target.style.height = "auto";
@@ -640,8 +640,8 @@ const AiChat = () => {
                 disabled={(!input.trim() && !selectedFile) || isLoading}
                 className={`p-3 rounded-xl shrink-0 transition-all cursor-pointer ${
                   (input.trim() || selectedFile) && !isLoading
-                    ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg"
-                    : "bg-gray-100 text-gray-300 cursor-not-allowed"
+                    ? "bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 shadow-md hover:shadow-lg"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed"
                 }`}
                 title="Gửi"
               >
@@ -649,7 +649,7 @@ const AiChat = () => {
               </button>
             </div>
 
-            <p className="text-center text-xs text-gray-400 mt-3 font-medium">
+            <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-3 font-medium">
               Whalio AI có thể mắc lỗi. Hãy kiểm tra lại thông tin quan trọng.
             </p>
           </div>
