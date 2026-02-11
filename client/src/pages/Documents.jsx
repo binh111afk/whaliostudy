@@ -564,35 +564,19 @@ const Documents = () => {
     }
   };
 
-  const handleView = async (doc) => {
+  // 👇 SỬA LẠI HÀM NÀY
+const handleView = (doc) => {
+    // 1. Gọi API tăng view ngầm (không cần chờ await để chuyển trang cho nhanh)
     try {
-      // 1. Tăng lượt xem ngay trong state (optimistic update)
-      setDocuments(prevDocs => 
-        prevDocs.map(d => 
-          d.id === doc.id 
-            ? { ...d, viewCount: (d.viewCount || 0) + 1 } 
-            : d
-        )
-      );
-      
-      // 2. Gọi API tăng view
-      await documentService.viewDocument(doc.id);
-      
+        // Gọi API mà ông vừa thêm vào server
+        fetch(`/api/documents/view/${doc.id}`, { method: 'POST' }); 
     } catch (error) {
-      console.error("Lỗi khi tăng view:", error);
-      // Nếu API thất bại, rollback lại state
-      setDocuments(prevDocs => 
-        prevDocs.map(d => 
-          d.id === doc.id 
-            ? { ...d, viewCount: Math.max((d.viewCount || 1) - 1, 0) } 
-            : d
-        )
-      );
+        console.error("Lỗi tăng view:", error);
     }
-    
-    // 3. Chuyển đến trang xem tài liệu
+
+    // 2. Chuyển sang trang xem chi tiết
     navigate(`/documents/${doc.id}`);
-  };
+};
 
   const getFileIcon = (type) => {
     switch (type) {
