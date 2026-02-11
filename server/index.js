@@ -338,6 +338,7 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     avatar: { type: String, default: null },
     role: { type: String, default: 'member', enum: ['member', 'admin'] },
+    totalTargetCredits: { type: Number, default: 150 },
     savedDocs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Document' }],
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
@@ -379,6 +380,17 @@ const gpaSchema = new mongoose.Schema({
     }],
     updatedAt: { type: Date, default: Date.now }
 });
+
+// QuickNote Schema
+const quickNoteSchema = new mongoose.Schema({
+    username: { type: String, required: true, index: true }, // Quan trọng: Chỉ chủ sở hữu mới thấy
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+    color: { type: String, default: 'bg-yellow-200' }, // Mặc định màu vàng note
+    createdAt: { type: Date, default: Date.now }
+});
+
+const QuickNote = mongoose.model('QuickNote', quickNoteSchema);
 
 // Document Schema
 const documentSchema = new mongoose.Schema({
@@ -1037,7 +1049,7 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/update-profile', async (req, res) => {
     try {
         // 1. Chỉ lấy những trường được phép update
-        const { username, fullName, email, avatar } = req.body;
+        const { username, fullName, email, avatar, totalTargetCredits } = req.body;
 
         // 2. Kiểm tra xem user có tồn tại không
         const user = await User.findOne({ username });
@@ -1049,6 +1061,7 @@ app.post('/api/update-profile', async (req, res) => {
         if (fullName) user.fullName = fullName;
         if (email) user.email = email;
         if (avatar) user.avatar = avatar;
+        if (totalTargetCredits) user.totalTargetCredits = parseInt(totalTargetCredits);
         
         user.updatedAt = new Date();
         
@@ -1540,6 +1553,36 @@ app.post('/api/create-exam', async (req, res) => {
         console.error('Create exam error:', err);
         res.status(500).json({ success: false, message: "Lỗi server khi lưu đề thi" });
     }
+});
+
+app.get('/api/quick-notes', async (req, res) => {
+    try {
+        const { username } = req.query;
+        if (!username) return res.json({ success: false });
+        const notes = await QuickNote.find({ username }).sort({ createdAt: -1 });
+        res.json({ success: true, notes });
+    } catch (err) { res.status(500).json({ success: false }); }
+});
+
+// POST: Tạo note mới
+app.post('/api/quick-notes', async (req, res) => {
+    try {
+        const { username, title, content, color } = req.body;
+        const newNote = new QuickNote({ username, title, content, color });
+        await newNote.save();
+        res.json({ success: true, note: newNote });
+    } catch (err) { res.status(500).json({ success: false }); }
+});
+
+// DELETE: Xóa note (Kiểm tra đúng chủ sở hữu)
+app.delete('/api/quick-notes/:id', async (req, res) => {
+    try {
+        const { username } = req.query;
+        const { id } = req.params;
+        const result = await QuickNote.findOneAndDelete({ _id: id, username }); // Chỉ xóa nếu khớp cả ID và Username
+        if(result) res.json({ success: true });
+        else res.status(403).json({ success: false, message: "Không đủ quyền" });
+    } catch (err) { res.status(500).json({ success: false }); }
 });
 
 // 8. Community APIs

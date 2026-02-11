@@ -1,5 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
+  
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -12,6 +14,6 @@ export default {
     },
   },
   plugins: [
-    require('@tailwindcss/typography'), // 👈 Thêm dòng này để hỗ trợ class 'prose'
+    require('@tailwindcss/typography'), 
   ],
 }
