@@ -391,6 +391,7 @@ const documentSchema = new mongoose.Schema({
     path: { type: String, required: true },
     size: { type: Number, default: 0 },
     downloadCount: { type: Number, default: 0 },
+    viewCount: { type: Number, default: 0 },
     course: { type: String, default: '' },
     visibility: { type: String, default: 'public', enum: ['public', 'private'] },
     createdAt: { type: Date, default: Date.now }
