@@ -367,10 +367,14 @@ const DocumentViewer = () => {
   const [isUploadModalOpen, setUploadModalOpen] = useState(false);
   const [isShareModalOpen, setShareModalOpen] = useState(false);
 
-  // --- 1. LOAD DỮ LIỆU ---
+  // --- 1. LOAD DỮ LIỆU & TĂNG LƯỢT XEM ---
   useEffect(() => {
     const fetchDocument = async () => {
       try {
+        // Gọi API tăng lượt xem trước, chờ hoàn tất
+        await fetch(`/api/documents/view/${id}`, { method: 'POST' }).catch(() => {});
+
+        // Sau đó mới lấy dữ liệu (đã có viewCount mới)
         const res = await fetch("/api/documents");
         const allDocs = await res.json();
 

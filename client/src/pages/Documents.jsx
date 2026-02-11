@@ -564,33 +564,8 @@ const Documents = () => {
     }
   };
 
-  const handleView = async (doc) => {
-    try {
-      // 1. Tăng lượt xem ngay trong state (optimistic update)
-      setDocuments(prevDocs => 
-        prevDocs.map(d => 
-          d.id === doc.id 
-            ? { ...d, viewCount: (d.viewCount || 0) + 1 } 
-            : d
-        )
-      );
-      
-      // 2. Gọi API tăng view
-      await documentService.viewDocument(doc.id);
-      
-    } catch (error) {
-      console.error("Lỗi khi tăng view:", error);
-      // Nếu API thất bại, rollback lại state
-      setDocuments(prevDocs => 
-        prevDocs.map(d => 
-          d.id === doc.id 
-            ? { ...d, viewCount: Math.max((d.viewCount || 1) - 1, 0) } 
-            : d
-        )
-      );
-    }
-    
-    // 3. Chuyển đến trang xem tài liệu
+  // 👇 Xem tài liệu - chỉ navigate, việc tăng view sẽ do DocumentViewer xử lý
+  const handleView = (doc) => {
     navigate(`/documents/${doc.id}`);
   };
 
