@@ -160,13 +160,13 @@ const EditTargetModal = ({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-fade-in-up"
+        className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-fade-in-up"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-          <Target size={20} className="text-blue-600" /> Mục tiêu tín chỉ
+        <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <Target size={20} className="text-blue-600 dark:text-blue-400" /> Mục tiêu tín chỉ
         </h3>
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           Nhập tổng số tín chỉ chương trình đào tạo của bạn.
         </p>
         <div className="relative mb-6">
@@ -174,16 +174,16 @@ const EditTargetModal = ({
             type="number"
             value={val}
             onChange={(e) => setVal(e.target.value)}
-            className="w-full p-3 pl-4 pr-12 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xl"
+            className="w-full p-3 pl-4 pr-12 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xl"
           />
-          <span className="absolute right-4 top-3.5 text-gray-400 font-medium text-sm">
+          <span className="absolute right-4 top-3.5 text-gray-400 dark:text-gray-500 font-medium text-sm">
             TC
           </span>
         </div>
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl text-gray-600 bg-gray-100 hover:bg-gray-200 font-bold"
+            className="flex-1 py-2.5 rounded-xl text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold"
           >
             Hủy
           </button>
@@ -210,27 +210,27 @@ const ChartStatBox = ({
 }) => (
   <div
     onClick={onClick}
-    className={`relative p-3 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center transition-all ${
+    className={`relative p-3 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center transition-all ${
       onClick
-        ? "bg-blue-50/50 cursor-pointer hover:bg-blue-50 hover:border-blue-200 group"
-        : "bg-gray-50 hover:bg-white hover:shadow-sm"
+        ? "bg-blue-50/50 dark:bg-blue-900/20 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:border-blue-200 dark:hover:border-blue-700 group"
+        : "bg-gray-50 dark:bg-gray-800 hover:bg-white dark:hover:bg-gray-750 hover:shadow-sm"
     }`}
   >
     {onClick && (
-      <div className="absolute top-1.5 right-1.5 text-blue-200 group-hover:text-blue-600 transition-colors">
+      <div className="absolute top-1.5 right-1.5 text-blue-200 dark:text-blue-700 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
         <Edit2 size={12} />
       </div>
     )}
     <div className={`mb-1 ${color}`}>
       <Icon size={18} />
     </div>
-    <span className="text-lg font-bold text-gray-800 leading-none">
+    <span className="text-lg font-bold text-gray-800 dark:text-white leading-none">
       {value}
     </span>
-    <span className="text-[10px] text-gray-500 font-medium uppercase mt-1">
+    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase mt-1">
       {label}
     </span>
-    {subLabel && <span className="text-[10px] text-gray-400">{subLabel}</span>}
+    {subLabel && <span className="text-[10px] text-gray-400 dark:text-gray-500">{subLabel}</span>}
   </div>
 );
 
@@ -388,20 +388,20 @@ const QuickNotesTab = ({ user }) => {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in-up">
       {/* CỘT TRÁI: GHI CHÚ CÁ NHÂN (MÀU VÀNG) */}
       <div>
-        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-          <StickyNote className="text-yellow-500" /> Ghi chú của tôi
+        <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <StickyNote className="text-yellow-500 dark:text-yellow-400" /> Ghi chú của tôi
         </h3>
 
         {/* Form thêm note */}
-        <div className="bg-yellow-50/50 p-4 rounded-xl border border-yellow-200 mb-6 shadow-sm">
+        <div className="bg-yellow-50/50 dark:bg-yellow-900/20 p-4 rounded-xl border border-yellow-200 dark:border-yellow-700 mb-6 shadow-sm">
           <input
-            className="w-full bg-transparent font-bold text-gray-800 placeholder-gray-400 outline-none mb-2"
+            className="w-full bg-transparent font-bold text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none mb-2"
             placeholder="Tiêu đề (VD: Mua giáo trình)"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
           />
           <textarea
-            className="w-full bg-transparent text-sm text-gray-600 placeholder-gray-400 outline-none resize-none h-20"
+            className="w-full bg-transparent text-sm text-gray-600 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 outline-none resize-none h-20"
             placeholder="Nội dung ghi chú..."
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
@@ -421,29 +421,29 @@ const QuickNotesTab = ({ user }) => {
           {myNotes.map((note) => (
             <div
               key={note._id}
-              className="group relative bg-yellow-100 p-4 rounded-xl shadow-sm border border-yellow-200 hover:shadow-md transition-all hover:-translate-y-1"
+              className="group relative bg-yellow-100 dark:bg-yellow-900/30 p-4 rounded-xl shadow-sm border border-yellow-200 dark:border-yellow-700 hover:shadow-md transition-all hover:-translate-y-1"
             >
               <button
                 onClick={() => handleDeleteNote(note._id)}
-                className="absolute top-2 right-2 text-yellow-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-2 right-2 text-yellow-600 dark:text-yellow-500 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
                 title="Xóa"
               >
                 <Trash2 size={14} />
               </button>
-              <h4 className="font-bold text-gray-800 mb-1">{note.title}</h4>
+              <h4 className="font-bold text-gray-800 dark:text-white mb-1">{note.title}</h4>
               <p
-                className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed font-medium"
+                className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap leading-relaxed font-medium"
                 style={{ fontFamily: '"Comic Sans MS", cursive, sans-serif' }}
               >
                 {note.content}
               </p>
-              <p className="text-[10px] text-yellow-600 mt-3 text-right">
+              <p className="text-[10px] text-yellow-600 dark:text-yellow-500 mt-3 text-right">
                 {new Date(note.createdAt).toLocaleDateString("vi-VN")}
               </p>
             </div>
           ))}
           {myNotes.length === 0 && (
-            <div className="col-span-full text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">
+            <div className="col-span-full text-center py-10 text-gray-400 dark:text-gray-500 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
               Chưa có ghi chú nào.
             </div>
           )}
@@ -452,8 +452,8 @@ const QuickNotesTab = ({ user }) => {
 
       {/* CỘT PHẢI: GHI CHÚ TỪ THỜI KHÓA BIỂU (MÀU XANH) */}
       <div>
-        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-          <Bell className="text-blue-500" /> Nhắc nhở từ Thời khóa biểu
+        <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <Bell className="text-blue-500 dark:text-blue-400" /> Nhắc nhở từ Thời khóa biểu
         </h3>
 
         <div className="space-y-4">
@@ -461,10 +461,10 @@ const QuickNotesTab = ({ user }) => {
             timetableNotes.map((note, idx) => (
               <div
                 key={idx}
-                className={`group relative bg-white p-4 rounded-xl shadow-sm border border-l-4 transition-all hover:shadow-md ${
+                className={`group relative bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-l-4 transition-all hover:shadow-md ${
                   note.isDone
-                    ? "border-l-green-500 opacity-60 bg-gray-50"
-                    : "border-l-blue-500"
+                    ? "border-l-green-500 opacity-60 bg-gray-50 dark:bg-gray-750"
+                    : "border-l-blue-500 dark:border-l-blue-400"
                 }`}
               >
                 {/* Nút Xóa (Hiện khi Hover) */}
@@ -473,7 +473,7 @@ const QuickNotesTab = ({ user }) => {
                     e.stopPropagation();
                     handleDeleteTimetableNote(note);
                   }}
-                  className="absolute top-2 right-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all z-10 p-1"
+                  className="absolute top-2 right-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all z-10 p-1"
                   title="Xóa nhắc nhở này"
                 >
                   <Trash2 size={16} />
@@ -486,7 +486,7 @@ const QuickNotesTab = ({ user }) => {
                       type="checkbox"
                       checked={note.isDone || false}
                       onChange={() => handleToggleTimetableNote(note)}
-                      className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
+                      className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
                     />
                   </div>
 
@@ -499,8 +499,8 @@ const QuickNotesTab = ({ user }) => {
                       <h4
                         className={`font-bold text-sm ${
                           note.isDone
-                            ? "text-gray-500 line-through"
-                            : "text-gray-800"
+                            ? "text-gray-500 dark:text-gray-400 line-through"
+                            : "text-gray-800 dark:text-white"
                         }`}
                       >
                         {note.subject}
@@ -508,7 +508,7 @@ const QuickNotesTab = ({ user }) => {
                     </div>
                     <p
                       className={`text-sm mt-1 ${
-                        note.isDone ? "text-gray-400" : "text-gray-600"
+                        note.isDone ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300"
                       }`}
                     >
                       {note.content}
@@ -518,8 +518,8 @@ const QuickNotesTab = ({ user }) => {
                       <p
                         className={`text-xs mt-2 flex items-center gap-1 font-medium ${
                           !note.isDone && new Date(note.deadline) < new Date()
-                            ? "text-red-600"
-                            : "text-gray-400"
+                            ? "text-red-600 dark:text-red-400"
+                            : "text-gray-400 dark:text-gray-500"
                         }`}
                       >
                         <Clock size={12} />
@@ -534,7 +534,7 @@ const QuickNotesTab = ({ user }) => {
               </div>
             ))
           ) : (
-            <div className="text-center py-10 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+            <div className="text-center py-10 text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
               Không có ghi chú nào trong các môn học.
             </div>
           )}
@@ -684,16 +684,16 @@ const FlashcardTab = () => {
         <>
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h3 className="font-bold text-gray-800 text-xl flex items-center gap-2">
-                <Layers className="text-blue-600" /> Flashcard của tôi
+              <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
+                <Layers className="text-blue-600 dark:text-blue-400" /> Flashcard của tôi
               </h3>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 Luyện tập trí nhớ với phương pháp lặp lại.
               </p>
             </div>
             <button
               onClick={() => setView("create")}
-              className="bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2"
+              className="bg-gray-900 dark:bg-gray-700 hover:bg-black dark:hover:bg-gray-600 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2"
             >
               <Plus size={16} /> Tạo bộ mới
             </button>
@@ -704,7 +704,7 @@ const FlashcardTab = () => {
               <div
                 key={deck.id}
                 onClick={() => startStudy(deck)}
-                className={`relative p-6 rounded-2xl border cursor-pointer hover:shadow-md transition-all hover:-translate-y-1 group bg-white border-gray-200`}
+                className={`relative p-6 rounded-2xl border cursor-pointer hover:shadow-md transition-all hover:-translate-y-1 group bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700`}
               >
                 <div className="flex justify-between items-start mb-4">
                   <div
@@ -719,15 +719,15 @@ const FlashcardTab = () => {
                       e.stopPropagation();
                       deleteDeck(deck.id);
                     }}
-                    className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                    className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all opacity-0 group-hover:opacity-100"
                   >
                     <Trash2 size={16} />
                   </button>
                 </div>
-                <h4 className="font-bold text-gray-800 text-lg mb-1">
+                <h4 className="font-bold text-gray-800 dark:text-white text-lg mb-1">
                   {deck.title}
                 </h4>
-                <p className="text-sm text-gray-500 font-medium">
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
                   {deck.cards?.length || 0} thẻ thuật ngữ
                 </p>
               </div>
@@ -835,14 +835,14 @@ const FlashcardTab = () => {
 
       {/* VIEW 3: TẠO BỘ THẺ MỚI */}
       {view === "create" && (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
-            <h3 className="font-bold text-lg text-gray-800">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
+            <h3 className="font-bold text-lg text-gray-800 dark:text-white">
               Tạo bộ Flashcard mới
             </h3>
             <button
               onClick={() => setView("list")}
-              className="text-gray-500 hover:text-gray-700 font-medium"
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium"
             >
               Hủy bỏ
             </button>
@@ -1057,25 +1057,25 @@ const DailyScheduleTab = ({ user }) => {
     return (
       <div
         key={item.id}
-        className={`p-4 rounded-xl shadow-sm border border-gray-100 border-l-4 ${statusColor} ${bgColor} mb-4 transition-all flex justify-between items-center group`}
+        className={`p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 border-l-4 ${statusColor} ${bgColor} dark:bg-opacity-10 mb-4 transition-all flex justify-between items-center group`}
       >
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h4
               className={`font-bold text-lg ${
-                isPassed ? "text-gray-500 line-through" : "text-gray-800"
+                isPassed ? "text-gray-500 dark:text-gray-400 line-through" : "text-gray-800 dark:text-white"
               }`}
             >
               {item.title}
             </h4>
             {item.type === "event" && (
-              <span className="text-[10px] bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-bold">
+              <span className="text-[10px] bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-full font-bold">
                 Thủ công
               </span>
             )}
           </div>
 
-          <div className="text-sm text-gray-600 flex flex-col gap-1">
+          <div className="text-sm text-gray-600 dark:text-gray-300 flex flex-col gap-1">
             <span className="flex items-center gap-2 font-medium">
               <Clock
                 size={14}
@@ -1120,17 +1120,17 @@ const DailyScheduleTab = ({ user }) => {
     <div className="animate-fade-in-up">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h3 className="font-bold text-gray-800 text-xl flex items-center gap-2">
-            <Calendar className="text-blue-600" /> Lịch trình hôm nay (
+          <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
+            <Calendar className="text-blue-600 dark:text-blue-400" /> Lịch trình hôm nay (
             {now.toLocaleDateString("vi-VN")})
           </h3>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Hệ thống tự động cập nhật theo thời gian thực.
           </p>
         </div>
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2"
+          className="bg-gray-900 dark:bg-gray-700 hover:bg-black dark:hover:bg-gray-600 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2"
         >
           + Thêm lịch
         </button>
@@ -1141,8 +1141,8 @@ const DailyScheduleTab = ({ user }) => {
           {schedule.map((item) => renderItem(item))}
         </div>
       ) : (
-        <div className="text-center py-16 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-          <p className="text-gray-400 font-medium">
+        <div className="text-center py-16 bg-gray-50 dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+          <p className="text-gray-400 dark:text-gray-500 font-medium">
             Hôm nay bạn rảnh rỗi! Không có lịch trình nào. 🎉
           </p>
         </div>
@@ -1361,23 +1361,30 @@ useEffect(() => {
       {/* 1. WELCOME SECTION */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gray-800">
+          <h1 className="text-3xl font-black text-gray-800 dark:text-white">
             Xin chào,{" "}
-            <span className="text-blue-600">
+            <span className="text-blue-600 dark:text-blue-400">
               {user?.fullName || "Sinh viên"}
             </span>{" "}
             👋
           </h1>
-          <p className="text-gray-500 mt-2 font-medium flex items-center gap-2">
-            <Calendar size={18} className="text-primary" />
+          <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium flex items-center gap-2">
+            <Calendar size={18} className="text-primary dark:text-blue-400" />
             {getVNDate()}
           </p>
         </div>
 
         <div className="flex gap-3">
           <button
+            onClick={() => setDarkMode(!darkMode)}
+            className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-all flex items-center gap-2 cursor-pointer"
+            title={darkMode ? "Chế độ sáng" : "Chế độ tối"}
+          >
+            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+          <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-primary text-white px-6 py-2 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-800 transition-all flex items-center gap-2 cursor-pointer"
+            className="bg-primary text-white px-6 py-2 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 dark:shadow-blue-900/30 hover:bg-blue-800 transition-all flex items-center gap-2 cursor-pointer"
           >
             + Thêm Deadline
           </button>
@@ -1385,7 +1392,7 @@ useEffect(() => {
       </div>
 
       {/* 2. NAVIGATION TABS */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-gray-200 dark:border-gray-700">
         <div className="flex gap-6 overflow-x-auto">
           {[
             { id: "overview", label: "Tổng quan", icon: GraduationCap },
@@ -1399,8 +1406,8 @@ useEffect(() => {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 pb-3 px-1 text-sm font-bold transition-all border-b-2 whitespace-nowrap ${
                 activeTab === tab.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  ? "border-primary text-primary dark:border-blue-400 dark:text-blue-400"
+                  : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               }`}
             >
               <tab.icon size={18} />
@@ -1416,17 +1423,17 @@ useEffect(() => {
           {/* Quick Stats Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* CARD 1: GPA */}
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 relative overflow-hidden">
-              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center font-bold z-10">
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4 relative overflow-hidden">
+              <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center font-bold z-10">
                 {gpaMetrics.current}
               </div>
               <div className="z-10">
-                <p className="text-xs text-gray-400 font-bold uppercase">
+                <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">
                   GPA Kỳ này
                 </p>
                 <div
                   className={`flex items-center text-sm font-bold ${
-                    isIncrease ? "text-green-600" : "text-red-500"
+                    isIncrease ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"
                   }`}
                 >
                   {isIncrease ? (
@@ -1445,41 +1452,41 @@ useEffect(() => {
             </div>
 
             {/* CARD 2: Tín chỉ */}
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center font-bold">
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+              <div className="w-12 h-12 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center font-bold">
                 {gpaMetrics.totalCredits}
               </div>
               <div>
-                <p className="text-xs text-gray-400 font-bold uppercase">
+                <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">
                   Tín chỉ
                 </p>
-                <p className="text-gray-700 font-bold">Đã hoàn thành</p>
+                <p className="text-gray-700 dark:text-gray-200 font-bold">Đã hoàn thành</p>
               </div>
             </div>
 
             {/* CARD 3: Đề thi */}
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-              <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center font-bold">
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+              <div className="w-12 h-12 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full flex items-center justify-center font-bold">
                 12
               </div>
               <div>
-                <p className="text-xs text-gray-400 font-bold uppercase">
+                <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">
                   Đề thi
                 </p>
-                <p className="text-gray-700 font-bold">Đã luyện tập</p>
+                <p className="text-gray-700 dark:text-gray-200 font-bold">Đã luyện tập</p>
               </div>
             </div>
 
             {/* CARD 4: Giờ học */}
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-              <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center font-bold">
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+              <div className="w-12 h-12 bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full flex items-center justify-center font-bold">
                 <Clock size={24} />
               </div>
               <div>
-                <p className="text-xs text-gray-400 font-bold uppercase">
+                <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">
                   Tổng giờ học
                 </p>
-                <p className="text-gray-700 font-bold">{totalStudyHours} giờ</p>
+                <p className="text-gray-700 dark:text-gray-200 font-bold">{totalStudyHours} giờ</p>
               </div>
             </div>
           </div>
@@ -1487,9 +1494,9 @@ useEffect(() => {
           {/* Main Grid: Chart & Schedule */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* CỘT TRÁI: BIỂU ĐỒ ĐA NĂNG */}
-            <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative">
+            <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                <h3 className="font-bold text-gray-800 dark:text-white flex items-center gap-2">
                   {chartMode === "credit" ? (
                     <GraduationCap className="text-green-600" size={20} />
                   ) : (
@@ -1501,13 +1508,13 @@ useEffect(() => {
                 </h3>
 
                 {/* NÚT CHUYỂN ĐỔI CHART */}
-                <div className="bg-gray-100 p-1 rounded-lg flex text-xs font-bold">
+                <div className="bg-gray-100 dark:bg-gray-700 p-1 rounded-lg flex text-xs font-bold">
                   <button
                     onClick={() => setChartMode("credit")}
                     className={`px-3 py-1.5 rounded-md transition-all ${
                       chartMode === "credit"
-                        ? "bg-white text-green-600 shadow-sm"
-                        : "text-gray-500 hover:text-gray-700"
+                        ? "bg-white dark:bg-gray-600 text-green-600 dark:text-green-400 shadow-sm"
+                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                     }`}
                   >
                     Tiến độ
@@ -1516,8 +1523,8 @@ useEffect(() => {
                     onClick={() => setChartMode("study")}
                     className={`px-3 py-1.5 rounded-md transition-all ${
                       chartMode === "study"
-                        ? "bg-white text-blue-600 shadow-sm"
-                        : "text-gray-500 hover:text-gray-700"
+                        ? "bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm"
+                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                     }`}
                   >
                     Giờ học
@@ -1556,10 +1563,10 @@ useEffect(() => {
                         </RadialBarChart>
                       </ResponsiveContainer>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pt-6 pointer-events-none">
-                        <span className="text-3xl font-black text-gray-800">
+                        <span className="text-3xl font-black text-gray-800 dark:text-white">
                           {creditPercent}%
                         </span>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">
                           Đã xong
                         </span>
                       </div>
@@ -1651,16 +1658,16 @@ useEffect(() => {
             </div>
 
             {/* Cột phải: To-Do List */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col h-full">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-gray-800">Deadline sắp tới</h3>
-                <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-md">
+                <h3 className="font-bold text-gray-800 dark:text-white">Deadline sắp tới</h3>
+                <span className="text-xs font-bold text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded-md">
                   {deadlines.length} task
                 </span>
               </div>
               <div className="space-y-3 flex-1 overflow-y-auto pr-2 max-h-[300px]">
                 {deadlines.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400">
+                  <div className="text-center py-8 text-gray-400 dark:text-gray-500">
                     <p>Không có deadline nào.</p>
                     <p className="text-xs">Thư giãn đi! 🎉</p>
                   </div>
@@ -1668,7 +1675,7 @@ useEffect(() => {
                   deadlines.map((task) => (
                     <div
                       key={task._id}
-                      className={`flex items-start gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer group relative ${
+                      className={`flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl transition-colors cursor-pointer group relative ${
                         task.isDone ? "opacity-60" : ""
                       }`}
                     >
@@ -1677,7 +1684,7 @@ useEffect(() => {
                           e.stopPropagation();
                           handleDeleteDeadline(task._id);
                         }}
-                        className="absolute right-2 top-2 p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all z-10"
+                        className="absolute right-2 top-2 p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all z-10"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -1689,7 +1696,7 @@ useEffect(() => {
                           type="checkbox"
                           checked={task.isDone || false}
                           onChange={() => handleToggleDeadline(task)}
-                          className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
+                          className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
                         />
                       </div>
                       <div
@@ -1699,23 +1706,23 @@ useEffect(() => {
                         <p
                           className={`text-sm font-semibold transition-all ${
                             task.isDone
-                              ? "text-gray-400 line-through decoration-gray-400"
-                              : "text-gray-700"
+                              ? "text-gray-400 dark:text-gray-500 line-through decoration-gray-400"
+                              : "text-gray-700 dark:text-gray-200"
                           }`}
                         >
                           {task.title}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
                           {task.type === "exam" && (
-                            <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] font-bold bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded">
                               THI
                             </span>
                           )}
                           <p
                             className={`text-xs font-medium ${
                               task.type === "exam"
-                                ? "text-red-500"
-                                : "text-gray-400"
+                                ? "text-red-500 dark:text-red-400"
+                                : "text-gray-400 dark:text-gray-500"
                             }`}
                           >
                             {formatDeadlineTime(task.date)}

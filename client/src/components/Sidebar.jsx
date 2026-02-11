@@ -9,8 +9,8 @@ const SidebarItem = ({ icon: Icon, label, to }) => (
     className={({ isActive }) =>
       `flex items-center space-x-3 p-3 rounded-xl cursor-pointer transition-all ${
         isActive 
-          ? 'bg-primary text-white shadow-md' // Style khi đang ở trang này
-          : 'text-gray-400 hover:bg-blue-50 hover:text-primary' // Style khi bình thường
+          ? 'bg-primary dark:bg-blue-600 text-white shadow-md' // Style khi đang ở trang này
+          : 'text-gray-400 dark:text-gray-500 hover:bg-blue-50 dark:hover:bg-gray-800 hover:text-primary dark:hover:text-blue-400' // Style khi bình thường
       }`
     }
   >
@@ -21,10 +21,10 @@ const SidebarItem = ({ icon: Icon, label, to }) => (
 
 const Sidebar = () => {
   return (
-    <div className="w-64 h-screen bg-white border-r border-gray-100 p-4 flex flex-col fixed left-0 top-0"> {/* Thêm fixed để Sidebar đứng im */}
+    <div className="w-64 h-screen bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 p-4 flex flex-col fixed left-0 top-0"> {/* Thêm fixed để Sidebar đứng im */}
       <div className="flex items-center space-x-2 px-2 mb-10">
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">W</div>
-        <span className="text-xl font-bold text-gray-800 tracking-tight">Whalio <span className="text-primary">2.0</span></span>
+        <div className="w-8 h-8 bg-primary dark:bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">W</div>
+        <span className="text-xl font-bold text-gray-800 dark:text-white tracking-tight">Whalio <span className="text-primary dark:text-blue-400">2.0</span></span>
       </div>
 
       <nav className="flex-1 space-y-2">
@@ -39,9 +39,9 @@ const Sidebar = () => {
         <SidebarItem icon={Calendar} label="Thời khóa biểu" to="/timetable" />
       </nav>
 
-      <div className="pt-4 border-t border-gray-100">
+      <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
         {/* Cài đặt thường ít khi active, cứ để tạm */}
-        <div className="flex items-center space-x-3 p-3 rounded-xl cursor-pointer text-gray-400 hover:bg-blue-50 hover:text-primary transition-all">
+        <div className="flex items-center space-x-3 p-3 rounded-xl cursor-pointer text-gray-400 dark:text-gray-500 hover:bg-blue-50 dark:hover:bg-gray-800 hover:text-primary dark:hover:text-blue-400 transition-all">
             <Settings size={20} />
             <span className="font-medium">Cài đặt</span>
         </div>

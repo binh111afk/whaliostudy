@@ -10,3 +10,14 @@
   background-color: #f3f4f6;
   color: #1a1a1a;
 }
+
+/* Dark mode styles */
+:root.dark {
+  background-color: #111827;
+  color: #f9fafb;
+}
+
+/* Smooth transition for dark mode */
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
