@@ -1150,16 +1150,30 @@ app.get('/document/:id', async (req, res) => {
     }
 });
 
-// [MỚI] API tăng lượt xem (Sử dụng trường downloadCount làm view count)
+// [MỚI] API tăng lượt xem
 app.post('/api/documents/view/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        // Đổi thành viewCount thay vì downloadCount
-        await Document.findByIdAndUpdate(id, { $inc: { viewCount: 1 } });
-        res.json({ success: true });
+        
+        // Validate ObjectId
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, message: 'ID không hợp lệ' });
+        }
+        
+        const updatedDoc = await Document.findByIdAndUpdate(
+            id, 
+            { $inc: { viewCount: 1 } },
+            { new: true } // Trả về document đã cập nhật
+        );
+        
+        if (!updatedDoc) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy tài liệu' });
+        }
+        
+        res.json({ success: true, viewCount: updatedDoc.viewCount });
     } catch (err) {
         console.error('❌ Increase view error:', err);
-        res.status(500).json({ success: false });
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 

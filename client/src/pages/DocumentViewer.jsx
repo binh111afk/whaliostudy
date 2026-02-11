@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -367,15 +367,29 @@ const DocumentViewer = () => {
   const [isUploadModalOpen, setUploadModalOpen] = useState(false);
   const [isShareModalOpen, setShareModalOpen] = useState(false);
 
+  // Ref chống StrictMode gọi tăng view 2 lần
+  const hasCountedView = useRef(false);
+
   // --- 1. LOAD DỮ LIỆU & TĂNG LƯỢT XEM ---
   useEffect(() => {
     const fetchDocument = async () => {
       try {
-        // Gọi API tăng lượt xem trước, chờ hoàn tất
-        await fetch(`/api/documents/view/${id}`, { method: 'POST' }).catch(() => {});
+        // Gọi API tăng lượt xem (chỉ 1 lần, tránh StrictMode double-fire)
+        if (!hasCountedView.current) {
+          hasCountedView.current = true;
+          try {
+            const viewRes = await fetch(`/api/documents/view/${id}`, { method: 'POST' });
+            if (!viewRes.ok) {
+              console.warn(`View API returned ${viewRes.status}`);
+            }
+          } catch (viewErr) {
+            console.warn('Không thể tăng lượt xem:', viewErr.message);
+          }
+        }
 
-        // Sau đó mới lấy dữ liệu (đã có viewCount mới)
+        // Lấy dữ liệu tài liệu
         const res = await fetch("/api/documents");
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
         const allDocs = await res.json();
 
         const currentDoc = allDocs.find((d) => d.id === id || d._id === id);

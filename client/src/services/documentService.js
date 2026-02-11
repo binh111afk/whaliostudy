@@ -57,6 +57,10 @@ export const documentService = {
             'Content-Type': 'application/json',
           },
         });
+        if (!res.ok) {
+          console.warn(`View API returned ${res.status}`);
+          return { success: false };
+        }
         return await res.json();
       } catch (error) {
         console.error('Error viewing document:', error);
