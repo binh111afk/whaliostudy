@@ -5,21 +5,21 @@ import { User, FileText, Bookmark, Gift, Edit2, Lock } from "lucide-react";
 
 // Hàm helper để hiển thị thông tin, nếu chưa có thì hiện "Chưa cập nhật"
 const DisplayRow = ({ label, value, isLink }) => (
-  <div className="flex items-center py-4 border-b border-gray-50 last:border-0 hover:bg-gray-50 px-2 transition-colors -mx-2 rounded-lg">
-    <span className="w-1/3 text-gray-500 font-medium text-sm">{label}</span>
+  <div className="flex items-center py-4 border-b border-gray-50 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50 px-2 transition-colors -mx-2 rounded-lg">
+    <span className="w-1/3 text-gray-500 dark:text-gray-400 font-medium text-sm">{label}</span>
     {isLink && value ? (
       <a
         href={value}
         target="_blank"
         rel="noreferrer"
-        className="flex-1 text-blue-600 hover:underline font-medium truncate"
+        className="flex-1 text-blue-600 dark:text-blue-400 hover:underline font-medium truncate"
       >
         {value}
       </a>
     ) : (
       <span
         className={`flex-1 font-medium truncate ${
-          value ? "text-gray-800" : "text-gray-400 italic"
+          value ? "text-gray-800 dark:text-gray-200" : "text-gray-400 dark:text-gray-500 italic"
         }`}
       >
         {value || "Chưa cập nhật"}
@@ -35,7 +35,7 @@ const Profile = ({ user, onUpdateUser }) => {
 
   if (!user)
     return (
-      <div className="p-10 text-center">Vui lòng đăng nhập để xem hồ sơ.</div>
+      <div className="p-10 text-center text-gray-500 dark:text-gray-400">Vui lòng đăng nhập để xem hồ sơ.</div>
     );
 
   return (
@@ -43,9 +43,9 @@ const Profile = ({ user, onUpdateUser }) => {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* === CỘT TRÁI (SIDEBAR) === */}
         <div className="md:col-span-4 lg:col-span-3 space-y-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
             {/* Avatar */}
-            <div className="w-28 h-28 mx-auto rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-100 mb-4 relative">
+            <div className="w-28 h-28 mx-auto rounded-full border-4 border-white dark:border-gray-700 shadow-lg overflow-hidden bg-gray-100 dark:bg-gray-700 mb-4 relative">
               {/* 1. Ưu tiên hiển thị ảnh (nếu là đường dẫn hợp lệ) */}
               {user.avatar && user.avatar.includes("/") && (
                 <img
@@ -62,7 +62,7 @@ const Profile = ({ user, onUpdateUser }) => {
 
               {/* 2. Fallback: Chữ cái đầu (Mặc định ẩn nếu đang có ảnh) */}
               <div
-                className="w-full h-full flex items-center justify-center text-4xl font-bold text-gray-400 bg-gray-200"
+                className="w-full h-full flex items-center justify-center text-4xl font-bold text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-600"
                 style={{
                   display:
                     user.avatar && user.avatar.includes("/") ? "none" : "flex",
@@ -71,26 +71,26 @@ const Profile = ({ user, onUpdateUser }) => {
                 {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
               </div>
             </div>
-            <h2 className="text-xl font-bold text-gray-800">{user.fullName}</h2>
-            <p className="text-sm text-gray-500">{user.email}</p>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white">{user.fullName}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
           </div>
 
           {/* Menu Navigation */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
             <nav className="flex flex-col">
               <button
                 onClick={() => setActiveTab("info")}
                 className={`flex items-center gap-3 px-5 py-4 text-sm font-medium transition-colors ${
                   activeTab === "info"
                     ? "bg-blue-600 text-white"
-                    : "text-gray-600 hover:bg-gray-50"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 <div
                   className={`p-1.5 rounded-lg ${
                     activeTab === "info"
                       ? "bg-white/20"
-                      : "bg-blue-50 text-blue-600"
+                      : "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
                   }`}
                 >
                   <User size={18} />
@@ -103,14 +103,14 @@ const Profile = ({ user, onUpdateUser }) => {
                 className={`flex items-center gap-3 px-5 py-4 text-sm font-medium transition-colors ${
                   activeTab === "docs"
                     ? "bg-blue-600 text-white"
-                    : "text-gray-600 hover:bg-gray-50"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 <div
                   className={`p-1.5 rounded-lg ${
                     activeTab === "docs"
                       ? "bg-white/20"
-                      : "bg-green-50 text-green-600"
+                      : "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400"
                   }`}
                 >
                   <FileText size={18} />
@@ -123,14 +123,14 @@ const Profile = ({ user, onUpdateUser }) => {
                 className={`flex items-center gap-3 px-5 py-4 text-sm font-medium transition-colors ${
                   activeTab === "saved"
                     ? "bg-blue-600 text-white"
-                    : "text-gray-600 hover:bg-gray-50"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 <div
                   className={`p-1.5 rounded-lg ${
                     activeTab === "saved"
                       ? "bg-white/20"
-                      : "bg-purple-50 text-purple-600"
+                      : "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
                   }`}
                 >
                   <Bookmark size={18} />
@@ -138,8 +138,8 @@ const Profile = ({ user, onUpdateUser }) => {
                 Tài liệu đã lưu
               </button>
 
-              <button className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                <div className="p-1.5 rounded-lg bg-orange-50 text-orange-600">
+              <button className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <div className="p-1.5 rounded-lg bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
                   <Gift size={18} />
                 </div>
                 Kho vật phẩm
@@ -151,13 +151,13 @@ const Profile = ({ user, onUpdateUser }) => {
         {/* === CỘT PHẢI (CONTENT) === */}
         <div className="md:col-span-8 lg:col-span-9">
           {activeTab === "info" && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 animate-fade-in-up">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 md:p-8 animate-fade-in-up">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-800 text-blue-900">
+                  <h3 className="text-2xl font-bold text-gray-800 dark:text-white text-blue-900 dark:text-blue-400">
                     Thông tin cá nhân
                   </h3>
-                  <p className="text-gray-500 text-sm mt-1">
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
                     Quản lý thông tin hồ sơ của bạn
                   </p>
                 </div>
@@ -170,7 +170,7 @@ const Profile = ({ user, onUpdateUser }) => {
                   </button>
                   <button
                     onClick={() => setIsPassModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors cursor-pointer"
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                   >
                     <Lock size={16} /> Đổi mật khẩu
                   </button>
@@ -196,24 +196,24 @@ const Profile = ({ user, onUpdateUser }) => {
           )}
 
           {activeTab === "docs" && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center animate-fade-in-up">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-10 text-center animate-fade-in-up">
               <div className="text-6xl mb-4">📂</div>
-              <h3 className="text-xl font-bold text-gray-800">
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white">
                 Tài liệu của tôi
               </h3>
-              <p className="text-gray-500">
+              <p className="text-gray-500 dark:text-gray-400">
                 Tính năng đang được cập nhật từ file cũ...
               </p>
             </div>
           )}
 
           {activeTab === "saved" && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center animate-fade-in-up">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-10 text-center animate-fade-in-up">
               <div className="text-6xl mb-4">🔖</div>
-              <h3 className="text-xl font-bold text-gray-800">
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white">
                 Tài liệu đã lưu
               </h3>
-              <p className="text-gray-500">
+              <p className="text-gray-500 dark:text-gray-400">
                 Tính năng đang được cập nhật từ file cũ...
               </p>
             </div>

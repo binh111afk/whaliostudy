@@ -167,8 +167,7 @@ const Timetable = () => {
           </div>
         )}
 
-        <div
-          className="font-bold text-gray-800 text-sm leading-tight line-clamp-2"
+        <div className="font-bold text-gray-800 text-sm leading-tight line-clamp-2"
           title={cls.subject}
         >
           {cls.subject}
@@ -187,7 +186,7 @@ const Timetable = () => {
         </div>
 
         {/* HOVER ACTIONS */}
-        <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 p-1 rounded-lg backdrop-blur-sm shadow-sm">
+        <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-gray-800/90 p-1 rounded-lg backdrop-blur-sm shadow-sm">
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -235,13 +234,13 @@ const Timetable = () => {
     const timeDisplay = `${startT} - ${endT}`;
 
     return (
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 relative">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative">
         <div className="flex justify-between items-start">
           <div className="flex-1">
-            <h3 className="font-bold text-gray-800 text-lg leading-tight mb-2">
+            <h3 className="font-bold text-gray-800 dark:text-white text-lg leading-tight mb-2">
               {cls.subject}
             </h3>
-            <div className="text-sm text-gray-500 space-y-1">
+            <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
               <span className="flex items-center gap-2 font-medium text-blue-600">
                 <Clock size={16} /> {timeDisplay} (Tiết {cls.startPeriod}-
                 {endPeriod})
@@ -276,13 +275,13 @@ const Timetable = () => {
                 setClassToEdit(cls);
                 setClassModalOpen(true);
               }}
-              className="p-2 bg-blue-50 text-blue-600 rounded-xl"
+              className="p-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl"
             >
               <Edit3 size={20} />
             </button>
             <button
               onClick={() => handleDeleteClass(cls._id || cls.id)}
-              className="p-2 bg-red-50 text-red-600 rounded-xl"
+              className="p-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl"
             >
               <Trash2 size={20} />
             </button>
@@ -296,14 +295,14 @@ const Timetable = () => {
     <div className="max-w-[1600px] mx-auto p-4 md:p-6 pb-20">
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-        <div className="flex items-center gap-4 bg-white p-2 rounded-xl shadow-sm border border-gray-200 w-full md:w-auto justify-between md:justify-start">
+        <div className="flex items-center gap-4 bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 w-full md:w-auto justify-between md:justify-start">
           <button
             onClick={() => handleWeekChange(-1)}
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300"
           >
             <ChevronLeft />
           </button>
-          <div className="font-bold text-gray-700 min-w-[200px] text-center text-sm md:text-base">
+          <div className="font-bold text-gray-700 dark:text-gray-200 min-w-[200px] text-center text-sm md:text-base">
             {formatDateDisplay(currentWeekStart)} -{" "}
             {formatDateDisplay(
               new Date(currentWeekStart).setDate(currentWeekStart.getDate() + 6)
@@ -311,7 +310,7 @@ const Timetable = () => {
           </div>
           <button
             onClick={() => handleWeekChange(1)}
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300"
           >
             <ChevronRight />
           </button>
@@ -320,7 +319,7 @@ const Timetable = () => {
         <div className="flex gap-2 w-full md:w-auto">
           <button
             onClick={handleDeleteAll}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 font-bold transition-all cursor-pointer"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 font-bold transition-all cursor-pointer"
             title="Xóa tất cả"
           >
             <Trash2 size={20} />
@@ -328,7 +327,7 @@ const Timetable = () => {
           </button>
           <button
             onClick={() => setImportModalOpen(true)}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 font-bold transition-all cursor-pointer"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/30 font-bold transition-all cursor-pointer"
           >
             <Upload size={20} />{" "}
             <span className="hidden sm:inline">Nhập Excel</span>
@@ -338,7 +337,7 @@ const Timetable = () => {
               setClassToEdit(null);
               setClassModalOpen(true);
             }}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold shadow-lg shadow-blue-200 transition-all cursor-pointer"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold shadow-lg shadow-blue-200 dark:shadow-blue-900/30 transition-all cursor-pointer"
           >
             <Plus size={20} /> <span>Thêm môn</span>
           </button>
@@ -346,12 +345,12 @@ const Timetable = () => {
       </div>
 
       {/* --- DESKTOP VIEW (TABLE) --- */}
-      <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="hidden md:block bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1000px] border-collapse table-fixed">
             <thead>
               <tr>
-                <th className="p-4 bg-gray-50 border-b border-r border-gray-200 w-24 text-gray-500 uppercase text-xs font-bold sticky left-0 z-10">
+                <th className="p-4 bg-gray-50 dark:bg-gray-900 border-b border-r border-gray-200 dark:border-gray-700 w-24 text-gray-500 dark:text-gray-400 uppercase text-xs font-bold sticky left-0 z-10">
                   Buổi
                 </th>
                 {days.map((day, index) => {
@@ -362,18 +361,18 @@ const Timetable = () => {
                   return (
                     <th
                       key={day}
-                      className={`p-4 border-b border-r border-gray-200 ${
-                        isToday ? "bg-blue-50/50" : "bg-white"
+                      className={`p-4 border-b border-r border-gray-200 dark:border-gray-700 ${
+                        isToday ? "bg-blue-50/50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"
                       }`}
                     >
                       <div
                         className={`text-sm font-black ${
-                          isToday ? "text-blue-600" : "text-gray-800"
+                          isToday ? "text-blue-600 dark:text-blue-400" : "text-gray-800 dark:text-white"
                         }`}
                       >
                         THỨ {day}
                       </div>
-                      <div className="text-xs text-gray-400 font-medium mt-1">
+                      <div className="text-xs text-gray-400 dark:text-gray-500 font-medium mt-1">
                         {formatDateDisplay(date)}
                       </div>
                     </th>
@@ -384,7 +383,7 @@ const Timetable = () => {
             <tbody>
               {sessions.map((session) => (
                 <tr key={session.id}>
-                  <td className="p-4 bg-gray-50 border-b border-r border-gray-200 font-bold text-gray-600 text-center sticky left-0 z-10 text-sm">
+                  <td className="p-4 bg-gray-50 dark:bg-gray-900 border-b border-r border-gray-200 dark:border-gray-700 font-bold text-gray-600 dark:text-gray-400 text-center sticky left-0 z-10 text-sm">
                     {session.label}
                   </td>
                   {days.map((day) => {
@@ -405,7 +404,7 @@ const Timetable = () => {
                       // 👇 Fix layout: min-h-[140px] để ô rộng hơn, h-auto để co giãn nếu nhiều môn
                       <td
                         key={`${day}-${session.id}`}
-                        className="p-2 border-b border-r border-gray-200 align-top h-auto min-h-[140px] relative group/cell"
+                        className="p-2 border-b border-r border-gray-200 dark:border-gray-600 align-top h-auto min-h-[140px] relative group/cell"
                       >
                         <div className="flex flex-col gap-2 h-full">
                           {cellClasses.map((cls) => (
@@ -448,10 +447,10 @@ const Timetable = () => {
                 onClick={() => setSelectedMobileDay(day)}
                 className={`flex flex-col items-center min-w-[70px] p-2 rounded-xl border-2 transition-all ${
                   isSelected
-                    ? "border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-200"
+                    ? "border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-blue-900/30"
                     : isToday
-                    ? "border-blue-200 bg-blue-50 text-blue-600"
-                    : "border-transparent bg-white text-gray-500"
+                    ? "border-blue-200 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                    : "border-transparent bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400"
                 }`}
               >
                 <span className="text-xs font-bold">Thứ {day}</span>
@@ -470,7 +469,7 @@ const Timetable = () => {
         <div className="space-y-3">
           {weeklyClasses.filter((c) => String(c.day) === selectedMobileDay)
             .length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-gray-400 bg-white rounded-2xl border-2 border-dashed border-gray-100">
+            <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-700">
               <Clock size={48} className="mb-2 opacity-20" />
               <p className="font-medium">Hôm nay không có môn nào!</p>
               <p className="text-xs">Chạm vào nút "+" để thêm lịch</p>
@@ -489,12 +488,12 @@ const Timetable = () => {
       {/* --- IMPORT MODAL --- */}
       {isImportModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="font-bold text-xl mb-4 text-gray-800">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="font-bold text-xl mb-4 text-gray-800 dark:text-white">
               Nhập từ Excel
             </h3>
 
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center mb-4 hover:bg-gray-50 transition-colors cursor-pointer relative group bg-gray-50/50">
+            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center mb-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer relative group bg-gray-50/50 dark:bg-gray-700/50">
               <input
                 type="file"
                 accept=".xlsx, .xls"
@@ -504,17 +503,17 @@ const Timetable = () => {
               <div className="group-hover:scale-110 transition-transform duration-200">
                 <Upload className="mx-auto text-blue-500 mb-3" size={48} />
               </div>
-              <p className="text-sm font-bold text-gray-700">
+              <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
                 Nhấn để tải lên file Excel
               </p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                 Hỗ trợ định dạng .xlsx, .xls
               </p>
             </div>
 
             {/* 👇 ĐÃ THÊM LẠI LINK HỖ TRỢ Ở ĐÂY */}
-            <div className="text-center mb-6 bg-blue-50 p-3 rounded-lg border border-blue-100">
-              <p className="text-xs text-blue-800 mb-1 font-medium">
+            <div className="text-center mb-6 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
+              <p className="text-xs text-blue-800 dark:text-blue-300 mb-1 font-medium">
                 Chưa có file Excel?
               </p>
               <a
@@ -529,7 +528,7 @@ const Timetable = () => {
 
             <button
               onClick={() => setImportModalOpen(false)}
-              className="w-full py-3 bg-gray-100 rounded-xl font-bold text-gray-600 hover:bg-gray-200 transition-colors"
+              className="w-full py-3 bg-gray-100 dark:bg-gray-700 rounded-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
               Đóng
             </button>

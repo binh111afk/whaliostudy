@@ -151,11 +151,11 @@ const Community = () => {
             {/* Posts List */}
             <div className="flex flex-col gap-4">
                 {displayedPosts.length === 0 ? (
-                    <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
+                    <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400 dark:text-gray-500">
                             <Users size={32}/>
                         </div>
-                        <p className="text-gray-500 font-medium">Chưa có bài viết nào ở đây...</p>
+                        <p className="text-gray-500 dark:text-gray-400 font-medium">Chưa có bài viết nào ở đây...</p>
                         <button onClick={() => setCreateModalOpen(true)} className="mt-4 text-blue-600 font-bold hover:underline">
                             Hãy là người đầu tiên đăng bài!
                         </button>
@@ -183,43 +183,43 @@ const Community = () => {
         <div className="hidden xl:block xl:col-span-1 space-y-6 sticky top-24">
             
             {/* Widget 1: Intro */}
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
                 <div className="flex items-center gap-3 mb-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0">
                         <Users size={24} />
                     </div>
                     <div className="overflow-hidden">
-                        <h3 className="font-bold text-gray-800 text-lg truncate">Cộng đồng Whalio</h3>
-                        <p className="text-xs text-gray-500 truncate">Nơi chia sẻ kiến thức</p>
+                        <h3 className="font-bold text-gray-800 dark:text-white text-lg truncate">Cộng đồng Whalio</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">Nơi chia sẻ kiến thức</p>
                     </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-center py-3 border-t border-gray-100">
+                <div className="grid grid-cols-3 gap-2 text-center py-3 border-t border-gray-100 dark:border-gray-700">
                     <div>
-                        <div className="font-black text-gray-800 text-lg">{posts.length}</div>
-                        <div className="text-[10px] text-gray-400 uppercase font-bold">Bài viết</div>
+                        <div className="font-black text-gray-800 dark:text-white text-lg">{posts.length}</div>
+                        <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">Bài viết</div>
                     </div>
                     <div>
-                        <div className="font-black text-gray-800 text-lg">{posts.reduce((acc, p) => acc + (p.comments?.length || 0), 0)}</div>
-                        <div className="text-[10px] text-gray-400 uppercase font-bold">Thảo luận</div>
+                        <div className="font-black text-gray-800 dark:text-white text-lg">{posts.reduce((acc, p) => acc + (p.comments?.length || 0), 0)}</div>
+                        <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">Thảo luận</div>
                     </div>
                     <div>
-                        <div className="font-black text-gray-800 text-lg">{posts.filter(p => p.author === user?.username).length}</div>
-                        <div className="text-[10px] text-gray-400 uppercase font-bold">Của bạn</div>
+                        <div className="font-black text-gray-800 dark:text-white text-lg">{posts.filter(p => p.author === user?.username).length}</div>
+                        <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">Của bạn</div>
                     </div>
                 </div>
             </div>
 
             {/* Widget 2: Rules */}
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <h4 className="font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
                     <Shield size={18} className="text-green-600"/> Quy tắc
                 </h4>
                 <ul className="space-y-3">
-                    <li className="flex gap-2 text-sm text-gray-600">
+                    <li className="flex gap-2 text-sm text-gray-600 dark:text-gray-400">
                         <span className="text-blue-500 font-bold">1.</span>
                         Tôn trọng, không spam.
                     </li>
-                    <li className="flex gap-2 text-sm text-gray-600">
+                    <li className="flex gap-2 text-sm text-gray-600 dark:text-gray-400">
                         <span className="text-blue-500 font-bold">2.</span>
                         Chia sẻ kiến thức bổ ích.
                     </li>

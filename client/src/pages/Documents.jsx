@@ -595,33 +595,33 @@ const Documents = () => {
         <div className="space-y-8">
           {/* 1. Bộ lọc */}
           <div>
-            <h3 className="font-bold text-lg mb-4 text-gray-800">Bộ lọc</h3>
+            <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-white">Bộ lọc</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1">
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
                   Tìm kiếm
                 </label>
                 <div className="relative">
                   <Search
                     size={16}
-                    className="absolute left-3 top-3 text-gray-400"
+                    className="absolute left-3 top-3 text-gray-400 dark:text-gray-500"
                   />
                   <input
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Tên tài liệu..."
-                    className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 outline-none"
+                    className="w-full pl-9 pr-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1">
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
                   Môn học
                 </label>
                 <select
                   value={filterSubject}
                   onChange={(e) => setFilterSubject(e.target.value)}
-                  className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm outline-none cursor-pointer"
+                  className="w-full p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm outline-none cursor-pointer text-gray-800 dark:text-gray-200"
                 >
                   {SUBJECTS.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -631,13 +631,13 @@ const Documents = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1">
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
                   Loại file
                 </label>
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm outline-none cursor-pointer"
+                  className="w-full p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm outline-none cursor-pointer text-gray-800 dark:text-gray-200"
                 >
                   <option value="all">Tất cả</option>
                   <option value="pdf">PDF Document</option>
@@ -651,18 +651,18 @@ const Documents = () => {
 
           {/* 2. Thống kê */}
           <div>
-            <h3 className="font-bold text-lg mb-4 text-gray-800">Thống kê</h3>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="flex justify-between items-center p-4 border-b border-gray-100">
-                <span className="text-sm text-gray-600">Tổng tài liệu</span>
-                <span className="font-bold text-gray-800">{stats.total}</span>
+            <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-white">Thống kê</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Tổng tài liệu</span>
+                <span className="font-bold text-gray-800 dark:text-white">{stats.total}</span>
               </div>
-              <div className="flex justify-between items-center p-4 border-b border-gray-100">
-                <span className="text-sm text-gray-600">Đã lưu</span>
+              <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Đã lưu</span>
                 <span className="font-bold text-blue-600">{stats.saved}</span>
               </div>
               <div className="flex justify-between items-center p-4">
-                <span className="text-sm text-gray-600">Mới (7 ngày)</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Mới (7 ngày)</span>
                 <span className="font-bold text-green-600">{stats.new}</span>
               </div>
             </div>
@@ -670,14 +670,14 @@ const Documents = () => {
 
           {/* 3. Thư viện cá nhân */}
           <div>
-            <h3 className="font-bold text-lg mb-4 text-gray-800">Thư viện</h3>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden p-2 space-y-1">
+            <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-white">Thư viện</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden p-2 space-y-1">
               <button
                 onClick={() => setViewMode("all")}
                 className={`w-full flex items-center justify-between p-3 rounded-lg text-sm font-medium transition-colors ${
                   viewMode === "all"
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-gray-600 hover:bg-gray-50"
+                    ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 <span className="flex items-center gap-2">
@@ -689,8 +689,8 @@ const Documents = () => {
                 onClick={() => setViewMode("saved")}
                 className={`w-full flex items-center justify-between p-3 rounded-lg text-sm font-medium transition-colors ${
                   viewMode === "saved"
-                    ? "bg-orange-50 text-orange-600"
-                    : "text-gray-600 hover:bg-gray-50"
+                    ? "bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 <span className="flex items-center gap-2">
@@ -705,7 +705,7 @@ const Documents = () => {
         {/* === MAIN CONTENT === */}
         <div className="lg:col-span-3">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
               {viewMode === "saved" ? (
                 <>
                   <Star className="text-orange-500 fill-orange-500" /> Tài liệu
@@ -717,7 +717,7 @@ const Documents = () => {
             </h2>
             <button
               onClick={() => setUploadModalOpen(true)}
-              className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-black transition-all shadow-lg shadow-gray-200"
+              className="flex items-center gap-2 bg-gray-900 dark:bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-black dark:hover:bg-blue-700 transition-all shadow-lg shadow-gray-200 dark:shadow-none"
             >
               <Upload size={16} /> Tải lên
             </button>
@@ -726,8 +726,8 @@ const Documents = () => {
           {isLoading ? (
             <div className="text-center py-20 text-gray-400">Đang tải...</div>
           ) : filteredDocs.length === 0 ? (
-            <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-              <p className="text-gray-500">
+            <div className="text-center py-20 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-600">
+              <p className="text-gray-500 dark:text-gray-400">
                 {viewMode === "saved"
                   ? "Bạn chưa lưu tài liệu nào."
                   : "Không tìm thấy tài liệu."}
@@ -753,7 +753,7 @@ const Documents = () => {
                   return (
                     <div
                       key={doc.id}
-                      className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group flex flex-col h-full relative"
+                      className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all group flex flex-col h-full relative"
                     >
                       {/* HEADER: Icon và Title + Badge (Đã sửa lỗi đè chữ) */}
                       <div className="flex items-start gap-4 mb-4">
@@ -768,7 +768,7 @@ const Documents = () => {
                           <div className="flex justify-between items-start gap-2">
                             {/* Tên file (Có thể xuống dòng) */}
                             <h4
-                              className="font-bold text-gray-800 text-sm line-clamp-2 leading-tight"
+                              className="font-bold text-gray-800 dark:text-white text-sm line-clamp-2 leading-tight"
                               title={doc.name}
                             >
                               {doc.name}
@@ -776,11 +776,11 @@ const Documents = () => {
 
                             {/* Badge (Không dùng absolute nữa, dùng flex item để chiếm chỗ) */}
                             {doc.visibility === "private" ? (
-                              <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200 whitespace-nowrap">
+                              <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 whitespace-nowrap">
                                 <Lock size={10} /> Riêng tư
                               </span>
                             ) : (
-                              <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100 whitespace-nowrap">
+                              <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 whitespace-nowrap">
                                 <Globe size={10} /> Công khai
                               </span>
                             )}
@@ -789,17 +789,17 @@ const Documents = () => {
                       </div>
 
                       {/* INFO: Người tải, Môn, Ngày... (Giữ nguyên) */}
-                      <div className="space-y-2 text-xs text-gray-500 mb-6 flex-1">
+                      <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400 mb-6 flex-1">
                         <div className="flex justify-between">
                           <span>Người tải:</span>
-                          <span className="font-medium text-gray-700 truncate ml-2">
+                          <span className="font-medium text-gray-700 dark:text-gray-300 truncate ml-2">
                             {doc.uploader || "Ẩn danh"}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span>Môn:</span>
                           <span
-                            className="font-medium text-gray-700 truncate max-w-[120px]"
+                            className="font-medium text-gray-700 dark:text-gray-300 truncate max-w-[120px]"
                             title={subjectName}
                           >
                             {subjectName}
@@ -807,7 +807,7 @@ const Documents = () => {
                         </div>
                         <div className="flex justify-between">
                           <span>Ngày:</span>
-                          <span className="font-medium text-gray-700">
+                          <span className="font-medium text-gray-700 dark:text-gray-300">
                             {new Date(doc.createdAt).toLocaleDateString(
                               "vi-VN"
                             )}
@@ -815,17 +815,17 @@ const Documents = () => {
                         </div>
                         <div className="flex justify-between">
                           <span>Kích cỡ:</span>
-                          <span className="font-medium text-gray-700">
+                          <span className="font-medium text-gray-700 dark:text-gray-300">
                             {(doc.size / 1024 / 1024).toFixed(2)} MB
                           </span>
                         </div>
                       </div>
 
                       {/* ACTIONS FOOTER (Giữ nguyên) */}
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
                         <button
                           onClick={() => handleView(doc)}
-                          className="p-2 text-gray-400 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
+                          className="p-2 text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
                           title="Xem"
                         >
                           <Eye size={18} />
@@ -834,8 +834,8 @@ const Documents = () => {
                           onClick={() => handleToggleSave(doc.id)}
                           className={`p-2 rounded-lg transition-colors ${
                             isSaved
-                              ? "text-blue-600 bg-blue-50"
-                              : "text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                              ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30"
+                              : "text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
                           }`}
                           title="Lưu"
                         >
@@ -852,14 +852,14 @@ const Documents = () => {
                                 setDocToEdit(doc);
                                 setEditModalOpen(true);
                               }}
-                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                               title="Sửa"
                             >
                               <Edit3 size={18} />
                             </button>
                             <button
                               onClick={() => handleDelete(doc.id)}
-                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                               title="Xóa"
                             >
                               <Trash2 size={18} />
@@ -878,11 +878,11 @@ const Documents = () => {
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="p-2 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    <ChevronLeft size={20} className="text-gray-600" />
+                    <ChevronLeft size={20} className="text-gray-600 dark:text-gray-400" />
                   </button>
-                  <span className="text-sm font-bold text-gray-700 bg-gray-100 px-4 py-2 rounded-lg">
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-4 py-2 rounded-lg">
                     Trang {currentPage} / {totalPages}
                   </span>
                   <button
@@ -890,9 +890,9 @@ const Documents = () => {
                       setCurrentPage((p) => Math.min(totalPages, p + 1))
                     }
                     disabled={currentPage === totalPages}
-                    className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="p-2 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    <ChevronRight size={20} className="text-gray-600" />
+                    <ChevronRight size={20} className="text-gray-600 dark:text-gray-400" />
                   </button>
                 </div>
               )}

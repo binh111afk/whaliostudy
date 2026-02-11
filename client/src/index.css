@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tailwind v4: Dùng class-based dark mode thay vì prefers-color-scheme */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* Khai báo lại màu xanh thương hiệu của Whalio */
   --color-primary: #134691;

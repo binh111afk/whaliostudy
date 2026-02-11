@@ -601,11 +601,11 @@ const GpaCalc = () => {
 
               {/* NỘI DUNG KỲ HỌC */}
               {sem.isExpanded && (
-                <div className="border-t border-gray-100">
+                <div className="border-t border-gray-100 dark:border-gray-700">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[900px]">
                       <thead>
-                        <tr className="bg-white text-gray-400 text-[10px] uppercase tracking-wider border-b border-gray-100">
+                        <tr className="bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 text-[10px] uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
                           <th className="p-3 font-bold w-1/4">
                             Tên môn & Loại
                           </th>
@@ -615,7 +615,7 @@ const GpaCalc = () => {
                           <th className="p-3 w-10"></th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                         {sem.subjects.map((sub) => {
                           const {
                             currentScore,
@@ -648,14 +648,14 @@ const GpaCalc = () => {
                           return (
                             <tr
                               key={sub.id}
-                              className="hover:bg-blue-50/30 transition-colors align-top group"
+                              className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors align-top group"
                             >
                               <td className="p-3">
                                 <input
                                   list="subject-suggestions"
                                   type="text"
                                   placeholder="Nhập tên môn..."
-                                  className="w-full font-bold text-gray-700 bg-transparent outline-none placeholder-gray-300 text-sm mb-1"
+                                  className="w-full font-bold text-gray-700 dark:text-gray-200 bg-transparent outline-none placeholder-gray-300 dark:placeholder-gray-600 text-sm mb-1"
                                   value={sub.name}
                                   onChange={(e) =>
                                     updateSubject(
@@ -676,8 +676,8 @@ const GpaCalc = () => {
                                       className={`text-[12px] px-1.5 py-0.5 my-2 rounded border transition-all cursor-pointer font-bold ${
                                         sub.type === t
                                           ? t === "general"
-                                            ? "bg-blue-100 text-blue-700 border-blue-200"
-                                            : "bg-purple-100 text-purple-700 border-purple-200"
+                                            ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-700"
+                                            : "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-700"
                                           : "text-gray-400 border-gray-200 hover:bg-gray-50"
                                       }`}
                                     >
@@ -715,8 +715,8 @@ const GpaCalc = () => {
                                         placeholder="?"
                                         className={`w-17 h-8 border rounded px-1 py-0.5 text-xs font-bold outline-none text-center text-[16px] ${
                                           comp.score === ""
-                                            ? "bg-yellow-50 border-yellow-200"
-                                            : "bg-white"
+                                            ? "bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-700 text-gray-800 dark:text-gray-200"
+                                            : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200"
                                         }`}
                                         value={comp.score}
                                         onChange={(e) =>
@@ -729,13 +729,13 @@ const GpaCalc = () => {
                                           )
                                         }
                                       />
-                                      <span className="text-gray-300 text-[17px]">
+                                      <span className="text-gray-300 dark:text-gray-500 text-[17px]">
                                         x
                                       </span>
                                       <input
                                         type="number"
                                         placeholder="%"
-                                        className="w-13 h-8 bg-gray-50 border-none rounded px-1 py-0.5 text-xs text-center text-[16px] "
+                                        className="w-13 h-8 bg-gray-50 dark:bg-gray-700 border-none rounded px-1 py-0.5 text-xs text-center text-[16px] text-gray-800 dark:text-gray-200"
                                         value={comp.weight}
                                         onChange={(e) =>
                                           updateComponent(
@@ -756,7 +756,7 @@ const GpaCalc = () => {
                                               comp.id
                                             )
                                           }
-                                          className="text-gray-300 hover:text-red-500"
+                                          className="text-gray-300 dark:text-gray-500 hover:text-red-500"
                                         >
                                           <Trash2 size={12} />
                                         </button>
@@ -765,7 +765,7 @@ const GpaCalc = () => {
                                   ))}
                                   <button
                                     onClick={() => addComponent(sem.id, sub.id)}
-                                    className="text-[14px] text-primary font-bold hover:underline flex items-center gap-1 cursor-pointer mx-5 py-2"
+                                    className="text-[14px] text-primary dark:text-blue-400 font-bold hover:underline flex items-center gap-1 cursor-pointer mx-5 py-2"
                                   >
                                     <Plus size={12} /> Thêm cột
                                   </button>
@@ -775,10 +775,10 @@ const GpaCalc = () => {
                                 {isFull && gradeInfo ? (
                                   <div className="flex flex-col">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-lg font-black text-gray-800">
+                                      <span className="text-lg font-black text-gray-800 dark:text-white">
                                         {finalScore10}
                                       </span>
-                                      <span className="text-xs font-bold text-gray-400 bg-gray-100 px-1 rounded">
+                                      <span className="text-xs font-bold text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-1 rounded">
                                         ({gradeInfo.point})
                                       </span>
                                       <span
@@ -803,7 +803,7 @@ const GpaCalc = () => {
                                       predictions.map((p, i) => (
                                         <div
                                           key={i}
-                                          className="flex items-center gap-1 bg-white border px-1.5 py-0.5 rounded shadow-sm"
+                                          className="flex items-center gap-1 bg-white dark:bg-gray-700 border dark:border-gray-600 px-1.5 py-0.5 rounded shadow-sm"
                                         >
                                           <span
                                             className={`text-[10px] font-bold ${
@@ -814,10 +814,10 @@ const GpaCalc = () => {
                                           >
                                             {p.char}
                                           </span>
-                                          <span className="text-gray-300 text-[10px]">
+                                          <span className="text-gray-300 dark:text-gray-500 text-[10px]">
                                             →
                                           </span>
-                                          <span className="text-xs font-black text-gray-800">
+                                          <span className="text-xs font-black text-gray-800 dark:text-white">
                                             {p.score}
                                           </span>
                                         </div>
@@ -829,7 +829,7 @@ const GpaCalc = () => {
                                     )}
                                   </div>
                                 ) : (
-                                  <span className="text-gray-400 text-xs italic">
+                                  <span className="text-gray-400 dark:text-gray-500 text-xs italic">
                                     ...
                                   </span>
                                 )}
@@ -837,7 +837,7 @@ const GpaCalc = () => {
                               <td className="p-3">
                                 <button
                                   onClick={() => removeSubject(sem.id, sub.id)}
-                                  className="text-gray-300 hover:text-red-500"
+                                  className="text-gray-300 dark:text-gray-500 hover:text-red-500"
                                 >
                                   <Trash2 size={16} />
                                 </button>
@@ -850,7 +850,7 @@ const GpaCalc = () => {
                   </div>
                   <button
                     onClick={() => addSubject(sem.id)}
-                    className="w-full py-3 bg-gray-50 text-gray-500 text-sm font-bold hover:bg-gray-100 transition-all flex items-center justify-center gap-2 border-t border-gray-100"
+                    className="w-full py-3 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm font-bold hover:bg-gray-100 dark:hover:bg-gray-600 transition-all flex items-center justify-center gap-2 border-t border-gray-100 dark:border-gray-600"
                   >
                     <Plus size={16} /> Thêm môn vào {sem.name}
                   </button>
@@ -861,7 +861,7 @@ const GpaCalc = () => {
 
           <button
             onClick={addSemester}
-            className="w-full py-4 border-2 border-dashed border-gray-300 rounded-2xl text-gray-500 font-bold hover:border-primary hover:text-primary hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+            className="w-full py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl text-gray-500 dark:text-gray-400 font-bold hover:border-primary hover:text-primary dark:hover:border-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all flex items-center justify-center gap-2"
           >
             <FolderPlus size={20} /> Thêm Học Kỳ Mới
           </button>
@@ -869,7 +869,7 @@ const GpaCalc = () => {
 
         {/* CỘT PHẢI: TỔNG KẾT (Sticky) */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-3xl shadow-xl shadow-blue-100 border border-gray-100 p-6 sticky top-24 space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl shadow-blue-100 dark:shadow-none border border-gray-100 dark:border-gray-700 p-6 sticky top-24 space-y-6">
             <div className="text-center py-6 bg-gradient-to-br from-primary to-blue-600 rounded-2xl text-white shadow-lg relative overflow-hidden">
               <div className="relative z-10">
                 <p className="opacity-80 font-medium text-xs uppercase tracking-widest">
@@ -893,32 +893,32 @@ const GpaCalc = () => {
               <div
                 className={`p-4 rounded-xl border ${
                   result.prediction4 <= 4.0
-                    ? "bg-purple-50 border-purple-100"
-                    : "bg-red-50 border-red-100"
+                    ? "bg-purple-50 dark:bg-purple-900/20 border-purple-100 dark:border-purple-800"
+                    : "bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800"
                 }`}
               >
-                <p className="text-xs font-bold uppercase mb-2 text-gray-500 flex items-center gap-1">
+                <p className="text-xs font-bold uppercase mb-2 text-gray-500 dark:text-gray-400 flex items-center gap-1">
                   <Target size={14} /> Để đạt GPA {targetGpa}
                 </p>
                 {result.prediction4 ? (
                   result.prediction4 <= 4.0 ? (
                     <div>
-                      <p className="text-sm text-gray-700 leading-tight">
+                      <p className="text-sm text-gray-700 dark:text-gray-300 leading-tight">
                         Các môn chưa có điểm cần trung bình:
                       </p>
 
                       {/* Dòng 1: Điểm hệ 4 */}
-                      <p className="text-xl font-black text-purple-600 mt-2">
+                      <p className="text-xl font-black text-purple-600 dark:text-purple-400 mt-2">
                         {result.prediction4.toFixed(2)}{" "}
-                        <span className="text-xs font-normal text-gray-400">
+                        <span className="text-xs font-normal text-gray-400 dark:text-gray-500">
                           / 4.0
                         </span>
                       </p>
 
                       {/* Dòng 2: QUY ĐỔI RA HỆ 10 (THEO YÊU CẦU CỦA ÔNG) */}
-                      <div className="mt-2 pt-2 border-t border-purple-200">
-                        <p className="text-xs text-gray-500">Tương đương:</p>
-                        <p className="font-bold text-purple-800 text-sm flex items-center gap-1">
+                      <div className="mt-2 pt-2 border-t border-purple-200 dark:border-purple-700">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Tương đương:</p>
+                        <p className="font-bold text-purple-800 dark:text-purple-300 text-sm flex items-center gap-1">
                           ~ {result.prediction10} thang 10 (
                           {result.predictionChar})
                         </p>
@@ -930,7 +930,7 @@ const GpaCalc = () => {
                     </div>
                   )
                 ) : (
-                  <p className="text-xs text-gray-400 italic">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 italic">
                     Nhập thêm môn...
                   </p>
                 )}
@@ -938,27 +938,27 @@ const GpaCalc = () => {
             )}
 
             <div className="space-y-3 pt-2">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-                <span className="text-gray-500 text-xs font-bold uppercase">
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-xl">
+                <span className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase">
                   Hệ 10
                 </span>
-                <span className="font-bold text-gray-800 text-lg">
+                <span className="font-bold text-gray-800 dark:text-white text-lg">
                   {result.gpa10}
                 </span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-                <span className="text-gray-500 text-xs font-bold uppercase">
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-xl">
+                <span className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase">
                   Tín chỉ
                 </span>
-                <span className="font-bold text-gray-800">
+                <span className="font-bold text-gray-800 dark:text-white">
                   {result.totalCredits}
                 </span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-xl">
-                <span className="text-green-600 text-xs font-bold uppercase">
+              <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                <span className="text-green-600 dark:text-green-400 text-xs font-bold uppercase">
                   Tích lũy
                 </span>
-                <span className="font-bold text-green-700">
+                <span className="font-bold text-green-700 dark:text-green-400">
                   {result.passedCredits}
                 </span>
               </div>

@@ -540,11 +540,11 @@ const DocumentViewer = () => {
 
   if (loading)
     return (
-      <div className="p-10 text-center animate-pulse">Đang tải tài liệu...</div>
+      <div className="p-10 text-center animate-pulse text-gray-500 dark:text-gray-400">Đang tải tài liệu...</div>
     );
   if (!document)
     return (
-      <div className="p-10 text-center text-red-500">
+      <div className="p-10 text-center text-red-500 dark:text-red-400">
         Không tìm thấy tài liệu!
       </div>
     );
@@ -555,7 +555,7 @@ const DocumentViewer = () => {
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-gray-600 hover:text-blue-600 font-bold transition-colors w-fit"
+          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-colors w-fit"
         >
           <ArrowLeft size={20} /> Quay lại
         </button>
@@ -564,8 +564,8 @@ const DocumentViewer = () => {
             onClick={handleToggleSave}
             className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all border ${
               isSaved
-                ? "bg-blue-50 text-blue-600 border-blue-200"
-                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700"
+                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
             }`}
           >
             <Bookmark size={18} fill={isSaved ? "currentColor" : "none"} />{" "}
@@ -575,7 +575,7 @@ const DocumentViewer = () => {
           {/* Nút CHIA SẺ -> Mở Modal */}
           <button
             onClick={() => setShareModalOpen(true)}
-            className="px-4 py-2 bg-white text-gray-600 border border-gray-200 rounded-xl font-bold hover:bg-gray-50 transition-all flex items-center gap-2"
+            className="px-4 py-2 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center gap-2"
           >
             <Share2 size={18} /> Chia sẻ
           </button>
@@ -584,7 +584,7 @@ const DocumentViewer = () => {
           <button
             onClick={handleDownload}
             disabled={isDownloading}
-            className="px-4 py-2 bg-gray-900 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-black shadow-lg shadow-gray-200 transition-all disabled:opacity-70 cursor-pointer"
+            className="px-4 py-2 bg-gray-900 dark:bg-blue-600 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-black dark:hover:bg-blue-700 shadow-lg shadow-gray-200 dark:shadow-none transition-all disabled:opacity-70 cursor-pointer"
           >
             {isDownloading ? (
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -599,7 +599,7 @@ const DocumentViewer = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* CỘT TRÁI: Viewer */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="flex items-start gap-4">
               {/* 👇 THAY ĐOẠN NÀY: Dùng FileThumbnail thay cho FileText cũ */}
               <FileThumbnail
@@ -608,10 +608,10 @@ const DocumentViewer = () => {
               />
 
               <div>
-                <h1 className="text-xl font-bold text-gray-800 leading-snug mb-2">
+                <h1 className="text-xl font-bold text-gray-800 dark:text-white leading-snug mb-2">
                   {document.name}
                 </h1>
-                <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
                   <span className="flex items-center gap-1">
                     <User size={14} /> {document.uploader}
                   </span>
@@ -625,15 +625,15 @@ const DocumentViewer = () => {
               </div>
             </div>
           </div>
-          <div className="bg-white p-1 rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 p-1 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             {renderViewer(document)}
           </div>
         </div>
 
         {/* CỘT PHẢI: Gợi ý & Đóng góp */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 sticky top-6">
-            <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 sticky top-6">
+            <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
               <Bookmark className="text-yellow-500" size={18} /> Tài liệu cùng
               môn
             </h3>
@@ -644,7 +644,7 @@ const DocumentViewer = () => {
                   <div
                     key={doc.id}
                     onClick={() => navigate(`/documents/${doc.id || doc._id}`)}
-                    className="group p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-all border border-transparent hover:border-gray-100 flex gap-3"
+                    className="group p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-all border border-transparent hover:border-gray-100 dark:hover:border-gray-600 flex gap-3"
                   >
                     {/* 👇 THAY ĐOẠN ICON CŨ BẰNG COMPONENT NÀY */}
                     <FileThumbnail
@@ -653,10 +653,10 @@ const DocumentViewer = () => {
                     />
 
                     <div className="min-w-0 flex flex-col justify-center">
-                      <h4 className="text-sm font-semibold text-gray-700 line-clamp-2 group-hover:text-blue-600 transition-colors leading-snug">
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug">
                         {doc.name}
                       </h4>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                      <div className="flex items-center gap-2 mt-1 text-xs text-gray-400 dark:text-gray-500">
                         <span>
                           {doc.size
                             ? (doc.size / 1024 / 1024).toFixed(1) + " MB"
@@ -670,14 +670,14 @@ const DocumentViewer = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-400 text-center py-4">
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
                 Chưa có tài liệu liên quan.
               </p>
             )}
 
             {/* BOX ĐÓNG GÓP TÀI LIỆU */}
-            <div className="mt-6 pt-6 border-t border-gray-100">
-              <div className="bg-gradient-to-br from-blue-600 to-purple-700 rounded-2xl p-5 text-white text-center relative overflow-hidden shadow-lg shadow-blue-200">
+            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
+              <div className="bg-gradient-to-br from-blue-600 to-purple-700 rounded-2xl p-5 text-white text-center relative overflow-hidden shadow-lg shadow-blue-200 dark:shadow-none">
                 <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full -mr-8 -mt-8"></div>
                 <div className="absolute bottom-0 left-0 w-12 h-12 bg-white/10 rounded-full -ml-6 -mb-6"></div>
 
