@@ -142,7 +142,7 @@ const MyDocumentsTab = ({ currentUser }) => {
   const handleUpload = async (formData) => {
     try {
       // Force visibility to private for profile uploads
-      formData.set('visibility', 'private');
+      formData.set("visibility", "private");
       const res = await documentService.uploadDocument(formData);
       if (res.success) {
         alert("Tải lên thành công!");
@@ -188,10 +188,7 @@ const MyDocumentsTab = ({ currentUser }) => {
                   : "hover:bg-gray-200 dark:hover:bg-gray-600"
               }`}
             >
-              <Grid3X3
-                size={16}
-                className="text-gray-600 dark:text-gray-300"
-              />
+              <Grid3X3 size={16} className="text-gray-600 dark:text-gray-300" />
             </button>
             <button
               onClick={() => setViewMode("list")}
@@ -222,7 +219,8 @@ const MyDocumentsTab = ({ currentUser }) => {
             Chưa có tài liệu riêng tư nào
           </h4>
           <p className="text-gray-500 dark:text-gray-400 mb-4">
-            Bạn chưa upload tài liệu riêng tư nào. Hãy vào trang Tài liệu để upload!
+            Bạn chưa upload tài liệu riêng tư nào. Hãy vào trang Tài liệu để
+            upload!
           </p>
           <button
             onClick={() => setShowUploadModal(true)}
@@ -246,7 +244,10 @@ const MyDocumentsTab = ({ currentUser }) => {
                   </h4>
                   <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
                     <Calendar size={12} />
-                    <span>{doc.date || new Date(doc.createdAt).toLocaleDateString("vi-VN")}</span>
+                    <span>
+                      {doc.date ||
+                        new Date(doc.createdAt).toLocaleDateString("vi-VN")}
+                    </span>
                     <span>•</span>
                     <span>{formatSize(doc.size)}</span>
                   </div>
@@ -274,7 +275,10 @@ const MyDocumentsTab = ({ currentUser }) => {
                 </h4>
               </div>
               <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                <span>{doc.date || new Date(doc.createdAt).toLocaleDateString("vi-VN")}</span>
+                <span>
+                  {doc.date ||
+                    new Date(doc.createdAt).toLocaleDateString("vi-VN")}
+                </span>
                 <span>{formatSize(doc.size)}</span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs rounded-full">
                   <Eye size={10} /> Riêng tư
@@ -308,7 +312,10 @@ const AcademicSettingsTab = ({ currentUser, onUpdateUser }) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const result = await userService.updateSettings(currentUser.username, settings);
+      const result = await userService.updateSettings(
+        currentUser.username,
+        settings
+      );
       if (result.success) {
         alert("Đã lưu cấu hình học tập thành công!");
         // Update user state in parent if callback exists
@@ -357,7 +364,10 @@ const AcademicSettingsTab = ({ currentUser, onUpdateUser }) => {
               type="number"
               value={settings.creditPrice}
               onChange={(e) =>
-                setSettings({ ...settings, creditPrice: Number(e.target.value) })
+                setSettings({
+                  ...settings,
+                  creditPrice: Number(e.target.value),
+                })
               }
               className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="450000"
@@ -485,7 +495,8 @@ const StatisticsTab = ({ currentUser }) => {
   };
 
   const gpaData = stats?.gpaSummary?.length > 0 ? stats.gpaSummary : [];
-  const creditData = stats?.creditDistribution?.filter(d => d.value > 0) || [];
+  const creditData =
+    stats?.creditDistribution?.filter((d) => d.value > 0) || [];
   const hasGpaData = gpaData.length > 0;
   const hasCreditData = creditData.length > 0;
 
@@ -528,7 +539,10 @@ const StatisticsTab = ({ currentUser }) => {
         {/* GPA Line Chart */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="text-blue-600 dark:text-blue-400" size={20} />
+            <TrendingUp
+              className="text-blue-600 dark:text-blue-400"
+              size={20}
+            />
             <h4 className="text-lg font-bold text-gray-800 dark:text-white">
               GPA qua các kỳ
             </h4>
@@ -620,8 +634,9 @@ const StatisticsTab = ({ currentUser }) => {
                       backgroundColor: "#1F2937",
                       border: "1px solid #374151",
                       borderRadius: "8px",
-                      color: "#F9FAFB",
+                      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                     }}
+                    itemStyle={{ color: "#FFFFFF", fontWeight: "bold" }}
                     formatter={(value) => [`${value} tín chỉ`, "Số lượng"]}
                   />
                   <Legend
@@ -659,7 +674,8 @@ const StatisticsTab = ({ currentUser }) => {
               <span className="font-medium text-gray-800 dark:text-white">
                 {studyStats.totalCredits > 0
                   ? Math.round(
-                      (studyStats.completedCredits / studyStats.totalCredits) * 100
+                      (studyStats.completedCredits / studyStats.totalCredits) *
+                        100
                     )
                   : 0}
                 %
@@ -671,7 +687,9 @@ const StatisticsTab = ({ currentUser }) => {
                 style={{
                   width: `${
                     studyStats.totalCredits > 0
-                      ? (studyStats.completedCredits / studyStats.totalCredits) * 100
+                      ? (studyStats.completedCredits /
+                          studyStats.totalCredits) *
+                        100
                       : 0
                   }%`,
                 }}
@@ -682,17 +700,23 @@ const StatisticsTab = ({ currentUser }) => {
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-gray-600 dark:text-gray-400">
-                  GPA hiện tại ({gpaData[gpaData.length - 1]?.gpa?.toFixed(2) || 0}/4.0)
+                  GPA hiện tại (
+                  {gpaData[gpaData.length - 1]?.gpa?.toFixed(2) || 0}/4.0)
                 </span>
                 <span className="font-medium text-gray-800 dark:text-white">
-                  {Math.round(((gpaData[gpaData.length - 1]?.gpa || 0) / 4) * 100)}%
+                  {Math.round(
+                    ((gpaData[gpaData.length - 1]?.gpa || 0) / 4) * 100
+                  )}
+                  %
                 </span>
               </div>
               <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full transition-all duration-500"
                   style={{
-                    width: `${((gpaData[gpaData.length - 1]?.gpa || 0) / 4) * 100}%`,
+                    width: `${
+                      ((gpaData[gpaData.length - 1]?.gpa || 0) / 4) * 100
+                    }%`,
                   }}
                 />
               </div>
@@ -750,8 +774,12 @@ const Profile = ({ user, onUpdateUser }) => {
                 {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
               </div>
             </div>
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white">{user.fullName}</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+              {user.fullName}
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {user.email}
+            </p>
           </div>
 
           {/* Menu Navigation */}
@@ -892,7 +920,10 @@ const Profile = ({ user, onUpdateUser }) => {
           {activeTab === "stats" && <StatisticsTab currentUser={user} />}
 
           {activeTab === "settings" && (
-            <AcademicSettingsTab currentUser={user} onUpdateUser={onUpdateUser} />
+            <AcademicSettingsTab
+              currentUser={user}
+              onUpdateUser={onUpdateUser}
+            />
           )}
         </div>
       </div>
