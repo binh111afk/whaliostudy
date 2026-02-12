@@ -587,7 +587,7 @@ const Documents = () => {
 
   // 👇 THAY ĐỔI 2: Xử lý Lưu không reload trang
   const handleToggleSave = async (docId) => {
-    if (!user) {
+    if (!currentUser) {
       return toast("Nhắc nhẹ một chút...", {
         // Dùng toast() thường, không dùng .error
         description: "Đăng nhập để Whalio lưu lại bảng điểm này nhé bro!",
