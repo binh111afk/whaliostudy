@@ -339,6 +339,15 @@ const userSchema = new mongoose.Schema({
     avatar: { type: String, default: null },
     role: { type: String, default: 'member', enum: ['member', 'admin'] },
     totalTargetCredits: { type: Number, default: 150 },
+    
+    // Thông tin cá nhân mở rộng
+    phone: { type: String, default: '' },
+    gender: { type: String, default: 'Nam', enum: ['Nam', 'Nữ', 'Khác'] },
+    birthYear: { type: Number, default: null },
+    school: { type: String, default: '' },
+    city: { type: String, default: '' },
+    facebook: { type: String, default: '' },
+    
     savedDocs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Document' }],
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
@@ -1066,8 +1075,8 @@ app.post('/api/register', async (req, res) => {
 // 2. Profile APIs
 app.post('/api/update-profile', async (req, res) => {
     try {
-        // 1. Chỉ lấy những trường được phép update
-        const { username, fullName, email, avatar, totalTargetCredits } = req.body;
+        // 1. Lấy tất cả các trường được phép update
+        const { username, fullName, email, avatar, totalTargetCredits, phone, gender, birthYear, school, city, facebook } = req.body;
 
         // 2. Kiểm tra xem user có tồn tại không
         const user = await User.findOne({ username });
@@ -1076,10 +1085,16 @@ app.post('/api/update-profile', async (req, res) => {
         }
 
         // 3. Cập nhật thủ công từng trường (Loại bỏ role, password ra khỏi danh sách)
-        if (fullName) user.fullName = fullName;
-        if (email) user.email = email;
-        if (avatar) user.avatar = avatar;
-        if (totalTargetCredits) user.totalTargetCredits = parseInt(totalTargetCredits);
+        if (fullName !== undefined) user.fullName = fullName;
+        if (email !== undefined) user.email = email;
+        if (avatar !== undefined) user.avatar = avatar;
+        if (totalTargetCredits !== undefined) user.totalTargetCredits = parseInt(totalTargetCredits);
+        if (phone !== undefined) user.phone = phone;
+        if (gender !== undefined) user.gender = gender;
+        if (birthYear !== undefined) user.birthYear = birthYear ? parseInt(birthYear) : null;
+        if (school !== undefined) user.school = school;
+        if (city !== undefined) user.city = city;
+        if (facebook !== undefined) user.facebook = facebook;
         
         user.updatedAt = new Date();
         
@@ -1191,6 +1206,109 @@ app.post('/api/portal/update', async (req, res) => {
     } catch (err) {
         console.error('Update portal error:', err);
         res.status(500).json({ success: false, message: "Lỗi server" });
+    }
+});
+
+// ==================== BACKUP & RESTORE APIs ====================
+
+// Sao lưu dữ liệu cá nhân của user
+app.post('/api/backup', async (req, res) => {
+    try {
+        const { username } = req.body;
+        
+        if (!username) {
+            return res.status(400).json({ success: false, message: "Thiếu username" });
+        }
+
+        const user = await User.findOne({ username }).select('-password');
+        if (!user) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy user" });
+        }
+
+        // Thu thập dữ liệu từ các collection
+        const [events, timetables, gpaData, studySessions, quickNotes] = await Promise.all([
+            Event.find({ username }).lean(),
+            Timetable.find({ username }).lean(),
+            GpaModel.findOne({ username }).lean(),
+            StudySession.find({ username }).lean(),
+            QuickNote.find({ username }).lean()
+        ]);
+
+        const backupData = {
+            app: "Whalio",
+            version: "2.0",
+            timestamp: Date.now(),
+            exportDate: new Date().toLocaleString('vi-VN'),
+            username: username,
+            
+            user: user.toObject(),
+            events: events || [],
+            timetables: timetables || [],
+            gpa: gpaData || null,
+            studySessions: studySessions || [],
+            quickNotes: quickNotes || []
+        };
+
+        res.json({ success: true, data: backupData });
+    } catch (err) {
+        console.error('Backup error:', err);
+        res.status(500).json({ success: false, message: "Lỗi server" });
+    }
+});
+
+// Khôi phục dữ liệu từ file backup
+app.post('/api/restore', async (req, res) => {
+    try {
+        const { username, backupData } = req.body;
+        
+        if (!username || !backupData) {
+            return res.status(400).json({ success: false, message: "Thiếu dữ liệu" });
+        }
+
+        // Validate backup data
+        if (backupData.app !== "Whalio") {
+            return res.status(400).json({ success: false, message: "File backup không hợp lệ" });
+        }
+
+        // Xóa dữ liệu cũ trước khi restore
+        await Promise.all([
+            Event.deleteMany({ username }),
+            Timetable.deleteMany({ username }),
+            GpaModel.deleteMany({ username }),
+            StudySession.deleteMany({ username }),
+            QuickNote.deleteMany({ username })
+        ]);
+
+        // Restore từng loại dữ liệu
+        const restorePromises = [];
+
+        if (backupData.events && backupData.events.length > 0) {
+            restorePromises.push(Event.insertMany(backupData.events.map(e => ({ ...e, username }))));
+        }
+
+        if (backupData.timetables && backupData.timetables.length > 0) {
+            restorePromises.push(Timetable.insertMany(backupData.timetables.map(t => ({ ...t, username }))));
+        }
+
+        if (backupData.gpa) {
+            const gpaDoc = new GpaModel({ ...backupData.gpa, username });
+            restorePromises.push(gpaDoc.save());
+        }
+
+        if (backupData.studySessions && backupData.studySessions.length > 0) {
+            restorePromises.push(StudySession.insertMany(backupData.studySessions.map(s => ({ ...s, username }))));
+        }
+
+        if (backupData.quickNotes && backupData.quickNotes.length > 0) {
+            restorePromises.push(QuickNote.insertMany(backupData.quickNotes.map(n => ({ ...n, username }))));
+        }
+
+        await Promise.all(restorePromises);
+
+        res.json({ success: true, message: "Khôi phục dữ liệu thành công!" });
+    } catch (err) {
+        console.error('Restore error:', err);
+        res.status(500).json({ success: false, message: "Lỗi server: " + err.message });
     }
 });
 

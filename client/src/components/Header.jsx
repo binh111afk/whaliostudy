@@ -16,6 +16,7 @@ import {
   FileText,
   Users,
 } from "lucide-react";
+import BackupRestoreModal from './BackupRestoreModal';
 
 const Header = ({
   user,
@@ -25,6 +26,7 @@ const Header = ({
   onToggleDarkMode,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   // Xử lý click ra ngoài để đóng menu
@@ -183,7 +185,13 @@ const Header = ({
                     </button>
                   </li>
                   <li>
-                    <button className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-3 transition-colors">
+                    <button 
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        setIsBackupModalOpen(true);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-3 transition-colors"
+                    >
                       <Save size={18} /> Sao lưu & Khôi phục
                     </button>
                   </li>
@@ -216,6 +224,15 @@ const Header = ({
           </button>
         )}
       </div>
+
+      {/* Backup & Restore Modal */}
+      {user && (
+        <BackupRestoreModal 
+          isOpen={isBackupModalOpen} 
+          onClose={() => setIsBackupModalOpen(false)} 
+          user={user} 
+        />
+      )}
     </div>
   );
 };
