@@ -419,8 +419,8 @@ const Portal = ({ user }) => {
                                     </h3>
                                 </div>
 
-                                {/* Danh sách Link trong Box */}
-                                <div className="space-y-3">
+                                {/* Danh sách Link trong Box - Giới hạn 4 items với cuộn dọc */}
+                                <div className="space-y-3 max-h-96 overflow-y-auto pr-2 hover:pr-1 transition-all">
                                     {section.links.map((link) => (
                                         <a 
                                             key={link.id}
