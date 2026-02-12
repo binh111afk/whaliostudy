@@ -234,13 +234,20 @@ const GpaCalc = () => {
   // Hàm Lưu dữ liệu lên Server
   const handleSaveGPA = async () => {
     if (!user) {
-      return toast.error("Bạn chưa đăng nhập!", {
-        description: "Đăng nhập để hệ thống lưu điểm cho ông nhé.",
+      return toast("Nhắc nhẹ một chút...", { // Dùng toast() thường, không dùng .error
+        description: "Đăng nhập để Whalio lưu lại bảng điểm này nhé bạn!",
+        duration: 6000,
         action: {
           label: "Đăng nhập ngay",
           onClick: () => setIsAuthModalOpen(true),
         },
-        duration: 5000,
+        // Chỉnh class để nó "thoáng" và "pro" hơn
+        classNames: {
+          toast: "group ![align-items:center] !bg-white dark:!bg-gray-800 !border-gray-200 dark:!border-gray-700 !p-4 !rounded-2xl !shadow-xl",
+          title: "!text-gray-800 dark:!text-white !font-bold !text-base",
+          description: "!text-gray-500 dark:!text-gray-400 !text-sm",
+          actionButton: "!bg-blue-600 !text-white !rounded-xl !px-4 !py-2 !font-semibold hover:!bg-blue-700 transition-all",
+        },
       });
     }
 

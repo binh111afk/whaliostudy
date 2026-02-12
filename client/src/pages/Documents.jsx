@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { documentService } from "../services/documentService";
 import { UploadModal, EditDocModal } from "../components/DocumentModals";
+import AuthModal from "../components/AuthModal";
 import {
   Search,
   Upload,
@@ -424,6 +426,7 @@ const SUBJECTS = [
 
 const Documents = () => {
   const navigate = useNavigate();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   // 👇 THAY ĐỔI 1: Đưa user vào State để cập nhật không cần reload
   const [currentUser, setCurrentUser] = useState(
     JSON.parse(localStorage.getItem("user"))
@@ -537,19 +540,74 @@ const Documents = () => {
     if (res.success) loadDocuments();
   };
 
-  const handleDelete = async (docId) => {
-    if (confirm("Xóa tài liệu này?")) {
-      const res = await documentService.deleteDocument(
-        docId,
-        currentUser.username
-      );
-      if (res.success) loadDocuments();
-    }
+  const handleDelete = (docId) => {
+    // Thay vì confirm(), ta gọi toast xác nhận
+    toast("Cảnh báo xóa dữ liệu!", {
+      description: "Bạn có chắc chắn muốn xóa tài liệu này không?",
+      position: 'top-center', // Hiện giữa màn hình phía trên
+      duration: Infinity,     // QUAN TRỌNG: Treo mãi đến khi user bấm nút (không tự tắt)
+      // Nút Hủy (Màu xám)
+      cancel: {
+        label: "Thôi, giữ lại",
+      },
+  
+      // Nút Hành động (Màu đỏ - Xóa)
+      action: {
+        label: "Xóa luôn",
+        onClick: async () => {
+          // 👇 Logic xóa di chuyển vào trong này
+          try {
+            const res = await documentService.deleteDocument(
+              docId,
+              currentUser.username
+            );
+            
+            if (res.success) {
+              loadDocuments();
+              toast.success("Đã xóa tài liệu thành công!", { duration: 3000 });
+            }
+          } catch (error) {
+            toast.error("Lỗi khi xóa tài liệu!");
+          }
+        },
+      },
+  
+      // Style cảnh báo nguy hiểm
+      classNames: {
+        toast: "group ![align-items:center] !bg-white dark:!bg-gray-800 !p-4 !rounded-2xl !shadow-2xl !border-red-100 dark:!border-red-900/30",
+        title: "!text-red-600 !font-bold !text-base", // Tiêu đề đỏ cảnh báo
+        description: "!text-gray-500 dark:!text-gray-400",
+        // Nút Xóa màu đỏ rực
+        actionButton: "!bg-red-600 !text-white !font-bold !rounded-xl hover:!bg-red-700 transition-colors",
+        // Nút Hủy màu xám nhẹ
+        cancelButton: "!bg-gray-100 dark:!bg-gray-700 !text-gray-600 dark:!text-gray-300 !font-medium !rounded-xl hover:!bg-gray-200",
+      },
+    });
   };
 
   // 👇 THAY ĐỔI 2: Xử lý Lưu không reload trang
   const handleToggleSave = async (docId) => {
-    if (!currentUser) return alert("Vui lòng đăng nhập!");
+    if (!user) {
+      return toast("Nhắc nhẹ một chút...", {
+        // Dùng toast() thường, không dùng .error
+        description: "Đăng nhập để Whalio lưu lại bảng điểm này nhé bro!",
+        duration: 6000,
+        icon: <div className="p-1 bg-blue-100 rounded-full">👤</div>, // Icon dịu mắt hơn
+        action: {
+          label: "Đăng nhập ngay",
+          onClick: () => setIsAuthModalOpen(true),
+        },
+        // Chỉnh class để nó "thoáng" và "pro" hơn
+        classNames: {
+          toast:
+            "group ![align-items:center] !bg-white dark:!bg-gray-800 !border-gray-200 dark:!border-gray-700 !p-4 !rounded-2xl !shadow-xl",
+          title: "!text-gray-800 dark:!text-white !font-bold !text-base",
+          description: "!text-gray-500 dark:!text-gray-400 !text-sm",
+          actionButton:
+            "!bg-blue-600 !text-white !rounded-xl !px-4 !py-2 !font-semibold hover:!bg-blue-700 transition-all",
+        },
+      });
+    }
 
     // Gọi API (Backend vẫn xử lý lưu vào DB)
     const res = await documentService.toggleSave(docId, currentUser.username);
@@ -595,7 +653,9 @@ const Documents = () => {
         <div className="space-y-8">
           {/* 1. Bộ lọc */}
           <div>
-            <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-white">Bộ lọc</h3>
+            <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-white">
+              Bộ lọc
+            </h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
@@ -651,18 +711,28 @@ const Documents = () => {
 
           {/* 2. Thống kê */}
           <div>
-            <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-white">Thống kê</h3>
+            <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-white">
+              Thống kê
+            </h3>
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Tổng tài liệu</span>
-                <span className="font-bold text-gray-800 dark:text-white">{stats.total}</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Tổng tài liệu
+                </span>
+                <span className="font-bold text-gray-800 dark:text-white">
+                  {stats.total}
+                </span>
               </div>
               <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Đã lưu</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Đã lưu
+                </span>
                 <span className="font-bold text-blue-600">{stats.saved}</span>
               </div>
               <div className="flex justify-between items-center p-4">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Mới (7 ngày)</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Mới (7 ngày)
+                </span>
                 <span className="font-bold text-green-600">{stats.new}</span>
               </div>
             </div>
@@ -670,7 +740,9 @@ const Documents = () => {
 
           {/* 3. Thư viện cá nhân */}
           <div>
-            <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-white">Thư viện</h3>
+            <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-white">
+              Thư viện
+            </h3>
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden p-2 space-y-1">
               <button
                 onClick={() => setViewMode("all")}
@@ -880,7 +952,10 @@ const Documents = () => {
                     disabled={currentPage === 1}
                     className="p-2 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    <ChevronLeft size={20} className="text-gray-600 dark:text-gray-400" />
+                    <ChevronLeft
+                      size={20}
+                      className="text-gray-600 dark:text-gray-400"
+                    />
                   </button>
                   <span className="text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-4 py-2 rounded-lg">
                     Trang {currentPage} / {totalPages}
@@ -892,7 +967,10 @@ const Documents = () => {
                     disabled={currentPage === totalPages}
                     className="p-2 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    <ChevronRight size={20} className="text-gray-600 dark:text-gray-400" />
+                    <ChevronRight
+                      size={20}
+                      className="text-gray-600 dark:text-gray-400"
+                    />
                   </button>
                 </div>
               )}
@@ -913,6 +991,16 @@ const Documents = () => {
         onClose={() => setEditModalOpen(false)}
         onSubmit={handleEdit}
         doc={docToEdit}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={(userData) => {
+          localStorage.setItem("user", JSON.stringify(userData));
+          setIsAuthModalOpen(false);
+          window.location.reload();
+        }}
       />
     </div>
   );
