@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from "sonner";
 import { authService } from '../services/authService';
 
 const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
@@ -52,18 +53,90 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
 
         // 3. Xử lý kết quả
         if (data.success) {
-            if (isLoginView) {
-                // --- ĐĂNG NHẬP THÀNH CÔNG ---
-                alert(`🎉 Chào mừng ${data.user.fullName} quay trở lại!`);
-                localStorage.setItem('user', JSON.stringify(data.user)); 
-                onLoginSuccess(data.user); // Báo cho App.jsx biết
-                onClose();                 // Đóng modal
-            } else {
-                // --- ĐĂNG KÝ THÀNH CÔNG ---
-                alert('✅ Đăng ký thành công! Hãy đăng nhập ngay.');
-                setIsLoginView(true); // Chuyển tab sang đăng nhập
-                setFormData(prev => ({ ...prev, password: '', confirmPassword: '' })); // Xóa mật khẩu cũ
-            }
+          if (isLoginView) {
+            // --- 1. ĐĂNG NHẬP THÀNH CÔNG ---
+            localStorage.setItem('user', JSON.stringify(data.user));
+            onLoginSuccess(data.user);
+            onClose();
+          
+            // Gọi Toast Modal (Responsive Version)
+            toast.custom((t) => (
+              <div className="relative w-[90vw] sm:w-full sm:max-w-[400px] bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-[24px] sm:rounded-[32px] flex flex-col items-center text-center 
+                animate-in zoom-in-95 duration-300
+                shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] z-[99999]"> 
+                {/* 👆 Shadow hack vẫn giữ nguyên để làm tối nền */}
+                
+                {/* Icon Ăn mừng - Tự co nhỏ trên mobile */}
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-4 sm:mb-6 shadow-inner">
+                  <span className="text-3xl sm:text-4xl animate-bounce">🎉</span>
+                </div>
+          
+                {/* Tiêu đề */}
+                <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white mb-2">
+                  Chào mừng trở lại!
+                </h2>
+                <p className="text-sm sm:text-base text-gray-500 dark:text-gray-300 mb-6 sm:mb-8 leading-relaxed">
+                  Xin chào <span className="text-blue-600 dark:text-blue-400 font-bold">{data.user.fullName}</span>, chúc bạn một ngày học tập thật năng suất nhé!
+                </p>
+          
+                {/* Nút bấm */}
+                <button
+                  onClick={() => toast.dismiss(t)}
+                  className="w-full py-3 sm:py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-base sm:text-lg rounded-2xl shadow-lg shadow-blue-500/40 transform active:scale-95 hover:scale-[1.02] transition-all"
+                >
+                  Vào học ngay 🚀
+                </button>
+          
+                {/* Nút tắt nhỏ góc trên */}
+                <button 
+                  onClick={() => toast.dismiss(t)}
+                  className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  ✕
+                </button>
+              </div>
+            ), { 
+              duration: Infinity, 
+              position: 'top-center', 
+            });
+          
+          } else {
+            // --- 2. ĐĂNG KÝ THÀNH CÔNG ---
+            setIsLoginView(true);
+            setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
+          
+            toast.custom((t) => (
+              <div className="relative w-[90vw] sm:w-full sm:max-w-[400px] bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-[24px] sm:rounded-[32px] flex flex-col items-center text-center 
+                animate-in zoom-in-95 duration-300
+                shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] z-[99999]">
+                
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4 sm:mb-6 shadow-inner">
+                  <span className="text-3xl sm:text-4xl">✅</span>
+                </div>
+          
+                <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white mb-2">
+                  Đăng ký thành công!
+                </h2>
+                <p className="text-sm sm:text-base text-gray-500 dark:text-gray-300 mb-6 sm:mb-8">
+                  Tài khoản đã sẵn sàng. Đăng nhập ngay để bắt đầu hành trình nhé.
+                </p>
+          
+                <button
+                  onClick={() => toast.dismiss(t)}
+                  className="w-full py-3 sm:py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold text-base sm:text-lg rounded-2xl shadow-lg shadow-green-500/40 transform active:scale-95 hover:scale-[1.02] transition-all"
+                >
+                  Đăng nhập ngay
+                </button>
+          
+                <button 
+                  onClick={() => toast.dismiss(t)}
+                  className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  ✕
+                </button>
+              </div>
+            ), { duration: 5000, position: 'top-center' });
+          }
         } else {
             // Server trả về lỗi (sai pass, user tồn tại...)
             throw new Error(data.message || 'Có lỗi xảy ra!');

@@ -49,94 +49,216 @@ const Community = () => {
 
   const handleLike = async (postId) => {
     if (!user) {
-      return toast("Nhắc nhẹ một chút...", {
-        // Dùng toast() thường, không dùng .error
-        description: "Đăng nhập để like bài viết nhé bạn!",
-        duration: 6000,
-        action: {
-          label: "Đăng nhập ngay",
-          onClick: () => setIsAuthModalOpen(true),
-        },
-        // Chỉnh class để nó "thoáng" và "pro" hơn
-        classNames: {
-          toast:
-            "group ![align-items:center] !bg-white dark:!bg-gray-800 !border-gray-200 dark:!border-gray-700 !p-4 !rounded-2xl !shadow-xl",
-          title: "!text-gray-800 dark:!text-white !font-bold !text-base",
-          description: "!text-gray-500 dark:!text-gray-400 !text-sm",
-          actionButton:
-            "!bg-blue-600 !text-white !rounded-xl !px-4 !py-2 !font-semibold hover:!bg-blue-700 transition-all",
-        },
+      return toast.custom((t) => (
+        <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+          
+          {/* 1. Tiêu đề & Nội dung (Không Icon) */}
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            Chưa đăng nhập
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
+            Đăng nhập ngay để thả tim cho bài viết này nhé!
+          </p>
+  
+          {/* 2. Nút bấm nằm dưới cùng (Compact Style) */}
+          <div className="flex w-full gap-3">
+            
+            {/* Nút Đóng/Để sau */}
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+            >
+              Để sau
+            </button>
+  
+            {/* Nút Đăng nhập (Màu Xanh sáng rực) */}
+            <button
+              onClick={() => {
+                toast.dismiss(t);
+                setIsAuthModalOpen(true);
+              }}
+              className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-blue-500/30 transition-all"
+            >
+              Đăng nhập
+            </button>
+          </div>
+  
+        </div>
+      ), {
+        position: 'top-center',
+        duration: 5000, // Tự tắt sau 5s nếu không bấm
       });
     }
+  
+    // Logic like bài viết
     await communityService.likePost(postId, user.username);
     loadPosts();
   };
 
   const handleSave = async (postId) => {
     if (!user) {
-      return toast("Nhắc nhẹ một chút...", {
-        // Dùng toast() thường, không dùng .error
-        description: "Đăng nhập để lưu bài viết nhé bạn!",
-        duration: 6000,
-        action: {
-          label: "Đăng nhập ngay",
-          onClick: () => setIsAuthModalOpen(true),
-        },
-        // Chỉnh class để nó "thoáng" và "pro" hơn
-        classNames: {
-          toast:
-            "group ![align-items:center] !bg-white dark:!bg-gray-800 !border-gray-200 dark:!border-gray-700 !p-4 !rounded-2xl !shadow-xl",
-          title: "!text-gray-800 dark:!text-white !font-bold !text-base",
-          description: "!text-gray-500 dark:!text-gray-400 !text-sm",
-          actionButton:
-            "!bg-blue-600 !text-white !rounded-xl !px-4 !py-2 !font-semibold hover:!bg-blue-700 transition-all",
-        },
+      return toast.custom((t) => (
+        <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+          
+          {/* 1. Tiêu đề & Nội dung */}
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            Chưa đăng nhập
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
+            Đăng nhập ngay để lưu bài viết này nhé!
+          </p>
+  
+          {/* 2. Nút bấm nằm dưới cùng */}
+          <div className="flex w-full gap-3">
+            
+            {/* Nút Để sau */}
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+            >
+              Để sau
+            </button>
+  
+            {/* Nút Đăng nhập (Xanh sáng) */}
+            <button
+              onClick={() => {
+                toast.dismiss(t);
+                setIsAuthModalOpen(true);
+              }}
+              className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-blue-500/30 transition-all"
+            >
+              Đăng nhập
+            </button>
+          </div>
+  
+        </div>
+      ), { 
+        position: 'top-center',
+        duration: 5000,
       });
     }
+  
+    // Logic lưu bài viết
     await communityService.savePost(postId, user.username);
     loadPosts();
   };
 
-  const handleDelete = async (postId) => {
-    if (!confirm("Xóa bài viết này?")) return;
-    await communityService.deletePost(postId, user.username);
-    loadPosts();
+  const handleDelete = (postId) => {
+    toast.custom((t) => (
+      <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+        
+        {/* 1. Tiêu đề ngắn gọn */}
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          Xóa bài viết?
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
+          Hành động này sẽ xóa vĩnh viễn bài viết của bạn.
+        </p>
+  
+        {/* 2. Nút bấm nhỏ gọn, nằm ngang */}
+        <div className="flex w-full gap-3">
+          
+          {/* Nút Hủy */}
+          <button
+            onClick={() => toast.dismiss(t)}
+            className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+          >
+            Hủy
+          </button>
+  
+          {/* Nút Xóa (Màu Đỏ) */}
+          <button
+            onClick={async () => {
+              toast.dismiss(t); // Đóng hộp thoại
+              try {
+                await communityService.deletePost(postId, user.username);
+                loadPosts(); // Load lại danh sách
+                toast.success("Đã xóa bài viết!", { position: 'top-center' });
+              } catch (error) {
+                console.error(error);
+                toast.error("Lỗi khi xóa bài viết!", { position: 'top-center' });
+              }
+            }}
+            className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
+          >
+            Xóa
+          </button>
+        </div>
+  
+      </div>
+    ), { 
+      position: 'top-center',
+      duration: Infinity, // Treo máy chờ user quyết định
+    });
   };
 
   const handleSubmitComment = async (postId, content) => {
+    // 1. Kiểm tra đăng nhập - Style Compact, Nút xanh
     if (!user) {
-      return toast("Nhắc nhẹ một chút...", {
-        // Dùng toast() thường, không dùng .error
-        description: "Đăng nhập để bình luận nhé bạn!",
-        duration: 6000,
-        action: {
-          label: "Đăng nhập ngay",
-          onClick: () => setIsAuthModalOpen(true),
-        },
-        // Chỉnh class để nó "thoáng" và "pro" hơn
-        classNames: {
-          toast:
-            "group ![align-items:center] !bg-white dark:!bg-gray-800 !border-gray-200 dark:!border-gray-700 !p-4 !rounded-2xl !shadow-xl",
-          title: "!text-gray-800 dark:!text-white !font-bold !text-base",
-          description: "!text-gray-500 dark:!text-gray-400 !text-sm",
-          actionButton:
-            "!bg-blue-600 !text-white !rounded-xl !px-4 !py-2 !font-semibold hover:!bg-blue-700 transition-all",
-        },
+      return toast.custom((t) => (
+        <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+          
+          {/* Tiêu đề & Nội dung */}
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            Chưa đăng nhập
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
+            Đăng nhập ngay để tham gia bình luận nhé!
+          </p>
+
+          {/* Buttons nằm ngang */}
+          <div className="flex w-full gap-3">
+            
+            {/* Nút Để sau */}
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+            >
+              Để sau
+            </button>
+
+            {/* Nút Đăng nhập (Màu xanh sáng) */}
+            <button
+              onClick={() => {
+                toast.dismiss(t);
+                setIsAuthModalOpen(true);
+              }}
+              className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-blue-500/30 transition-all"
+            >
+              Đăng nhập
+            </button>
+          </div>
+
+        </div>
+      ), { 
+        position: 'top-center',
+        duration: 5000,
       });
     }
-    const formData = new FormData();
-    formData.append("postId", postId);
-    formData.append("content", content);
-    formData.append("username", user.username);
 
-    await communityService.addComment(formData);
-    await loadPosts();
+    // 2. Logic gửi bình luận (Giữ nguyên logic của ông)
+    try {
+      const formData = new FormData();
+      formData.append("postId", postId);
+      formData.append("content", content);
+      formData.append("username", user.username);
+  
+      await communityService.addComment(formData);
+      await loadPosts();
+  
+      setPosts((prevPosts) => {
+        const updatedPost = prevPosts.find((p) => (p._id || p.id) === postId);
+        if (updatedPost) setSelectedPostForComment(updatedPost);
+        return prevPosts;
+      });
+      
+      // Thêm cái này để báo user biết là gửi xong rồi
+      toast.success("Đã gửi bình luận!", { position: 'top-center' });
 
-    setPosts((prevPosts) => {
-      const updatedPost = prevPosts.find((p) => (p._id || p.id) === postId);
-      if (updatedPost) setSelectedPostForComment(updatedPost);
-      return prevPosts;
-    });
+    } catch (error) {
+      console.error(error);
+      toast.error("Gửi bình luận thất bại!", { position: 'top-center' });
+    }
   };
 
   const handleReplyComment = async (postId, parentCommentId, content) => {

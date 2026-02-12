@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { studyService } from "../services/studyService";
 import AddDeadlineModal from "../components/AddDeadlineModal";
 import {
@@ -319,17 +320,60 @@ const QuickNotesTab = ({ user }) => {
     }
   };
 
-  const handleDeleteNote = async (id) => {
-    if (!confirm("Xóa ghi chú này?")) return;
-    try {
-      const res = await fetch(
-        `/api/quick-notes/${id}?username=${user.username}`,
-        { method: "DELETE" }
-      );
-      if ((await res.json()).success) fetchMyNotes();
-    } catch (e) {
-      console.error(e);
-    }
+  const handleDeleteNote = (id) => {
+    toast.custom((t) => (
+      <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+        
+        {/* 1. Tiêu đề ngắn gọn */}
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          Xóa ghi chú?
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
+          Hành động này không thể hoàn tác.
+        </p>
+  
+        {/* 2. Nút bấm nhỏ gọn */}
+        <div className="flex w-full gap-3">
+          
+          {/* Nút Hủy */}
+          <button
+            onClick={() => toast.dismiss(t)}
+            className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+          >
+            Hủy
+          </button>
+  
+          {/* Nút Xóa */}
+          <button
+            onClick={async () => {
+              toast.dismiss(t); // Đóng hộp thoại
+              try {
+                const res = await fetch(
+                  `/api/quick-notes/${id}?username=${user.username}`,
+                  { method: "DELETE" }
+                );
+                const data = await res.json();
+                
+                if (data.success) {
+                  fetchMyNotes(); // Load lại danh sách ghi chú
+                  toast.success("Đã dọn dẹp ghi chú!", { position: 'top-center' });
+                }
+              } catch (e) {
+                console.error(e);
+                toast.error("Lỗi hệ thống, thử lại sau!", { position: 'top-center' });
+              }
+            }}
+            className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
+          >
+            Xóa
+          </button>
+        </div>
+  
+      </div>
+    ), { 
+      position: 'top-center',
+      duration: Infinity,
+    });
   };
 
   // --- [MỚI] HANDLERS CHO NOTE TKB ---
@@ -361,27 +405,68 @@ const QuickNotesTab = ({ user }) => {
     }
   };
 
-  const handleDeleteTimetableNote = async (note) => {
-    if (!confirm(`Xóa nhắc nhở môn ${note.subject}?`)) return;
-
-    // Optimistic UI Update
-    setTimetableNotes(timetableNotes.filter((n) => n.id !== note.id));
-
-    try {
-      await fetch("/api/timetable/update-note", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          classId: note.classId,
-          username: user.username,
-          action: "delete",
-          note: { id: note.id },
-        }),
-      });
-    } catch (e) {
-      console.error(e);
-      fetchTimetableNotes();
-    }
+  const handleDeleteTimetableNote = (note) => {
+    toast.custom((t) => (
+      <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+        
+        {/* 1. Tiêu đề ngắn gọn */}
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          Xóa nhắc nhở?
+        </h3>
+  
+        {/* 2. Mô tả chứa tên môn học được in đậm */}
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
+          Nhắc nhở môn <span className="font-bold text-gray-700 dark:text-gray-300">{note.subject}</span> sẽ bị xóa vĩnh viễn.
+        </p>
+  
+        {/* 3. Nút bấm nhỏ gọn (Compact) */}
+        <div className="flex w-full gap-3">
+          
+          {/* Nút Hủy */}
+          <button
+            onClick={() => toast.dismiss(t)}
+            className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+          >
+            Hủy
+          </button>
+  
+          {/* Nút Xóa */}
+          <button
+            onClick={async () => {
+              toast.dismiss(t);
+              
+              // Optimistic UI: Xóa ngay trên giao diện trước
+              setTimetableNotes(timetableNotes.filter((n) => n.id !== note.id));
+  
+              try {
+                await fetch("/api/timetable/update-note", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    classId: note.classId,
+                    username: user.username,
+                    action: "delete",
+                    note: { id: note.id },
+                  }),
+                });
+                toast.success("Đã xóa nhắc nhở thành công!", { position: 'top-center' });
+              } catch (e) {
+                console.error(e);
+                fetchTimetableNotes(); // Lỗi thì load lại dữ liệu cũ
+                toast.error("Lỗi kết nối, đã khôi phục lại dữ liệu!", { position: 'top-center' });
+              }
+            }}
+            className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
+          >
+            Xóa
+          </button>
+        </div>
+  
+      </div>
+    ), { 
+      position: 'top-center',
+      duration: Infinity,
+    });
   };
 
   return (
@@ -662,10 +747,49 @@ const FlashcardTab = () => {
   };
 
   const deleteDeck = (id) => {
-    if (!confirm("Xóa bộ thẻ này?")) return;
-    const updated = decks.filter((d) => d.id !== id);
-    setDecks(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    toast.custom((t) => (
+      <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+        
+        {/* 1. Tiêu đề & Nội dung */}
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          Xóa bộ thẻ?
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
+          Dữ liệu học tập của bộ này sẽ bị xóa vĩnh viễn.
+        </p>
+  
+        {/* 2. Hai nút nằm ngang (Compact style) */}
+        <div className="flex w-full gap-3">
+          
+          {/* Nút Hủy */}
+          <button
+            onClick={() => toast.dismiss(t)}
+            className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+          >
+            Hủy
+          </button>
+  
+          {/* Nút Xóa */}
+          <button
+            onClick={() => {
+              toast.dismiss(t); // Đóng hộp thoại
+              // Logic xóa cũ của ông
+              const updated = decks.filter((d) => d.id !== id);
+              setDecks(updated);
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+              toast.success("Đã xóa bộ thẻ thành công!", { position: 'top-center' });
+            }}
+            className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
+          >
+            Xóa
+          </button>
+        </div>
+  
+      </div>
+    ), { 
+      position: 'top-center',
+      duration: Infinity,
+    });
   };
 
   // Mapping màu sắc
@@ -1297,16 +1421,58 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
     });
   };
 
-  const handleDeleteDeadline = async (id) => {
-    if (!confirm("Bạn có chắc muốn xóa công việc này?")) return;
-    try {
-      const res = await fetch(`/api/events/${id}?username=${user.username}`, {
-        method: "DELETE",
-      });
-      if ((await res.json()).success) loadDeadlines();
-    } catch (error) {
-      console.error(error);
-    }
+  const handleDeleteDeadline = (id) => {
+    toast.custom((t) => (
+      <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+        
+        {/* 1. Tiêu đề & Nội dung gọn hơn */}
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          Xác nhận xóa?
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
+          Công việc này sẽ bị xóa vĩnh viễn khỏi lịch.
+        </p>
+  
+        {/* 2. Nút bấm nhỏ gọn, thanh thoát (text-sm, py-2) */}
+        <div className="flex w-full gap-3">
+          
+          {/* Nút Hủy */}
+          <button
+            onClick={() => toast.dismiss(t)}
+            className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+          >
+            Hủy
+          </button>
+  
+          {/* Nút Xóa */}
+          <button
+            onClick={async () => {
+              toast.dismiss(t);
+              try {
+                const res = await fetch(`/api/events/${id}?username=${user.username}`, {
+                  method: "DELETE",
+                });
+                const data = await res.json();
+                if (data.success) {
+                  loadDeadlines();
+                  toast.success("Đã xóa xong!", { position: 'top-center' });
+                }
+              } catch (error) {
+                console.error(error);
+                toast.error("Lỗi khi xóa!", { position: 'top-center' });
+              }
+            }}
+            className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
+          >
+            Xóa
+          </button>
+        </div>
+  
+      </div>
+    ), { 
+      position: 'top-center',
+      duration: Infinity,
+    });
   };
 
   const handleToggleDeadline = async (task) => {

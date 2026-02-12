@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { toast } from "sonner";
 import { timetableService } from "../services/timetableService";
 import {
   getMonday,
@@ -105,18 +106,94 @@ const Timetable = () => {
     }
   };
 
-  const handleDeleteClass = async (classId) => {
-    if (confirm("Bạn có chắc muốn xóa môn này?")) {
-      await timetableService.deleteClass(classId, user.username);
-      loadTimetable();
-    }
+  const handleDeleteClass = (classId) => {
+    toast.custom((t) => (
+      <div className="w-[90vw] sm:max-w-[320px] bg-white dark:bg-gray-900 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+        
+        {/* Tiêu đề ngắn gọn */}
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          Xóa môn học?
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
+          Môn này sẽ bị gỡ khỏi thời khóa biểu của bạn.
+        </p>
+  
+        {/* Nút bấm ngang hàng */}
+        <div className="flex w-full gap-3">
+          
+          {/* Nút Hủy */}
+          <button
+            onClick={() => toast.dismiss(t)}
+            className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+          >
+            Hủy
+          </button>
+  
+          {/* Nút Xóa */}
+          <button
+            onClick={async () => {
+              toast.dismiss(t);
+              try {
+                await timetableService.deleteClass(classId, user.username);
+                loadTimetable();
+                toast.success("Đã xóa môn học!", { position: 'top-center' });
+              } catch (error) {
+                console.error(error);
+                toast.error("Lỗi khi xóa môn!", { position: 'top-center' });
+              }
+            }}
+            className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
+          >
+            Xóa
+          </button>
+        </div>
+  
+      </div>
+    ), { position: 'top-center', duration: Infinity });
   };
 
-  const handleDeleteAll = async () => {
-    if (confirm("CẢNH BÁO: Xóa sạch thời khóa biểu?")) {
-      await timetableService.clearTimetable(user.username);
-      loadTimetable();
-    }
+  const handleDeleteAll = () => {
+    toast.custom((t) => (
+      <div className="w-[90vw] sm:max-w-[320px] bg-white dark:bg-gray-900 p-5 rounded-2xl shadow-xl border border-red-100 dark:border-red-900/30 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+        
+        {/* Tiêu đề Cảnh báo mạnh */}
+        <h3 className="text-lg font-bold text-red-600 dark:text-red-500">
+          Xóa sạch TKB?
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
+          Toàn bộ lịch học sẽ bị xóa trắng. <br/> Hành động này <span className="font-bold text-gray-700 dark:text-gray-300">không thể hoàn tác!</span>
+        </p>
+  
+        {/* Nút bấm */}
+        <div className="flex w-full gap-3">
+          
+          <button
+            onClick={() => toast.dismiss(t)}
+            className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+          >
+            Giữ lại
+          </button>
+  
+          <button
+            onClick={async () => {
+              toast.dismiss(t);
+              try {
+                await timetableService.clearTimetable(user.username);
+                loadTimetable();
+                toast.success("Đã dọn sạch thời khóa biểu!", { position: 'top-center' });
+              } catch (error) {
+                console.error(error);
+                toast.error("Lỗi khi xóa dữ liệu!", { position: 'top-center' });
+              }
+            }}
+            className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-red-500/30 transition-all"
+          >
+            Xóa hết
+          </button>
+        </div>
+  
+      </div>
+    ), { position: 'top-center', duration: Infinity });
   };
 
   const handleFileUpload = async (e) => {
