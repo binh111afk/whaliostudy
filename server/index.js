@@ -1186,8 +1186,8 @@ app.get('/api/profile/stats', async (req, res) => {
         const weekSessions = allSessions.filter(s => new Date(s.date) >= weekAgo);
         const thisWeekMinutes = weekSessions.reduce((sum, s) => sum + s.duration, 0);
 
-        // 3. Lấy GPA data (nếu có)
-        const gpaData = await Gpa.findOne({ username });
+        // 3. Lấy GPA data (nếu có) - SỬA: Dùng đúng model GpaModel
+        const gpaData = await GpaModel.findOne({ username });
         let gpaSummary = [];
         let totalCredits = 0;
         let completedCredits = 0;
@@ -1195,49 +1195,66 @@ app.get('/api/profile/stats', async (req, res) => {
         let majorCredits = 0;
         let electiveCredits = 0;
 
+        // Helper: Chuyển điểm hệ 10 sang hệ 4 (giống Dashboard)
+        const convertToGPA4 = (score10) => {
+            if (score10 >= 8.5) return 4.0;
+            if (score10 >= 8.0) return 3.5;
+            if (score10 >= 7.0) return 3.0;
+            if (score10 >= 6.5) return 2.5;
+            if (score10 >= 5.5) return 2.0;
+            if (score10 >= 5.0) return 1.5;
+            if (score10 >= 4.0) return 1.0;
+            return 0;
+        };
+
         if (gpaData && gpaData.semesters) {
             gpaData.semesters.forEach((sem, index) => {
-                let semesterTotalPoints = 0;
-                let semesterTotalCredits = 0;
+                let semTotalScore = 0;
+                let semTotalCredits = 0;
 
                 if (sem.subjects) {
                     sem.subjects.forEach(subject => {
-                        const credits = subject.credits || 0;
-                        totalCredits += credits;
+                        const credits = parseFloat(subject.credits) || 0;
                         
                         // Phân loại tín chỉ
                         if (subject.type === 'general') generalCredits += credits;
                         else if (subject.type === 'major') majorCredits += credits;
                         else electiveCredits += credits;
 
-                        // Tính GPA nếu có điểm
+                        // Tính điểm hệ 10 từ components (giống Dashboard)
+                        let subScore10 = 0;
                         if (subject.components && subject.components.length > 0) {
-                            let totalWeight = 0;
-                            let weightedSum = 0;
-                            
                             subject.components.forEach(comp => {
                                 const score = parseFloat(comp.score);
-                                if (!isNaN(score) && comp.weight) {
-                                    weightedSum += score * comp.weight;
-                                    totalWeight += comp.weight;
+                                const weight = parseFloat(comp.weight);
+                                if (!isNaN(score) && !isNaN(weight)) {
+                                    subScore10 += score * (weight / 100);
                                 }
                             });
+                        }
 
-                            if (totalWeight > 0) {
-                                const avgScore = weightedSum / totalWeight;
-                                const gpa4 = Math.min(4, avgScore / 2.5); // Convert to 4.0 scale
-                                semesterTotalPoints += gpa4 * credits;
-                                semesterTotalCredits += credits;
+                        // Nếu có điểm, tính GPA
+                        if (subScore10 > 0) {
+                            const subScore4 = convertToGPA4(subScore10);
+                            semTotalScore += subScore4 * credits;
+                            semTotalCredits += credits;
+                            
+                            // Tín chỉ hoàn thành (điểm >= 1.0 là pass)
+                            if (subScore4 >= 1.0) {
                                 completedCredits += credits;
                             }
                         }
+                        
+                        totalCredits += credits;
                     });
                 }
 
-                if (semesterTotalCredits > 0) {
+                // Thêm GPA của học kỳ nếu có môn học
+                if (semTotalCredits > 0) {
+                    const semGpa = semTotalScore / semTotalCredits;
                     gpaSummary.push({
                         semester: sem.name || `Học kỳ ${index + 1}`,
-                        gpa: parseFloat((semesterTotalPoints / semesterTotalCredits).toFixed(2))
+                        gpa: parseFloat(semGpa.toFixed(2))
                     });
                 }
             });
