@@ -373,29 +373,6 @@ const Portal = ({ user }) => {
 
                                                 {/* --- KHU VỰC NÚT BẤM (Góc phải) --- */}
                                                 <div className="absolute top-3 right-3 flex items-center gap-1">
-                                                    
-                                                    {/* Nhóm nút Admin: Edit & Delete */}
-                                                    {isAdmin && (
-                                                        <>
-                                                            <button
-                                                                onClick={(e) => handleEdit(e, link, section.id)}
-                                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/30"
-                                                                title="Sửa"
-                                                            >
-                                                                <Edit size={14} />
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => handleDelete(e, link.id, section.id)}
-                                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"
-                                                                title="Xóa"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
-                                                            {/* Đường kẻ dọc ngăn cách */}
-                                                            <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1 opacity-0 group-hover:opacity-100"></div>
-                                                        </>
-                                                    )}
-
                                                     {/* Nút Copy */}
                                                     <button
                                                         onClick={(e) => handleCopy(e, link.url, link.id)}
@@ -417,9 +394,31 @@ const Portal = ({ user }) => {
                                             </div>
                                             
                                             {/* Mô tả link */}
-                                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 line-clamp-1 group-hover:text-gray-500 dark:group-hover:text-gray-400 w-[85%]">
+                                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 line-clamp-1 group-hover:text-gray-500 dark:group-hover:text-gray-400">
                                                 {link.desc}
                                             </p>
+
+                                            {/* Nút Admin (Ở dưới mô tả) */}
+                                            {isAdmin && (
+                                                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200 dark:border-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={(e) => handleEdit(e, link, section.id)}
+                                                        className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-yellow-600 hover:bg-yellow-50 dark:text-yellow-400 dark:hover:bg-yellow-900/30 transition-colors"
+                                                        title="Sửa"
+                                                    >
+                                                        <Edit size={12} />
+                                                        Sửa
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => handleDelete(e, link.id, section.id)}
+                                                        className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
+                                                        title="Xóa"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                        Xóa
+                                                    </button>
+                                                </div>
+                                            )}
                                         </a>
                                     ))}
                                 </div>
