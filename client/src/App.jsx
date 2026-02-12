@@ -112,6 +112,7 @@ function App() {
           richColors 
           closeButton 
           position="top-right" 
+          duration={3000}
           theme={darkMode ? 'dark' : 'light'}
         />
       </div>

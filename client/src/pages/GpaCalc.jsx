@@ -230,8 +230,14 @@ const GpaCalc = () => {
   // Hàm Lưu dữ liệu lên Server
   const handleSaveGPA = async () => {
     if (!user) {
-      alert("Vui lòng đăng nhập để lưu bảng điểm!");
-      return;
+      return toast.error("Chưa đăng nhập bro ơi!", {
+        description: "Ông cần đăng nhập để lưu lại bảng điểm và đồng bộ dữ liệu nhé.",
+        action: {
+          label: "Đăng nhập ngay",
+          onClick: () => setIsLoginModalOpen(true), // Bấm phát mở Modal luôn
+        },
+        duration: 5000, // Để lâu một chút cho họ kịp bấm
+      });
     }
 
     setIsSaving(true);
