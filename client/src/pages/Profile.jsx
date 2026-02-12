@@ -1,12 +1,125 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import EditProfileModal from "../components/EditProfileModal";
 import ChangePasswordModal from "../components/ChangePasswordModal";
-import { User, FileText, Bookmark, Gift, Edit2, Lock } from "lucide-react";
+import {
+  User,
+  FileText,
+  Edit2,
+  Lock,
+  BarChart3,
+  Settings,
+  Upload,
+  FileType,
+  Calendar,
+  Eye,
+  Grid3X3,
+  List,
+  Clock,
+  BookOpen,
+  Target,
+  TrendingUp,
+  PieChart as PieChartIcon,
+} from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 
-// Hàm helper để hiển thị thông tin, nếu chưa có thì hiện "Chưa cập nhật"
+// ==================== MOCK DATA ====================
+const mockDocuments = [
+  {
+    id: 1,
+    name: "Bài giảng Toán cao cấp A1",
+    uploadedBy: "binhdzvl",
+    privacy: "private",
+    type: "pdf",
+    uploadDate: "2026-01-15",
+    size: "2.5 MB",
+  },
+  {
+    id: 2,
+    name: "Ghi chú Vật lý đại cương",
+    uploadedBy: "binhdzvl",
+    privacy: "private",
+    type: "docx",
+    uploadDate: "2026-01-20",
+    size: "1.2 MB",
+  },
+  {
+    id: 3,
+    name: "Tài liệu ôn thi Lập trình C",
+    uploadedBy: "binhdzvl",
+    privacy: "public",
+    type: "pdf",
+    uploadDate: "2026-02-01",
+    size: "3.8 MB",
+  },
+  {
+    id: 4,
+    name: "Slide bài giảng Marketing",
+    uploadedBy: "otheruser",
+    privacy: "public",
+    type: "pdf",
+    uploadDate: "2026-01-25",
+    size: "5.1 MB",
+  },
+  {
+    id: 5,
+    name: "Đề cương Triết học",
+    uploadedBy: "binhdzvl",
+    privacy: "private",
+    type: "docx",
+    uploadDate: "2026-02-05",
+    size: "850 KB",
+  },
+  {
+    id: 6,
+    name: "Bài tập Xác suất thống kê",
+    uploadedBy: "otheruser",
+    privacy: "private",
+    type: "pdf",
+    uploadDate: "2026-02-08",
+    size: "1.5 MB",
+  },
+];
+
+// Mock data for Statistics
+const mockGpaData = [
+  { semester: "HK1 2024", gpa: 3.2 },
+  { semester: "HK2 2024", gpa: 3.4 },
+  { semester: "HK1 2025", gpa: 3.5 },
+  { semester: "HK2 2025", gpa: 3.7 },
+  { semester: "HK1 2026", gpa: 3.8 },
+];
+
+const mockCreditData = [
+  { name: "Đại cương", value: 45, color: "#3B82F6" },
+  { name: "Chuyên ngành", value: 75, color: "#10B981" },
+  { name: "Tự chọn", value: 15, color: "#F59E0B" },
+];
+
+const mockStudyStats = {
+  totalHours: 156,
+  thisWeekHours: 12,
+  totalCredits: 135,
+  completedCredits: 98,
+};
+
+// ==================== HELPER COMPONENTS ====================
 const DisplayRow = ({ label, value, isLink }) => (
   <div className="flex items-center py-4 border-b border-gray-50 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50 px-2 transition-colors -mx-2 rounded-lg">
-    <span className="w-1/3 text-gray-500 dark:text-gray-400 font-medium text-sm">{label}</span>
+    <span className="w-1/3 text-gray-500 dark:text-gray-400 font-medium text-sm">
+      {label}
+    </span>
     {isLink && value ? (
       <a
         href={value}
@@ -19,7 +132,9 @@ const DisplayRow = ({ label, value, isLink }) => (
     ) : (
       <span
         className={`flex-1 font-medium truncate ${
-          value ? "text-gray-800 dark:text-gray-200" : "text-gray-400 dark:text-gray-500 italic"
+          value
+            ? "text-gray-800 dark:text-gray-200"
+            : "text-gray-400 dark:text-gray-500 italic"
         }`}
       >
         {value || "Chưa cập nhật"}
@@ -28,6 +143,511 @@ const DisplayRow = ({ label, value, isLink }) => (
   </div>
 );
 
+// File icon based on type
+const FileIcon = ({ type }) => {
+  const iconClass =
+    type === "pdf"
+      ? "text-red-500 dark:text-red-400"
+      : "text-blue-500 dark:text-blue-400";
+  return <FileType className={`w-8 h-8 ${iconClass}`} />;
+};
+
+// Stat Box Component
+const StatBox = ({ icon: Icon, label, value, color, bgColor }) => (
+  <div
+    className={`${bgColor} rounded-xl p-4 border border-gray-100 dark:border-gray-700`}
+  >
+    <div className="flex items-center gap-3">
+      <div className={`p-2 rounded-lg ${color}`}>
+        <Icon size={20} />
+      </div>
+      <div>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+        <p className="text-xl font-bold text-gray-800 dark:text-white">
+          {value}
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
+// ==================== TAB COMPONENTS ====================
+
+// Tab: Tài liệu của tôi (My Documents)
+const MyDocumentsTab = ({ currentUser }) => {
+  const [viewMode, setViewMode] = useState("grid");
+
+  // Filter documents: only private docs uploaded by current user
+  const myDocuments = useMemo(() => {
+    return mockDocuments.filter(
+      (doc) =>
+        doc.uploadedBy === currentUser?.username && doc.privacy === "private"
+    );
+  }, [currentUser]);
+
+  const handleUpload = () => {
+    alert(
+      "Tính năng tải tài liệu lên đang được phát triển!\nBạn sẽ có thể upload tài liệu riêng tư tại đây."
+    );
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 md:p-8 animate-fade-in-up">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div>
+          <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
+            Tài liệu của tôi
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+            Quản lý tài liệu riêng tư của bạn ({myDocuments.length} tài liệu)
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* View Mode Toggle */}
+          <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-2 rounded-md transition-colors ${
+                viewMode === "grid"
+                  ? "bg-white dark:bg-gray-600 shadow-sm"
+                  : "hover:bg-gray-200 dark:hover:bg-gray-600"
+              }`}
+            >
+              <Grid3X3
+                size={16}
+                className="text-gray-600 dark:text-gray-300"
+              />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-2 rounded-md transition-colors ${
+                viewMode === "list"
+                  ? "bg-white dark:bg-gray-600 shadow-sm"
+                  : "hover:bg-gray-200 dark:hover:bg-gray-600"
+              }`}
+            >
+              <List size={16} className="text-gray-600 dark:text-gray-300" />
+            </button>
+          </div>
+          {/* Upload Button */}
+          <button
+            onClick={handleUpload}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors shadow-sm cursor-pointer"
+          >
+            <Upload size={16} /> Tải tài liệu lên
+          </button>
+        </div>
+      </div>
+
+      {/* Documents List/Grid */}
+      {myDocuments.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">📂</div>
+          <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-2">
+            Chưa có tài liệu nào
+          </h4>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
+            Bắt đầu upload tài liệu riêng tư của bạn ngay!
+          </p>
+          <button
+            onClick={handleUpload}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+          >
+            Upload ngay
+          </button>
+        </div>
+      ) : viewMode === "grid" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {myDocuments.map((doc) => (
+            <div
+              key={doc.id}
+              className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 border border-gray-100 dark:border-gray-600 hover:shadow-md transition-shadow cursor-pointer group"
+            >
+              <div className="flex items-start gap-3">
+                <FileIcon type={doc.type} />
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-gray-800 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                    {doc.name}
+                  </h4>
+                  <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    <Calendar size={12} />
+                    <span>{doc.uploadDate}</span>
+                    <span>•</span>
+                    <span>{doc.size}</span>
+                  </div>
+                  <div className="mt-2">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs rounded-full">
+                      <Eye size={10} /> Riêng tư
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {myDocuments.map((doc) => (
+            <div
+              key={doc.id}
+              className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600 hover:shadow-md transition-shadow cursor-pointer group"
+            >
+              <FileIcon type={doc.type} />
+              <div className="flex-1 min-w-0">
+                <h4 className="font-medium text-gray-800 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                  {doc.name}
+                </h4>
+              </div>
+              <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                <span>{doc.uploadDate}</span>
+                <span>{doc.size}</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs rounded-full">
+                  <Eye size={10} /> Riêng tư
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Tab: Cấu hình học tập (Academic Settings)
+const AcademicSettingsTab = ({ currentUser }) => {
+  const [settings, setSettings] = useState({
+    creditPrice: currentUser?.settings?.creditPrice || 450000,
+    gpaScale: currentUser?.settings?.gpaScale || 4,
+    startHour: currentUser?.settings?.startHour || "07:00",
+  });
+
+  const handleSave = () => {
+    console.log("Saving settings:", settings);
+    alert("Đã lưu cấu hình học tập thành công!");
+    // TODO: Integrate with backend API
+  };
+
+  const startHourOptions = [
+    "06:30",
+    "07:00",
+    "07:30",
+    "08:00",
+    "08:30",
+    "09:00",
+  ];
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 md:p-8 animate-fade-in-up">
+      <div className="mb-8">
+        <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
+          Cấu hình học tập
+        </h3>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+          Cài đặt các thông số hệ thống cho tính toán học tập
+        </p>
+      </div>
+
+      <div className="space-y-6 max-w-2xl">
+        {/* Credit Price Input */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Đơn giá tín chỉ (VNĐ)
+          </label>
+          <div className="relative">
+            <input
+              type="number"
+              value={settings.creditPrice}
+              onChange={(e) =>
+                setSettings({ ...settings, creditPrice: Number(e.target.value) })
+              }
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              placeholder="450000"
+            />
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
+              VNĐ/tín chỉ
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Dùng để tính học phí dự kiến mỗi kỳ
+          </p>
+        </div>
+
+        {/* GPA Scale Select */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Hệ điểm
+          </label>
+          <select
+            value={settings.gpaScale}
+            onChange={(e) =>
+              setSettings({ ...settings, gpaScale: Number(e.target.value) })
+            }
+            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer"
+          >
+            <option value={4}>Hệ 4 (GPA tối đa: 4.0)</option>
+            <option value={10}>Hệ 10 (GPA tối đa: 10.0)</option>
+          </select>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Chọn hệ điểm trường bạn đang áp dụng
+          </p>
+        </div>
+
+        {/* Start Hour Select */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Giờ bắt đầu tiết 1
+          </label>
+          <select
+            value={settings.startHour}
+            onChange={(e) =>
+              setSettings({ ...settings, startHour: e.target.value })
+            }
+            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer"
+          >
+            {startHourOptions.map((hour) => (
+              <option key={hour} value={hour}>
+                {hour}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Dùng để tính toán thời khóa biểu và lịch học
+          </p>
+        </div>
+
+        {/* Info Box */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-4">
+          <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-2">
+            Thông tin cấu hình hiện tại
+          </h4>
+          <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
+            <li>
+              • Học phí mỗi tín chỉ:{" "}
+              {settings.creditPrice.toLocaleString("vi-VN")} VNĐ
+            </li>
+            <li>• Thang điểm: Hệ {settings.gpaScale}</li>
+            <li>• Tiết 1 bắt đầu lúc: {settings.startHour}</li>
+          </ul>
+        </div>
+
+        {/* Save Button */}
+        <button
+          onClick={handleSave}
+          className="w-full sm:w-auto px-8 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm cursor-pointer"
+        >
+          Lưu cấu hình
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Tab: Thống kê học tập (Statistics)
+const StatisticsTab = () => {
+  const COLORS = ["#3B82F6", "#10B981", "#F59E0B"];
+
+  return (
+    <div className="space-y-6 animate-fade-in-up">
+      {/* Stat Boxes */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatBox
+          icon={Clock}
+          label="Tổng giờ học"
+          value={`${mockStudyStats.totalHours}h`}
+          color="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+          bgColor="bg-white dark:bg-gray-800"
+        />
+        <StatBox
+          icon={TrendingUp}
+          label="Tuần này"
+          value={`${mockStudyStats.thisWeekHours}h`}
+          color="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+          bgColor="bg-white dark:bg-gray-800"
+        />
+        <StatBox
+          icon={BookOpen}
+          label="Tổng tín chỉ"
+          value={mockStudyStats.totalCredits}
+          color="bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
+          bgColor="bg-white dark:bg-gray-800"
+        />
+        <StatBox
+          icon={Target}
+          label="Đã hoàn thành"
+          value={`${mockStudyStats.completedCredits} TC`}
+          color="bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
+          bgColor="bg-white dark:bg-gray-800"
+        />
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* GPA Line Chart */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="text-blue-600 dark:text-blue-400" size={20} />
+            <h4 className="text-lg font-bold text-gray-800 dark:text-white">
+              GPA qua các kỳ
+            </h4>
+          </div>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={mockGpaData}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#374151"
+                  opacity={0.3}
+                />
+                <XAxis
+                  dataKey="semester"
+                  tick={{ fontSize: 11, fill: "#9CA3AF" }}
+                  axisLine={{ stroke: "#4B5563" }}
+                />
+                <YAxis
+                  domain={[0, 4]}
+                  tick={{ fontSize: 12, fill: "#9CA3AF" }}
+                  axisLine={{ stroke: "#4B5563" }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1F2937",
+                    border: "1px solid #374151",
+                    borderRadius: "8px",
+                    color: "#F9FAFB",
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="gpa"
+                  stroke="#3B82F6"
+                  strokeWidth={3}
+                  dot={{ fill: "#3B82F6", strokeWidth: 2, r: 5 }}
+                  activeDot={{ r: 7 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Credit Pie Chart */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <PieChartIcon
+              className="text-green-600 dark:text-green-400"
+              size={20}
+            />
+            <h4 className="text-lg font-bold text-gray-800 dark:text-white">
+              Phân bổ tín chỉ
+            </h4>
+          </div>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={mockCreditData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                  label={({ name, percent }) =>
+                    `${name} ${(percent * 100).toFixed(0)}%`
+                  }
+                  labelLine={{ stroke: "#9CA3AF" }}
+                >
+                  {mockCreditData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1F2937",
+                    border: "1px solid #374151",
+                    borderRadius: "8px",
+                    color: "#F9FAFB",
+                  }}
+                  formatter={(value) => [`${value} tín chỉ`, "Số lượng"]}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: "12px" }}
+                  formatter={(value) => (
+                    <span className="text-gray-600 dark:text-gray-400">
+                      {value}
+                    </span>
+                  )}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Progress Summary */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h4 className="text-lg font-bold text-gray-800 dark:text-white mb-4">
+          Tiến độ học tập
+        </h4>
+        <div className="space-y-4">
+          <div>
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-gray-600 dark:text-gray-400">
+                Hoàn thành chương trình
+              </span>
+              <span className="font-medium text-gray-800 dark:text-white">
+                {Math.round(
+                  (mockStudyStats.completedCredits /
+                    mockStudyStats.totalCredits) *
+                    100
+                )}
+                %
+              </span>
+            </div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
+                style={{
+                  width: `${
+                    (mockStudyStats.completedCredits /
+                      mockStudyStats.totalCredits) *
+                    100
+                  }%`,
+                }}
+              />
+            </div>
+          </div>
+          <div>
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-gray-600 dark:text-gray-400">
+                GPA mục tiêu (3.5/4.0)
+              </span>
+              <span className="font-medium text-gray-800 dark:text-white">
+                {Math.round(
+                  (mockGpaData[mockGpaData.length - 1].gpa / 4) * 100
+                )}
+                %
+              </span>
+            </div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full transition-all duration-500"
+                style={{
+                  width: `${(mockGpaData[mockGpaData.length - 1].gpa / 4) * 100}%`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== MAIN COMPONENT ====================
 const Profile = ({ user, onUpdateUser }) => {
   const [activeTab, setActiveTab] = useState("info");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -35,7 +655,9 @@ const Profile = ({ user, onUpdateUser }) => {
 
   if (!user)
     return (
-      <div className="p-10 text-center text-gray-500 dark:text-gray-400">Vui lòng đăng nhập để xem hồ sơ.</div>
+      <div className="p-10 text-center text-gray-500 dark:text-gray-400">
+        Vui lòng đăng nhập để xem hồ sơ.
+      </div>
     );
 
   return (
@@ -119,30 +741,43 @@ const Profile = ({ user, onUpdateUser }) => {
               </button>
 
               <button
-                onClick={() => setActiveTab("saved")}
+                onClick={() => setActiveTab("stats")}
                 className={`flex items-center gap-3 px-5 py-4 text-sm font-medium transition-colors ${
-                  activeTab === "saved"
+                  activeTab === "stats"
                     ? "bg-blue-600 text-white"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 <div
                   className={`p-1.5 rounded-lg ${
-                    activeTab === "saved"
+                    activeTab === "stats"
                       ? "bg-white/20"
                       : "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
                   }`}
                 >
-                  <Bookmark size={18} />
+                  <BarChart3 size={18} />
                 </div>
-                Tài liệu đã lưu
+                Thống kê học tập
               </button>
 
-              <button className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                <div className="p-1.5 rounded-lg bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
-                  <Gift size={18} />
+              <button
+                onClick={() => setActiveTab("settings")}
+                className={`flex items-center gap-3 px-5 py-4 text-sm font-medium transition-colors ${
+                  activeTab === "settings"
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                }`}
+              >
+                <div
+                  className={`p-1.5 rounded-lg ${
+                    activeTab === "settings"
+                      ? "bg-white/20"
+                      : "bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
+                  }`}
+                >
+                  <Settings size={18} />
                 </div>
-                Kho vật phẩm
+                Cấu hình học tập
               </button>
             </nav>
           </div>
@@ -195,28 +830,12 @@ const Profile = ({ user, onUpdateUser }) => {
             </div>
           )}
 
-          {activeTab === "docs" && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-10 text-center animate-fade-in-up">
-              <div className="text-6xl mb-4">📂</div>
-              <h3 className="text-xl font-bold text-gray-800 dark:text-white">
-                Tài liệu của tôi
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                Tính năng đang được cập nhật từ file cũ...
-              </p>
-            </div>
-          )}
+          {activeTab === "docs" && <MyDocumentsTab currentUser={user} />}
 
-          {activeTab === "saved" && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-10 text-center animate-fade-in-up">
-              <div className="text-6xl mb-4">🔖</div>
-              <h3 className="text-xl font-bold text-gray-800 dark:text-white">
-                Tài liệu đã lưu
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                Tính năng đang được cập nhật từ file cũ...
-              </p>
-            </div>
+          {activeTab === "stats" && <StatisticsTab />}
+
+          {activeTab === "settings" && (
+            <AcademicSettingsTab currentUser={user} />
           )}
         </div>
       </div>
