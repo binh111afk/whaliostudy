@@ -15,6 +15,7 @@ import Timetable from './pages/Timetable';
 import Documents from './pages/Documents';
 import Exams from './pages/Exams';
 import DocumentViewer from './pages/DocumentViewer';
+import Portal from './pages/Portal';
 
 function App() {
   // 1. Khai báo State quản lý User và Modal
@@ -93,6 +94,8 @@ function App() {
               <Route path="/documents" element={<Documents />} />
               <Route path="/exams" element={<Exams />} />
               <Route path="/documents/:id" element={<DocumentViewer />} />
+              <Route path="/portal" element={<Portal />} />
+              <Route path="/portal" element={<Portal user={user} />} />
             </Routes>
           </main>
         </div>

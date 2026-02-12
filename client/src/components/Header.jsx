@@ -11,9 +11,19 @@ import {
   Save,
   LogOut,
   ChevronDown,
+  LayoutGrid,
+  Home,
+  FileText,
+  Users,
 } from "lucide-react";
 
-const Header = ({ user, onLoginClick, onLogoutClick, darkMode, onToggleDarkMode }) => {
+const Header = ({
+  user,
+  onLoginClick,
+  onLogoutClick,
+  darkMode,
+  onToggleDarkMode,
+}) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -49,22 +59,37 @@ const Header = ({ user, onLoginClick, onLogoutClick, darkMode, onToggleDarkMode 
       {/* 2. MENU GIỮA */}
       <nav className="hidden md:flex items-center space-x-8">
         <NavLink to="/" className={navLinkClass}>
-          Trang chủ
+          <div className="flex items-center gap-2">
+            <Home size={18} />
+            <span>Trang chủ</span>
+          </div>
         </NavLink>
-        <NavLink to="/gpa" className={navLinkClass}>
-          Tính GPA
+
+        <NavLink to="/portal" className={navLinkClass}>
+          <div className="flex items-center gap-2">
+            <LayoutGrid size={18} />
+            <span>Tiện ích</span>
+          </div>
         </NavLink>
+
         <NavLink to="/documents" className={navLinkClass}>
-          Tài liệu
+          <div className="flex items-center gap-2">
+            <FileText size={18} />
+            <span>Tài liệu</span>
+          </div>
         </NavLink>
+
         <NavLink to="/community" className={navLinkClass}>
-          Cộng đồng
+          <div className="flex items-center gap-2">
+            <Users size={18} />
+            <span>Cộng đồng</span>
+          </div>
         </NavLink>
       </nav>
 
       {/* 3. KHU VỰC CÁ NHÂN */}
       <div className="flex items-center space-x-3">
-        <button 
+        <button
           onClick={onToggleDarkMode}
           className="p-2 text-gray-400 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-all"
           title={darkMode ? "Chế độ sáng" : "Chế độ tối"}
