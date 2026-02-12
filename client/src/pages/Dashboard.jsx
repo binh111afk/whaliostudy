@@ -57,16 +57,16 @@ const PERIOD_START_TIMES = {
   12: "18:20", // Thêm tiết tối nếu cần
 };
 
-// Hàm lấy tên thứ hiện tại (Khớp với format trong Database: "Thứ 2", "Thứ 3"...)
+// Hàm lấy tên thứ hiện tại (Khớp với format trong Database: "2", "3"... hoặc "CN")
 const getCurrentDayString = () => {
   const days = [
-    "Chủ Nhật",
-    "Thứ 2",
-    "Thứ 3",
-    "Thứ 4",
-    "Thứ 5",
-    "Thứ 6",
-    "Thứ 7",
+    "CN",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
   ];
   return days[new Date().getDay()];
 };
