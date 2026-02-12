@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     Search, ExternalLink, Globe, Book, CreditCard, 
     Wrench, Heart, Copy, Edit, Check, Plus, ShieldCheck, Trash2,
-    Monitor, Coffee, Library, Bus, School
+    Monitor, Coffee, Library, Bus, School, RotateCcw
 } from 'lucide-react';
+import { portalService } from '../services/portalService';
 
 const Portal = ({ user }) => {
     // --- STATE QUẢN LÝ ---
@@ -12,17 +13,27 @@ const Portal = ({ user }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingLink, setEditingLink] = useState(null);
     const [formData, setFormData] = useState({ name: '', url: '', desc: '', categoryId: '' });
+    const [loading, setLoading] = useState(true);
 
     // --- 🔐 LOGIC CHECK QUYỀN ADMIN ---
     // User là Admin nếu role là 'admin' HOẶC username là 'binhdzvl' (Account của ông)
     const isAdmin = user?.role === 'admin' || user?.username === 'binhdzvl';
+
+    // Map icon names to components
+    const iconMap = {
+        'Globe': Globe,
+        'CreditCard': CreditCard,
+        'Library': Library,
+        'Wrench': Wrench,
+        'Heart': Heart
+    };
 
     // --- DỮ LIỆU ĐẦY ĐỦ 5 DANH MỤC (BOX) ---
     const initialData = [
         {
             id: 'admin',
             category: "Hành chính & Đào tạo",
-            icon: <Globe size={24} className="text-blue-600 dark:text-blue-400" />,
+            icon: 'Globe',
             bg: "bg-blue-50 dark:bg-blue-900/20",
             links: [
                 { 
@@ -54,7 +65,7 @@ const Portal = ({ user }) => {
         {
             id: 'finance',
             category: "Tài chính & Dịch vụ",
-            icon: <CreditCard size={24} className="text-green-600 dark:text-green-400" />,
+            icon: 'CreditCard',
             bg: "bg-green-50 dark:bg-green-900/20",
             links: [
                 { 
@@ -86,7 +97,7 @@ const Portal = ({ user }) => {
         {
             id: 'library',
             category: "Tài nguyên Học tập",
-            icon: <Library size={24} className="text-purple-600 dark:text-purple-400" />,
+            icon: 'Library',
             bg: "bg-purple-50 dark:bg-purple-900/20",
             links: [
                 { 
@@ -112,7 +123,7 @@ const Portal = ({ user }) => {
         {
             id: 'tools',
             category: "Công cụ Sinh viên",
-            icon: <Wrench size={24} className="text-orange-600 dark:text-orange-400" />,
+            icon: 'Wrench',
             bg: "bg-orange-50 dark:bg-orange-900/20",
             links: [
                 { 
@@ -144,7 +155,7 @@ const Portal = ({ user }) => {
         {
             id: 'community',
             category: "Cộng đồng & Đời sống",
-            icon: <Heart size={24} className="text-pink-600 dark:text-pink-400" />,
+            icon: 'Heart',
             bg: "bg-pink-50 dark:bg-pink-900/20",
             links: [
                 { 
@@ -177,6 +188,32 @@ const Portal = ({ user }) => {
 
     const [portalData, setPortalData] = useState(initialData);
 
+    // Load dữ liệu từ MongoDB khi component mount
+    useEffect(() => {
+        loadPortalData();
+    }, []);
+
+    const loadPortalData = async () => {
+        setLoading(true);
+        const result = await portalService.getPortalData();
+        if (result.success && result.data.length > 0) {
+            setPortalData(result.data);
+        } else {
+            // Nếu chưa có dữ liệu, khởi tạo với initialData
+            await portalService.updatePortalData(initialData);
+            setPortalData(initialData);
+        }
+        setLoading(false);
+    };
+
+    // Hàm lưu dữ liệu lên MongoDB
+    const savePortalData = async (newData) => {
+        const result = await portalService.updatePortalData(newData);
+        if (result.success) {
+            setPortalData(newData);
+        }
+    };
+
     // --- CÁC HÀM XỬ LÝ SỰ KIỆN (HANDLERS) ---
 
     // Xử lý Copy Link
@@ -204,21 +241,20 @@ const Portal = ({ user }) => {
     };
 
     // Xử lý Xóa Link (Chỉ Admin)
-    const handleDelete = (e, linkId, categoryId) => {
+    const handleDelete = async (e, linkId, categoryId) => {
         e.preventDefault(); 
         e.stopPropagation();
         if(confirm("Bạn chắc chắn muốn xóa link này?")) {
-            setPortalData(prevData => 
-                prevData.map(section => {
-                    if (section.id === categoryId) {
-                        return {
-                            ...section,
-                            links: section.links.filter(link => link.id !== linkId)
-                        };
-                    }
-                    return section;
-                })
-            );
+            const newData = portalData.map(section => {
+                if (section.id === categoryId) {
+                    return {
+                        ...section,
+                        links: section.links.filter(link => link.id !== linkId)
+                    };
+                }
+                return section;
+            });
+            await savePortalData(newData);
         }
     }
 
@@ -229,51 +265,56 @@ const Portal = ({ user }) => {
         setIsModalOpen(true);
     }
 
+    // Xử lý Reset về dữ liệu gốc (Chỉ Admin)
+    const handleReset = async () => {
+        if(confirm("Bằn chắc chắn muốn khôi phục lại dữ liệu gốc? Tất cả thay đổi sẽ bị mất!")) {
+            await savePortalData(initialData);
+        }
+    }
+
     // Xử lý Lưu Link (Thêm mới hoặc Cập nhật)
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!formData.name || !formData.url || !formData.desc || !formData.categoryId) {
             alert('Vui lòng điền đầy đủ thông tin!');
             return;
         }
 
+        let newData;
         if (editingLink) {
             // Cập nhật link hiện có
-            setPortalData(prevData => 
-                prevData.map(section => {
-                    if (section.id === formData.categoryId) {
-                        return {
-                            ...section,
-                            links: section.links.map(link => 
-                                link.id === editingLink.id
-                                    ? { ...link, name: formData.name, url: formData.url, desc: formData.desc }
-                                    : link
-                            )
-                        };
-                    }
-                    return section;
-                })
-            );
+            newData = portalData.map(section => {
+                if (section.id === formData.categoryId) {
+                    return {
+                        ...section,
+                        links: section.links.map(link => 
+                            link.id === editingLink.id
+                                ? { ...link, name: formData.name, url: formData.url, desc: formData.desc }
+                                : link
+                        )
+                    };
+                }
+                return section;
+            });
         } else {
             // Thêm link mới
             const newId = Math.max(...portalData.flatMap(s => s.links.map(l => l.id))) + 1;
-            setPortalData(prevData => 
-                prevData.map(section => {
-                    if (section.id === formData.categoryId) {
-                        return {
-                            ...section,
-                            links: [...section.links, { 
-                                id: newId, 
-                                name: formData.name, 
-                                url: formData.url, 
-                                desc: formData.desc 
-                            }]
-                        };
-                    }
-                    return section;
-                })
-            );
+            newData = portalData.map(section => {
+                if (section.id === formData.categoryId) {
+                    return {
+                        ...section,
+                        links: [...section.links, { 
+                            id: newId, 
+                            name: formData.name, 
+                            url: formData.url, 
+                            desc: formData.desc 
+                        }]
+                    };
+                }
+                return section;
+            });
         }
 
+        await savePortalData(newData);
         setIsModalOpen(false);
         setEditingLink(null);
         setFormData({ name: '', url: '', desc: '', categoryId: '' });
@@ -328,18 +369,33 @@ const Portal = ({ user }) => {
 
                         {/* NÚT THÊM MỚI (CHỈ ADMIN THẤY) */}
                         {isAdmin && (
-                            <button 
-                                onClick={handleAddNew}
-                                className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl shadow-lg shadow-blue-200 dark:shadow-none transition-all transform hover:scale-105"
-                                title="Thêm liên kết mới"
-                            >
-                                <Plus size={24} />
-                            </button>
+                            <>
+                                <button 
+                                    onClick={handleAddNew}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl shadow-lg shadow-blue-200 dark:shadow-none transition-all transform hover:scale-105"
+                                    title="Thêm liên kết mới"
+                                >
+                                    <Plus size={24} />
+                                </button>
+                                <button 
+                                    onClick={handleReset}
+                                    className="bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-xl shadow-lg dark:shadow-none transition-all transform hover:scale-105"
+                                    title="Khôi phục dữ liệu gốc"
+                                >
+                                    <RotateCcw size={24} />
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>
 
                 {/* --- MAIN CONTENT (GRID 5 BOX) --- */}
+                {loading ? (
+                    <div className="col-span-full text-center py-20">
+                        <Coffee size={48} className="mx-auto text-gray-300 mb-4 animate-pulse" />
+                        <p className="text-gray-500 dark:text-gray-400 font-medium">Đang tải dữ liệu...</p>
+                    </div>
+                ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20">
                     {filteredData.length > 0 ? (
                         filteredData.map((section) => (
@@ -348,7 +404,15 @@ const Portal = ({ user }) => {
                                 {/* Header của từng Box */}
                                 <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-50 dark:border-gray-700">
                                     <div className={`p-3 rounded-xl ${section.bg}`}>
-                                        {section.icon}
+                                        {(() => {
+                                            const IconComponent = iconMap[section.icon] || Globe;
+                                            const colorClass = section.icon === 'Globe' ? 'text-blue-600 dark:text-blue-400' :
+                                                              section.icon === 'CreditCard' ? 'text-green-600 dark:text-green-400' :
+                                                              section.icon === 'Library' ? 'text-purple-600 dark:text-purple-400' :
+                                                              section.icon === 'Wrench' ? 'text-orange-600 dark:text-orange-400' :
+                                                              'text-pink-600 dark:text-pink-400';
+                                            return <IconComponent size={24} className={colorClass} />;
+                                        })()}
                                     </div>
                                     <h3 className="font-bold text-lg text-gray-800 dark:text-white">
                                         {section.category}
@@ -432,6 +496,7 @@ const Portal = ({ user }) => {
                         </div>
                     )}
                 </div>
+                )}
 
                 {/* MODAL THÊM/SỬA LINK (CHỈ ADMIN) */}
                 {isModalOpen && (

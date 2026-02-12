@@ -344,6 +344,23 @@ const userSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 
+// --- Portal Schema (Quản lý link tiện ích) ---
+const portalSchema = new mongoose.Schema({
+    categories: [{
+        id: { type: String, required: true },
+        category: { type: String, required: true },
+        icon: { type: String },
+        bg: { type: String },
+        links: [{
+            id: { type: Number, required: true },
+            name: { type: String, required: true },
+            url: { type: String, required: true },
+            desc: { type: String, required: true }
+        }]
+    }],
+    updatedAt: { type: Date, default: Date.now }
+});
+
 // --- Study Session Schema (Lưu lịch sử học tập) ---
 const studySessionSchema = new mongoose.Schema({
     username: { type: String, required: true, index: true },
@@ -580,6 +597,7 @@ chatSessionSchema.index({ username: 1, createdAt: -1 });
 
 // Create Models
 const User = mongoose.model('User', userSchema);
+const Portal = mongoose.model('Portal', portalSchema);
 const Document = mongoose.model('Document', documentSchema);
 const Exam = mongoose.model('Exam', examSchema);
 const Post = mongoose.model('Post', postSchema);
@@ -1127,6 +1145,51 @@ app.post('/api/upload-avatar', upload.single('avatar'), async (req, res) => {
         res.json({ success: true, avatar: avatarPath, user: safeUser });
     } catch (err) {
         console.error('Upload avatar error:', err);
+        res.status(500).json({ success: false, message: "Lỗi server" });
+    }
+});
+
+// ==================== PORTAL APIs ====================
+
+// Lấy dữ liệu portal
+app.get('/api/portal', async (req, res) => {
+    try {
+        let portalData = await Portal.findOne();
+        
+        // Nếu chưa có dữ liệu, tạo mới với dữ liệu mặc định
+        if (!portalData) {
+            portalData = new Portal({
+                categories: []
+            });
+            await portalData.save();
+        }
+        
+        res.json({ success: true, data: portalData.categories });
+    } catch (err) {
+        console.error('Get portal error:', err);
+        res.status(500).json({ success: false, message: "Lỗi server" });
+    }
+});
+
+// Cập nhật dữ liệu portal (chỉ admin)
+app.post('/api/portal/update', async (req, res) => {
+    try {
+        const { categories } = req.body;
+        
+        let portalData = await Portal.findOne();
+        
+        if (!portalData) {
+            portalData = new Portal({ categories });
+        } else {
+            portalData.categories = categories;
+            portalData.updatedAt = Date.now();
+        }
+        
+        await portalData.save();
+        
+        res.json({ success: true, data: portalData.categories });
+    } catch (err) {
+        console.error('Update portal error:', err);
         res.status(500).json({ success: false, message: "Lỗi server" });
     }
 });
