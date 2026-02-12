@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import EditProfileModal from "../components/EditProfileModal";
 import ChangePasswordModal from "../components/ChangePasswordModal";
+import { UploadModal } from "../components/DocumentModals";
 import { documentService } from "../services/documentService";
 import { userService } from "../services/userService";
 import {
@@ -102,27 +103,30 @@ const MyDocumentsTab = ({ currentUser }) => {
   const [viewMode, setViewMode] = useState("grid");
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
-  // Fetch documents from API
+  // Load documents
+  const loadDocuments = async () => {
+    setLoading(true);
+    try {
+      const data = await documentService.getDocuments();
+      const myDocs = (data || []).filter(
+        (doc) =>
+          doc.uploaderUsername === currentUser?.username &&
+          doc.visibility === "private"
+      );
+      setDocuments(myDocs);
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch documents on mount
   useEffect(() => {
-    const fetchDocuments = async () => {
-      try {
-        const data = await documentService.getDocuments();
-        // Filter: only private docs uploaded by current user
-        const myDocs = (data || []).filter(
-          (doc) =>
-            doc.uploaderUsername === currentUser?.username &&
-            doc.visibility === "private"
-        );
-        setDocuments(myDocs);
-      } catch (error) {
-        console.error("Error fetching documents:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     if (currentUser?.username) {
-      fetchDocuments();
+      loadDocuments();
     }
   }, [currentUser]);
 
@@ -134,10 +138,22 @@ const MyDocumentsTab = ({ currentUser }) => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const handleUpload = () => {
-    alert(
-      "Tính năng tải tài liệu lên đang được phát triển!\nHãy sử dụng trang Tài liệu để upload tài liệu riêng tư."
-    );
+  // Handle upload
+  const handleUpload = async (formData) => {
+    try {
+      // Force visibility to private for profile uploads
+      formData.set('visibility', 'private');
+      const res = await documentService.uploadDocument(formData);
+      if (res.success) {
+        alert("Tải lên thành công!");
+        loadDocuments();
+      } else {
+        alert("Lỗi: " + res.message);
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Có lỗi xảy ra khi tải lên tài liệu!");
+    }
   };
 
   if (loading) {
@@ -190,7 +206,7 @@ const MyDocumentsTab = ({ currentUser }) => {
           </div>
           {/* Upload Button */}
           <button
-            onClick={handleUpload}
+            onClick={() => setShowUploadModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors shadow-sm cursor-pointer"
           >
             <Upload size={16} /> Tải tài liệu lên
@@ -209,7 +225,7 @@ const MyDocumentsTab = ({ currentUser }) => {
             Bạn chưa upload tài liệu riêng tư nào. Hãy vào trang Tài liệu để upload!
           </p>
           <button
-            onClick={handleUpload}
+            onClick={() => setShowUploadModal(true)}
             className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
           >
             Upload ngay
@@ -268,6 +284,14 @@ const MyDocumentsTab = ({ currentUser }) => {
           ))}
         </div>
       )}
+
+      {/* Upload Modal */}
+      <UploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onSuccess={handleUpload}
+        currentUser={currentUser}
+      />
     </div>
   );
 };
