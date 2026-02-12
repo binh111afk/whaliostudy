@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import EditProfileModal from "../components/EditProfileModal";
 import ChangePasswordModal from "../components/ChangePasswordModal";
+import { documentService } from "../services/documentService";
+import { userService } from "../services/userService";
 import {
   User,
   FileText,
@@ -19,6 +21,8 @@ import {
   Target,
   TrendingUp,
   PieChart as PieChartIcon,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 import {
   LineChart,
@@ -33,86 +37,6 @@ import {
   Cell,
   Legend,
 } from "recharts";
-
-// ==================== MOCK DATA ====================
-const mockDocuments = [
-  {
-    id: 1,
-    name: "Bài giảng Toán cao cấp A1",
-    uploadedBy: "binhdzvl",
-    privacy: "private",
-    type: "pdf",
-    uploadDate: "2026-01-15",
-    size: "2.5 MB",
-  },
-  {
-    id: 2,
-    name: "Ghi chú Vật lý đại cương",
-    uploadedBy: "binhdzvl",
-    privacy: "private",
-    type: "docx",
-    uploadDate: "2026-01-20",
-    size: "1.2 MB",
-  },
-  {
-    id: 3,
-    name: "Tài liệu ôn thi Lập trình C",
-    uploadedBy: "binhdzvl",
-    privacy: "public",
-    type: "pdf",
-    uploadDate: "2026-02-01",
-    size: "3.8 MB",
-  },
-  {
-    id: 4,
-    name: "Slide bài giảng Marketing",
-    uploadedBy: "otheruser",
-    privacy: "public",
-    type: "pdf",
-    uploadDate: "2026-01-25",
-    size: "5.1 MB",
-  },
-  {
-    id: 5,
-    name: "Đề cương Triết học",
-    uploadedBy: "binhdzvl",
-    privacy: "private",
-    type: "docx",
-    uploadDate: "2026-02-05",
-    size: "850 KB",
-  },
-  {
-    id: 6,
-    name: "Bài tập Xác suất thống kê",
-    uploadedBy: "otheruser",
-    privacy: "private",
-    type: "pdf",
-    uploadDate: "2026-02-08",
-    size: "1.5 MB",
-  },
-];
-
-// Mock data for Statistics
-const mockGpaData = [
-  { semester: "HK1 2024", gpa: 3.2 },
-  { semester: "HK2 2024", gpa: 3.4 },
-  { semester: "HK1 2025", gpa: 3.5 },
-  { semester: "HK2 2025", gpa: 3.7 },
-  { semester: "HK1 2026", gpa: 3.8 },
-];
-
-const mockCreditData = [
-  { name: "Đại cương", value: 45, color: "#3B82F6" },
-  { name: "Chuyên ngành", value: 75, color: "#10B981" },
-  { name: "Tự chọn", value: 15, color: "#F59E0B" },
-];
-
-const mockStudyStats = {
-  totalHours: 156,
-  thisWeekHours: 12,
-  totalCredits: 135,
-  completedCredits: 98,
-};
 
 // ==================== HELPER COMPONENTS ====================
 const DisplayRow = ({ label, value, isLink }) => (
@@ -176,20 +100,54 @@ const StatBox = ({ icon: Icon, label, value, color, bgColor }) => (
 // Tab: Tài liệu của tôi (My Documents)
 const MyDocumentsTab = ({ currentUser }) => {
   const [viewMode, setViewMode] = useState("grid");
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filter documents: only private docs uploaded by current user
-  const myDocuments = useMemo(() => {
-    return mockDocuments.filter(
-      (doc) =>
-        doc.uploadedBy === currentUser?.username && doc.privacy === "private"
-    );
+  // Fetch documents from API
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      try {
+        const data = await documentService.getDocuments();
+        // Filter: only private docs uploaded by current user
+        const myDocs = (data || []).filter(
+          (doc) =>
+            doc.uploaderUsername === currentUser?.username &&
+            doc.visibility === "private"
+        );
+        setDocuments(myDocs);
+      } catch (error) {
+        console.error("Error fetching documents:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (currentUser?.username) {
+      fetchDocuments();
+    }
   }, [currentUser]);
+
+  // Format file size
+  const formatSize = (bytes) => {
+    if (!bytes) return "0 KB";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   const handleUpload = () => {
     alert(
-      "Tính năng tải tài liệu lên đang được phát triển!\nBạn sẽ có thể upload tài liệu riêng tư tại đây."
+      "Tính năng tải tài liệu lên đang được phát triển!\nHãy sử dụng trang Tài liệu để upload tài liệu riêng tư."
     );
   };
+
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-10 text-center animate-fade-in-up">
+        <RefreshCw className="w-10 h-10 mx-auto mb-4 text-blue-500 animate-spin" />
+        <p className="text-gray-500 dark:text-gray-400">Đang tải...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 md:p-8 animate-fade-in-up">
@@ -200,7 +158,7 @@ const MyDocumentsTab = ({ currentUser }) => {
             Tài liệu của tôi
           </h3>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Quản lý tài liệu riêng tư của bạn ({myDocuments.length} tài liệu)
+            Quản lý tài liệu riêng tư của bạn ({documents.length} tài liệu)
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -241,14 +199,14 @@ const MyDocumentsTab = ({ currentUser }) => {
       </div>
 
       {/* Documents List/Grid */}
-      {myDocuments.length === 0 ? (
+      {documents.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">📂</div>
           <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-2">
-            Chưa có tài liệu nào
+            Chưa có tài liệu riêng tư nào
           </h4>
           <p className="text-gray-500 dark:text-gray-400 mb-4">
-            Bắt đầu upload tài liệu riêng tư của bạn ngay!
+            Bạn chưa upload tài liệu riêng tư nào. Hãy vào trang Tài liệu để upload!
           </p>
           <button
             onClick={handleUpload}
@@ -259,9 +217,9 @@ const MyDocumentsTab = ({ currentUser }) => {
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {myDocuments.map((doc) => (
+          {documents.map((doc) => (
             <div
-              key={doc.id}
+              key={doc._id || doc.id}
               className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 border border-gray-100 dark:border-gray-600 hover:shadow-md transition-shadow cursor-pointer group"
             >
               <div className="flex items-start gap-3">
@@ -272,9 +230,9 @@ const MyDocumentsTab = ({ currentUser }) => {
                   </h4>
                   <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
                     <Calendar size={12} />
-                    <span>{doc.uploadDate}</span>
+                    <span>{doc.date || new Date(doc.createdAt).toLocaleDateString("vi-VN")}</span>
                     <span>•</span>
-                    <span>{doc.size}</span>
+                    <span>{formatSize(doc.size)}</span>
                   </div>
                   <div className="mt-2">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs rounded-full">
@@ -288,9 +246,9 @@ const MyDocumentsTab = ({ currentUser }) => {
         </div>
       ) : (
         <div className="space-y-2">
-          {myDocuments.map((doc) => (
+          {documents.map((doc) => (
             <div
-              key={doc.id}
+              key={doc._id || doc.id}
               className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600 hover:shadow-md transition-shadow cursor-pointer group"
             >
               <FileIcon type={doc.type} />
@@ -300,8 +258,8 @@ const MyDocumentsTab = ({ currentUser }) => {
                 </h4>
               </div>
               <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                <span>{doc.uploadDate}</span>
-                <span>{doc.size}</span>
+                <span>{doc.date || new Date(doc.createdAt).toLocaleDateString("vi-VN")}</span>
+                <span>{formatSize(doc.size)}</span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs rounded-full">
                   <Eye size={10} /> Riêng tư
                 </span>
@@ -315,17 +273,33 @@ const MyDocumentsTab = ({ currentUser }) => {
 };
 
 // Tab: Cấu hình học tập (Academic Settings)
-const AcademicSettingsTab = ({ currentUser }) => {
+const AcademicSettingsTab = ({ currentUser, onUpdateUser }) => {
   const [settings, setSettings] = useState({
     creditPrice: currentUser?.settings?.creditPrice || 450000,
     gpaScale: currentUser?.settings?.gpaScale || 4,
     startHour: currentUser?.settings?.startHour || "07:00",
   });
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
-    console.log("Saving settings:", settings);
-    alert("Đã lưu cấu hình học tập thành công!");
-    // TODO: Integrate with backend API
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const result = await userService.updateSettings(currentUser.username, settings);
+      if (result.success) {
+        alert("Đã lưu cấu hình học tập thành công!");
+        // Update user state in parent if callback exists
+        if (onUpdateUser && result.user) {
+          onUpdateUser(result.user);
+        }
+      } else {
+        alert("Lỗi: " + (result.message || "Không thể lưu cấu hình"));
+      }
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      alert("Đã xảy ra lỗi khi lưu cấu hình!");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const startHourOptions = [
@@ -434,9 +408,11 @@ const AcademicSettingsTab = ({ currentUser }) => {
         {/* Save Button */}
         <button
           onClick={handleSave}
-          className="w-full sm:w-auto px-8 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm cursor-pointer"
+          disabled={saving}
+          className="w-full sm:w-auto px-8 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          Lưu cấu hình
+          {saving && <RefreshCw size={16} className="animate-spin" />}
+          {saving ? "Đang lưu..." : "Lưu cấu hình"}
         </button>
       </div>
     </div>
@@ -444,8 +420,50 @@ const AcademicSettingsTab = ({ currentUser }) => {
 };
 
 // Tab: Thống kê học tập (Statistics)
-const StatisticsTab = () => {
+const StatisticsTab = ({ currentUser }) => {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
   const COLORS = ["#3B82F6", "#10B981", "#F59E0B"];
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const result = await userService.getProfileStats(currentUser?.username);
+        if (result.success) {
+          setStats(result.data);
+        }
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (currentUser?.username) {
+      fetchStats();
+    }
+  }, [currentUser]);
+
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-10 text-center animate-fade-in-up">
+        <RefreshCw className="w-10 h-10 mx-auto mb-4 text-blue-500 animate-spin" />
+        <p className="text-gray-500 dark:text-gray-400">Đang tải thống kê...</p>
+      </div>
+    );
+  }
+
+  // Default values if no stats
+  const studyStats = {
+    totalHours: stats?.totalHours || 0,
+    thisWeekHours: stats?.thisWeekHours || 0,
+    totalCredits: stats?.totalCredits || 150,
+    completedCredits: stats?.completedCredits || 0,
+  };
+
+  const gpaData = stats?.gpaSummary?.length > 0 ? stats.gpaSummary : [];
+  const creditData = stats?.creditDistribution?.filter(d => d.value > 0) || [];
+  const hasGpaData = gpaData.length > 0;
+  const hasCreditData = creditData.length > 0;
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -454,28 +472,28 @@ const StatisticsTab = () => {
         <StatBox
           icon={Clock}
           label="Tổng giờ học"
-          value={`${mockStudyStats.totalHours}h`}
+          value={`${studyStats.totalHours}h`}
           color="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
           bgColor="bg-white dark:bg-gray-800"
         />
         <StatBox
           icon={TrendingUp}
           label="Tuần này"
-          value={`${mockStudyStats.thisWeekHours}h`}
+          value={`${studyStats.thisWeekHours}h`}
           color="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
           bgColor="bg-white dark:bg-gray-800"
         />
         <StatBox
           icon={BookOpen}
           label="Tổng tín chỉ"
-          value={mockStudyStats.totalCredits}
+          value={studyStats.totalCredits}
           color="bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
           bgColor="bg-white dark:bg-gray-800"
         />
         <StatBox
           icon={Target}
           label="Đã hoàn thành"
-          value={`${mockStudyStats.completedCredits} TC`}
+          value={`${studyStats.completedCredits} TC`}
           color="bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
           bgColor="bg-white dark:bg-gray-800"
         />
@@ -491,43 +509,51 @@ const StatisticsTab = () => {
               GPA qua các kỳ
             </h4>
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={mockGpaData}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#374151"
-                  opacity={0.3}
-                />
-                <XAxis
-                  dataKey="semester"
-                  tick={{ fontSize: 11, fill: "#9CA3AF" }}
-                  axisLine={{ stroke: "#4B5563" }}
-                />
-                <YAxis
-                  domain={[0, 4]}
-                  tick={{ fontSize: 12, fill: "#9CA3AF" }}
-                  axisLine={{ stroke: "#4B5563" }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1F2937",
-                    border: "1px solid #374151",
-                    borderRadius: "8px",
-                    color: "#F9FAFB",
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="gpa"
-                  stroke="#3B82F6"
-                  strokeWidth={3}
-                  dot={{ fill: "#3B82F6", strokeWidth: 2, r: 5 }}
-                  activeDot={{ r: 7 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {hasGpaData ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={gpaData}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#374151"
+                    opacity={0.3}
+                  />
+                  <XAxis
+                    dataKey="semester"
+                    tick={{ fontSize: 11, fill: "#9CA3AF" }}
+                    axisLine={{ stroke: "#4B5563" }}
+                  />
+                  <YAxis
+                    domain={[0, 4]}
+                    tick={{ fontSize: 12, fill: "#9CA3AF" }}
+                    axisLine={{ stroke: "#4B5563" }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1F2937",
+                      border: "1px solid #374151",
+                      borderRadius: "8px",
+                      color: "#F9FAFB",
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="gpa"
+                    stroke="#3B82F6"
+                    strokeWidth={3}
+                    dot={{ fill: "#3B82F6", strokeWidth: 2, r: 5 }}
+                    activeDot={{ r: 7 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
+              <AlertCircle size={40} className="mb-3 opacity-50" />
+              <p>Chưa có dữ liệu GPA</p>
+              <p className="text-sm mt-1">Hãy nhập điểm ở trang Tính GPA</p>
+            </div>
+          )}
         </div>
 
         {/* Credit Pie Chart */}
@@ -541,49 +567,57 @@ const StatisticsTab = () => {
               Phân bổ tín chỉ
             </h4>
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={mockCreditData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
-                  labelLine={{ stroke: "#9CA3AF" }}
-                >
-                  {mockCreditData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1F2937",
-                    border: "1px solid #374151",
-                    borderRadius: "8px",
-                    color: "#F9FAFB",
-                  }}
-                  formatter={(value) => [`${value} tín chỉ`, "Số lượng"]}
-                />
-                <Legend
-                  wrapperStyle={{ fontSize: "12px" }}
-                  formatter={(value) => (
-                    <span className="text-gray-600 dark:text-gray-400">
-                      {value}
-                    </span>
-                  )}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          {hasCreditData ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={creditData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, percent }) =>
+                      `${name} ${(percent * 100).toFixed(0)}%`
+                    }
+                    labelLine={{ stroke: "#9CA3AF" }}
+                  >
+                    {creditData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.color || COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1F2937",
+                      border: "1px solid #374151",
+                      borderRadius: "8px",
+                      color: "#F9FAFB",
+                    }}
+                    formatter={(value) => [`${value} tín chỉ`, "Số lượng"]}
+                  />
+                  <Legend
+                    wrapperStyle={{ fontSize: "12px" }}
+                    formatter={(value) => (
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {value}
+                      </span>
+                    )}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
+              <AlertCircle size={40} className="mb-3 opacity-50" />
+              <p>Chưa có dữ liệu tín chỉ</p>
+              <p className="text-sm mt-1">Hãy thêm môn học ở trang Tính GPA</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -599,11 +633,11 @@ const StatisticsTab = () => {
                 Hoàn thành chương trình
               </span>
               <span className="font-medium text-gray-800 dark:text-white">
-                {Math.round(
-                  (mockStudyStats.completedCredits /
-                    mockStudyStats.totalCredits) *
-                    100
-                )}
+                {studyStats.totalCredits > 0
+                  ? Math.round(
+                      (studyStats.completedCredits / studyStats.totalCredits) * 100
+                    )
+                  : 0}
                 %
               </span>
             </div>
@@ -612,35 +646,34 @@ const StatisticsTab = () => {
                 className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
                 style={{
                   width: `${
-                    (mockStudyStats.completedCredits /
-                      mockStudyStats.totalCredits) *
-                    100
+                    studyStats.totalCredits > 0
+                      ? (studyStats.completedCredits / studyStats.totalCredits) * 100
+                      : 0
                   }%`,
                 }}
               />
             </div>
           </div>
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600 dark:text-gray-400">
-                GPA mục tiêu (3.5/4.0)
-              </span>
-              <span className="font-medium text-gray-800 dark:text-white">
-                {Math.round(
-                  (mockGpaData[mockGpaData.length - 1].gpa / 4) * 100
-                )}
-                %
-              </span>
+          {hasGpaData && (
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-600 dark:text-gray-400">
+                  GPA hiện tại ({gpaData[gpaData.length - 1]?.gpa?.toFixed(2) || 0}/4.0)
+                </span>
+                <span className="font-medium text-gray-800 dark:text-white">
+                  {Math.round(((gpaData[gpaData.length - 1]?.gpa || 0) / 4) * 100)}%
+                </span>
+              </div>
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${((gpaData[gpaData.length - 1]?.gpa || 0) / 4) * 100}%`,
+                  }}
+                />
+              </div>
             </div>
-            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full transition-all duration-500"
-                style={{
-                  width: `${(mockGpaData[mockGpaData.length - 1].gpa / 4) * 100}%`,
-                }}
-              />
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -832,10 +865,10 @@ const Profile = ({ user, onUpdateUser }) => {
 
           {activeTab === "docs" && <MyDocumentsTab currentUser={user} />}
 
-          {activeTab === "stats" && <StatisticsTab />}
+          {activeTab === "stats" && <StatisticsTab currentUser={user} />}
 
           {activeTab === "settings" && (
-            <AcademicSettingsTab currentUser={user} />
+            <AcademicSettingsTab currentUser={user} onUpdateUser={onUpdateUser} />
           )}
         </div>
       </div>

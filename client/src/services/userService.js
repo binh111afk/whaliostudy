@@ -31,5 +31,26 @@ export const userService = {
         body: JSON.stringify({ username, oldPass, newPass })
       });
       return await response.json();
+    },
+
+    // Cập nhật cấu hình học tập
+    async updateSettings(username, settings) {
+      const response = await fetch('/api/update-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, ...settings })
+      });
+      return await response.json();
+    },
+
+    // Lấy thống kê tổng hợp cho Profile
+    async getProfileStats(username) {
+      try {
+        const response = await fetch(`/api/profile/stats?username=${username}`);
+        return await response.json();
+      } catch (error) {
+        console.error('Error getting profile stats:', error);
+        return { success: false, data: null };
+      }
     }
   };

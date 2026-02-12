@@ -348,6 +348,13 @@ const userSchema = new mongoose.Schema({
     city: { type: String, default: '' },
     facebook: { type: String, default: '' },
     
+    // Cấu hình học tập
+    settings: {
+        creditPrice: { type: Number, default: 450000 },
+        gpaScale: { type: Number, default: 4, enum: [4, 10] },
+        startHour: { type: String, default: '07:00' }
+    },
+    
     savedDocs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Document' }],
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
@@ -1128,6 +1135,135 @@ app.post('/api/change-password', async (req, res) => {
         res.json({ success: true, message: "Đổi mật khẩu thành công!" });
     } catch (err) {
         console.error('Change password error:', err);
+        res.status(500).json({ success: false, message: "Lỗi server" });
+    }
+});
+
+// API: Cập nhật cấu hình học tập (Settings)
+app.post('/api/update-settings', async (req, res) => {
+    try {
+        const { username, creditPrice, gpaScale, startHour } = req.body;
+        
+        const user = await User.findOne({ username });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy user" });
+        }
+
+        // Cập nhật settings
+        if (!user.settings) {
+            user.settings = {};
+        }
+        if (creditPrice !== undefined) user.settings.creditPrice = parseInt(creditPrice);
+        if (gpaScale !== undefined) user.settings.gpaScale = parseInt(gpaScale);
+        if (startHour !== undefined) user.settings.startHour = startHour;
+        
+        user.updatedAt = new Date();
+        await user.save();
+
+        const safeUser = user.toObject();
+        delete safeUser.password;
+        
+        res.json({ success: true, user: safeUser, settings: user.settings });
+    } catch (err) {
+        console.error('Update settings error:', err);
+        res.status(500).json({ success: false, message: "Lỗi server" });
+    }
+});
+
+// API: Lấy thống kê tổng hợp cho Profile
+app.get('/api/profile/stats', async (req, res) => {
+    try {
+        const { username } = req.query;
+        if (!username) return res.status(400).json({ success: false, message: "Missing username" });
+
+        // 1. Lấy tổng giờ học từ StudySession
+        const allSessions = await StudySession.find({ username });
+        const totalMinutes = allSessions.reduce((sum, s) => sum + s.duration, 0);
+        
+        // 2. Lấy giờ học tuần này
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        const weekSessions = allSessions.filter(s => new Date(s.date) >= weekAgo);
+        const thisWeekMinutes = weekSessions.reduce((sum, s) => sum + s.duration, 0);
+
+        // 3. Lấy GPA data (nếu có)
+        const gpaData = await Gpa.findOne({ username });
+        let gpaSummary = [];
+        let totalCredits = 0;
+        let completedCredits = 0;
+        let generalCredits = 0;
+        let majorCredits = 0;
+        let electiveCredits = 0;
+
+        if (gpaData && gpaData.semesters) {
+            gpaData.semesters.forEach((sem, index) => {
+                let semesterTotalPoints = 0;
+                let semesterTotalCredits = 0;
+
+                if (sem.subjects) {
+                    sem.subjects.forEach(subject => {
+                        const credits = subject.credits || 0;
+                        totalCredits += credits;
+                        
+                        // Phân loại tín chỉ
+                        if (subject.type === 'general') generalCredits += credits;
+                        else if (subject.type === 'major') majorCredits += credits;
+                        else electiveCredits += credits;
+
+                        // Tính GPA nếu có điểm
+                        if (subject.components && subject.components.length > 0) {
+                            let totalWeight = 0;
+                            let weightedSum = 0;
+                            
+                            subject.components.forEach(comp => {
+                                const score = parseFloat(comp.score);
+                                if (!isNaN(score) && comp.weight) {
+                                    weightedSum += score * comp.weight;
+                                    totalWeight += comp.weight;
+                                }
+                            });
+
+                            if (totalWeight > 0) {
+                                const avgScore = weightedSum / totalWeight;
+                                const gpa4 = Math.min(4, avgScore / 2.5); // Convert to 4.0 scale
+                                semesterTotalPoints += gpa4 * credits;
+                                semesterTotalCredits += credits;
+                                completedCredits += credits;
+                            }
+                        }
+                    });
+                }
+
+                if (semesterTotalCredits > 0) {
+                    gpaSummary.push({
+                        semester: sem.name || `Học kỳ ${index + 1}`,
+                        gpa: parseFloat((semesterTotalPoints / semesterTotalCredits).toFixed(2))
+                    });
+                }
+            });
+        }
+
+        // 4. Lấy user để tính target credits
+        const user = await User.findOne({ username });
+        const targetCredits = user?.totalTargetCredits || 150;
+
+        res.json({
+            success: true,
+            data: {
+                totalHours: Math.round(totalMinutes / 60),
+                thisWeekHours: Math.round(thisWeekMinutes / 60),
+                totalCredits: targetCredits,
+                completedCredits,
+                gpaSummary,
+                creditDistribution: [
+                    { name: 'Đại cương', value: generalCredits, color: '#3B82F6' },
+                    { name: 'Chuyên ngành', value: majorCredits, color: '#10B981' },
+                    { name: 'Tự chọn', value: electiveCredits, color: '#F59E0B' }
+                ]
+            }
+        });
+    } catch (err) {
+        console.error('Get profile stats error:', err);
         res.status(500).json({ success: false, message: "Lỗi server" });
     }
 });
