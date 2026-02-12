@@ -9,6 +9,9 @@ const Portal = ({ user }) => {
     // --- STATE QUẢN LÝ ---
     const [searchTerm, setSearchTerm] = useState('');
     const [copiedId, setCopiedId] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingLink, setEditingLink] = useState(null);
+    const [formData, setFormData] = useState({ name: '', url: '', desc: '', categoryId: '' });
 
     // --- 🔐 LOGIC CHECK QUYỀN ADMIN ---
     // User là Admin nếu role là 'admin' HOẶC username là 'binhdzvl' (Account của ông)
@@ -187,24 +190,93 @@ const Portal = ({ user }) => {
     };
 
     // Xử lý Sửa Link (Chỉ Admin)
-    const handleEdit = (e, link) => {
+    const handleEdit = (e, link, categoryId) => {
         e.preventDefault(); 
         e.stopPropagation();
-        alert(`[ADMIN ONLY] Đang mở form sửa link: ${link.name}`);
+        setEditingLink({ ...link, categoryId });
+        setFormData({ 
+            name: link.name, 
+            url: link.url, 
+            desc: link.desc, 
+            categoryId: categoryId 
+        });
+        setIsModalOpen(true);
     };
 
     // Xử lý Xóa Link (Chỉ Admin)
-    const handleDelete = (e, linkId) => {
+    const handleDelete = (e, linkId, categoryId) => {
         e.preventDefault(); 
         e.stopPropagation();
-        if(confirm("[ADMIN WARNING] Bạn chắc chắn muốn xóa link này?")) {
-            alert("Đã xóa thành công! (Dữ liệu sẽ được cập nhật)");
+        if(confirm("Bạn chắc chắn muốn xóa link này?")) {
+            setPortalData(prevData => 
+                prevData.map(section => {
+                    if (section.id === categoryId) {
+                        return {
+                            ...section,
+                            links: section.links.filter(link => link.id !== linkId)
+                        };
+                    }
+                    return section;
+                })
+            );
         }
     }
 
     // Xử lý Thêm Link Mới (Chỉ Admin)
     const handleAddNew = () => {
-        alert("[ADMIN ONLY] Mở Modal thêm link mới");
+        setEditingLink(null);
+        setFormData({ name: '', url: '', desc: '', categoryId: portalData[0].id });
+        setIsModalOpen(true);
+    }
+
+    // Xử lý Lưu Link (Thêm mới hoặc Cập nhật)
+    const handleSave = () => {
+        if (!formData.name || !formData.url || !formData.desc || !formData.categoryId) {
+            alert('Vui lòng điền đầy đủ thông tin!');
+            return;
+        }
+
+        if (editingLink) {
+            // Cập nhật link hiện có
+            setPortalData(prevData => 
+                prevData.map(section => {
+                    if (section.id === formData.categoryId) {
+                        return {
+                            ...section,
+                            links: section.links.map(link => 
+                                link.id === editingLink.id
+                                    ? { ...link, name: formData.name, url: formData.url, desc: formData.desc }
+                                    : link
+                            )
+                        };
+                    }
+                    return section;
+                })
+            );
+        } else {
+            // Thêm link mới
+            const newId = Math.max(...portalData.flatMap(s => s.links.map(l => l.id))) + 1;
+            setPortalData(prevData => 
+                prevData.map(section => {
+                    if (section.id === formData.categoryId) {
+                        return {
+                            ...section,
+                            links: [...section.links, { 
+                                id: newId, 
+                                name: formData.name, 
+                                url: formData.url, 
+                                desc: formData.desc 
+                            }]
+                        };
+                    }
+                    return section;
+                })
+            );
+        }
+
+        setIsModalOpen(false);
+        setEditingLink(null);
+        setFormData({ name: '', url: '', desc: '', categoryId: '' });
     }
 
     // --- LOGIC TÌM KIẾM ---
@@ -306,14 +378,14 @@ const Portal = ({ user }) => {
                                                     {isAdmin && (
                                                         <>
                                                             <button
-                                                                onClick={(e) => handleEdit(e, link)}
+                                                                onClick={(e) => handleEdit(e, link, section.id)}
                                                                 className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/30"
                                                                 title="Sửa"
                                                             >
                                                                 <Edit size={14} />
                                                             </button>
                                                             <button
-                                                                onClick={(e) => handleDelete(e, link.id)}
+                                                                onClick={(e) => handleDelete(e, link.id, section.id)}
                                                                 className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"
                                                                 title="Xóa"
                                                             >
@@ -361,6 +433,84 @@ const Portal = ({ user }) => {
                         </div>
                     )}
                 </div>
+
+                {/* MODAL THÊM/SỬA LINK (CHỈ ADMIN) */}
+                {isModalOpen && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
+                                {editingLink ? '✏️ Sửa Link' : '➕ Thêm Link Mới'}
+                            </h3>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Danh mục</label>
+                                    <select
+                                        value={formData.categoryId}
+                                        onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        {portalData.map(section => (
+                                            <option key={section.id} value={section.id}>{section.category}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tên Link</label>
+                                    <input
+                                        type="text"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                        placeholder="VD: Cổng thông tin Đào tạo"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">URL</label>
+                                    <input
+                                        type="url"
+                                        value={formData.url}
+                                        onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                        placeholder="https://example.com"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mô tả</label>
+                                    <textarea
+                                        value={formData.desc}
+                                        onChange={(e) => setFormData({ ...formData, desc: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 resize-none"
+                                        rows="3"
+                                        placeholder="Mô tả ngắn gọn về link này"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    onClick={() => {
+                                        setIsModalOpen(false);
+                                        setEditingLink(null);
+                                        setFormData({ name: '', url: '', desc: '', categoryId: '' });
+                                    }}
+                                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                                >
+                                    {editingLink ? 'Cập nhật' : 'Thêm mới'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

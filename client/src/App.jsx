@@ -94,7 +94,6 @@ function App() {
               <Route path="/documents" element={<Documents />} />
               <Route path="/exams" element={<Exams />} />
               <Route path="/documents/:id" element={<DocumentViewer />} />
-              <Route path="/portal" element={<Portal />} />
               <Route path="/portal" element={<Portal user={user} />} />
             </Routes>
           </main>
