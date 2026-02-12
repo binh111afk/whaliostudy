@@ -564,7 +564,7 @@ const GpaCalc = () => {
               className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all">
               {/* HEADER KỲ HỌC (Click để ẩn/hiện) */}
               <div
-                className="p-4 bg-gray-50 dark:bg-gray-750 flex items-center justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="p-4 bg-gray-50 dark:bg-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 first:rounded-t-2xl"
                 onClick={() => toggleSemester(sem.id)}
               >
                 <div className="flex items-center gap-3">
@@ -691,7 +691,7 @@ const GpaCalc = () => {
                               <td className="p-3">
                                 <input
                                   type="number"
-                                  className="w-full text-center bg-gray-50 rounded p-1 font-bold text-gray-700 outline-none text-sm"
+                                  className="w-full text-center bg-gray-50 dark:bg-gray-700 rounded p-1 font-bold text-gray-700 dark:text-white outline-none text-sm border border-transparent focus:border-blue-500 dark:focus:border-blue-400 transition-all"
                                   value={sub.credits}
                                   onChange={(e) =>
                                     updateSubject(

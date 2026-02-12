@@ -591,7 +591,7 @@ const AiChat = () => {
             )}
 
             {/* Thanh nhập liệu */}
-            <div className="flex items-end gap-2 bg-white dark:bg-gray-750 p-2 rounded-2xl border border-gray-200 dark:border-gray-600 focus-within:border-blue-500/50 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all shadow-sm hover:shadow-md">
+            <div className="flex items-end gap-2 bg-white dark:bg-gray-800 p-2 rounded-2xl border border-gray-200 dark:border-gray-700 focus-within:border-blue-500/50 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all shadow-sm hover:shadow-md">
               <input
                 type="file"
                 ref={fileInputRef}
@@ -626,7 +626,7 @@ const AiChat = () => {
                   }
                 }}
                 placeholder="Hỏi Whalio bất kì điều gì ..."
-                className="flex-1 bg-transparent text-gray-800 dark:text-gray-100 border-none outline-none resize-none py-3 max-h-[120px] min-h-[48px] placeholder-gray-400 dark:placeholder-gray-500 text-base break-words min-w-0"
+                className="flex-1 bg-transparent text-gray-800 dark:text-gray-200 border-none outline-none resize-none py-3 max-h-[120px] min-h-[48px] placeholder-gray-400 dark:placeholder-gray-400 text-base break-words min-w-0 transition-colors"
                 rows={1}
                 onInput={(e) => {
                   e.target.style.height = "auto";

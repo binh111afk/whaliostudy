@@ -1360,13 +1360,6 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
 
         <div className="flex gap-3">
           <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-all flex items-center gap-2 cursor-pointer"
-            title={darkMode ? "Chế độ sáng" : "Chế độ tối"}
-          >
-            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
-          <button
             onClick={() => setIsModalOpen(true)}
             className="bg-primary text-white px-6 py-2 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 dark:shadow-blue-900/30 hover:bg-blue-800 transition-all flex items-center gap-2 cursor-pointer"
           >
