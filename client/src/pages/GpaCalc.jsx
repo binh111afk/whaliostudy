@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { toast } from 'sonner';
 import {
   Calculator,
   Plus,
@@ -15,6 +16,7 @@ import {
   AlertTriangle,
   FolderPlus,
 } from "lucide-react";
+import AuthModal from '../components/AuthModal';
 
 // --- 1. DỮ LIỆU CẤU HÌNH ---
 const SUGGESTED_SUBJECTS = [
@@ -178,6 +180,8 @@ const predictNeededScores = (currentScore, missingWeight, type) => {
 
 const GpaCalc = () => {
   const user = JSON.parse(localStorage.getItem("user"));
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  
   // --- STATE CẤU TRÚC MỚI: Mảng các Học kỳ ---
   const [semesters, setSemesters] = useState([
     {
@@ -230,13 +234,13 @@ const GpaCalc = () => {
   // Hàm Lưu dữ liệu lên Server
   const handleSaveGPA = async () => {
     if (!user) {
-      return toast.error("Chưa đăng nhập bro ơi!", {
-        description: "Ông cần đăng nhập để lưu lại bảng điểm và đồng bộ dữ liệu nhé.",
+      return toast.error("Bạn chưa đăng nhập!", {
+        description: "Đăng nhập để hệ thống lưu điểm cho ông nhé.",
         action: {
           label: "Đăng nhập ngay",
-          onClick: () => setIsLoginModalOpen(true), // Bấm phát mở Modal luôn
+          onClick: () => setIsAuthModalOpen(true),
         },
-        duration: 5000, // Để lâu một chút cho họ kịp bấm
+        duration: 5000,
       });
     }
 
@@ -978,6 +982,16 @@ const GpaCalc = () => {
           <option key={index} value={s.name} />
         ))}
       </datalist>
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={(userData) => {
+          localStorage.setItem('user', JSON.stringify(userData));
+          setIsAuthModalOpen(false);
+          window.location.reload();
+        }}
+      />
     </div>
   );
 };
