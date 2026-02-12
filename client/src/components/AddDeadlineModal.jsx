@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { X, Calendar, Clock, Type, Save, AlertCircle } from 'lucide-react';
 
 const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
@@ -11,8 +12,8 @@ const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
     if (!isOpen) return null;
 
     const handleSubmit = async () => {
-        if (!title.trim()) return alert("Vui lòng nhập tên deadline!");
-        if (!date) return alert("Vui lòng chọn ngày!");
+        if (!title.trim()) return toast.error("Vui lòng nhập tên deadline!");
+        if (!date) return toast.error("Vui lòng chọn ngày!");
 
         setLoading(true);
         try {
@@ -33,17 +34,18 @@ const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
             const data = await response.json();
 
             if (data.success) {
+                toast.success("Thêm deadline thành công!");
                 // Reset form
                 setTitle('');
                 setType('deadline');
                 onSuccess(); // Báo cho Dashboard biết để load lại list
                 onClose();   // Đóng modal
             } else {
-                alert(data.message || "Có lỗi xảy ra!");
+                toast.error(data.message || "Có lỗi xảy ra!");
             }
         } catch (error) {
             console.error("Lỗi thêm deadline:", error);
-            alert("Không thể kết nối đến server!");
+            toast.error("Không thể kết nối đến server!");
         } finally {
             setLoading(false);
         }

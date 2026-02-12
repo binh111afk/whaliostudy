@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header'; 
 import AuthModal from './components/AuthModal'; // Import Modal
@@ -104,6 +105,14 @@ function App() {
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
           onLoginSuccess={(userData) => setUser(userData)} 
+        />
+        
+        {/* Toaster cho notifications */}
+        <Toaster 
+          richColors 
+          closeButton 
+          position="top-right" 
+          theme={darkMode ? 'dark' : 'light'}
         />
       </div>
     </Router>
