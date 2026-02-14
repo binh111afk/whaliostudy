@@ -181,37 +181,74 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
     { gpa: 2.0, label: 'Trung bình' },
   ];
 
-  // Tìm mốc học lực hiện tại
+  // Tìm mốc học lực hiện tại (mốc cao nhất mà GPA >= mốc đó)
   const currentMilestone = [...academicMilestones].reverse().find(m => currentGpa4 >= m.gpa);
   
-  // Tìm mốc cao hơn gần nhất (mốc tiếp theo phía trên)
+  // Tìm mốc cao hơn gần nhất (mốc thấp nhất mà GPA < mốc đó)
   const nextHigherMilestone = academicMilestones.find(m => currentGpa4 < m.gpa);
   
-  // Tìm mốc thấp hơn gần nhất (mốc tiếp theo phía dưới)
-  const nextLowerMilestone = [...academicMilestones].reverse().find(m => currentGpa4 > m.gpa);
+  // Tìm mốc thấp hơn gần nhất (mốc ngay dưới currentMilestone)
+  let nextLowerMilestone = null;
+  if (currentMilestone) {
+    const currentIndex = academicMilestones.findIndex(m => m.gpa === currentMilestone.gpa);
+    if (currentIndex < academicMilestones.length - 1) {
+      nextLowerMilestone = academicMilestones[currentIndex + 1];
+    }
+  }
 
   // === PHÂN TÍCH CÁC MÔN CHƯA CÓ ĐIỂM ===
   const ungradedSubjects = subjectAnalysis.filter(s => !s.isFull && s.credits > 0);
   
-  if (ungradedSubjects.length > 0 && totalCredits > 0) {
-    // CẢNH BÁO TÍCH CỰC: Gần đạt mốc cao hơn
-    if (nextHigherMilestone && (nextHigherMilestone.gpa - currentGpa4) <= 0.3) {
-      // Tính điểm cần đạt để lên mốc cao hơn
-      const targetTotalPointCredit = nextHigherMilestone.gpa * (totalCredits + ungradedSubjects.reduce((sum, s) => sum + s.credits, 0));
-      const neededPoint4 = (targetTotalPointCredit - totalPointCredit) / ungradedSubjects.reduce((sum, s) => sum + s.credits, 0);
+  // Chỉ tính cảnh báo thông minh nếu đã có GPA (có ít nhất 1 môn hoàn thành)
+  if (ungradedSubjects.length > 0 && currentGpa4 > 0) {
+    const totalUngradedCredits = ungradedSubjects.reduce((sum, s) => sum + s.credits, 0);
+    const totalAllCredits = totalCredits + totalUngradedCredits;
+    const subjectNames = ungradedSubjects.map(s => s.name).join(', ');
+    
+    // Xác định loại cảnh báo dựa trên vị trí GPA
+    let alertType = 'info'; // Mặc định là thông tin  
+    let targetMilestone = null;
+    let isPositive = true;
+    
+    // Kiểm tra nguy cơ tụt mốc (ưu tiên cao nhất)
+    if (currentMilestone && nextLowerMilestone) {
+      const gapToCurrentMilestone = currentGpa4 - currentMilestone.gpa;
+      // Nếu GPA gần mốc hiện tại → nguy cơ tụt
+      if (gapToCurrentMilestone < 0.5) {
+        alertType = 'danger';
+        targetMilestone = currentMilestone;
+        isPositive = false;
+      }
+    }
+    
+    // Nếu không có nguy cơ, kiểm tra cơ hội đạt mốc cao hơn
+    if (alertType === 'info' && nextHigherMilestone) {
+      const gapToNextMilestone = nextHigherMilestone.gpa - currentGpa4;
+      // Nếu gần đạt mốc cao hơn → cơ hội
+      if (gapToNextMilestone <= 1.0) {
+        alertType = 'positive';
+        targetMilestone = nextHigherMilestone;
+        isPositive = true;
+      }
+    }
+    
+    // Tạo cảnh báo dựa trên loại
+    if (isPositive && targetMilestone === nextHigherMilestone) {
+      // CẢNH BÁO TÍCH CỰC: Gần đạt mốc cao hơn
+      const targetTotalPointCredit = nextHigherMilestone.gpa * totalAllCredits;
+      const neededPoint4 = (targetTotalPointCredit - totalPointCredit) / totalUngradedCredits;
       
       // Quy đổi về điểm hệ 10
       let requiredScore10 = 10;
-      for (let score = 5; score <= 10; score += 0.1) {
+      for (let score = 0; score <= 10; score += 0.1) {
         const p4 = getPoint4FromScore10(score);
         if (p4 >= neededPoint4) {
-          requiredScore10 = Math.ceil(score * 10) / 10;
+          requiredScore10 = Math.ceil(score * 10) / 10; // Làm tròn lên
           break;
         }
       }
 
       if (requiredScore10 <= 10) {
-        const subjectNames = ungradedSubjects.map(s => s.name).join(', ');
         alerts.push({
           type: 'positive-opportunity',
           message: `🎉 Tuyệt vời! GPA hiện tại của bạn là ${currentGpa4.toFixed(2)}. ${ungradedSubjects.length === 1 ? 'Môn' : 'Các môn'} ${subjectNames} cần ≥${requiredScore10.toFixed(1)} điểm để đạt GPA ${nextHigherMilestone.gpa} (${nextHigherMilestone.label}), bạn hãy cố gắng hơn nhé!`,
@@ -220,40 +257,34 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
           icon: '✨',
         });
       }
-    }
-    
-    // CẢNH BÁO NGUY HIỂM: Nguy cơ tụt mốc
-    if (currentMilestone && nextLowerMilestone && alerts.length < 2) {
-      // Tính điểm thấp nhất có thể để tránh tụt mốc
-      const minTotalPointCredit = currentMilestone.gpa * (totalCredits + ungradedSubjects.reduce((sum, s) => sum + s.credits, 0));
-      const maxAllowedPoint4 = (minTotalPointCredit - totalPointCredit) / ungradedSubjects.reduce((sum, s) => sum + s.credits, 0);
+    } else if (!isPositive && currentMilestone && nextLowerMilestone) {
+      // CẢNH BÁO NGUY HIỂM: Nguy cơ tụt mốc
+      const minTotalPointCredit = currentMilestone.gpa * totalAllCredits;
+      const neededPoint4ToMaintain = (minTotalPointCredit - totalPointCredit) / totalUngradedCredits;
       
       // Quy đổi về điểm hệ 10
       let thresholdScore10 = 0;
       for (let score = 10; score >= 0; score -= 0.1) {
         const p4 = getPoint4FromScore10(score);
-        if (p4 <= maxAllowedPoint4) {
-          thresholdScore10 = Math.floor(score * 10) / 10;
+        if (p4 >= neededPoint4ToMaintain) {
+          thresholdScore10 = Math.floor(score * 10) / 10; // Làm tròn xuống
           break;
         }
       }
+      
+      // Tính GPA sẽ rơi xuống nếu đạt điểm dưới ngưỡng
+      const testLowScore = Math.max(0, thresholdScore10 - 0.1);
+      const testPoint4 = getPoint4FromScore10(testLowScore);
+      const projectedTotalPointCredit = totalPointCredit + (testPoint4 * totalUngradedCredits);
+      const projectedGpa = roundScore(projectedTotalPointCredit / totalAllCredits);
 
-      // Tính GPA sẽ rơi xuống nếu đạt điểm ngưỡng
-      const projectedPoint4 = getPoint4FromScore10(thresholdScore10);
-      const projectedTotalPointCredit = totalPointCredit + (projectedPoint4 * ungradedSubjects.reduce((sum, s) => sum + s.credits, 0));
-      const projectedGpa = roundScore(projectedTotalPointCredit / (totalCredits + ungradedSubjects.reduce((sum, s) => sum + s.credits, 0)));
-
-      // Chỉ cảnh báo nếu khoảng cách đến mốc nhỏ (< 0.2)
-      if ((currentGpa4 - currentMilestone.gpa) < 0.2 && thresholdScore10 > 0) {
-        const subjectNames = ungradedSubjects.map(s => s.name).join(', ');
-        alerts.push({
-          type: 'danger-warning',
-          message: `🚨 Cảnh báo! GPA của bạn đang là ${currentGpa4.toFixed(2)}. Chỉ cần ${ungradedSubjects.length === 1 ? 'môn' : 'các môn'} ${subjectNames} <${thresholdScore10.toFixed(1)} điểm là bạn sẽ xuống ${projectedGpa.toFixed(2)} (${nextLowerMilestone.label})`,
-          action: `An toàn: ≥ ${(thresholdScore10 + 0.5).toFixed(1)} điểm`,
-          severity: 'danger',
-          icon: '🚨',
-        });
-      }
+      alerts.push({
+        type: 'danger-warning',
+        message: `🚨 Cảnh báo! GPA của bạn đang là ${currentGpa4.toFixed(2)}. Chỉ cần ${ungradedSubjects.length === 1 ? 'môn' : 'các môn'} ${subjectNames} <${thresholdScore10.toFixed(1)} điểm là bạn sẽ xuống ${projectedGpa.toFixed(2)} (${nextLowerMilestone.label})`,
+        action: `An toàn: ≥ ${thresholdScore10.toFixed(1)} điểm`,
+        severity: 'danger',
+        icon: '🚨',
+      });
     }
   }
 
