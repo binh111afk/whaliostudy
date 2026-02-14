@@ -148,11 +148,12 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
   
   // Thu thập dữ liệu môn học
   const subjectAnalysis = [];
+  let totalPointCredit = 0; // Tổng điểm * tín chỉ hiện tại
+  
   semesters.forEach((sem) => {
     sem.subjects.forEach((sub) => {
       const status = calculateSubjectStatus(sub.components);
       const credits = parseFloat(sub.credits) || 0;
-      const impact = totalCredits > 0 ? (credits / totalCredits) : 0;
       
       subjectAnalysis.push({
         id: sub.id,
@@ -161,83 +162,106 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
         type: sub.type,
         score: status.finalScore10,
         isFull: status.isFull,
-        impact,
+        currentWeight: status.currentWeight,
       });
+
+      // Tính tổng điểm hiện tại
+      if (status.isFull && status.finalScore10 !== null) {
+        const point4 = getPoint4FromScore10(status.finalScore10);
+        totalPointCredit += point4 * credits;
+      }
     });
   });
 
-  // Danh sách các mốc GPA quan trọng
-  const milestones = [
+  // Danh sách các mốc GPA quan trọng (học lực)
+  const academicMilestones = [
     { gpa: 3.6, label: 'Xuất sắc' },
     { gpa: 3.2, label: 'Giỏi' },
-    { gpa: 2.8, label: 'Khá' },
-    { gpa: 2.0, label: 'Tốt nghiệp' },
+    { gpa: 2.5, label: 'Khá' },
+    { gpa: 2.0, label: 'Trung bình' },
   ];
 
-  // Tìm mốc quan trọng nhất (target hoặc mốc gần nhất phía trên)
-  let targetMilestone = null;
-  if (targetGpa > 0) {
-    targetMilestone = { gpa: targetGpa, label: 'Mục tiêu' };
-  } else {
-    // Tìm mốc tiếp theo phía trên
-    targetMilestone = milestones.find(m => currentGpa4 < m.gpa);
+  // Tìm mốc học lực hiện tại
+  const currentMilestone = [...academicMilestones].reverse().find(m => currentGpa4 >= m.gpa);
+  
+  // Tìm mốc quan trọng tiếp theo (mốc gần nhất phía dưới nếu đang ở giữa 2 mốc)
+  const nextLowerMilestone = [...academicMilestones].reverse().find(m => currentGpa4 > m.gpa);
+
+  // === CẢNH BÁO CHO CÁC MÔN CHƯA CÓ ĐIỂM ===
+  const ungradedSubjects = subjectAnalysis.filter(s => !s.isFull && s.credits > 0);
+  
+  if (ungradedSubjects.length > 0 && totalCredits > 0 && nextLowerMilestone) {
+    // Tính toán ngưỡng điểm nguy hiểm cho từng môn chưa điểm
+    const criticalUngradedAnalysis = ungradedSubjects.map(sub => {
+      // Tính GPA nếu môn này đạt điểm khác nhau
+      const testScores = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
+      let thresholdScore = null;
+      
+      for (let score of testScores) {
+        const point4 = getPoint4FromScore10(score);
+        const newTotalPointCredit = totalPointCredit + (point4 * sub.credits);
+        const newTotalCredits = totalCredits + sub.credits;
+        const newGpa4 = roundScore(newTotalPointCredit / newTotalCredits);
+        
+        // Tìm điểm mà nếu thấp hơn sẽ rơi xuống mốc học lực thấp hơn
+        if (newGpa4 < (currentMilestone?.gpa || 3.6) && newGpa4 >= nextLowerMilestone.gpa) {
+          thresholdScore = score;
+        }
+      }
+      
+      return {
+        ...sub,
+        thresholdScore,
+        wouldDropTo: nextLowerMilestone,
+      };
+    }).filter(s => s.thresholdScore !== null)
+      .sort((a, b) => b.thresholdScore - a.thresholdScore); // Sắp xếp theo ngưỡng nguy hiểm nhất
+
+    // Tạo cảnh báo cho môn nguy hiểm nhất
+    if (criticalUngradedAnalysis.length > 0) {
+      const mostCritical = criticalUngradedAnalysis[0];
+      
+      // Tính GPA sẽ rơi xuống bao nhiêu
+      const point4AtThreshold = getPoint4FromScore10(mostCritical.thresholdScore);
+      const newTotalPointCredit = totalPointCredit + (point4AtThreshold * mostCritical.credits);
+      const newTotalCredits = totalCredits + mostCritical.credits;
+      const projectedGpa = roundScore(newTotalPointCredit / newTotalCredits);
+      
+      alerts.push({
+        type: 'ungraded-warning',
+        message: `⚠️ GPA hiện tại ${currentGpa4.toFixed(2)} - Môn "${mostCritical.name}" chỉ cần dưới ${mostCritical.thresholdScore.toFixed(1)} điểm là xuống ${projectedGpa.toFixed(2)} (${mostCritical.wouldDropTo.label})`,
+        action: `Cần đạt ≥ ${(mostCritical.thresholdScore + 0.5).toFixed(1)} để an toàn`,
+        severity: mostCritical.thresholdScore >= 8 ? 'danger' : 'warning',
+        icon: mostCritical.thresholdScore >= 8 ? '🚨' : '⚠️',
+      });
+    }
   }
 
-  if (targetMilestone && currentGpa4 > 0) {
-    const gap = targetMilestone.gpa - currentGpa4;
+  // === CẢNH BÁO VỀ CÁC MÔN CHƯA CÓ ĐIỂM (TỔNG QUÁT) ===
+  if (alerts.length < 2 && ungradedSubjects.length > 0) {
+    const totalUngradedCredits = ungradedSubjects.reduce((sum, s) => sum + s.credits, 0);
+    alerts.push({
+      type: 'ungraded-info',
+      message: `💡 Còn ${ungradedSubjects.length} môn chưa có điểm (${totalUngradedCredits} tín chỉ). Tập trung hoàn thiện để dự đoán GPA chính xác hơn.`,
+      action: `Môn gần nhất: ${ungradedSubjects[0].name}`,
+      severity: 'info',
+      icon: '💡',
+    });
+  }
 
-    // 1. HIGH RISK - Cảnh báo khi sắp mất mốc hoặc rất gần mốc
-    if (gap < 0.1 && gap > 0) {
-      // Tính xem môn nào có thể làm rớt mốc
-      const criticalSubjects = subjectAnalysis
-        .filter(s => s.isFull && s.credits >= 3)
-        .filter(s => {
-          const lossIfDropHalf = s.impact * 0.1; // Giảm 0.5 điểm hệ 10 ≈ 0.1 hệ 4
-          return currentGpa4 - lossIfDropHalf < targetMilestone.gpa;
-        })
-        .sort((a, b) => b.impact - a.impact);
-
-      if (criticalSubjects.length > 0) {
-        const critical = criticalSubjects[0];
-        alerts.push({
-          type: 'high-risk',
-          message: `🚨 Rủi ro cao: Chỉ cần giảm 0.5đ ở "${critical.name}" là mất mốc ${targetMilestone.label} (${targetMilestone.gpa}).`,
-          action: `Ưu tiên giữ điểm môn ${critical.credits}TC này`,
-          severity: 'danger',
-          icon: '🚨',
-        });
-      } else {
-        alerts.push({
-          type: 'high-risk',
-          message: `🚨 GPA sát mốc ${targetMilestone.label} (${targetMilestone.gpa}) - chỉ dư ${gap.toFixed(2)} điểm.`,
-          action: `Cần giữ điểm trung bình ≥ 7.5 để an toàn`,
-          severity: 'danger',
-          icon: '🚨',
-        });
-      }
-    }
-    // 2. MEDIUM RISK - Vùng nhạy cảm
-    else if (gap >= 0.1 && gap <= 0.25) {
-      const minSafeScore = 7.0 + (gap * 10); // Ước lượng điểm cần giữ
+  // === CẢNH BÁO VỀ MỤC TIÊU GPA ===
+  if (alerts.length < 2 && targetGpa > 0 && currentGpa4 > 0) {
+    const gap = targetGpa - currentGpa4;
+    
+    if (gap > 0 && gap <= 0.3) {
       alerts.push({
-        type: 'medium-risk',
-        message: `⚠️ GPA ở vùng nhạy cảm. Cần giữ các môn ≥ ${minSafeScore.toFixed(1)} để đạt ${targetMilestone.label}.`,
-        action: `Tập trung môn nhiều tín chỉ`,
+        type: 'target-warning',
+        message: `🎯 Còn ${gap.toFixed(2)} điểm nữa đạt mục tiêu GPA ${targetGpa.toFixed(1)}. Cần giữ performance ổn định.`,
+        action: `Duy trì điểm TB ≥ 7.5`,
         severity: 'warning',
-        icon: '⚠️',
+        icon: '🎯',
       });
     }
-    // 3. SAFE - Vùng an toàn
-    else if (gap > 0.25 && gap <= 0.5) {
-      alerts.push({
-        type: 'safe',
-        message: `✅ Bạn đang ở vùng an toàn so với mốc ${targetMilestone.label} (${targetMilestone.gpa}).`,
-        action: `Duy trì phong độ hiện tại`,
-        severity: 'info',
-        icon: '✅',
-      });
-    }
-    // 4. Nếu gap > 0.5 hoặc gap < 0 - không hiển thị
   }
 
   // Cảnh báo môn điểm thấp (chỉ thêm nếu chưa đủ 2 cảnh báo)
@@ -269,57 +293,88 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
 // ============================================================================
 
 /**
- * Tính toán thông tin học bổng
- * @param {Object} params - { currentGpa4, targetScholarship, totalCredits, pendingCredits }
+ * Tính GPA của một học kỳ cụ thể
+ * @param {Object} semester - Dữ liệu học kỳ
+ * @returns {Object} - { semesterGpa4, semesterGpa10, totalCredits }
+ */
+export function calculateSemesterGpa(semester) {
+  let totalPointCredit = 0;
+  let totalCredits = 0;
+  let totalScore10Credit = 0;
+
+  semester.subjects.forEach((sub) => {
+    const status = calculateSubjectStatus(sub.components);
+    const credits = parseFloat(sub.credits) || 0;
+
+    if (status.isFull && status.finalScore10 !== null) {
+      const score10 = parseFloat(status.finalScore10);
+      const point4 = getPoint4FromScore10(score10);
+      
+      totalPointCredit += point4 * credits;
+      totalScore10Credit += score10 * credits;
+      totalCredits += credits;
+    }
+  });
+
+  const semesterGpa4 = totalCredits > 0 ? roundScore(totalPointCredit / totalCredits) : 0;
+  const semesterGpa10 = totalCredits > 0 ? roundScore(totalScore10Credit / totalCredits) : 0;
+
+  return {
+    semesterGpa4,
+    semesterGpa10,
+    totalCredits,
+  };
+}
+
+/**
+ * Tính toán thông tin học bổng (dựa trên GPA học kỳ gần nhất)
+ * @param {Object} params - { semesters, targetScholarship }
  * @returns {Object}
  */
 export function calculateScholarshipInfo({ 
-  currentGpa4, 
+  semesters,
   targetScholarship = 'excellent',
-  totalCredits,
-  pendingCredits 
 }) {
   const threshold = SCHOLARSHIP_THRESHOLDS[targetScholarship];
   if (!threshold) return null;
 
+  // Lấy học kỳ gần nhất có điểm
+  const lastSemesterWithGrades = [...semesters].reverse().find(sem => {
+    const semGpa = calculateSemesterGpa(sem);
+    return semGpa.totalCredits > 0;
+  });
+
+  if (!lastSemesterWithGrades) {
+    return {
+      targetGpa: threshold.gpa,
+      label: threshold.label,
+      reward: threshold.reward,
+      gap: threshold.gpa,
+      isAchieved: false,
+      requiredAvgScore: null,
+      probability: 0,
+      lastSemesterGpa: 0,
+      semesterName: 'Chưa có',
+    };
+  }
+
+  const { semesterGpa4, semesterName } = {
+    ...calculateSemesterGpa(lastSemesterWithGrades),
+    semesterName: lastSemesterWithGrades.name,
+  };
+
   const targetGpa = threshold.gpa;
-  const gap = roundScore(targetGpa - currentGpa4);
-  const isAchieved = currentGpa4 >= targetGpa;
+  const gap = roundScore(targetGpa - semesterGpa4);
+  const isAchieved = semesterGpa4 >= targetGpa;
 
-  // Tính điểm TB cần đạt cho các môn còn lại
-  let requiredAvgScore = null;
+  // Ước tính xác suất dựa trên GPA hiện tại
   let probability = 100;
-
-  if (!isAchieved && pendingCredits > 0) {
-    const totalAllCredits = totalCredits + pendingCredits;
-    const currentTotalPoint4 = currentGpa4 * totalCredits;
-    const neededTotalPoint4 = targetGpa * totalAllCredits;
-    const neededPoint4 = (neededTotalPoint4 - currentTotalPoint4) / pendingCredits;
-
-    // Quy đổi về điểm hệ 10
-    if (neededPoint4 <= 4.0 && neededPoint4 >= 0) {
-      const grade = [...GRADE_SCALE].reverse().find((g) => g.point >= neededPoint4);
-      requiredAvgScore = grade ? grade.min : 10;
-    } else if (neededPoint4 > 4.0) {
-      requiredAvgScore = 11; // Không thể đạt
-    } else {
-      requiredAvgScore = 0; // Đã đạt
-    }
-
-    // Ước tính xác suất đạt (rule-based)
-    if (requiredAvgScore > 10) {
-      probability = 0;
-    } else if (requiredAvgScore <= 6) {
-      probability = 95;
-    } else if (requiredAvgScore <= 7) {
-      probability = 85;
-    } else if (requiredAvgScore <= 8) {
-      probability = 65;
-    } else if (requiredAvgScore <= 9) {
-      probability = 35;
-    } else {
-      probability = 10;
-    }
+  if (!isAchieved) {
+    if (gap > 1.0) probability = 5;
+    else if (gap > 0.5) probability = 25;
+    else if (gap > 0.3) probability = 50;
+    else if (gap > 0.1) probability = 75;
+    else probability = 90;
   }
 
   return {
@@ -328,24 +383,23 @@ export function calculateScholarshipInfo({
     reward: threshold.reward,
     gap: gap > 0 ? gap : 0,
     isAchieved,
-    requiredAvgScore,
+    requiredAvgScore: null, // Không áp dụng cho scholarship mode mới
     probability: isAchieved ? 100 : probability,
-    pendingCredits,
+    lastSemesterGpa: semesterGpa4,
+    semesterName,
   };
 }
 
 /**
- * Lấy tất cả mức học bổng có thể đạt
+ * Lấy tất cả mức học bổng có thể đạt (dựa trên GPA học kỳ gần nhất)
  */
-export function getReachableScholarships({ currentGpa4, totalCredits, pendingCredits }) {
+export function getReachableScholarships({ semesters }) {
   const results = [];
   
   for (const [key] of Object.entries(SCHOLARSHIP_THRESHOLDS)) {
     const info = calculateScholarshipInfo({
-      currentGpa4,
+      semesters,
       targetScholarship: key,
-      totalCredits,
-      pendingCredits,
     });
     
     if (info) {

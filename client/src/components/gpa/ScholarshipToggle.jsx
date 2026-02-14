@@ -104,6 +104,9 @@ const ScholarshipToggle = ({
               <p className="text-sm font-bold text-green-600 dark:text-green-400">
                 Đã đạt mức {scholarshipInfo.label}!
               </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                GPA {scholarshipInfo.semesterName}: {scholarshipInfo.lastSemesterGpa?.toFixed(2)}
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -116,19 +119,27 @@ const ScholarshipToggle = ({
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">Còn thiếu</p>
-                  <p className="text-lg font-black text-red-600 dark:text-red-400">
-                    -{scholarshipInfo.gap?.toFixed(2)}
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">GPA hiện tại</p>
+                  <p className="text-lg font-black text-blue-600 dark:text-blue-400">
+                    {scholarshipInfo.lastSemesterGpa?.toFixed(2)}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">Điểm TB cần</p>
-                  <p className="text-lg font-black text-orange-600 dark:text-orange-400">
-                    {scholarshipInfo.requiredAvgScore > 10 
-                      ? '—' 
-                      : scholarshipInfo.requiredAvgScore?.toFixed(1)}
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">Còn thiếu</p>
+                  <p className="text-lg font-black text-red-600 dark:text-red-400">
+                    {scholarshipInfo.gap?.toFixed(2)}
                   </p>
                 </div>
+              </div>
+
+              {/* Semester Info */}
+              <div className="text-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Dựa trên GPA học kỳ gần nhất
+                </p>
+                <p className="text-sm font-bold text-gray-800 dark:text-white mt-1">
+                  {scholarshipInfo.semesterName}
+                </p>
               </div>
 
               {/* Probability */}
@@ -136,15 +147,17 @@ const ScholarshipToggle = ({
                 <div className="flex items-center justify-center gap-2">
                   <TrendingUp size={14} />
                   <span className="text-sm font-bold">
-                    Khả năng đạt: {scholarshipInfo.probability}%
+                    Khả năng đạt kỳ sau: {scholarshipInfo.probability}%
                   </span>
                 </div>
                 <p className="text-[10px] mt-1 opacity-80">
-                  {scholarshipInfo.requiredAvgScore > 10 
-                    ? 'Không thể đạt với điểm hiện tại'
-                    : scholarshipInfo.pendingCredits > 0 
-                      ? `Cần đạt TB ${scholarshipInfo.requiredAvgScore?.toFixed(1)} cho ${scholarshipInfo.pendingCredits} TC còn lại`
-                      : 'Đã hoàn thành tất cả môn'}
+                  {scholarshipInfo.gap > 1.0 
+                    ? 'Cần cải thiện đáng kể'
+                    : scholarshipInfo.gap > 0.5 
+                      ? 'Cần nỗ lực nhiều hơn'
+                      : scholarshipInfo.gap > 0.2
+                        ? 'Cố gắng thêm một chút!'
+                        : 'Rất gần với mục tiêu!'}
                 </p>
               </div>
             </div>

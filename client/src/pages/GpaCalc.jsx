@@ -38,6 +38,7 @@ import {
   analyzeRisks,
   calculateScholarshipInfo,
   calculateGpaMapData,
+  calculateSemesterGpa,
 } from '../services/gpaAdvancedService';
 import { SurvivalModePanel, RiskAlertCard, GpaMapCard, ScholarshipToggle } from '../components/gpa';
 
@@ -270,6 +271,10 @@ const GpaCalc = () => {
   // Scholarship Info
   const [scholarshipInfo, setScholarshipInfo] = useState(null);
 
+  // GPA Display Mode - 'cumulative' or 'semester'
+  const [gpaDisplayMode, setGpaDisplayMode] = useState('cumulative');
+  const [selectedSemesterId, setSelectedSemesterId] = useState(null);
+
   // Load dữ liệu từ Server khi vào trang
   useEffect(() => {
     if (user) {
@@ -457,15 +462,12 @@ const GpaCalc = () => {
 
   // === SCHOLARSHIP INFO EFFECT ===
   useEffect(() => {
-    const gpa4Num = parseFloat(result.gpa4) || 0;
     const info = calculateScholarshipInfo({
-      currentGpa4: gpa4Num,
+      semesters,
       targetScholarship: selectedScholarshipLevel,
-      totalCredits: result.totalCredits,
-      pendingCredits: result.pendingCredits,
     });
     setScholarshipInfo(info);
-  }, [result, selectedScholarshipLevel]);
+  }, [semesters, selectedScholarshipLevel]);
 
   // === SURVIVAL MODE SIMULATION ===
   const simulationResult = useMemo(() => {
@@ -515,6 +517,33 @@ const GpaCalc = () => {
       }));
     }
   };
+
+  // === SEMESTER GPA CALCULATIONS ===
+  const semesterGpas = useMemo(() => {
+    return semesters.map(sem => ({
+      id: sem.id,
+      name: sem.name,
+      ...calculateSemesterGpa(sem),
+    }));
+  }, [semesters]);
+
+  // Auto-select most recent semester with grades
+  useEffect(() => {
+    if (gpaDisplayMode === 'semester' && !selectedSemesterId) {
+      const lastSemesterWithGrades = [...semesterGpas].reverse().find(s => s.totalCredits > 0);
+      if (lastSemesterWithGrades) {
+        setSelectedSemesterId(lastSemesterWithGrades.id);
+      }
+    }
+  }, [gpaDisplayMode, selectedSemesterId, semesterGpas]);
+
+  // Get currently displayed semester GPA
+  const displayedSemesterGpa = useMemo(() => {
+    if (gpaDisplayMode === 'semester' && selectedSemesterId) {
+      return semesterGpas.find(s => s.id === selectedSemesterId);
+    }
+    return null;
+  }, [gpaDisplayMode, selectedSemesterId, semesterGpas]);
 
   // --- ACTIONS ---
 
@@ -1118,22 +1147,76 @@ const GpaCalc = () => {
 
             {/* GPA Display - chỉ hiện khi không ở scholarship mode */}
             {!isScholarshipMode && (
-              <div className="text-center py-6 bg-gradient-to-br from-primary to-blue-600 rounded-2xl text-white shadow-lg relative overflow-hidden">
-                <div className="relative z-10">
-                  <p className="opacity-80 font-medium text-xs uppercase tracking-widest">
-                    GPA Tích lũy
-                  </p>
-                  <div className="text-6xl font-black mt-1 tracking-tighter">
-                    {result.gpa4}
-                  </div>
-                  {/* XẾP LOẠI HỌC LỰC */}
-                  <div
-                    className={`inline-block mt-2 px-3 py-1 rounded-lg font-bold text-sm bg-white/20 backdrop-blur-md border border-white/30`}
+              <div>
+                {/* GPA Mode Tabs */}
+                <div className="flex gap-2 mb-3">
+                  <button
+                    onClick={() => setGpaDisplayMode('cumulative')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                      gpaDisplayMode === 'cumulative'
+                        ? 'bg-primary text-white shadow-md'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
                   >
-                    {classification.label}
-                  </div>
+                    GPA Tích lũy
+                  </button>
+                  <button
+                    onClick={() => setGpaDisplayMode('semester')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                      gpaDisplayMode === 'semester'
+                        ? 'bg-primary text-white shadow-md'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    GPA Học kỳ
+                  </button>
                 </div>
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
+
+                {/* Semester Selection Dropdown - only show in semester mode */}
+                {gpaDisplayMode === 'semester' && (
+                  <div className="mb-3">
+                    <select
+                      value={selectedSemesterId || ''}
+                      onChange={(e) => setSelectedSemesterId(parseInt(e.target.value))}
+                      className="w-full px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">Chọn học kỳ</option>
+                      {semesterGpas.map((sem) => (
+                        <option key={sem.id} value={sem.id}>
+                          {sem.name} {sem.totalCredits > 0 ? `(GPA: ${sem.semesterGpa4.toFixed(2)})` : '(Chưa có điểm)'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* GPA Display Card */}
+                <div className="text-center py-6 bg-gradient-to-br from-primary to-blue-600 rounded-2xl text-white shadow-lg relative overflow-hidden">
+                  <div className="relative z-10">
+                    <p className="opacity-80 font-medium text-xs uppercase tracking-widest">
+                      {gpaDisplayMode === 'cumulative' ? 'GPA Tích lũy' : (displayedSemesterGpa ? displayedSemesterGpa.name : 'Chọn học kỳ')}
+                    </p>
+                    <div className="text-6xl font-black mt-1 tracking-tighter">
+                      {gpaDisplayMode === 'cumulative' 
+                        ? result.gpa4 
+                        : (displayedSemesterGpa ? displayedSemesterGpa.semesterGpa4.toFixed(2) : '0.00')}
+                    </div>
+                    {/* XẾP LOẠI HỌC LỰC */}
+                    <div
+                      className={`inline-block mt-2 px-3 py-1 rounded-lg font-bold text-sm bg-white/20 backdrop-blur-md border border-white/30`}
+                    >
+                      {gpaDisplayMode === 'cumulative' 
+                        ? classification.label 
+                        : (displayedSemesterGpa ? getClassification(displayedSemesterGpa.semesterGpa4).label : 'N/A')}
+                    </div>
+                    {gpaDisplayMode === 'semester' && displayedSemesterGpa && (
+                      <p className="text-xs mt-2 opacity-75">
+                        {displayedSemesterGpa.totalCredits} tín chỉ
+                      </p>
+                    )}
+                  </div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
+                </div>
               </div>
             )}
 
