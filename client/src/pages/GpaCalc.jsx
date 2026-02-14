@@ -1137,8 +1137,8 @@ const GpaCalc = () => {
               </div>
             )}
 
-            {/* GPA MAP - Visual Summary (thay thế progress bar cũ) */}
-            {!isScholarshipMode && gpaMapData && (
+            {/* GPA MAP - Chỉ hiển thị khi cần thiết */}
+            {(isScholarshipMode || targetGpa || survivalMode.activeSubjectId) && gpaMapData && (
               <GpaMapCard mapData={gpaMapData} />
             )}
 

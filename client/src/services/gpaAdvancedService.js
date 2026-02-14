@@ -139,20 +139,20 @@ export function calculateSubjectImpact(subject, totalCredits) {
 // ============================================================================
 
 /**
- * Phân tích và tạo cảnh báo rủi ro
+ * Phân tích và tạo cảnh báo rủi ro có tính hành động
  * @param {Object} params - { semesters, currentGpa4, targetGpa, totalCredits }
- * @returns {Array<{type, message, severity, icon}>} - Tối đa 3 cảnh báo
+ * @returns {Array<{type, message, severity, icon, action}>} - Tối đa 2 cảnh báo
  */
 export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }) {
   const alerts = [];
-
+  
   // Thu thập dữ liệu môn học
   const subjectAnalysis = [];
   semesters.forEach((sem) => {
     sem.subjects.forEach((sub) => {
       const status = calculateSubjectStatus(sub.components);
       const credits = parseFloat(sub.credits) || 0;
-      const impact = totalCredits > 0 ? (credits / totalCredits) * 100 : 0;
+      const impact = totalCredits > 0 ? (credits / totalCredits) : 0;
       
       subjectAnalysis.push({
         id: sub.id,
@@ -161,87 +161,107 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
         type: sub.type,
         score: status.finalScore10,
         isFull: status.isFull,
-        impact: roundScore(impact),
+        impact,
       });
     });
   });
 
-  // 1. Cảnh báo môn chiếm >30% impact
-  const highImpactSubjects = subjectAnalysis.filter((s) => s.impact > 30);
-  if (highImpactSubjects.length > 0) {
-    const top = highImpactSubjects[0];
-    alerts.push({
-      type: 'high-dependency',
-      message: `"${top.name}" chiếm ${top.impact}% GPA - phụ thuộc cao`,
-      severity: 'warning',
-      icon: '⚠️',
-    });
-  }
+  // Danh sách các mốc GPA quan trọng
+  const milestones = [
+    { gpa: 3.6, label: 'Xuất sắc' },
+    { gpa: 3.2, label: 'Giỏi' },
+    { gpa: 2.8, label: 'Khá' },
+    { gpa: 2.0, label: 'Tốt nghiệp' },
+  ];
 
-  // 2. Cảnh báo môn có thể làm trượt mục tiêu
+  // Tìm mốc quan trọng nhất (target hoặc mốc gần nhất phía trên)
+  let targetMilestone = null;
   if (targetGpa > 0) {
-    const riskySubjects = subjectAnalysis.filter((s) => {
-      if (!s.isFull || !s.score) return false;
-      // Tính xem nếu môn này điểm thấp hơn 1 mức thì có trượt target không
-      const potentialLoss = (s.credits / totalCredits) * 0.5; // Mất ~0.5 điểm hệ 4
-      return currentGpa4 - potentialLoss < targetGpa;
-    });
+    targetMilestone = { gpa: targetGpa, label: 'Mục tiêu' };
+  } else {
+    // Tìm mốc tiếp theo phía trên
+    targetMilestone = milestones.find(m => currentGpa4 < m.gpa);
+  }
 
-    if (riskySubjects.length > 0 && riskySubjects.length <= 3) {
+  if (targetMilestone && currentGpa4 > 0) {
+    const gap = targetMilestone.gpa - currentGpa4;
+
+    // 1. HIGH RISK - Cảnh báo khi sắp mất mốc hoặc rất gần mốc
+    if (gap < 0.1 && gap > 0) {
+      // Tính xem môn nào có thể làm rớt mốc
+      const criticalSubjects = subjectAnalysis
+        .filter(s => s.isFull && s.credits >= 3)
+        .filter(s => {
+          const lossIfDropHalf = s.impact * 0.1; // Giảm 0.5 điểm hệ 10 ≈ 0.1 hệ 4
+          return currentGpa4 - lossIfDropHalf < targetMilestone.gpa;
+        })
+        .sort((a, b) => b.impact - a.impact);
+
+      if (criticalSubjects.length > 0) {
+        const critical = criticalSubjects[0];
+        alerts.push({
+          type: 'high-risk',
+          message: `🚨 Rủi ro cao: Chỉ cần giảm 0.5đ ở "${critical.name}" là mất mốc ${targetMilestone.label} (${targetMilestone.gpa}).`,
+          action: `Ưu tiên giữ điểm môn ${critical.credits}TC này`,
+          severity: 'danger',
+          icon: '🚨',
+        });
+      } else {
+        alerts.push({
+          type: 'high-risk',
+          message: `🚨 GPA sát mốc ${targetMilestone.label} (${targetMilestone.gpa}) - chỉ dư ${gap.toFixed(2)} điểm.`,
+          action: `Cần giữ điểm trung bình ≥ 7.5 để an toàn`,
+          severity: 'danger',
+          icon: '🚨',
+        });
+      }
+    }
+    // 2. MEDIUM RISK - Vùng nhạy cảm
+    else if (gap >= 0.1 && gap <= 0.25) {
+      const minSafeScore = 7.0 + (gap * 10); // Ước lượng điểm cần giữ
       alerts.push({
-        type: 'target-risk',
-        message: `${riskySubjects.length} môn có thể ảnh hưởng mục tiêu GPA ${targetGpa}`,
+        type: 'medium-risk',
+        message: `⚠️ GPA ở vùng nhạy cảm. Cần giữ các môn ≥ ${minSafeScore.toFixed(1)} để đạt ${targetMilestone.label}.`,
+        action: `Tập trung môn nhiều tín chỉ`,
+        severity: 'warning',
+        icon: '⚠️',
+      });
+    }
+    // 3. SAFE - Vùng an toàn
+    else if (gap > 0.25 && gap <= 0.5) {
+      alerts.push({
+        type: 'safe',
+        message: `✅ Bạn đang ở vùng an toàn so với mốc ${targetMilestone.label} (${targetMilestone.gpa}).`,
+        action: `Duy trì phong độ hiện tại`,
+        severity: 'info',
+        icon: '✅',
+      });
+    }
+    // 4. Nếu gap > 0.5 hoặc gap < 0 - không hiển thị
+  }
+
+  // Cảnh báo môn điểm thấp (chỉ thêm nếu chưa đủ 2 cảnh báo)
+  if (alerts.length < 2) {
+    const failingSubjects = subjectAnalysis.filter(
+      s => s.isFull && ((s.type === 'major' && s.score < 5.5) || (s.type === 'general' && s.score < 4.0))
+    );
+    
+    if (failingSubjects.length > 0) {
+      alerts.push({
+        type: 'failing',
+        message: `❌ ${failingSubjects.length} môn có nguy cơ học lại. Cần ưu tiên cải thiện.`,
+        action: `Xem lại môn "${failingSubjects[0].name}"`,
         severity: 'danger',
-        icon: '🚨',
+        icon: '❌',
       });
     }
   }
 
-  // 3. Cảnh báo GPA sát mốc học bổng
-  const scholarshipLevels = [3.6, 3.2, 2.8, 2.0];
-  for (const threshold of scholarshipLevels) {
-    const gap = Math.abs(currentGpa4 - threshold);
-    if (gap > 0 && gap < 0.1) {
-      const direction = currentGpa4 > threshold ? 'trên' : 'dưới';
-      alerts.push({
-        type: 'scholarship-edge',
-        message: `GPA cách mốc ${threshold} chỉ ${gap.toFixed(2)} điểm (${direction})`,
-        severity: currentGpa4 < threshold ? 'danger' : 'info',
-        icon: currentGpa4 < threshold ? '📉' : '📈',
-      });
-      break;
-    }
-  }
-
-  // 4. Cảnh báo có môn điểm thấp
-  const lowScoreSubjects = subjectAnalysis.filter((s) => s.isFull && s.score < 5.5);
-  if (lowScoreSubjects.length > 0) {
-    alerts.push({
-      type: 'low-score',
-      message: `${lowScoreSubjects.length} môn dưới 5.5 - nguy cơ học lại`,
-      severity: 'danger',
-      icon: '❌',
-    });
-  }
-
-  // 5. Cảnh báo môn chuyên ngành điểm thấp
-  const lowMajorSubjects = subjectAnalysis.filter(
-    (s) => s.isFull && s.type === 'major' && s.score < 6.5
-  );
-  if (lowMajorSubjects.length > 0 && !alerts.find(a => a.type === 'low-score')) {
-    alerts.push({
-      type: 'major-warning',
-      message: `${lowMajorSubjects.length} môn chuyên ngành cần cải thiện`,
-      severity: 'warning',
-      icon: '📚',
-    });
-  }
-
-  // Sắp xếp theo severity và trả về tối đa 3
+  // Sắp xếp theo severity và trả về tối đa 2
   const severityOrder = { danger: 0, warning: 1, info: 2 };
   return alerts
     .sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity])
-    .slice(0, 3);
+    .slice(0, 2);
 }
 
 // ============================================================================
