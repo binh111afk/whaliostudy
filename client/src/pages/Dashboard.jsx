@@ -60,15 +60,7 @@ const PERIOD_START_TIMES = {
 
 // Hàm lấy tên thứ hiện tại (Khớp với format trong Database: "2", "3"... hoặc "CN")
 const getCurrentDayString = () => {
-  const days = [
-    "CN",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-  ];
+  const days = ["CN", "2", "3", "4", "5", "6", "7"];
   return days[new Date().getDay()];
 };
 
@@ -165,7 +157,8 @@ const EditTargetModal = ({
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-          <Target size={20} className="text-blue-600 dark:text-blue-400" /> Mục tiêu tín chỉ
+          <Target size={20} className="text-blue-600 dark:text-blue-400" /> Mục
+          tiêu tín chỉ
         </h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           Nhập tổng số tín chỉ chương trình đào tạo của bạn.
@@ -231,7 +224,11 @@ const ChartStatBox = ({
     <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase mt-1">
       {label}
     </span>
-    {subLabel && <span className="text-[10px] text-gray-400 dark:text-gray-500">{subLabel}</span>}
+    {subLabel && (
+      <span className="text-[10px] text-gray-400 dark:text-gray-500">
+        {subLabel}
+      </span>
+    )}
   </div>
 );
 
@@ -321,59 +318,63 @@ const QuickNotesTab = ({ user }) => {
   };
 
   const handleDeleteNote = (id) => {
-    toast.custom((t) => (
-      <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
-        
-        {/* 1. Tiêu đề ngắn gọn */}
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-          Xóa ghi chú?
-        </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
-          Hành động này không thể hoàn tác.
-        </p>
-  
-        {/* 2. Nút bấm nhỏ gọn */}
-        <div className="flex w-full gap-3">
-          
-          {/* Nút Hủy */}
-          <button
-            onClick={() => toast.dismiss(t)}
-            className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
-          >
-            Hủy
-          </button>
-  
-          {/* Nút Xóa */}
-          <button
-            onClick={async () => {
-              toast.dismiss(t); // Đóng hộp thoại
-              try {
-                const res = await fetch(
-                  `/api/quick-notes/${id}?username=${user.username}`,
-                  { method: "DELETE" }
-                );
-                const data = await res.json();
-                
-                if (data.success) {
-                  fetchMyNotes(); // Load lại danh sách ghi chú
-                  toast.success("Đã dọn dẹp ghi chú!", { position: 'top-center' });
+    toast.custom(
+      (t) => (
+        <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+          {/* 1. Tiêu đề ngắn gọn */}
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            Xóa ghi chú?
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
+            Hành động này không thể hoàn tác.
+          </p>
+
+          {/* 2. Nút bấm nhỏ gọn */}
+          <div className="flex w-full gap-3">
+            {/* Nút Hủy */}
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+            >
+              Hủy
+            </button>
+
+            {/* Nút Xóa */}
+            <button
+              onClick={async () => {
+                toast.dismiss(t); // Đóng hộp thoại
+                try {
+                  const res = await fetch(
+                    `/api/quick-notes/${id}?username=${user.username}`,
+                    { method: "DELETE" }
+                  );
+                  const data = await res.json();
+
+                  if (data.success) {
+                    fetchMyNotes(); // Load lại danh sách ghi chú
+                    toast.success("Đã dọn dẹp ghi chú!", {
+                      position: "top-center",
+                    });
+                  }
+                } catch (e) {
+                  console.error(e);
+                  toast.error("Lỗi hệ thống, thử lại sau!", {
+                    position: "top-center",
+                  });
                 }
-              } catch (e) {
-                console.error(e);
-                toast.error("Lỗi hệ thống, thử lại sau!", { position: 'top-center' });
-              }
-            }}
-            className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
-          >
-            Xóa
-          </button>
+              }}
+              className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
+            >
+              Xóa
+            </button>
+          </div>
         </div>
-  
-      </div>
-    ), { 
-      position: 'top-center',
-      duration: Infinity,
-    });
+      ),
+      {
+        position: "top-center",
+        duration: Infinity,
+      }
+    );
   };
 
   // --- [MỚI] HANDLERS CHO NOTE TKB ---
@@ -406,67 +407,77 @@ const QuickNotesTab = ({ user }) => {
   };
 
   const handleDeleteTimetableNote = (note) => {
-    toast.custom((t) => (
-      <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
-        
-        {/* 1. Tiêu đề ngắn gọn */}
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-          Xóa nhắc nhở?
-        </h3>
-  
-        {/* 2. Mô tả chứa tên môn học được in đậm */}
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
-          Nhắc nhở môn <span className="font-bold text-gray-700 dark:text-gray-300">{note.subject}</span> sẽ bị xóa vĩnh viễn.
-        </p>
-  
-        {/* 3. Nút bấm nhỏ gọn (Compact) */}
-        <div className="flex w-full gap-3">
-          
-          {/* Nút Hủy */}
-          <button
-            onClick={() => toast.dismiss(t)}
-            className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
-          >
-            Hủy
-          </button>
-  
-          {/* Nút Xóa */}
-          <button
-            onClick={async () => {
-              toast.dismiss(t);
-              
-              // Optimistic UI: Xóa ngay trên giao diện trước
-              setTimetableNotes(timetableNotes.filter((n) => n.id !== note.id));
-  
-              try {
-                await fetch("/api/timetable/update-note", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    classId: note.classId,
-                    username: user.username,
-                    action: "delete",
-                    note: { id: note.id },
-                  }),
-                });
-                toast.success("Đã xóa nhắc nhở thành công!", { position: 'top-center' });
-              } catch (e) {
-                console.error(e);
-                fetchTimetableNotes(); // Lỗi thì load lại dữ liệu cũ
-                toast.error("Lỗi kết nối, đã khôi phục lại dữ liệu!", { position: 'top-center' });
-              }
-            }}
-            className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
-          >
-            Xóa
-          </button>
+    toast.custom(
+      (t) => (
+        <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+          {/* 1. Tiêu đề ngắn gọn */}
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            Xóa nhắc nhở?
+          </h3>
+
+          {/* 2. Mô tả chứa tên môn học được in đậm */}
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
+            Nhắc nhở môn{" "}
+            <span className="font-bold text-gray-700 dark:text-gray-300">
+              {note.subject}
+            </span>{" "}
+            sẽ bị xóa vĩnh viễn.
+          </p>
+
+          {/* 3. Nút bấm nhỏ gọn (Compact) */}
+          <div className="flex w-full gap-3">
+            {/* Nút Hủy */}
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+            >
+              Hủy
+            </button>
+
+            {/* Nút Xóa */}
+            <button
+              onClick={async () => {
+                toast.dismiss(t);
+
+                // Optimistic UI: Xóa ngay trên giao diện trước
+                setTimetableNotes(
+                  timetableNotes.filter((n) => n.id !== note.id)
+                );
+
+                try {
+                  await fetch("/api/timetable/update-note", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      classId: note.classId,
+                      username: user.username,
+                      action: "delete",
+                      note: { id: note.id },
+                    }),
+                  });
+                  toast.success("Đã xóa nhắc nhở thành công!", {
+                    position: "top-center",
+                  });
+                } catch (e) {
+                  console.error(e);
+                  fetchTimetableNotes(); // Lỗi thì load lại dữ liệu cũ
+                  toast.error("Lỗi kết nối, đã khôi phục lại dữ liệu!", {
+                    position: "top-center",
+                  });
+                }
+              }}
+              className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
+            >
+              Xóa
+            </button>
+          </div>
         </div>
-  
-      </div>
-    ), { 
-      position: 'top-center',
-      duration: Infinity,
-    });
+      ),
+      {
+        position: "top-center",
+        duration: Infinity,
+      }
+    );
   };
 
   return (
@@ -474,7 +485,8 @@ const QuickNotesTab = ({ user }) => {
       {/* CỘT TRÁI: GHI CHÚ CÁ NHÂN (MÀU VÀNG) */}
       <div>
         <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-          <StickyNote className="text-yellow-500 dark:text-yellow-400" /> Ghi chú của tôi
+          <StickyNote className="text-yellow-500 dark:text-yellow-400" /> Ghi
+          chú của tôi
         </h3>
 
         {/* Form thêm note */}
@@ -515,7 +527,9 @@ const QuickNotesTab = ({ user }) => {
               >
                 <Trash2 size={14} />
               </button>
-              <h4 className="font-bold text-gray-800 dark:text-white mb-1">{note.title}</h4>
+              <h4 className="font-bold text-gray-800 dark:text-white mb-1">
+                {note.title}
+              </h4>
               <p
                 className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap leading-relaxed font-medium"
                 style={{ fontFamily: '"Comic Sans MS", cursive, sans-serif' }}
@@ -538,7 +552,8 @@ const QuickNotesTab = ({ user }) => {
       {/* CỘT PHẢI: GHI CHÚ TỪ THỜI KHÓA BIỂU (MÀU XANH) */}
       <div>
         <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-          <Bell className="text-blue-500 dark:text-blue-400" /> Nhắc nhở từ Thời khóa biểu
+          <Bell className="text-blue-500 dark:text-blue-400" /> Nhắc nhở từ Thời
+          khóa biểu
         </h3>
 
         <div className="space-y-4">
@@ -593,7 +608,9 @@ const QuickNotesTab = ({ user }) => {
                     </div>
                     <p
                       className={`text-sm mt-1 ${
-                        note.isDone ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300"
+                        note.isDone
+                          ? "text-gray-400 dark:text-gray-500"
+                          : "text-gray-600 dark:text-gray-300"
                       }`}
                     >
                       {note.content}
@@ -747,49 +764,51 @@ const FlashcardTab = () => {
   };
 
   const deleteDeck = (id) => {
-    toast.custom((t) => (
-      <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
-        
-        {/* 1. Tiêu đề & Nội dung */}
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-          Xóa bộ thẻ?
-        </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
-          Dữ liệu học tập của bộ này sẽ bị xóa vĩnh viễn.
-        </p>
-  
-        {/* 2. Hai nút nằm ngang (Compact style) */}
-        <div className="flex w-full gap-3">
-          
-          {/* Nút Hủy */}
-          <button
-            onClick={() => toast.dismiss(t)}
-            className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
-          >
-            Hủy
-          </button>
-  
-          {/* Nút Xóa */}
-          <button
-            onClick={() => {
-              toast.dismiss(t); // Đóng hộp thoại
-              // Logic xóa cũ của ông
-              const updated = decks.filter((d) => d.id !== id);
-              setDecks(updated);
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-              toast.success("Đã xóa bộ thẻ thành công!", { position: 'top-center' });
-            }}
-            className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
-          >
-            Xóa
-          </button>
+    toast.custom(
+      (t) => (
+        <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+          {/* 1. Tiêu đề & Nội dung */}
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            Xóa bộ thẻ?
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
+            Dữ liệu học tập của bộ này sẽ bị xóa vĩnh viễn.
+          </p>
+
+          {/* 2. Hai nút nằm ngang (Compact style) */}
+          <div className="flex w-full gap-3">
+            {/* Nút Hủy */}
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+            >
+              Hủy
+            </button>
+
+            {/* Nút Xóa */}
+            <button
+              onClick={() => {
+                toast.dismiss(t); // Đóng hộp thoại
+                // Logic xóa cũ của ông
+                const updated = decks.filter((d) => d.id !== id);
+                setDecks(updated);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+                toast.success("Đã xóa bộ thẻ thành công!", {
+                  position: "top-center",
+                });
+              }}
+              className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
+            >
+              Xóa
+            </button>
+          </div>
         </div>
-  
-      </div>
-    ), { 
-      position: 'top-center',
-      duration: Infinity,
-    });
+      ),
+      {
+        position: "top-center",
+        duration: Infinity,
+      }
+    );
   };
 
   // Mapping màu sắc
@@ -809,7 +828,8 @@ const FlashcardTab = () => {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
-                <Layers className="text-blue-600 dark:text-blue-400" /> Flashcard của tôi
+                <Layers className="text-blue-600 dark:text-blue-400" />{" "}
+                Flashcard của tôi
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 Luyện tập trí nhớ với phương pháp lặp lại.
@@ -1187,7 +1207,9 @@ const DailyScheduleTab = ({ user }) => {
           <div className="flex items-center gap-2 mb-1">
             <h4
               className={`font-bold text-lg ${
-                isPassed ? "text-gray-500 dark:text-gray-400 line-through" : "text-gray-800 dark:text-white"
+                isPassed
+                  ? "text-gray-500 dark:text-gray-400 line-through"
+                  : "text-gray-800 dark:text-white"
               }`}
             >
               {item.title}
@@ -1245,8 +1267,8 @@ const DailyScheduleTab = ({ user }) => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
-            <Calendar className="text-blue-600 dark:text-blue-400" /> Lịch trình hôm nay (
-            {now.toLocaleDateString("vi-VN")})
+            <Calendar className="text-blue-600 dark:text-blue-400" /> Lịch trình
+            hôm nay ({now.toLocaleDateString("vi-VN")})
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Hệ thống tự động cập nhật theo thời gian thực.
@@ -1422,57 +1444,60 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   };
 
   const handleDeleteDeadline = (id) => {
-    toast.custom((t) => (
-      <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
-        
-        {/* 1. Tiêu đề & Nội dung gọn hơn */}
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-          Xác nhận xóa?
-        </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
-          Công việc này sẽ bị xóa vĩnh viễn khỏi lịch.
-        </p>
-  
-        {/* 2. Nút bấm nhỏ gọn, thanh thoát (text-sm, py-2) */}
-        <div className="flex w-full gap-3">
-          
-          {/* Nút Hủy */}
-          <button
-            onClick={() => toast.dismiss(t)}
-            className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
-          >
-            Hủy
-          </button>
-  
-          {/* Nút Xóa */}
-          <button
-            onClick={async () => {
-              toast.dismiss(t);
-              try {
-                const res = await fetch(`/api/events/${id}?username=${user.username}`, {
-                  method: "DELETE",
-                });
-                const data = await res.json();
-                if (data.success) {
-                  loadDeadlines();
-                  toast.success("Đã xóa xong!", { position: 'top-center' });
+    toast.custom(
+      (t) => (
+        <div className="w-full max-w-[320px] bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+          {/* 1. Tiêu đề & Nội dung gọn hơn */}
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            Xác nhận xóa?
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
+            Công việc này sẽ bị xóa vĩnh viễn khỏi lịch.
+          </p>
+
+          {/* 2. Nút bấm nhỏ gọn, thanh thoát (text-sm, py-2) */}
+          <div className="flex w-full gap-3">
+            {/* Nút Hủy */}
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+            >
+              Hủy
+            </button>
+
+            {/* Nút Xóa */}
+            <button
+              onClick={async () => {
+                toast.dismiss(t);
+                try {
+                  const res = await fetch(
+                    `/api/events/${id}?username=${user.username}`,
+                    {
+                      method: "DELETE",
+                    }
+                  );
+                  const data = await res.json();
+                  if (data.success) {
+                    loadDeadlines();
+                    toast.success("Đã xóa xong!", { position: "top-center" });
+                  }
+                } catch (error) {
+                  console.error(error);
+                  toast.error("Lỗi khi xóa!", { position: "top-center" });
                 }
-              } catch (error) {
-                console.error(error);
-                toast.error("Lỗi khi xóa!", { position: 'top-center' });
-              }
-            }}
-            className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
-          >
-            Xóa
-          </button>
+              }}
+              className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
+            >
+              Xóa
+            </button>
+          </div>
         </div>
-  
-      </div>
-    ), { 
-      position: 'top-center',
-      duration: Infinity,
-    });
+      ),
+      {
+        position: "top-center",
+        duration: Infinity,
+      }
+    );
   };
 
   const handleToggleDeadline = async (task) => {
@@ -1576,7 +1601,9 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                 </p>
                 <div
                   className={`flex items-center text-sm font-bold ${
-                    isIncrease ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"
+                    isIncrease
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-red-500 dark:text-red-400"
                   }`}
                 >
                   {isIncrease ? (
@@ -1603,7 +1630,9 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                 <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">
                   Tín chỉ
                 </p>
-                <p className="text-gray-700 dark:text-gray-200 font-bold">Đã hoàn thành</p>
+                <p className="text-gray-700 dark:text-gray-200 font-bold">
+                  Đã hoàn thành
+                </p>
               </div>
             </div>
 
@@ -1616,7 +1645,9 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                 <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">
                   Đề thi
                 </p>
-                <p className="text-gray-700 dark:text-gray-200 font-bold">Đã luyện tập</p>
+                <p className="text-gray-700 dark:text-gray-200 font-bold">
+                  Đã luyện tập
+                </p>
               </div>
             </div>
 
@@ -1629,7 +1660,9 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                 <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">
                   Tổng giờ học
                 </p>
-                <p className="text-gray-700 dark:text-gray-200 font-bold">{totalStudyHours} giờ</p>
+                <p className="text-gray-700 dark:text-gray-200 font-bold">
+                  {totalStudyHours} giờ
+                </p>
               </div>
             </div>
           </div>
@@ -1677,18 +1710,40 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
 
               <div className="h-64 w-full">
                 {chartMode === "credit" ? (
-                  // --- BIỂU ĐỒ TIẾN ĐỘ ---
-                  <div className="flex items-center justify-center h-full gap-8">
-                    <div className="relative w-48 h-48 flex-shrink-0">
+                  // --- BIỂU ĐỒ TIẾN ĐỘ (REMASTERED) ---
+                  <div className="flex flex-col sm:flex-row items-center justify-center h-full gap-6 sm:gap-10 p-2">
+                    {/* PHẦN 1: BIỂU ĐỒ TRÒN */}
+                    <div className="relative w-56 h-56 flex-shrink-0 group">
                       <ResponsiveContainer width="100%" height="100%">
                         <RadialBarChart
-                          innerRadius="70%"
+                          innerRadius="75%"
                           outerRadius="100%"
-                          data={creditData}
+                          barSize={24} // Tăng độ dày cho rõ
+                          data={[
+                            {
+                              value: gpaMetrics.totalCredits,
+                              fill: "url(#progressGradient)",
+                            },
+                          ]} // Sử dụng Gradient
                           startAngle={180}
                           endAngle={0}
-                          barSize={20}
                         >
+                          {/* Định nghĩa Gradient màu sắc */}
+                          <defs>
+                            <linearGradient
+                              id="progressGradient"
+                              x1="0"
+                              y1="0"
+                              x2="1"
+                              y2="0"
+                            >
+                              <stop offset="0%" stopColor="#3B82F6" />{" "}
+                              {/* Blue-500 */}
+                              <stop offset="100%" stopColor="#10B981" />{" "}
+                              {/* Emerald-500 */}
+                            </linearGradient>
+                          </defs>
+
                           <PolarAngleAxis
                             type="number"
                             domain={[0, targetCredits]}
@@ -1697,51 +1752,94 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                           />
                           <RadialBar
                             minAngle={15}
-                            background
+                            background={{ fill: "#f3f4f6" }} // Màu nền thanh (Light mode)
                             clockWise={true}
                             dataKey="value"
-                            cornerRadius={10}
+                            cornerRadius={12} // Bo tròn đầu thanh
                           />
                           <Tooltip cursor={false} />
                         </RadialBarChart>
                       </ResponsiveContainer>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pt-6 pointer-events-none">
-                        <span className="text-3xl font-black text-gray-800 dark:text-white">
+
+                      {/* Text ở giữa biểu đồ */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pt-8 pointer-events-none">
+                        <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 drop-shadow-sm">
                           {creditPercent}%
                         </span>
-                        <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">
-                          Đã xong
+                        <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-1">
+                          Hoàn thành
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex-1 grid grid-cols-2 gap-3 max-w-xs">
-                      <ChartStatBox
-                        label="Mục tiêu"
-                        value={`${targetCredits} TC`}
-                        icon={Target}
-                        color="text-blue-600"
+                    {/* PHẦN 2: CÁC THÔNG SỐ CHI TIẾT (GRID MÀU SẮC) */}
+                    <div className="flex-1 grid grid-cols-2 gap-4 w-full max-w-sm">
+                      {/* Box 1: Mục tiêu (Màu Xanh Dương) */}
+                      <div
+                        className="flex flex-col p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 transition-transform hover:scale-105 cursor-pointer"
                         onClick={() => setIsTargetModalOpen(true)}
-                      />
-                      <ChartStatBox
-                        label="Đã tích lũy"
-                        value={`${gpaMetrics.totalCredits} TC`}
-                        icon={CheckCircle}
-                        color="text-green-600"
-                      />
-                      <ChartStatBox
-                        label="Còn lại"
-                        value={`${remainingCredits} TC`}
-                        icon={AlertCircle}
-                        color="text-orange-500"
-                      />
-                      <ChartStatBox
-                        label="Môn đã qua"
-                        value={gpaMetrics.passedSubjects}
-                        subLabel="Môn học"
-                        icon={BookOpen}
-                        color="text-purple-600"
-                      />
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Target className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          <span className="text-xs font-semibold text-blue-600 dark:text-blue-300 uppercase">
+                            Mục tiêu
+                          </span>
+                        </div>
+                        <span className="text-xl font-bold text-gray-800 dark:text-white">
+                          {targetCredits}{" "}
+                          <span className="text-xs font-medium text-gray-500">
+                            TC
+                          </span>
+                        </span>
+                      </div>
+
+                      {/* Box 2: Đã tích lũy (Màu Xanh Lá) */}
+                      <div className="flex flex-col p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 transition-transform hover:scale-105">
+                        <div className="flex items-center gap-2 mb-1">
+                          <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-300 uppercase">
+                            Tích lũy
+                          </span>
+                        </div>
+                        <span className="text-xl font-bold text-gray-800 dark:text-white">
+                          {gpaMetrics.totalCredits}{" "}
+                          <span className="text-xs font-medium text-gray-500">
+                            TC
+                          </span>
+                        </span>
+                      </div>
+
+                      {/* Box 3: Còn lại (Màu Cam) */}
+                      <div className="flex flex-col p-4 rounded-2xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 transition-transform hover:scale-105">
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                          <span className="text-xs font-semibold text-orange-600 dark:text-orange-300 uppercase">
+                            Còn lại
+                          </span>
+                        </div>
+                        <span className="text-xl font-bold text-gray-800 dark:text-white">
+                          {remainingCredits}{" "}
+                          <span className="text-xs font-medium text-gray-500">
+                            TC
+                          </span>
+                        </span>
+                      </div>
+
+                      {/* Box 4: Môn đã qua (Màu Tím) */}
+                      <div className="flex flex-col p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 transition-transform hover:scale-105">
+                        <div className="flex items-center gap-2 mb-1">
+                          <BookOpen className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                          <span className="text-xs font-semibold text-purple-600 dark:text-purple-300 uppercase">
+                            Môn đã qua
+                          </span>
+                        </div>
+                        <span className="text-xl font-bold text-gray-800 dark:text-white">
+                          {gpaMetrics.passedSubjects}{" "}
+                          <span className="text-xs font-medium text-gray-500">
+                            Môn
+                          </span>
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -1803,7 +1901,9 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
             {/* Cột phải: To-Do List */}
             <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col h-full">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-gray-800 dark:text-white">Deadline sắp tới</h3>
+                <h3 className="font-bold text-gray-800 dark:text-white">
+                  Deadline sắp tới
+                </h3>
                 <span className="text-xs font-bold text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded-md">
                   {deadlines.length} task
                 </span>
