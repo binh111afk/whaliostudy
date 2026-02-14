@@ -15,8 +15,23 @@ import {
   XCircle,
   AlertTriangle,
   FolderPlus,
+  TrendingUp,
+  Zap,
+  Shield,
+  AlertOctagon,
+  Lightbulb,
+  BarChart3,
+  Star,
 } from "lucide-react";
 import AuthModal from '../components/AuthModal';
+import {
+  getFeasibilityColors,
+  generateScenarios,
+  findMostCriticalSubject,
+  getTopCriticalSubjects,
+  generateStrategy,
+  calculateGpaProgress,
+} from '../utils/gpaStrategy';
 
 // --- 1. DỮ LIỆU CẤU HÌNH ---
 const SUGGESTED_SUBJECTS = [
@@ -211,10 +226,21 @@ const GpaCalc = () => {
     passedCredits: 0,
     prediction4: null,
     prediction10: null,
-    predictionChar: null, // Thêm dự báo hệ 10
+    predictionChar: null,
+    pendingCredits: 0,
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const [showStrategyPanel, setShowStrategyPanel] = useState(true);
+
+  // Strategy analysis results
+  const [strategyData, setStrategyData] = useState({
+    scenarios: null,
+    criticalSubject: null,
+    topCriticalSubjects: [],
+    strategy: null,
+    gpaProgress: null,
+  });
 
   // Load dữ liệu từ Server khi vào trang
   useEffect(() => {
@@ -346,6 +372,38 @@ const GpaCalc = () => {
       prediction4,
       prediction10,
       predictionChar,
+      pendingCredits,
+    });
+
+    // --- STRATEGY ANALYSIS ---
+    const gpa4Num = parseFloat(gpa4) || 0;
+    const targetNum = parseFloat(targetGpa) || 0;
+
+    // Calculate scenarios
+    const scenarios = targetNum > 0 && pendingCredits > 0
+      ? generateScenarios(gpa4Num, totalCredits, pendingCredits, targetNum)
+      : null;
+
+    // Find critical subjects
+    const criticalSubject = findMostCriticalSubject(semesters);
+    const topCriticalSubjects = getTopCriticalSubjects(semesters, 5);
+
+    // Generate strategy
+    const strategy = generateStrategy(semesters, targetNum, {
+      gpa4: gpa4Num,
+      totalCredits,
+      passedCredits,
+    });
+
+    // Calculate GPA progress
+    const gpaProgress = calculateGpaProgress(gpa4Num, targetNum);
+
+    setStrategyData({
+      scenarios,
+      criticalSubject,
+      topCriticalSubjects,
+      strategy,
+      gpaProgress,
     });
   }, [semesters, targetGpa]);
 
@@ -662,27 +720,46 @@ const GpaCalc = () => {
                               ? parseFloat(finalScore10) >= 5.5
                               : parseFloat(finalScore10) >= 4.0);
 
+                          // Check if this is a critical subject
+                          const isCriticalSubject = strategyData.criticalSubject?.subjectName === sub.name;
+                          const isTopCritical = strategyData.topCriticalSubjects.slice(0, 3).some(
+                            cs => cs.id === sub.id
+                          );
+
                           return (
                             <tr
                               key={sub.id}
-                              className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors align-top group"
+                              className={`hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors align-top group ${
+                                isCriticalSubject 
+                                  ? 'bg-amber-50/50 dark:bg-amber-900/10 ring-2 ring-amber-200 dark:ring-amber-700 ring-inset' 
+                                  : isTopCritical 
+                                  ? 'bg-purple-50/30 dark:bg-purple-900/5' 
+                                  : ''
+                              }`}
                             >
                               <td className="p-3">
-                                <input
-                                  list="subject-suggestions"
-                                  type="text"
-                                  placeholder="Nhập tên môn..."
-                                  className="w-full font-bold text-gray-700 dark:text-gray-200 bg-transparent outline-none placeholder-gray-300 dark:placeholder-gray-600 text-sm mb-1"
-                                  value={sub.name}
-                                  onChange={(e) =>
-                                    updateSubject(
-                                      sem.id,
-                                      sub.id,
-                                      "name",
-                                      e.target.value
-                                    )
-                                  }
-                                />
+                                <div className="flex items-center gap-2">
+                                  {isCriticalSubject && (
+                                    <span className="text-amber-500" title="Môn có ảnh hưởng lớn nhất">
+                                      <Star size={14} fill="currentColor" />
+                                    </span>
+                                  )}
+                                  <input
+                                    list="subject-suggestions"
+                                    type="text"
+                                    placeholder="Nhập tên môn..."
+                                    className="w-full font-bold text-gray-700 dark:text-gray-200 bg-transparent outline-none placeholder-gray-300 dark:placeholder-gray-600 text-sm mb-1"
+                                    value={sub.name}
+                                    onChange={(e) =>
+                                      updateSubject(
+                                        sem.id,
+                                        sub.id,
+                                        "name",
+                                        e.target.value
+                                      )
+                                    }
+                                  />
+                                </div>
                                 <div className="flex gap-1">
                                   {["general", "major"].map((t) => (
                                     <button
@@ -905,18 +982,54 @@ const GpaCalc = () => {
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
             </div>
 
-            {/* DỰ BÁO GPA TỔNG (ĐÃ SỬA: HIỆN THANG 10) */}
-            {targetGpa && (
-              <div
-                className={`p-4 rounded-xl border ${
-                  result.prediction4 <= 4.0
-                    ? "bg-purple-50 dark:bg-purple-900/20 border-purple-100 dark:border-purple-800"
-                    : "bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800"
-                }`}
-              >
-                <p className="text-xs font-bold uppercase mb-2 text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                  <Target size={14} /> Để đạt GPA {targetGpa}
+            {/* GPA PROGRESS BAR */}
+            {targetGpa && strategyData.gpaProgress && (
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1">
+                    <TrendingUp size={14} /> Tiến độ
+                  </span>
+                  <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
+                    {strategyData.gpaProgress.percentage.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="w-full h-3 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      strategyData.gpaProgress.status === 'achieved'
+                        ? 'bg-green-500'
+                        : strategyData.gpaProgress.status === 'close'
+                        ? 'bg-blue-500'
+                        : strategyData.gpaProgress.status === 'on-track'
+                        ? 'bg-yellow-500'
+                        : 'bg-orange-500'
+                    }`}
+                    style={{ width: `${Math.min(strategyData.gpaProgress.percentage, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                  {strategyData.gpaProgress.message}
+                  {strategyData.gpaProgress.gap > 0 && (
+                    <span className="font-bold"> (còn {strategyData.gpaProgress.gap.toFixed(2)})</span>
+                  )}
                 </p>
+              </div>
+            )}
+
+            {/* FEASIBILITY BADGE & PREDICTION */}
+            {targetGpa && strategyData.strategy?.feasibility && (
+              <div
+                className={`p-4 rounded-xl border ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).border}`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                    <Target size={14} /> Để đạt GPA {targetGpa}
+                  </p>
+                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).text}`}>
+                    {getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).icon} {getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).label}
+                  </span>
+                </div>
+                
                 {result.prediction4 ? (
                   result.prediction4 <= 4.0 ? (
                     <div>
@@ -924,7 +1037,7 @@ const GpaCalc = () => {
                         Các môn chưa có điểm cần trung bình:
                       </p>
 
-                      {/* Dòng 1: Điểm hệ 4 */}
+                      {/* Điểm hệ 4 */}
                       <p className="text-xl font-black text-purple-600 dark:text-purple-400 mt-2">
                         {result.prediction4.toFixed(2)}{" "}
                         <span className="text-xs font-normal text-gray-400 dark:text-gray-500">
@@ -932,18 +1045,23 @@ const GpaCalc = () => {
                         </span>
                       </p>
 
-                      {/* Dòng 2: QUY ĐỔI RA HỆ 10 (THEO YÊU CẦU CỦA ÔNG) */}
-                      <div className="mt-2 pt-2 border-t border-purple-200 dark:border-purple-700">
+                      {/* Quy đổi hệ 10 */}
+                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
                         <p className="text-xs text-gray-500 dark:text-gray-400">Tương đương:</p>
                         <p className="font-bold text-purple-800 dark:text-purple-300 text-sm flex items-center gap-1">
                           ~ {result.prediction10} thang 10 (
                           {result.predictionChar})
                         </p>
                       </div>
+
+                      {/* Feasibility Message */}
+                      <p className={`text-xs mt-3 p-2 rounded-lg ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).text}`}>
+                        💡 {strategyData.strategy.feasibility.feasibilityMessage}
+                      </p>
                     </div>
                   ) : (
-                    <div className="text-xs font-bold text-red-600 flex gap-1">
-                      <AlertTriangle size={14} /> Không thể đạt được!
+                    <div className="text-xs font-bold text-red-600 flex gap-1 items-center">
+                      <AlertTriangle size={14} /> Không thể đạt được với dữ liệu hiện tại!
                     </div>
                   )
                 ) : (
@@ -951,6 +1069,72 @@ const GpaCalc = () => {
                     Nhập thêm môn...
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* SCENARIO CARDS */}
+            {strategyData.scenarios && (
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                  <Layers size={14} /> Các kịch bản
+                </p>
+                
+                {/* Safe Scenario */}
+                <div className={`p-3 rounded-lg border ${getFeasibilityColors(strategyData.scenarios.safe.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.scenarios.safe.feasibilityLevel).border}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold flex items-center gap-1">
+                      <Shield size={12} className="text-green-600" /> An toàn
+                    </span>
+                    <span className="text-sm font-black">{strategyData.scenarios.safe.requiredScore}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                    Target: {strategyData.scenarios.safe.targetGpa.toFixed(1)}
+                  </p>
+                </div>
+
+                {/* Balanced Scenario */}
+                <div className={`p-3 rounded-lg border-2 ${getFeasibilityColors(strategyData.scenarios.balanced.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.scenarios.balanced.feasibilityLevel).border}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold flex items-center gap-1">
+                      <Target size={12} className="text-blue-600" /> Mục tiêu
+                    </span>
+                    <span className="text-sm font-black">{strategyData.scenarios.balanced.requiredScore}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                    Target: {strategyData.scenarios.balanced.targetGpa.toFixed(1)}
+                  </p>
+                </div>
+
+                {/* Risky Scenario */}
+                <div className={`p-3 rounded-lg border ${getFeasibilityColors(strategyData.scenarios.risky.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.scenarios.risky.feasibilityLevel).border}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold flex items-center gap-1">
+                      <Zap size={12} className="text-orange-600" /> Rủi ro
+                    </span>
+                    <span className="text-sm font-black">{strategyData.scenarios.risky.requiredScore}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                    Target: {strategyData.scenarios.risky.targetGpa.toFixed(1)}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* CRITICAL SUBJECT */}
+            {strategyData.criticalSubject && (
+              <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-700">
+                <p className="text-xs font-bold uppercase text-amber-600 dark:text-amber-400 flex items-center gap-1 mb-2">
+                  <Star size={14} /> Môn quan trọng nhất
+                </p>
+                <p className="font-bold text-gray-800 dark:text-white text-sm">
+                  {strategyData.criticalSubject.subjectName}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {strategyData.criticalSubject.credits} tín chỉ • Impact: {strategyData.criticalSubject.impactScore}
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-2 italic">
+                  💡 {strategyData.criticalSubject.suggestion}
+                </p>
               </div>
             )}
 
@@ -971,6 +1155,14 @@ const GpaCalc = () => {
                   {result.totalCredits}
                 </span>
               </div>
+              <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                <span className="text-blue-600 dark:text-blue-400 text-xs font-bold uppercase">
+                  Chưa có điểm
+                </span>
+                <span className="font-bold text-blue-700 dark:text-blue-400">
+                  {result.pendingCredits || 0}
+                </span>
+              </div>
               <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
                 <span className="text-green-600 dark:text-green-400 text-xs font-bold uppercase">
                   Tích lũy
@@ -983,6 +1175,147 @@ const GpaCalc = () => {
           </div>
         </div>
       </div>
+
+      {/* STRATEGY PANEL */}
+      {strategyData.strategy && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mt-6">
+          <div 
+            className="flex items-center justify-between cursor-pointer"
+            onClick={() => setShowStrategyPanel(!showStrategyPanel)}
+          >
+            <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+              <Lightbulb className="text-yellow-500" size={20} />
+              Chiến lược học tập
+            </h3>
+            <ChevronDown 
+              size={20} 
+              className={`text-gray-500 transition-transform ${showStrategyPanel ? 'rotate-180' : ''}`}
+            />
+          </div>
+
+          {showStrategyPanel && (
+            <div className="mt-4 space-y-4">
+              {/* Summary */}
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl">
+                <p className="text-gray-800 dark:text-gray-200 font-medium">
+                  {strategyData.strategy.summary}
+                </p>
+              </div>
+
+              {/* Action Steps */}
+              {strategyData.strategy.actionSteps.length > 0 && (
+                <div>
+                  <p className="text-sm font-bold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1">
+                    <BarChart3 size={14} /> Các bước hành động
+                  </p>
+                  <ul className="space-y-2">
+                    {strategyData.strategy.actionSteps.map((step, idx) => (
+                      <li 
+                        key={idx}
+                        className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg"
+                      >
+                        <span className="font-bold text-primary dark:text-blue-400 mt-0.5">{idx + 1}.</span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Risk Warning */}
+              {strategyData.strategy.riskWarning && (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl">
+                  <p className="text-sm text-red-700 dark:text-red-400 flex items-start gap-2">
+                    <AlertOctagon size={16} className="mt-0.5 shrink-0" />
+                    <span>{strategyData.strategy.riskWarning}</span>
+                  </p>
+                </div>
+              )}
+
+              {/* Stats */}
+              {strategyData.strategy.stats && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+                  <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <p className="text-2xl font-black text-gray-800 dark:text-white">
+                      {strategyData.strategy.stats.completedCredits}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">TC hoàn thành</p>
+                  </div>
+                  <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <p className="text-2xl font-black text-blue-600 dark:text-blue-400">
+                      {strategyData.strategy.stats.pendingCredits}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">TC chưa điểm</p>
+                  </div>
+                  <div className="text-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                    <p className="text-2xl font-black text-orange-600 dark:text-orange-400">
+                      {strategyData.strategy.stats.lowScoreCount}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Môn điểm thấp</p>
+                  </div>
+                  <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                    <p className="text-2xl font-black text-purple-600 dark:text-purple-400">
+                      {strategyData.strategy.stats.neededScore || '-'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Điểm cần đạt</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TOP CRITICAL SUBJECTS */}
+      {strategyData.topCriticalSubjects.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mt-6">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2 mb-4">
+            <BarChart3 className="text-purple-500" size={20} />
+            Top 5 môn ảnh hưởng lớn nhất
+          </h3>
+          <div className="space-y-3">
+            {strategyData.topCriticalSubjects.map((sub, idx) => {
+              const isCritical = idx === 0;
+              return (
+                <div 
+                  key={sub.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
+                    isCritical 
+                      ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700' 
+                      : 'bg-gray-50 dark:bg-gray-700 border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      isCritical 
+                        ? 'bg-amber-500 text-white' 
+                        : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                    }`}>
+                      {idx + 1}
+                    </span>
+                    <div>
+                      <p className="font-bold text-gray-800 dark:text-white text-sm">
+                        {sub.subjectName}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {sub.credits} TC • {sub.isFull ? `Điểm: ${sub.currentScore}` : 'Chưa có điểm'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-xs font-bold ${isCritical ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                      Impact: {sub.impactScore}
+                    </p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 max-w-[150px] truncate">
+                      {sub.suggestion}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <datalist id="subject-suggestions">
         {SUGGESTED_SUBJECTS.map((s, index) => (
