@@ -31,6 +31,14 @@ const RiskAlertCard = ({ alerts = [], onAlertClick }) => {
           actionBg: 'bg-orange-100 dark:bg-orange-900/40',
           actionText: 'text-orange-800 dark:text-orange-300',
         };
+      case 'info':
+        return {
+          bg: 'bg-blue-50 dark:bg-blue-900/20',
+          border: 'border-blue-200 dark:border-blue-800',
+          text: 'text-blue-700 dark:text-blue-400',
+          actionBg: 'bg-blue-100 dark:bg-blue-900/40',
+          actionText: 'text-blue-800 dark:text-blue-300',
+        };
       default:
         return {
           bg: 'bg-green-50 dark:bg-green-900/20',
