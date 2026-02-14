@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { toast } from 'sonner';
 import {
   Calculator,
@@ -22,6 +22,7 @@ import {
   Lightbulb,
   BarChart3,
   Star,
+  Sliders,
 } from "lucide-react";
 import AuthModal from '../components/AuthModal';
 import {
@@ -32,6 +33,13 @@ import {
   generateStrategy,
   calculateGpaProgress,
 } from '../utils/gpaStrategy';
+import {
+  simulateGpaChange,
+  analyzeRisks,
+  calculateScholarshipInfo,
+  calculateGpaMapData,
+} from '../services/gpaAdvancedService';
+import { SurvivalModePanel, RiskAlertCard, GpaMapCard, ScholarshipToggle } from '../components/gpa';
 
 // --- 1. DỮ LIỆU CẤU HÌNH ---
 const SUGGESTED_SUBJECTS = [
@@ -242,6 +250,26 @@ const GpaCalc = () => {
     gpaProgress: null,
   });
 
+  // === ADVANCED FEATURES STATE ===
+  // Survival Mode - What-if simulation
+  const [survivalMode, setSurvivalMode] = useState({
+    activeSubjectId: null,
+    simulatedScore: null,
+  });
+
+  // Scholarship Mode
+  const [isScholarshipMode, setIsScholarshipMode] = useState(false);
+  const [selectedScholarshipLevel, setSelectedScholarshipLevel] = useState('excellent');
+
+  // Risk Alerts
+  const [riskAlerts, setRiskAlerts] = useState([]);
+
+  // GPA Map Data
+  const [gpaMapData, setGpaMapData] = useState(null);
+
+  // Scholarship Info
+  const [scholarshipInfo, setScholarshipInfo] = useState(null);
+
   // Load dữ liệu từ Server khi vào trang
   useEffect(() => {
     if (user) {
@@ -405,7 +433,88 @@ const GpaCalc = () => {
       strategy,
       gpaProgress,
     });
+
+    // === ADVANCED FEATURES CALCULATIONS ===
+    // Risk Alerts
+    const alerts = analyzeRisks({
+      semesters,
+      currentGpa4: gpa4Num,
+      targetGpa: targetNum,
+      totalCredits,
+    });
+    setRiskAlerts(alerts);
+
+    // GPA Map Data
+    const mapData = calculateGpaMapData({
+      currentGpa4: gpa4Num,
+      targetGpa: targetNum,
+      pendingCredits,
+      totalCredits,
+    });
+    setGpaMapData(mapData);
+
   }, [semesters, targetGpa]);
+
+  // === SCHOLARSHIP INFO EFFECT ===
+  useEffect(() => {
+    const gpa4Num = parseFloat(result.gpa4) || 0;
+    const info = calculateScholarshipInfo({
+      currentGpa4: gpa4Num,
+      targetScholarship: selectedScholarshipLevel,
+      totalCredits: result.totalCredits,
+      pendingCredits: result.pendingCredits,
+    });
+    setScholarshipInfo(info);
+  }, [result, selectedScholarshipLevel]);
+
+  // === SURVIVAL MODE SIMULATION ===
+  const simulationResult = useMemo(() => {
+    if (!survivalMode.activeSubjectId || survivalMode.simulatedScore === null) {
+      return null;
+    }
+    return simulateGpaChange({
+      semesters,
+      targetSubjectId: survivalMode.activeSubjectId,
+      newScore: survivalMode.simulatedScore,
+      targetGpa: parseFloat(targetGpa) || 0,
+    });
+  }, [semesters, survivalMode, targetGpa]);
+
+  // Survival Mode handlers
+  const handleOpenSurvivalMode = (subjectId, currentScore) => {
+    setSurvivalMode({
+      activeSubjectId: subjectId,
+      simulatedScore: currentScore ?? 5,
+    });
+  };
+
+  const handleCloseSurvivalMode = () => {
+    setSurvivalMode({
+      activeSubjectId: null,
+      simulatedScore: null,
+    });
+  };
+
+  const handleSimulatedScoreChange = (score) => {
+    setSurvivalMode(prev => ({
+      ...prev,
+      simulatedScore: score,
+    }));
+  };
+
+  const handleResetSimulation = () => {
+    const activeSubject = semesters
+      .flatMap(s => s.subjects)
+      .find(sub => sub.id === survivalMode.activeSubjectId);
+    
+    if (activeSubject) {
+      const status = calculateSubjectStatus(activeSubject.components);
+      setSurvivalMode(prev => ({
+        ...prev,
+        simulatedScore: status.finalScore10 ?? 5,
+      }));
+    }
+  };
 
   // --- ACTIONS ---
 
@@ -589,6 +698,10 @@ const GpaCalc = () => {
           màu" hết đấy nhé!
         </p>
       </div>
+
+      {/* EARLY RISK ALERT - Cảnh báo sớm */}
+      <RiskAlertCard alerts={riskAlerts} />
+
       {/* HEADER: Mục tiêu GPA */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
         <div>
@@ -727,8 +840,8 @@ const GpaCalc = () => {
                           );
 
                           return (
+                            <React.Fragment key={sub.id}>
                             <tr
-                              key={sub.id}
                               className={`hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors align-top group ${
                                 isCriticalSubject 
                                   ? 'bg-amber-50/50 dark:bg-amber-900/10 ring-2 ring-amber-200 dark:ring-amber-700 ring-inset' 
@@ -929,14 +1042,44 @@ const GpaCalc = () => {
                                 )}
                               </td>
                               <td className="p-3">
-                                <button
-                                  onClick={() => removeSubject(sem.id, sub.id)}
-                                  className="text-gray-300 dark:text-gray-500 hover:text-red-500"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
+                                <div className="flex items-center gap-1">
+                                  {/* Survival Mode Button - chỉ hiện khi có điểm đầy đủ */}
+                                  {isFull && (
+                                    <button
+                                      onClick={() => handleOpenSurvivalMode(sub.id, parseFloat(finalScore10))}
+                                      className={`p-1.5 rounded-lg transition-all ${
+                                        survivalMode.activeSubjectId === sub.id
+                                          ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
+                                          : 'text-gray-300 dark:text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30'
+                                      }`}
+                                      title="Survival Mode - Thử thay đổi điểm"
+                                    >
+                                      <Sliders size={14} />
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => removeSubject(sem.id, sub.id)}
+                                    className="text-gray-300 dark:text-gray-500 hover:text-red-500 p-1.5"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
+                            {/* Survival Mode Panel - inline expansion */}
+                            {survivalMode.activeSubjectId === sub.id && isFull && (
+                              <SurvivalModePanel
+                                subject={sub}
+                                currentScore={parseFloat(finalScore10)}
+                                simulatedScore={survivalMode.simulatedScore}
+                                onScoreChange={handleSimulatedScoreChange}
+                                onReset={handleResetSimulation}
+                                onClose={handleCloseSurvivalMode}
+                                simulationResult={simulationResult}
+                                targetGpa={parseFloat(targetGpa) || 0}
+                              />
+                            )}
+                          </React.Fragment>
                           );
                         })}
                       </tbody>
@@ -964,62 +1107,43 @@ const GpaCalc = () => {
         {/* CỘT PHẢI: TỔNG KẾT (Sticky) */}
         <div className="lg:col-span-1">
           <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl shadow-blue-100 dark:shadow-none border border-gray-100 dark:border-gray-700 p-6 sticky top-24 space-y-6">
-            <div className="text-center py-6 bg-gradient-to-br from-primary to-blue-600 rounded-2xl text-white shadow-lg relative overflow-hidden">
-              <div className="relative z-10">
-                <p className="opacity-80 font-medium text-xs uppercase tracking-widest">
-                  GPA Tích lũy
-                </p>
-                <div className="text-6xl font-black mt-1 tracking-tighter">
-                  {result.gpa4}
-                </div>
-                {/* XẾP LOẠI HỌC LỰC */}
-                <div
-                  className={`inline-block mt-2 px-3 py-1 rounded-lg font-bold text-sm bg-white/20 backdrop-blur-md border border-white/30`}
-                >
-                  {classification.label}
-                </div>
-              </div>
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
-            </div>
+            {/* SCHOLARSHIP / GPA MODE TOGGLE */}
+            <ScholarshipToggle
+              scholarshipInfo={scholarshipInfo}
+              selectedLevel={selectedScholarshipLevel}
+              onLevelChange={setSelectedScholarshipLevel}
+              isScholarshipMode={isScholarshipMode}
+              onModeToggle={setIsScholarshipMode}
+            />
 
-            {/* GPA PROGRESS BAR - Tiến độ đạt mục tiêu */}
-            {targetGpa && strategyData.gpaProgress && (
-              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1">
-                    <TrendingUp size={14} /> Tiến độ đạt mục tiêu
-                  </span>
-                  <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
-                    {strategyData.gpaProgress.percentage.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="w-full h-3 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+            {/* GPA Display - chỉ hiện khi không ở scholarship mode */}
+            {!isScholarshipMode && (
+              <div className="text-center py-6 bg-gradient-to-br from-primary to-blue-600 rounded-2xl text-white shadow-lg relative overflow-hidden">
+                <div className="relative z-10">
+                  <p className="opacity-80 font-medium text-xs uppercase tracking-widest">
+                    GPA Tích lũy
+                  </p>
+                  <div className="text-6xl font-black mt-1 tracking-tighter">
+                    {result.gpa4}
+                  </div>
+                  {/* XẾP LOẠI HỌC LỰC */}
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      strategyData.gpaProgress.status === 'achieved'
-                        ? 'bg-green-500'
-                        : strategyData.gpaProgress.status === 'close'
-                        ? 'bg-blue-500'
-                        : strategyData.gpaProgress.status === 'on-track'
-                        ? 'bg-yellow-500'
-                        : 'bg-orange-500'
-                    }`}
-                    style={{ width: `${Math.min(strategyData.gpaProgress.percentage, 100)}%` }}
-                  />
+                    className={`inline-block mt-2 px-3 py-1 rounded-lg font-bold text-sm bg-white/20 backdrop-blur-md border border-white/30`}
+                  >
+                    {classification.label}
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-                  {strategyData.gpaProgress.status === 'achieved' 
-                    ? '🎉 Bạn đã đạt mục tiêu!'
-                    : strategyData.gpaProgress.message}
-                  {strategyData.gpaProgress.gap > 0 && strategyData.gpaProgress.status !== 'achieved' && (
-                    <span className="font-bold"> (cần tăng thêm {strategyData.gpaProgress.gap.toFixed(2)} điểm GPA)</span>
-                  )}
-                </p>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
               </div>
             )}
 
+            {/* GPA MAP - Visual Summary (thay thế progress bar cũ) */}
+            {!isScholarshipMode && gpaMapData && (
+              <GpaMapCard mapData={gpaMapData} />
+            )}
+
             {/* FEASIBILITY BADGE & PREDICTION - Đánh giá khả năng đạt mục tiêu */}
-            {targetGpa && strategyData.strategy?.feasibility && (
+            {!isScholarshipMode && targetGpa && strategyData.strategy?.feasibility && (
               <div
                 className={`p-4 rounded-xl border ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).border}`}
               >
@@ -1075,7 +1199,7 @@ const GpaCalc = () => {
             )}
 
             {/* SCENARIO CARDS - Các mức điểm cần đạt */}
-            {strategyData.scenarios && (
+            {!isScholarshipMode && strategyData.scenarios && (
               <div className="space-y-2">
                 <p className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400 flex items-center gap-1">
                   <Layers size={14} /> Điểm trung bình cần đạt
@@ -1126,7 +1250,7 @@ const GpaCalc = () => {
             )}
 
             {/* CRITICAL SUBJECT - Môn cần ưu tiên */}
-            {strategyData.criticalSubject && (
+            {!isScholarshipMode && strategyData.criticalSubject && (
               <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-700">
                 <p className="text-xs font-bold uppercase text-amber-600 dark:text-amber-400 flex items-center gap-1 mb-2">
                   <Star size={14} /> Môn cần ưu tiên
