@@ -74,11 +74,11 @@ export const FEASIBILITY_THRESHOLDS = {
   // > 9.0 là gần như không thể
 };
 
-// Thông điệp khả thi
+// Thông điệp khả thi - phong cách hỗ trợ và rõ ràng
 const FEASIBILITY_MESSAGES = {
-  green: "Mục tiêu này hoàn toàn trong tầm với nếu bạn tập trung ổn định.",
-  yellow: "Bạn cần nỗ lực cao hơn mức trung bình để đạt được mục tiêu này.",
-  red: "Với dữ liệu hiện tại, mục tiêu này rất khó đạt. Hãy cân nhắc điều chỉnh chiến lược.",
+  green: "Bạn hoàn toàn có thể đạt được mục tiêu này với nỗ lực học tập ổn định.",
+  yellow: "Mục tiêu này đòi hỏi nỗ lực cao hơn mức trung bình, nhưng vẫn khả thi nếu bạn tập trung.",
+  red: "Mục tiêu này vượt quá khả năng với dữ liệu hiện tại. Hãy cân nhắc điều chỉnh mục tiêu hoặc tìm cách cải thiện các môn đã học.",
 };
 
 // Thang điểm chuẩn
@@ -202,21 +202,21 @@ export function getFeasibilityColors(level) {
       border: 'border-green-200 dark:border-green-700',
       text: 'text-green-700 dark:text-green-400',
       icon: '🟢',
-      label: 'Khả thi',
+      label: 'Có thể đạt được',
     },
     yellow: {
       bg: 'bg-yellow-100 dark:bg-yellow-900/30',
       border: 'border-yellow-200 dark:border-yellow-700',
       text: 'text-yellow-700 dark:text-yellow-400',
       icon: '🟡',
-      label: 'Khó nhưng có thể',
+      label: 'Cần nỗ lực cao',
     },
     red: {
       bg: 'bg-red-100 dark:bg-red-900/30',
       border: 'border-red-200 dark:border-red-700',
       text: 'text-red-700 dark:text-red-400',
       icon: '🔴',
-      label: 'Gần như không thể',
+      label: 'Vượt khả năng',
     },
   };
   return colors[level] || colors.green;
