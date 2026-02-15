@@ -1745,31 +1745,21 @@ const GpaCalc = () => {
         }}
       />
 
-      {/* Sticky Save Reminder Banner */}
+      {/* Sticky Save Reminder - Floating Box */}
       {hasUnsavedChanges && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/30 dark:to-amber-900/30 border-t-2 border-orange-400 dark:border-orange-500 shadow-2xl animate-in slide-in-from-bottom-5 duration-300">
-          <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-800/50 flex items-center justify-center">
-                <AlertTriangle size={20} className="text-orange-600 dark:text-orange-400" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-orange-900 dark:text-orange-200">
-                  Bạn có thay đổi chưa lưu
-                </p>
-                <p className="text-xs text-orange-700 dark:text-orange-300">
-                  Hãy lưu dữ liệu trước khi rời khỏi trang
-                </p>
-              </div>
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 duration-300">
+          <div className="bg-white dark:bg-gray-800 border border-orange-200 dark:border-orange-800/50 shadow-2xl rounded-2xl p-4 flex items-center gap-3 max-w-[300px]">
+            <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center shrink-0">
+              <AlertTriangle size={16} className="text-orange-600 dark:text-orange-400" />
             </div>
-            <button
-              onClick={handleSaveGPA}
-              disabled={isSaving}
-              className="px-6 py-2.5 bg-gradient-to-r from-[#134691] to-blue-600 text-white font-bold text-sm rounded-xl hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <Save size={16} />
-              {isSaving ? 'Đang lưu...' : 'Lưu ngay'}
-            </button>
+            <div>
+              <p className="text-sm font-bold text-gray-800 dark:text-white">
+                Chưa lưu thay đổi
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Đừng quên lưu lại bạn nhé
+              </p>
+            </div>
           </div>
         </div>
       )}
