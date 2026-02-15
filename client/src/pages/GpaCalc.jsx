@@ -890,19 +890,18 @@ const GpaCalc = () => {
               className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all">
               {/* HEADER KỲ HỌC (Click để ẩn/hiện) */}
               <div
-                className="p-4 bg-gray-50 dark:bg-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 first:rounded-t-2xl"
+                className="p-4 bg-gray-50/80 dark:bg-gray-800/80 flex items-center justify-between cursor-pointer hover:bg-white dark:hover:bg-gray-700 transition-all border-b border-gray-100 dark:border-gray-700 backdrop-blur-sm first:rounded-t-2xl"
                 onClick={() => toggleSemester(sem.id)}
               >
-                <div className="flex items-center gap-3">
-                  {sem.isExpanded ? (
-                    <ChevronDown size={20} className="text-gray-500 dark:text-gray-400" />
-                  ) : (
-                    <ChevronRight size={20} className="text-gray-500 dark:text-gray-400" />
-                  )}
+                <div className="flex items-center gap-3 flex-1">
+                  <div className={`p-1.5 rounded-lg transition-all duration-300 ${sem.isExpanded ? 'bg-blue-100/50 text-blue-600 rotate-90' : 'bg-transparent text-gray-400'}`}>
+                    <ChevronRight size={18} />
+                  </div>
                   <input
-                    className="font-bold text-gray-800 dark:text-white bg-transparent outline-none text-lg"
+                    className="font-bold text-gray-800 dark:text-white bg-transparent outline-none text-lg hover:text-blue-600 transition-colors placeholder-gray-400 flex-1 max-w-[300px]"
                     value={sem.name}
-                    onClick={(e) => e.stopPropagation()} // Để không bị đóng tab khi sửa tên
+                    placeholder="Tên học kỳ..."
+                    onClick={(e) => e.stopPropagation()} 
                     onChange={(e) => {
                       const newSems = semesters.map((s) =>
                         s.id === sem.id ? { ...s, name: e.target.value } : s
@@ -910,38 +909,36 @@ const GpaCalc = () => {
                       setSemesters(newSems);
                     }}
                   />
-                  <span className="text-xs bg-white dark:bg-gray-700 border dark:border-gray-600 px-2 py-1 rounded-full text-gray-500 dark:text-gray-400 font-medium">
-                    {sem.subjects.length} môn
-                  </span>
+                  <div className="hidden sm:flex items-center gap-2">
+                     <span className="text-[10px] uppercase font-bold text-gray-400 bg-white border border-gray-100 dark:bg-gray-700 dark:border-gray-600 px-2 py-1 rounded-md">
+                        {sem.subjects.length} môn
+                     </span>
+                     {sem.subjects.length > 0 && calculateSemesterGpa(sem).totalCredits > 0 && (
+                        <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-md border ${
+                            calculateSemesterGpa(sem).semesterGpa4 >= 3.2 
+                            ? 'bg-green-50 text-green-600 border-green-100' 
+                            : 'bg-gray-50 text-gray-500 border-gray-100'
+                        }`}>
+                           GPA: {calculateSemesterGpa(sem).semesterGpa4.toFixed(2)}
+                        </span>
+                     )}
+                  </div>
                 </div>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     removeSemester(sem.id);
                   }}
-                  className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-2"
+                  className="text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition-colors ml-2"
                 >
-                  <Trash2 size={18} />
+                  <Trash2 size={16} />
                 </button>
               </div>
 
               {/* NỘI DUNG KỲ HỌC */}
               {sem.isExpanded && (
-                <div className="border-t border-gray-100 dark:border-gray-700">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[900px]">
-                      <thead>
-                        <tr className="bg-gray-50/50 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 text-[10px] font-bold uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
-                          <th className="p-4 w-1/4 pl-6">
-                            Tên môn & Loại
-                          </th>
-                          <th className="p-4 text-center w-20">TC</th>
-                          <th className="p-4 w-1/3">Thành phần điểm</th>
-                          <th className="p-4 w-48">Kết quả</th>
-                          <th className="p-4 w-12"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
+                <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-900/10 p-4">
+                  <div className="flex flex-col gap-3">
                         {sem.subjects.map((sub) => {
                           const {
                             currentScore,
@@ -976,116 +973,107 @@ const GpaCalc = () => {
                           const isTopCritical = strategyData.topCriticalSubjects.slice(0, 3).some(
                             cs => cs.id === sub.id
                           );
+                          
+                          // Determine border color based on status (subtle for "Emotional Feedback")
+                          let statusBorderClass = "border-l-4 border-l-transparent";
+                          if (isFull && gradeInfo) {
+                             if (gradeInfo.point >= 3.6) statusBorderClass = "border-l-4 border-l-green-400"; // Excellent
+                             else if (gradeInfo.point < 2.0) statusBorderClass = "border-l-4 border-l-red-400"; // Low
+                             else if (gradeInfo.point < 2.5) statusBorderClass = "border-l-4 border-l-orange-400"; // Warning
+                          }
 
                           return (
                             <React.Fragment key={sub.id}>
-                            <tr
-                              className={`group hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-all align-top ${
+                            <div
+                              className={`group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200/60 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800 transition-all duration-300 p-5 ${statusBorderClass} ${
                                 isCriticalSubject 
-                                  ? 'bg-amber-50/30 dark:bg-amber-900/5' 
+                                  ? 'bg-amber-50/20 dark:bg-amber-900/5' 
                                   : isTopCritical 
-                                  ? 'bg-purple-50/20 dark:bg-purple-900/5' 
+                                  ? 'bg-purple-50/10 dark:bg-purple-900/5' 
                                   : ''
                               }`}
                             >
-                              <td className="p-4 pl-6">
-                                <div className="flex items-start gap-3">
-                                  {isCriticalSubject && (
-                                    <div className="mt-1 text-amber-500 animate-pulse" title="Môn trọng điểm">
-                                      <Star size={14} fill="currentColor" />
+                              <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                                {/* 1. SUBJECT NAME & TYPE (Anchor) */}
+                                <div className="flex-1 min-w-[30%]">
+                                  <div className="flex items-start gap-3">
+                                    {isCriticalSubject && (
+                                      <div className="mt-1.5 text-amber-500 animate-pulse" title="Môn trọng điểm">
+                                        <Star size={16} fill="currentColor" />
+                                      </div>
+                                    )}
+                                    <div className="w-full space-y-2">
+                                        <input
+                                          list="subject-suggestions"
+                                          type="text"
+                                          placeholder="Tên môn học..."
+                                          className="w-full font-bold text-gray-800 dark:text-gray-100 bg-transparent outline-none placeholder-gray-300 dark:placeholder-gray-600 text-lg group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors"
+                                          value={sub.name}
+                                          onChange={(e) =>
+                                            updateSubject(
+                                              sem.id,
+                                              sub.id,
+                                              "name",
+                                              e.target.value
+                                            )
+                                          }
+                                        />
+                                        <button
+                                          onClick={() =>
+                                            updateSubject(sem.id, sub.id, "type", sub.type === "general" ? "major" : "general")
+                                          }
+                                          className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                                            sub.type === "major"
+                                              ? "bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800"
+                                              : "bg-gray-50 text-gray-400 border-gray-100 dark:bg-gray-700 dark:text-gray-500 dark:border-gray-600 hover:bg-gray-100"
+                                          }`}
+                                        >
+                                          {sub.type === "major" ? (
+                                              <>
+                                                  <Zap size={10} className="fill-current" />
+                                                  CHUYÊN NGÀNH
+                                              </>
+                                          ) : (
+                                              "ĐẠI CƯƠNG"
+                                          )}
+                                        </button>
                                     </div>
-                                  )}
-                                  <div className="w-full">
+                                  </div>
+                                </div>
+
+                                {/* 2. CREDITS (Informational Pill) */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide hidden md:inline-block">Số TC</span>
+                                    <div className="relative">
                                       <input
-                                        list="subject-suggestions"
-                                        type="text"
-                                        placeholder="Tên môn học..."
-                                        className="w-full font-bold text-gray-800 dark:text-gray-100 bg-transparent outline-none placeholder-gray-300 dark:placeholder-gray-600 text-base mb-1.5"
-                                        value={sub.name}
+                                        type="number"
+                                        className="w-10 text-center bg-gray-50 dark:bg-gray-700/50 rounded-md border border-transparent hover:border-gray-200 dark:hover:border-gray-600 focus:bg-white focus:border-blue-200 dark:focus:border-blue-800 font-bold text-gray-600 dark:text-gray-300 outline-none text-sm py-1 transition-all"
+                                        value={sub.credits}
                                         onChange={(e) =>
                                           updateSubject(
                                             sem.id,
                                             sub.id,
-                                            "name",
+                                            "credits",
                                             e.target.value
                                           )
                                         }
                                       />
-                                      <button
-                                        onClick={() =>
-                                          updateSubject(sem.id, sub.id, "type", sub.type === "general" ? "major" : "general")
-                                        }
-                                        className={`text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer font-bold tracking-wide border w-fit ${
-                                          sub.type === "major"
-                                            ? "bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800"
-                                            : "bg-gray-50 text-gray-400 border-gray-100 dark:bg-gray-800 dark:text-gray-500 dark:border-gray-700 hover:bg-gray-100"
-                                        }`}
-                                      >
-                                        {sub.type === "major" ? (
-                                            <>
-                                                <Zap size={10} className="fill-current" />
-                                                CHUYÊN NGÀNH
-                                            </>
-                                        ) : (
-                                            "ĐẠI CƯƠNG"
-                                        )}
-                                      </button>
-                                  </div>
+                                      <span className="absolute right-0 top-0 -mr-3 text-xs text-gray-300 font-medium select-none hidden group-hover:block">TC</span>
+                                    </div>
                                 </div>
-                              </td>
-                              <td className="p-4">
-                                <div className="flex justify-center">
-                                    <input
-                                      type="number"
-                                      className="w-12 text-center bg-gray-50 dark:bg-gray-800 rounded-lg border-transparent focus:bg-white focus:border-blue-200 dark:focus:border-blue-800 border focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/20 font-bold text-gray-700 dark:text-white outline-none text-sm py-1.5 transition-all"
-                                      value={sub.credits}
-                                      onChange={(e) =>
-                                        updateSubject(
-                                          sem.id,
-                                          sub.id,
-                                          "credits",
-                                          e.target.value
-                                        )
-                                      }
-                                    />
-                                </div>
-                              </td>
-                              <td className="p-4">
-                                <div className="space-y-2">
+
+                                {/* 3. GRADE COMPONENTS (Clean Rows) */}
+                                <div className="flex-[2] flex flex-col gap-2 min-w-[200px]">
                                   {sub.components.map((comp) => (
                                     <div
                                       key={comp.id}
-                                      className="flex items-center gap-2 group/comp"
+                                      className="flex items-center gap-3 text-sm group/comp relative pl-2 border-l-2 border-transparent hover:border-gray-200 transition-all"
                                     >
-                                      <div className="relative">
+                                      {/* Weight Pill */}
+                                      <div className="flex items-center relative w-12">
                                           <input
                                             type="number"
-                                            placeholder="--"
-                                            className={`w-16 text-center font-bold text-sm bg-transparent border-b-2 outline-none transition-all pb-0.5 ${
-                                              comp.score === ""
-                                                ? "border-gray-100 dark:border-gray-700 text-gray-400"
-                                                : "border-gray-300 dark:border-gray-600 text-gray-800 dark:text-white focus:border-blue-500"
-                                            }`}
-                                            value={comp.score}
-                                            onChange={(e) =>
-                                              updateComponent(
-                                                sem.id,
-                                                sub.id,
-                                                comp.id,
-                                                "score",
-                                                e.target.value
-                                              )
-                                            }
-                                          />
-                                      </div>
-                                      
-                                      <span className="text-gray-300 dark:text-gray-600 text-[10px]">✕</span>
-                                      
-                                      <div className="relative flex items-center">
-                                          <input
-                                            type="number"
-                                            placeholder="%"
-                                            className="w-10 text-center text-xs font-medium text-gray-500 dark:text-gray-400 bg-transparent border-b border-gray-100 dark:border-gray-700 outline-none focus:border-blue-500 focus:text-blue-600 pb-0.5"
+                                            className="w-full text-right text-xs font-bold text-gray-500 dark:text-gray-400 bg-transparent outline-none focus:text-blue-600"
                                             value={comp.weight}
                                             onChange={(e) =>
                                               updateComponent(
@@ -1099,7 +1087,34 @@ const GpaCalc = () => {
                                           />
                                           <span className="text-[10px] text-gray-400 ml-0.5">%</span>
                                       </div>
-                                      
+
+                                      {/* Separator */}
+                                      <div className="h-4 w-px bg-gray-200 dark:bg-gray-700"></div>
+
+                                      {/* Score Input */}
+                                      <div className="relative flex-1">
+                                          <input
+                                            type="number"
+                                            placeholder="Nhập điểm..."
+                                            className={`w-20 font-bold bg-transparent outline-none transition-all ${
+                                              comp.score === ""
+                                                ? "text-gray-400 placeholder-gray-300 text-sm"
+                                                : "text-gray-800 dark:text-white text-base"
+                                            }`}
+                                            value={comp.score}
+                                            onChange={(e) =>
+                                              updateComponent(
+                                                sem.id,
+                                                sub.id,
+                                                comp.id,
+                                                "score",
+                                                e.target.value
+                                              )
+                                            }
+                                          />
+                                      </div>
+
+                                      {/* Actions */}
                                       {sub.components.length > 1 && (
                                         <button
                                           onClick={() =>
@@ -1109,137 +1124,150 @@ const GpaCalc = () => {
                                               comp.id
                                             )
                                           }
-                                          className="text-gray-300 dark:text-gray-600 hover:text-red-500 opacity-0 group-hover/comp:opacity-100 transition-opacity ml-2 p-1"
+                                          className="text-gray-300 dark:text-gray-600 hover:text-red-500 opacity-0 group-hover/comp:opacity-100 transition-opacity p-1"
                                         >
                                           <Trash2 size={12} />
                                         </button>
                                       )}
-                                    </div>
-                                  ))}
-                                  <button
-                                    onClick={() => addComponent(sem.id, sub.id)}
-                                    className="text-[10px] text-blue-500/70 hover:text-blue-600 font-bold uppercase tracking-wide flex items-center gap-1 cursor-pointer mt-2 opacity-0 group-hover:opacity-100 transition-opacity py-1 px-2 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 w-fit"
-                                  >
-                                    <Plus size={10} /> Thêm cột điểm
-                                  </button>
-                                </div>
-                              </td>
-                              <td className="p-4 align-top">
-                                {isFull && gradeInfo ? (
-                                  <div className="flex flex-col gap-1">
-                                    <div className="flex items-center gap-3">
-                                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-black shadow-sm ${
-                                          isPassed 
-                                          ? 'bg-white border border-gray-100 text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white' 
-                                          : 'bg-red-50 text-red-600 border border-red-100 dark:bg-red-900/20 dark:text-red-400'
-                                      }`}>
-                                        {finalScore10.toFixed(1)}
-                                      </div>
-                                      <div className="flex flex-col">
-                                          <span className={`text-sm font-black ${gradeInfo.color}`}>
-                                            {gradeInfo.char}
-                                          </span>
-                                          <span className="text-[10px] text-gray-400 font-medium">
-                                            Thang 4: {gradeInfo.point}
-                                          </span>
-                                      </div>
-                                    </div>
-                                    {!isPassed && (
-                                      <span className="flex items-center gap-1 text-[10px] font-bold text-red-500 mt-1 bg-red-50 dark:bg-red-900/10 px-2 py-0.5 rounded-full w-fit">
-                                        <XCircle size={10} /> HỌC LẠI
-                                      </span>
-                                    )}
-                                  </div>
-                                ) : missingComponent ? (
-                                  <div className="flex flex-col gap-1.5">
-                                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wide">Cần đạt:</span>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {predictions.length > 0 ? (
-                                        predictions.map((p, i) => (
-                                          <div
-                                            key={i}
-                                            className="flex items-center gap-1.5 bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 px-2 py-1 rounded-lg shadow-sm"
-                                          >
-                                            <span
-                                              className={`text-xs font-black ${
-                                                p.char === "A"
-                                                  ? "text-green-600"
-                                                  : "text-blue-600"
-                                              }`}
-                                            >
-                                              {p.char}
-                                            </span>
-                                            <span className="text-gray-300 dark:text-gray-500 text-[10px]">
-                                              →
-                                            </span>
-                                            <span className="text-xs font-bold text-gray-700 dark:text-gray-200">
-                                              {p.score}
-                                            </span>
+                                      
+                                      {/* Mini visual indicator */}
+                                      {comp.score && (
+                                          <div className="absolute bottom-0 left-16 right-0 h-[2px] bg-gray-100 rounded-full overflow-hidden w-16 opacity-0 group-hover/comp:opacity-100 transition-opacity">
+                                              <div 
+                                                className={`h-full ${parseFloat(comp.score) >= 8.5 ? 'bg-green-400' : parseFloat(comp.score) >= 7 ? 'bg-blue-400' : parseFloat(comp.score) >= 5 ? 'bg-yellow-400' : 'bg-red-400'}`} 
+                                                style={{ width: `${parseFloat(comp.score) * 10}%` }}
+                                              ></div>
                                           </div>
-                                        ))
-                                      ) : (
-                                        <span className="text-[10px] text-red-500 font-bold bg-red-50 px-2 py-1 rounded-lg">
-                                          Rớt chắc rồi 😭
-                                        </span>
                                       )}
                                     </div>
-                                  </div>
-                                ) : (
-                                  <span className="text-gray-300 dark:text-gray-600 text-xs italic pl-2">
-                                    Đang cập nhật...
-                                  </span>
-                                )}
-                              </td>
-                              <td className="p-4">
-                                <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  {/* Survival Mode Button */}
+                                  ))}
+                                  
+                                  <button
+                                    onClick={() => addComponent(sem.id, sub.id)}
+                                    className="text-[10px] text-blue-500/80 hover:text-blue-600 font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity mt-1 ml-2"
+                                  >
+                                    <Plus size={12} /> Thêm cột điểm
+                                  </button>
+                                </div>
+
+                                {/* 4. RESULT AREA (Capsule) */}
+                                <div className="min-w-[140px] flex justify-end">
+                                  {isFull && gradeInfo ? (
+                                    <div className={`flex items-center gap-3 px-4 py-2 rounded-xl border transition-all ${
+                                        isPassed 
+                                        ? `bg-${gradeInfo.color.split('-')[1]}-50/50 border-${gradeInfo.color.split('-')[1]}-100` 
+                                        : 'bg-red-50 border-red-100'
+                                    }`}>
+                                      <div>
+                                          <div className={`text-2xl font-black leading-none ${gradeInfo.color}`}>
+                                            {finalScore10.toFixed(1)}
+                                          </div>
+                                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wide mt-1 text-center">
+                                            Thang 10
+                                          </div>
+                                      </div>
+                                      <div className="w-px h-8 bg-current opacity-20"></div>
+                                      <div className="flex flex-col items-center">
+                                          <span className={`text-lg font-black ${gradeInfo.color}`}>
+                                            {gradeInfo.char}
+                                          </span>
+                                          <span className="text-[10px] font-bold text-gray-500">
+                                            {gradeInfo.point}
+                                          </span>
+                                      </div>
+                                    </div>
+                                  ) : missingComponent ? (
+                                    <div className="flex flex-col gap-2 items-end">
+                                      <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wide">Cần đạt tối thiểu:</span>
+                                      <div className="flex flex-wrap justify-end gap-2">
+                                        {predictions.length > 0 ? (
+                                          predictions.slice(0, 2).map((p, i) => (
+                                            <div
+                                              key={i}
+                                              className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 px-2 py-1.5 rounded-lg"
+                                            >
+                                              <span
+                                                className={`text-xs font-black ${
+                                                  p.char === "A"
+                                                    ? "text-green-600"
+                                                    : "text-blue-600"
+                                                }`}
+                                              >
+                                                {p.char}
+                                              </span>
+                                              <span className="text-gray-300 dark:text-gray-500 text-[10px]">
+                                                →
+                                              </span>
+                                              <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                                                {p.score}
+                                              </span>
+                                            </div>
+                                          ))
+                                        ) : (
+                                          <span className="text-[10px] text-red-500 font-bold bg-red-50 px-2 py-1 rounded-lg">
+                                            Không thể đạt
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400 dark:text-gray-600 text-xs font-medium italic">
+                                      Đang tính toán...
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {/* 5. ACTIONS (Hover only) */}
+                                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                   {isFull && (
                                     <button
                                       onClick={() => handleOpenSurvivalMode(sub.id, parseFloat(finalScore10))}
-                                      className={`p-2 rounded-lg transition-all ${
+                                      className={`p-1.5 rounded-lg transition-all ${
                                         survivalMode.activeSubjectId === sub.id
-                                          ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
-                                          : 'text-gray-400 dark:text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                                          ? 'bg-blue-100 text-blue-600'
+                                          : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
                                       }`}
-                                      title="Survival Mode"
+                                      title="Giả lập điểm (Survival Mode)"
                                     >
-                                      <Sliders size={16} />
+                                      <Sliders size={14} />
                                     </button>
                                   )}
                                   <button
                                     onClick={() => removeSubject(sem.id, sub.id)}
-                                    className="text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition-colors"
+                                    className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
                                   >
-                                    <Trash2 size={16} />
+                                    <Trash2 size={14} />
                                   </button>
                                 </div>
-                              </td>
-                            </tr>
-                            {/* Survival Mode Panel */}
+
+                              </div>
+                            </div>
+                            
+                            {/* Survival Mode Panel (Embedded below card) */}
                             {survivalMode.activeSubjectId === sub.id && isFull && (
-                              <SurvivalModePanel
-                                subject={sub}
-                                currentScore={parseFloat(finalScore10)}
-                                simulatedScore={survivalMode.simulatedScore}
-                                onScoreChange={handleSimulatedScoreChange}
-                                onReset={handleResetSimulation}
-                                onClose={handleCloseSurvivalMode}
-                                simulationResult={simulationResult}
-                                targetGpa={parseFloat(targetGpa) || 0}
-                              />
+                                <div className="mt-2 ml-4 border-l-2 border-blue-100 pl-4 animate-in fade-in slide-in-from-top-2">
+                                  <SurvivalModePanel
+                                    subject={sub}
+                                    currentScore={parseFloat(finalScore10)}
+                                    simulatedScore={survivalMode.simulatedScore}
+                                    onScoreChange={handleSimulatedScoreChange}
+                                    onReset={handleResetSimulation}
+                                    onClose={handleCloseSurvivalMode}
+                                    simulationResult={simulationResult}
+                                    targetGpa={parseFloat(targetGpa) || 0}
+                                  />
+                                </div>
                             )}
                           </React.Fragment>
                           );
                         })}
-                      </tbody>
-                    </table>
                   </div>
                   <button
                     onClick={() => addSubject(sem.id)}
-                    className="w-full py-4 bg-white dark:bg-gray-800 text-blue-500/80 dark:text-blue-400/80 text-sm font-bold hover:text-blue-600 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-all flex items-center justify-center gap-2 border-t border-gray-50 dark:border-gray-700/50 group"
+                    className="w-full mt-6 py-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 font-bold hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all flex items-center justify-center gap-2 group"
                   >
-                    <div className="p-1 rounded-md bg-blue-50 dark:bg-blue-900/20 group-hover:bg-blue-100 transition-colors">
-                        <Plus size={14} />
+                    <div className="p-1 rounded-md bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/20 transition-colors">
+                        <Plus size={16} />
                     </div>
                     Thêm môn học mới
                   </button>

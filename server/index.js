@@ -259,75 +259,6 @@ async function seedExamsFromJSON(forceReseed = false) {
     }
 }
 
-// ==================== USER SEEDING (CẬP NHẬT QUYỀN TỪ JSON) ====================
-async function seedUsersFromJSON() {
-    console.log('\n👤 STARTING USER SYNC FROM JSON...');
-    try {
-        const usersFilePath = path.join(__dirname, '..', 'data', 'users.json');
-        
-        if (!fs.existsSync(usersFilePath)) {
-            console.log('   ⚠️ Không tìm thấy file users.json, bỏ qua.');
-            return;
-        }
-
-        const usersRaw = fs.readFileSync(usersFilePath, 'utf8');
-        const usersData = JSON.parse(usersRaw);
-
-        for (const u of usersData) {
-            // Tìm user trong Database theo username
-            const userInDb = await User.findOne({ username: u.username });
-
-            if (userInDb) {
-                // 🏫 TRƯỜNG HỢP 1: USER ĐÃ TỒN TẠI (Giống trường đại học)
-                let hasChange = false;
-                
-                // Cập nhật ROLE (Ông vẫn giữ quyền set Admin/Member qua file JSON)
-                if (u.role && userInDb.role !== u.role) {
-                    console.log(`   🔄 Update ROLE cho [${u.username}]: ${userInDb.role} -> ${u.role}`);
-                    userInDb.role = u.role;
-                    hasChange = true;
-                }
-
-                // Cập nhật TÊN HIỂN THỊ (Nếu ông muốn đổi tên cho chuyên nghiệp)
-                if (u.fullName && userInDb.fullName !== u.fullName) {
-                    console.log(`   🔄 Update TÊN cho [${u.username}]: -> ${u.fullName}`);
-                    userInDb.fullName = u.fullName;
-                    hasChange = true;
-                }
-
-                // 🛡️ BẢO MẬT: Không cập nhật password ở đây. 
-                // Nếu user đã tự đổi mật khẩu trên giao diện web, mật khẩu đó sẽ được giữ nguyên.
-
-                if (hasChange) {
-                    await userInDb.save();
-                    console.log(`   ✅ Đã đồng bộ thông tin cho ${u.username}`);
-                } else {
-                    console.log(`   ok User [${u.username}] đã khớp cấu hình.`);
-                }
-
-            } else {
-                // 🆕 TRƯỜNG HỢP 2: USER CHƯA CÓ -> TẠO MỚI (Cấp tài khoản lần đầu)
-                const newUser = new User({
-                    username: u.username,
-                    password: u.password || "123456", // Lấy pass trong JSON, nếu ko có thì để 123456
-                    fullName: u.fullName || u.username,
-                    role: u.role || "member",
-                    email: u.email || `${u.username}@whalio.edu.vn`,
-                    avatar: '/img/avt.png',
-                    savedDocs: []
-                });
-
-                await newUser.save();
-                console.log(`   🆕 Đã cấp tài khoản mới thành công cho: ${u.username} (Pass: ${u.password || "123456"})`);
-            }
-        }
-        console.log('👤 USER SYNC COMPLETED.\n');
-
-    } catch (err) {
-        console.error('❌ Lỗi khi đồng bộ User từ JSON:', err.message);
-    }
-}
-
 // ==================== MONGOOSE SCHEMAS & MODELS ====================
 
 // User Schema
@@ -338,42 +269,8 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     avatar: { type: String, default: null },
     role: { type: String, default: 'member', enum: ['member', 'admin'] },
-    totalTargetCredits: { type: Number, default: 150 },
-    
-    // Thông tin cá nhân mở rộng
-    phone: { type: String, default: '' },
-    gender: { type: String, default: 'Nam', enum: ['Nam', 'Nữ', 'Khác'] },
-    birthYear: { type: Number, default: null },
-    school: { type: String, default: '' },
-    city: { type: String, default: '' },
-    facebook: { type: String, default: '' },
-    
-    // Cấu hình học tập
-    settings: {
-        creditPrice: { type: Number, default: 450000 },
-        gpaScale: { type: Number, default: 4, enum: [4, 10] },
-        startHour: { type: String, default: '07:00' }
-    },
-    
     savedDocs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Document' }],
     createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
-});
-
-// --- Portal Schema (Quản lý link tiện ích) ---
-const portalSchema = new mongoose.Schema({
-    categories: [{
-        id: { type: String, required: true },
-        category: { type: String, required: true },
-        icon: { type: String },
-        bg: { type: String },
-        links: [{
-            id: { type: Number, required: true },
-            name: { type: String, required: true },
-            url: { type: String, required: true },
-            desc: { type: String, required: true }
-        }]
-    }],
     updatedAt: { type: Date, default: Date.now }
 });
 
@@ -414,17 +311,6 @@ const gpaSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 
-// QuickNote Schema
-const quickNoteSchema = new mongoose.Schema({
-    username: { type: String, required: true, index: true }, // Quan trọng: Chỉ chủ sở hữu mới thấy
-    title: { type: String, required: true },
-    content: { type: String, required: true },
-    color: { type: String, default: 'bg-yellow-200' }, // Mặc định màu vàng note
-    createdAt: { type: Date, default: Date.now }
-});
-
-const QuickNote = mongoose.model('QuickNote', quickNoteSchema);
-
 // Document Schema
 const documentSchema = new mongoose.Schema({
     name: { type: String, required: true },
@@ -436,7 +322,6 @@ const documentSchema = new mongoose.Schema({
     path: { type: String, required: true },
     size: { type: Number, default: 0 },
     downloadCount: { type: Number, default: 0 },
-    viewCount: { type: Number, default: 0 },
     course: { type: String, default: '' },
     visibility: { type: String, default: 'public', enum: ['public', 'private'] },
     createdAt: { type: Date, default: Date.now }
@@ -577,7 +462,6 @@ const eventSchema = new mongoose.Schema({
     title: { type: String, required: true },
     date: { type: Date, required: true },
     type: { type: String, default: 'exam', enum: ['exam', 'deadline', 'other'] },
-    isDone: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -613,7 +497,6 @@ chatSessionSchema.index({ username: 1, createdAt: -1 });
 
 // Create Models
 const User = mongoose.model('User', userSchema);
-const Portal = mongoose.model('Portal', portalSchema);
 const Document = mongoose.model('Document', documentSchema);
 const Exam = mongoose.model('Exam', examSchema);
 const Post = mongoose.model('Post', postSchema);
@@ -627,7 +510,6 @@ const GpaModel = mongoose.model('Gpa', gpaSchema);
 async function seedInitialData() {
     console.log('\n🔄 AUTO-SEED: Running automatic database seeding on startup...');
     await seedExamsFromJSON(false);
-    await seedUsersFromJSON();
 }
 
 // Middleware
@@ -1082,36 +964,18 @@ app.post('/api/register', async (req, res) => {
 // 2. Profile APIs
 app.post('/api/update-profile', async (req, res) => {
     try {
-        // 1. Lấy tất cả các trường được phép update
-        const { username, fullName, email, avatar, totalTargetCredits, phone, gender, birthYear, school, city, facebook } = req.body;
+        const { username, ...updateData } = req.body;
+        const user = await User.findOneAndUpdate(
+            { username },
+            { ...updateData, updatedAt: new Date() },
+            { new: true }
+        ).lean();
 
-        // 2. Kiểm tra xem user có tồn tại không
-        const user = await User.findOne({ username });
         if (!user) {
             return res.status(404).json({ success: false, message: "Không tìm thấy user" });
         }
 
-        // 3. Cập nhật thủ công từng trường (Loại bỏ role, password ra khỏi danh sách)
-        if (fullName !== undefined) user.fullName = fullName;
-        if (email !== undefined) user.email = email;
-        if (avatar !== undefined) user.avatar = avatar;
-        if (totalTargetCredits !== undefined) user.totalTargetCredits = parseInt(totalTargetCredits);
-        if (phone !== undefined) user.phone = phone;
-        if (gender !== undefined) user.gender = gender;
-        if (birthYear !== undefined) user.birthYear = birthYear ? parseInt(birthYear) : null;
-        if (school !== undefined) user.school = school;
-        if (city !== undefined) user.city = city;
-        if (facebook !== undefined) user.facebook = facebook;
-        
-        user.updatedAt = new Date();
-        
-        // 4. Lưu lại
-        await user.save();
-
-        // 5. Trả về kết quả (đã lọc bỏ password)
-        const safeUser = user.toObject();
-        delete safeUser.password;
-        
+        const { password: _, ...safeUser } = user;
         res.json({ success: true, user: safeUser });
     } catch (err) {
         console.error('Update profile error:', err);
@@ -1135,152 +999,6 @@ app.post('/api/change-password', async (req, res) => {
         res.json({ success: true, message: "Đổi mật khẩu thành công!" });
     } catch (err) {
         console.error('Change password error:', err);
-        res.status(500).json({ success: false, message: "Lỗi server" });
-    }
-});
-
-// API: Cập nhật cấu hình học tập (Settings)
-app.post('/api/update-settings', async (req, res) => {
-    try {
-        const { username, creditPrice, gpaScale, startHour } = req.body;
-        
-        const user = await User.findOne({ username });
-        if (!user) {
-            return res.status(404).json({ success: false, message: "Không tìm thấy user" });
-        }
-
-        // Cập nhật settings
-        if (!user.settings) {
-            user.settings = {};
-        }
-        if (creditPrice !== undefined) user.settings.creditPrice = parseInt(creditPrice);
-        if (gpaScale !== undefined) user.settings.gpaScale = parseInt(gpaScale);
-        if (startHour !== undefined) user.settings.startHour = startHour;
-        
-        user.updatedAt = new Date();
-        await user.save();
-
-        const safeUser = user.toObject();
-        delete safeUser.password;
-        
-        res.json({ success: true, user: safeUser, settings: user.settings });
-    } catch (err) {
-        console.error('Update settings error:', err);
-        res.status(500).json({ success: false, message: "Lỗi server" });
-    }
-});
-
-// API: Lấy thống kê tổng hợp cho Profile
-app.get('/api/profile/stats', async (req, res) => {
-    try {
-        const { username } = req.query;
-        if (!username) return res.status(400).json({ success: false, message: "Missing username" });
-
-        // 1. Lấy tổng giờ học từ StudySession
-        const allSessions = await StudySession.find({ username });
-        const totalMinutes = allSessions.reduce((sum, s) => sum + s.duration, 0);
-        
-        // 2. Lấy giờ học tuần này
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        const weekSessions = allSessions.filter(s => new Date(s.date) >= weekAgo);
-        const thisWeekMinutes = weekSessions.reduce((sum, s) => sum + s.duration, 0);
-
-        // 3. Lấy GPA data (nếu có) - SỬA: Dùng đúng model GpaModel
-        const gpaData = await GpaModel.findOne({ username });
-        let gpaSummary = [];
-        let totalCredits = 0;
-        let completedCredits = 0;
-        let generalCredits = 0;
-        let majorCredits = 0;
-        let electiveCredits = 0;
-
-        // Helper: Chuyển điểm hệ 10 sang hệ 4 (giống Dashboard)
-        const convertToGPA4 = (score10) => {
-            if (score10 >= 8.5) return 4.0;
-            if (score10 >= 8.0) return 3.5;
-            if (score10 >= 7.0) return 3.0;
-            if (score10 >= 6.5) return 2.5;
-            if (score10 >= 5.5) return 2.0;
-            if (score10 >= 5.0) return 1.5;
-            if (score10 >= 4.0) return 1.0;
-            return 0;
-        };
-
-        if (gpaData && gpaData.semesters) {
-            gpaData.semesters.forEach((sem, index) => {
-                let semTotalScore = 0;
-                let semTotalCredits = 0;
-
-                if (sem.subjects) {
-                    sem.subjects.forEach(subject => {
-                        const credits = parseFloat(subject.credits) || 0;
-                        
-                        // Phân loại tín chỉ
-                        if (subject.type === 'general') generalCredits += credits;
-                        else if (subject.type === 'major') majorCredits += credits;
-                        else electiveCredits += credits;
-
-                        // Tính điểm hệ 10 từ components (giống Dashboard)
-                        let subScore10 = 0;
-                        if (subject.components && subject.components.length > 0) {
-                            subject.components.forEach(comp => {
-                                const score = parseFloat(comp.score);
-                                const weight = parseFloat(comp.weight);
-                                if (!isNaN(score) && !isNaN(weight)) {
-                                    subScore10 += score * (weight / 100);
-                                }
-                            });
-                        }
-
-                        // Nếu có điểm, tính GPA
-                        if (subScore10 > 0) {
-                            const subScore4 = convertToGPA4(subScore10);
-                            semTotalScore += subScore4 * credits;
-                            semTotalCredits += credits;
-                            
-                            // Tín chỉ hoàn thành (điểm >= 1.0 là pass)
-                            if (subScore4 >= 1.0) {
-                                completedCredits += credits;
-                            }
-                        }
-                        
-                        totalCredits += credits;
-                    });
-                }
-
-                // Thêm GPA của học kỳ nếu có môn học
-                if (semTotalCredits > 0) {
-                    const semGpa = semTotalScore / semTotalCredits;
-                    gpaSummary.push({
-                        semester: sem.name || `Học kỳ ${index + 1}`,
-                        gpa: parseFloat(semGpa.toFixed(2))
-                    });
-                }
-            });
-        }
-
-        // 4. Lấy user để tính target credits
-        const user = await User.findOne({ username });
-        const targetCredits = user?.totalTargetCredits || 150;
-
-        res.json({
-            success: true,
-            data: {
-                totalHours: Math.round(totalMinutes / 60),
-                thisWeekHours: Math.round(thisWeekMinutes / 60),
-                totalCredits: targetCredits,
-                completedCredits,
-                gpaSummary,
-                creditDistribution: [
-                    { name: 'Đại cương', value: generalCredits, color: '#3B82F6' },
-                    { name: 'Chuyên ngành', value: majorCredits, color: '#10B981' },
-                    { name: 'Tự chọn', value: electiveCredits, color: '#F59E0B' }
-                ]
-            }
-        });
-    } catch (err) {
-        console.error('Get profile stats error:', err);
         res.status(500).json({ success: false, message: "Lỗi server" });
     }
 });
@@ -1317,154 +1035,6 @@ app.post('/api/upload-avatar', upload.single('avatar'), async (req, res) => {
     }
 });
 
-// ==================== PORTAL APIs ====================
-
-// Lấy dữ liệu portal
-app.get('/api/portal', async (req, res) => {
-    try {
-        let portalData = await Portal.findOne();
-        
-        // Nếu chưa có dữ liệu, tạo mới với dữ liệu mặc định
-        if (!portalData) {
-            portalData = new Portal({
-                categories: []
-            });
-            await portalData.save();
-        }
-        
-        res.json({ success: true, data: portalData.categories });
-    } catch (err) {
-        console.error('Get portal error:', err);
-        res.status(500).json({ success: false, message: "Lỗi server" });
-    }
-});
-
-// Cập nhật dữ liệu portal (chỉ admin)
-app.post('/api/portal/update', async (req, res) => {
-    try {
-        const { categories } = req.body;
-        
-        let portalData = await Portal.findOne();
-        
-        if (!portalData) {
-            portalData = new Portal({ categories });
-        } else {
-            portalData.categories = categories;
-            portalData.updatedAt = Date.now();
-        }
-        
-        await portalData.save();
-        
-        res.json({ success: true, data: portalData.categories });
-    } catch (err) {
-        console.error('Update portal error:', err);
-        res.status(500).json({ success: false, message: "Lỗi server" });
-    }
-});
-
-// ==================== BACKUP & RESTORE APIs ====================
-
-// Sao lưu dữ liệu cá nhân của user
-app.post('/api/backup', async (req, res) => {
-    try {
-        const { username } = req.body;
-        
-        if (!username) {
-            return res.status(400).json({ success: false, message: "Thiếu username" });
-        }
-
-        const user = await User.findOne({ username }).select('-password');
-        if (!user) {
-            return res.status(404).json({ success: false, message: "Không tìm thấy user" });
-        }
-
-        // Thu thập dữ liệu từ các collection
-        const [events, timetables, gpaData, studySessions, quickNotes] = await Promise.all([
-            Event.find({ username }).lean(),
-            Timetable.find({ username }).lean(),
-            GpaModel.findOne({ username }).lean(),
-            StudySession.find({ username }).lean(),
-            QuickNote.find({ username }).lean()
-        ]);
-
-        const backupData = {
-            app: "Whalio",
-            version: "2.0",
-            timestamp: Date.now(),
-            exportDate: new Date().toLocaleString('vi-VN'),
-            username: username,
-            
-            user: user.toObject(),
-            events: events || [],
-            timetables: timetables || [],
-            gpa: gpaData || null,
-            studySessions: studySessions || [],
-            quickNotes: quickNotes || []
-        };
-
-        res.json({ success: true, data: backupData });
-    } catch (err) {
-        console.error('Backup error:', err);
-        res.status(500).json({ success: false, message: "Lỗi server" });
-    }
-});
-
-// Khôi phục dữ liệu từ file backup
-app.post('/api/restore', async (req, res) => {
-    try {
-        const { username, backupData } = req.body;
-        
-        if (!username || !backupData) {
-            return res.status(400).json({ success: false, message: "Thiếu dữ liệu" });
-        }
-
-        // Validate backup data
-        if (backupData.app !== "Whalio") {
-            return res.status(400).json({ success: false, message: "File backup không hợp lệ" });
-        }
-
-        // Xóa dữ liệu cũ trước khi restore
-        await Promise.all([
-            Event.deleteMany({ username }),
-            Timetable.deleteMany({ username }),
-            GpaModel.deleteMany({ username }),
-            StudySession.deleteMany({ username }),
-            QuickNote.deleteMany({ username })
-        ]);
-
-        // Restore từng loại dữ liệu
-        const restorePromises = [];
-
-        if (backupData.events && backupData.events.length > 0) {
-            restorePromises.push(Event.insertMany(backupData.events.map(e => ({ ...e, username }))));
-        }
-
-        if (backupData.timetables && backupData.timetables.length > 0) {
-            restorePromises.push(Timetable.insertMany(backupData.timetables.map(t => ({ ...t, username }))));
-        }
-
-        if (backupData.gpa) {
-            const gpaDoc = new GpaModel({ ...backupData.gpa, username });
-            restorePromises.push(gpaDoc.save());
-        }
-
-        if (backupData.studySessions && backupData.studySessions.length > 0) {
-            restorePromises.push(StudySession.insertMany(backupData.studySessions.map(s => ({ ...s, username }))));
-        }
-
-        if (backupData.quickNotes && backupData.quickNotes.length > 0) {
-            restorePromises.push(QuickNote.insertMany(backupData.quickNotes.map(n => ({ ...n, username }))));
-        }
-
-        await Promise.all(restorePromises);
-
-        res.json({ success: true, message: "Khôi phục dữ liệu thành công!" });
-    } catch (err) {
-        console.error('Restore error:', err);
-        res.status(500).json({ success: false, message: "Lỗi server: " + err.message });
-    }
-});
-
 // 4. Document APIs
 app.get('/api/documents', async (req, res) => {
     try {
@@ -1494,33 +1064,6 @@ app.get('/document/:id', async (req, res) => {
     } catch (err) {
         console.error('Document detail error:', err);
         res.status(500).send('Lỗi server');
-    }
-});
-
-// [MỚI] API tăng lượt xem
-app.post('/api/documents/view/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        
-        // Validate ObjectId
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ success: false, message: 'ID không hợp lệ' });
-        }
-        
-        const updatedDoc = await Document.findByIdAndUpdate(
-            id, 
-            { $inc: { viewCount: 1 } },
-            { new: true } // Trả về document đã cập nhật
-        );
-        
-        if (!updatedDoc) {
-            return res.status(404).json({ success: false, message: 'Không tìm thấy tài liệu' });
-        }
-        
-        res.json({ success: true, viewCount: updatedDoc.viewCount });
-    } catch (err) {
-        console.error('❌ Increase view error:', err);
-        res.status(500).json({ success: false, message: err.message });
     }
 });
 
@@ -1756,28 +1299,14 @@ app.get('/api/stats', async (req, res) => {
 // 7. Exam APIs
 app.get('/api/exams', async (req, res) => {
     try {
-        // Lấy tất cả exam, bao gồm cả questionBank để đếm số câu
+        // Tuyệt chiêu: Lấy mọi thứ TRỪ questions và questionBank
         const exams = await Exam.find()
+            .select('-questions -questionBank') 
             .sort({ createdAt: -1 })
             .lean();
         
-        // Map lại để thêm thông tin cần thiết cho client
-        const mappedExams = exams.map(exam => ({
-            id: exam.examId || exam._id,
-            examId: exam.examId || exam._id,
-            title: exam.title,
-            subject: exam.subject,
-            time: exam.time,
-            image: exam.image,
-            createdBy: exam.createdBy,
-            createdAt: exam.createdAt,
-            isStatic: false,
-            // Gửi cả mảng questions để ExamRunner dùng trực tiếp
-            questions: exam.questionBank || [],
-            limit: Array.isArray(exam.questionBank) ? exam.questionBank.length : (exam.questions || 0)
-        }));
-        
-        res.json(mappedExams); 
+        // Giờ dữ liệu trả về cực nhẹ, Koyeb sẽ không bao giờ báo Unhealthy nữa
+        res.json(exams); 
     } catch (err) {
         console.error('Get exams error:', err);
         res.json([]);
@@ -1814,53 +1343,31 @@ app.get('/api/exams/:id', async (req, res) => {
     }
 });
 
-// [UPDATED] Xử lý xóa đề thi với Log chi tiết
 app.post('/api/delete-exam', async (req, res) => {
     try {
-        console.log('📤 DELETE EXAM REQUEST:', req.body); 
         const { examId, username } = req.body;
-        
-        // Chuyển examId về String để so sánh cho chuẩn (tránh lệch kiểu số/chữ)
-        const targetExamId = String(examId);
-
-        if (!examId || !username) {
-            return res.status(400).json({ success: false, message: "Thiếu thông tin cần thiết!" });
-        }
-
         const user = await User.findOne({ username });
         if (!user) {
             return res.status(403).json({ success: false, message: "⛔ Người dùng không tồn tại!" });
         }
 
-        // Tìm đề thi (So sánh examId string)
-        const exam = await Exam.findOne({ examId: targetExamId });
-        
+        const exam = await Exam.findOne({ examId });
         if (!exam) {
-            console.log(`❌ Exam not found in DB with ID: ${targetExamId}`);
-            return res.status(404).json({ success: false, message: "Không tìm thấy đề thi trong cơ sở dữ liệu!" });
+            return res.status(404).json({ success: false, message: "Không tìm thấy đề thi!" });
         }
 
         const isAdmin = user.role === 'admin';
         const isCreator = exam.createdBy === username;
-        
-        // Log để ông debug xem tại sao bị 403
-        console.log(`🔍 DEBUG QUYỀN: User=[${username}], Role=[${user.role}], ExamCreator=[${exam.createdBy}]`);
 
-        // 🔥 LOGIC QUYỀN: Admin xóa tất, User xóa của mình, SYSTEM thì chặn nếu không phải Admin
         if (!isAdmin && !isCreator) {
-            console.log("⛔ BỊ CHẶN: Không đủ quyền xóa.");
-            return res.status(403).json({ 
-                success: false, 
-                message: `⛔ Bạn không thể xóa đề này! (Được tạo bởi: ${exam.createdBy})` 
-            });
+            return res.status(403).json({ success: false, message: "⛔ Bạn chỉ có thể xóa đề thi do chính mình tạo!" });
         }
 
-        await Exam.findOneAndDelete({ examId: targetExamId });
-        console.log(`🗑️ ${username} đã xóa đề thi ID: ${targetExamId}`);
+        await Exam.findOneAndDelete({ examId });
+        console.log(`🗑️ ${username} đã xóa đề thi ID: ${examId}`);
         res.json({ success: true, message: "Đã xóa đề thi thành công!" });
-
     } catch (err) {
-        console.error('❌ Delete exam error:', err);
+        console.error('Delete exam error:', err);
         res.status(500).json({ success: false, message: "Lỗi server khi xóa đề" });
     }
 });
@@ -1887,36 +1394,6 @@ app.post('/api/create-exam', async (req, res) => {
         console.error('Create exam error:', err);
         res.status(500).json({ success: false, message: "Lỗi server khi lưu đề thi" });
     }
-});
-
-app.get('/api/quick-notes', async (req, res) => {
-    try {
-        const { username } = req.query;
-        if (!username) return res.json({ success: false });
-        const notes = await QuickNote.find({ username }).sort({ createdAt: -1 });
-        res.json({ success: true, notes });
-    } catch (err) { res.status(500).json({ success: false }); }
-});
-
-// POST: Tạo note mới
-app.post('/api/quick-notes', async (req, res) => {
-    try {
-        const { username, title, content, color } = req.body;
-        const newNote = new QuickNote({ username, title, content, color });
-        await newNote.save();
-        res.json({ success: true, note: newNote });
-    } catch (err) { res.status(500).json({ success: false }); }
-});
-
-// DELETE: Xóa note (Kiểm tra đúng chủ sở hữu)
-app.delete('/api/quick-notes/:id', async (req, res) => {
-    try {
-        const { username } = req.query;
-        const { id } = req.params;
-        const result = await QuickNote.findOneAndDelete({ _id: id, username }); // Chỉ xóa nếu khớp cả ID và Username
-        if(result) res.json({ success: true });
-        else res.status(403).json({ success: false, message: "Không đủ quyền" });
-    } catch (err) { res.status(500).json({ success: false }); }
 });
 
 // 8. Community APIs
@@ -2899,24 +2376,6 @@ app.post('/api/events', async (req, res) => {
     }
 });
 
-app.put('/api/events/toggle', async (req, res) => {
-    try {
-        const { id, username } = req.body;
-        const event = await Event.findById(id);
-
-        if (!event) return res.status(404).json({ success: false, message: "Không tìm thấy" });
-        if (event.username !== username) return res.status(403).json({ success: false });
-
-        event.isDone = !event.isDone; // Đảo ngược trạng thái (Chưa xong <-> Xong)
-        await event.save();
-
-        res.json({ success: true, isDone: event.isDone });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false });
-    }
-});
-
 // DELETE /api/events/:id - Delete an event
 app.delete('/api/events/:id', async (req, res) => {
     try {
@@ -2994,7 +2453,7 @@ let WHALIO_SYSTEM_INSTRUCTION;
 try {
     const fs = require('fs');
     const path = require('path');
-    const promptPath = path.join(__dirname, 'whalio_prompt.txt');
+    const promptPath = path.join(__dirname, '..', 'whalio_prompt.txt');
     WHALIO_SYSTEM_INSTRUCTION = fs.readFileSync(promptPath, 'utf8');
     console.log('✅ Đã tải thành công Whalio System Prompt từ file');
 } catch (error) {
