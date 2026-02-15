@@ -41,6 +41,7 @@ import {
   calculateGpaMapData,
   calculateSemesterGpa,
   getPriorityAlert,
+  calculateGpaMomentum,
 } from '../services/gpaAdvancedService';
 import { SurvivalModePanel, RiskAlertCard, GpaMapCard, ScholarshipToggle } from '../components/gpa';
 
