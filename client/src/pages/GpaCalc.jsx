@@ -1089,10 +1089,10 @@ const GpaCalc = () => {
                                   {sub.components.map((comp) => (
                                     <div
                                       key={comp.id}
-                                      className="flex items-center gap-3 text-sm group/comp relative pl-2 border-l-2 border-transparent hover:border-gray-200 transition-all"
+                                      className="flex items-center gap-2 text-sm group/comp relative pl-2 border-l-2 border-transparent hover:border-gray-200 transition-all"
                                     >
                                        {/* Score Input (Swapped: Now First) */}
-                                      <div className="relative flex-1">
+                                      <div className="relative">
                                           <input
                                             type="number"
                                             placeholder="Nhập điểm..."
