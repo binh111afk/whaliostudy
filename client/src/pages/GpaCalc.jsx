@@ -363,13 +363,13 @@ const GpaCalc = () => {
       const data = await res.json();
 
       if (data.success) {
-        alert("✅ Đã lưu bảng điểm thành công!");
+        toast.success("Đã lưu bảng điểm thành công!");
         setHasUnsavedChanges(false); // Reset unsaved changes flag
       } else {
-        alert("❌ Lỗi: " + data.message);
+        toast.error("Lỗi: " + data.message);
       }
     } catch (err) {
-      alert("❌ Lỗi kết nối Server!");
+      toast.error("Lỗi kết nối Server!");
     } finally {
       setIsSaving(false);
     }
@@ -881,6 +881,7 @@ const GpaCalc = () => {
                       type="number"
                       value={targetGpa}
                       onChange={(e) => setTargetGpa(e.target.value)}
+                      onBlur={handleSaveGPA} // 🔥 Auto-save on blur
                       placeholder="3.6"
                       className="w-full bg-white border border-blue-200 text-blue-900 font-bold text-lg rounded-lg py-2 px-3 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none transition-all"
                     />
