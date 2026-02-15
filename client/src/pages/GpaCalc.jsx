@@ -18,7 +18,6 @@ import {
   TrendingUp,
   TrendingDown,
   Zap,
-  BarChart,
   Minus,
   Info,
   ArrowRight,
@@ -32,6 +31,7 @@ import {
   Lock,
   Trophy,
   BarChart3,
+  Sliders,
 } from "lucide-react";
 import AuthModal from '../components/AuthModal';
 import {
