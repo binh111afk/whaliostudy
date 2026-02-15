@@ -1134,6 +1134,13 @@ const GpaCalc = () => {
                                             }
                                           />
                                           <span className="text-[10px] text-gray-400 ml-0.5">%</span>
+                                      </div>
+
+                                      {/* Actions */}
+                                      {sub.components.length > 1 && (
+                                        <button
+                                          onClick={() =>
+                                            removeComponent(
                                               sem.id,
                                               sub.id,
                                               comp.id
