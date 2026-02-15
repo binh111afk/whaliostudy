@@ -24,7 +24,11 @@ export const SCHOLARSHIP_THRESHOLDS = {
   pass: { gpa: 2.0, label: 'Tốt nghiệp', reward: null },
 };
 
-const roundScore = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
+// Làm tròn điểm đến 1 chữ số thập phân (đồng bộ với GpaCalc.jsx)
+const roundScore = (num) => Math.round((num + Number.EPSILON) * 10) / 10;
+
+// Làm tròn GPA đến 2 chữ số thập phân
+const roundGpa = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
 
 /**
  * Lấy điểm hệ 4 từ điểm hệ 10
@@ -35,7 +39,7 @@ const getPoint4FromScore10 = (score10) => {
 };
 
 /**
- * Tính trạng thái môn học
+ * Tính trạng thái môn học (đồng bộ với GpaCalc.jsx)
  */
 const calculateSubjectStatus = (components) => {
   let currentScore = 0;
@@ -90,7 +94,7 @@ export function simulateGpaChange({ semesters, targetSubjectId, newScore, target
     });
   });
 
-  const newGpa4 = totalCredits > 0 ? roundScore(totalPointCredit / totalCredits) : 0;
+  const newGpa4 = totalCredits > 0 ? roundGpa(totalPointCredit / totalCredits) : 0;
   
   // Tính GPA gốc
   let originalTotalPointCredit = 0;
@@ -104,11 +108,11 @@ export function simulateGpaChange({ semesters, targetSubjectId, newScore, target
       }
     });
   });
-  const originalGpa4 = totalCredits > 0 ? roundScore(originalTotalPointCredit / totalCredits) : 0;
+  const originalGpa4 = totalCredits > 0 ? roundGpa(originalTotalPointCredit / totalCredits) : 0;
 
-  const gpaDelta = roundScore(newGpa4 - originalGpa4);
+  const gpaDelta = roundGpa(newGpa4 - originalGpa4);
   const percentToTarget = targetGpa > 0 
-    ? roundScore((newGpa4 / targetGpa) * 100) 
+    ? roundGpa((newGpa4 / targetGpa) * 100) 
     : 0;
 
   return {
@@ -131,7 +135,7 @@ export function simulateGpaChange({ semesters, targetSubjectId, newScore, target
 export function calculateSubjectImpact(subject, totalCredits) {
   const credits = parseFloat(subject.credits) || 0;
   if (totalCredits <= 0) return 0;
-  return roundScore((credits / totalCredits) * 100);
+  return roundGpa((credits / totalCredits) * 100);
 }
 
 // ============================================================================
@@ -230,7 +234,7 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
         const testLowScore = Math.max(0, thresholdScore10 - 0.1);
         const testPoint4 = getPoint4FromScore10(testLowScore);
         const projectedTotalPointCredit = totalPointCredit + (testPoint4 * totalUngradedCredits);
-        const projectedGpa = roundScore(projectedTotalPointCredit / totalAllCredits);
+        const projectedGpa = roundGpa(projectedTotalPointCredit / totalAllCredits);
 
         alerts.push({
           type: 'danger-warning',
@@ -335,8 +339,8 @@ export function calculateSemesterGpa(semester) {
     }
   });
 
-  const semesterGpa4 = totalCredits > 0 ? roundScore(totalPointCredit / totalCredits) : 0;
-  const semesterGpa10 = totalCredits > 0 ? roundScore(totalScore10Credit / totalCredits) : 0;
+  const semesterGpa4 = totalCredits > 0 ? roundGpa(totalPointCredit / totalCredits) : 0;
+  const semesterGpa10 = totalCredits > 0 ? roundGpa(totalScore10Credit / totalCredits) : 0;
 
   return {
     semesterGpa4,
@@ -383,7 +387,7 @@ export function calculateScholarshipInfo({
   };
 
   const targetGpa = threshold.gpa;
-  const gap = roundScore(targetGpa - semesterGpa4);
+  const gap = roundGpa(targetGpa - semesterGpa4);
   const isAchieved = semesterGpa4 >= targetGpa;
 
   // Ước tính xác suất dựa trên GPA hiện tại
@@ -440,7 +444,7 @@ export function getReachableScholarships({ semesters }) {
  * Tính toán dữ liệu cho GPA Map
  */
 export function calculateGpaMapData({ currentGpa4, targetGpa, pendingCredits, totalCredits }) {
-  const progress = targetGpa > 0 ? roundScore((currentGpa4 / targetGpa) * 100) : 0;
+  const progress = targetGpa > 0 ? roundGpa((currentGpa4 / targetGpa) * 100) : 0;
   
   // Dự đoán GPA cuối kỳ (giả định giữ phong độ)
   let projectedGpa = currentGpa4;
@@ -451,7 +455,7 @@ export function calculateGpaMapData({ currentGpa4, targetGpa, pendingCredits, to
     const avgPoint4 = currentGpa4; // Giả định duy trì
     const totalAllCredits = totalCredits + pendingCredits;
     const projectedTotalPoint = currentGpa4 * totalCredits + avgPoint4 * pendingCredits;
-    projectedGpa = roundScore(projectedTotalPoint / totalAllCredits);
+    projectedGpa = roundGpa(projectedTotalPoint / totalAllCredits);
 
     // Xác định xu hướng
     if (projectedGpa > currentGpa4) trend = 'up';
@@ -477,6 +481,6 @@ export function calculateGpaMapData({ currentGpa4, targetGpa, pendingCredits, to
     trend,
     nearestMilestone,
     currentMilestone,
-    gapToTarget: targetGpa > 0 ? roundScore(targetGpa - currentGpa4) : 0,
+    gapToTarget: targetGpa > 0 ? roundGpa(targetGpa - currentGpa4) : 0,
   };
 }

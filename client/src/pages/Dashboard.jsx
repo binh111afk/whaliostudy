@@ -1395,6 +1395,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   const calculateGpaMetrics = (semesters) => {
     let totalCreditsAccumulated = 0;
     let totalSubjectsPassed = 0;
+    let totalPointCredit = 0; // Tổng (điểm hệ 4 * tín chỉ) tích lũy
     let semesterGPAs = [];
 
     semesters.forEach((sem) => {
@@ -1403,22 +1404,31 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
       if (sem.subjects) {
         sem.subjects.forEach((sub) => {
           let subScore10 = 0;
+          let totalWeight = 0;
           if (sub.components && sub.components.length > 0) {
             sub.components.forEach((comp) => {
               const score = parseFloat(comp.score);
               const weight = parseFloat(comp.weight);
               if (!isNaN(score) && !isNaN(weight)) {
                 subScore10 += score * (weight / 100);
+                totalWeight += weight;
               }
             });
           }
-          if (subScore10 > 0) {
+          // Chỉ tính môn có đủ trọng số (>= 99.9%)
+          if (totalWeight >= 99.9 && subScore10 > 0) {
             const subScore4 = convertToGPA4(subScore10);
             const credits = parseFloat(sub.credits) || 0;
+            
+            // Tính cho học kỳ hiện tại
             semTotalScore += subScore4 * credits;
             semTotalCredits += credits;
+            
+            // Tích lũy cho GPA tổng
+            totalPointCredit += subScore4 * credits;
+            totalCreditsAccumulated += credits;
+            
             if (subScore4 >= 1.0) {
-              totalCreditsAccumulated += credits;
               totalSubjectsPassed += 1;
             }
           }
@@ -1428,15 +1438,20 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
       semesterGPAs.push(semGpa);
     });
 
-    const currentGpa =
-      semesterGPAs.length > 0 ? semesterGPAs[semesterGPAs.length - 1] : 0;
-    const lastGpa =
-      semesterGPAs.length > 1 ? semesterGPAs[semesterGPAs.length - 2] : 0;
-    const diff = currentGpa - lastGpa;
+    // GPA tích lũy (cumulative) = tổng (điểm * tín chỉ) / tổng tín chỉ
+    const cumulativeGpa = totalCreditsAccumulated > 0 ? totalPointCredit / totalCreditsAccumulated : 0;
+    
+    // GPA học kỳ gần nhất
+    const lastSemesterGpa = semesterGPAs.length > 0 ? semesterGPAs[semesterGPAs.length - 1] : 0;
+    
+    // GPA học kỳ trước đó
+    const previousSemesterGpa = semesterGPAs.length > 1 ? semesterGPAs[semesterGPAs.length - 2] : 0;
+    
+    const diff = cumulativeGpa - previousSemesterGpa;
 
     setGpaMetrics({
-      current: currentGpa.toFixed(2),
-      last: lastGpa.toFixed(2),
+      current: cumulativeGpa.toFixed(2), // Hiển thị GPA tích lũy
+      last: previousSemesterGpa.toFixed(2),
       diff: diff.toFixed(2),
       totalCredits: totalCreditsAccumulated,
       passedSubjects: totalSubjectsPassed,

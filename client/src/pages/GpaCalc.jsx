@@ -172,8 +172,8 @@ const calculateSubjectStatus = (components) => {
 
   const isFull = currentWeight >= 99.9;
 
-  // SỬA DÒNG NÀY: Dùng roundScore thay vì toFixed trực tiếp
-  const finalScore10 = isFull ? roundScore(currentScore).toFixed(1) : null;
+  // Làm tròn điểm đến 1 chữ số thập phân (giữ dạng số, không dùng toFixed)
+  const finalScore10 = isFull ? roundScore(currentScore) : null;
 
   return {
     currentScore,
@@ -1012,7 +1012,7 @@ const GpaCalc = () => {
                                   <div className="flex flex-col">
                                     <div className="flex items-center gap-2">
                                       <span className="text-lg font-black text-gray-800 dark:text-white">
-                                        {finalScore10}
+                                        {finalScore10.toFixed(1)}
                                       </span>
                                       <span className="text-xs font-bold text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-1 rounded">
                                         ({gradeInfo.point})
