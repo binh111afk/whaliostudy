@@ -186,7 +186,14 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
   ];
 
   // Tìm mốc học lực hiện tại (mốc cao nhất mà GPA >= mốc đó)
-  const currentMilestone = [...academicMilestones].reverse().find(m => currentGpa4 >= m.gpa);
+  // Duyệt từ cao xuống thấp, lấy mốc đầu tiên thỏa điều kiện
+  let currentMilestone = null;
+  for (let i = 0; i < academicMilestones.length; i++) {
+    if (currentGpa4 >= academicMilestones[i].gpa) {
+      currentMilestone = academicMilestones[i];
+      break;
+    }
+  }
   
   // Tìm mốc cao hơn gần nhất (mốc thấp nhất mà GPA < mốc đó)
   const nextHigherMilestone = academicMilestones.find(m => currentGpa4 < m.gpa);
@@ -234,9 +241,14 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
         const testPoint4_7 = getPoint4FromScore10(7.0);
         const projected_7 = roundGpa((totalPointCredit + testPoint4_7 * totalUngradedCredits) / totalAllCredits);
         
-        // Xác định xếp loại sau khi giảm
-        const newMilestone = [...academicMilestones].reverse().find(m => projected_7 >= m.gpa);
-        const fallLabel = newMilestone ? newMilestone.label : 'Yếu';
+        // Xác định xếp loại sau khi giảm - duyệt từ cao xuống thấp
+        let fallLabel = 'Yếu';
+        for (let i = 0; i < academicMilestones.length; i++) {
+          if (projected_7 >= academicMilestones[i].gpa) {
+            fallLabel = academicMilestones[i].label;
+            break;
+          }
+        }
 
         alerts.push({
           type: 'danger-warning',
@@ -261,8 +273,15 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
       const predictions = scenarios.map(s => {
         const point4 = getPoint4FromScore10(s.score);
         const gpa = roundGpa((totalPointCredit + point4 * totalUngradedCredits) / totalAllCredits);
-        const milestone = [...academicMilestones].reverse().find(m => gpa >= m.gpa);
-        return { ...s, gpa, milestone: milestone?.label || 'Yếu' };
+        // Tìm mốc học lực: duyệt từ cao xuống thấp, lấy mốc đầu tiên mà GPA >= mốc đó
+        let milestone = null;
+        for (let i = 0; i < academicMilestones.length; i++) {
+          if (gpa >= academicMilestones[i].gpa) {
+            milestone = academicMilestones[i].label;
+            break;
+          }
+        }
+        return { ...s, gpa, milestone: milestone || 'Yếu' };
       });
       
       // Tìm kịch bản tốt nhất và trung bình
@@ -477,7 +496,14 @@ export function calculateGpaMapData({ currentGpa4, targetGpa, pendingCredits, to
   ];
 
   const nearestMilestone = milestones.find((m) => currentGpa4 < m.gpa);
-  const currentMilestone = [...milestones].reverse().find((m) => currentGpa4 >= m.gpa);
+  // Tìm mốc hiện tại: duyệt từ cao xuống thấp
+  let currentMilestone = null;
+  for (let i = 0; i < milestones.length; i++) {
+    if (currentGpa4 >= milestones[i].gpa) {
+      currentMilestone = milestones[i];
+      break;
+    }
+  }
 
   return {
     currentGpa4,
