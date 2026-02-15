@@ -39,6 +39,7 @@ import {
   calculateScholarshipInfo,
   calculateGpaMapData,
   calculateSemesterGpa,
+  getPriorityAlert,
 } from '../services/gpaAdvancedService';
 import { SurvivalModePanel, RiskAlertCard, GpaMapCard, ScholarshipToggle } from '../components/gpa';
 
@@ -202,6 +203,8 @@ const predictNeededScores = (currentScore, missingWeight, type) => {
     .reverse();
 };
 
+
+
 const GpaCalc = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -274,6 +277,9 @@ const GpaCalc = () => {
   // GPA Display Mode - 'cumulative' or 'semester'
   const [gpaDisplayMode, setGpaDisplayMode] = useState('cumulative');
   const [selectedSemesterId, setSelectedSemesterId] = useState(null);
+  
+  // State for Layout
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
   // Load dữ liệu từ Server khi vào trang
   useEffect(() => {
@@ -711,70 +717,93 @@ const GpaCalc = () => {
 
   const classification = getClassification(result.gpa4);
 
+  const priorityAlert = getPriorityAlert(riskAlerts, scholarshipInfo?.alerts);
+  const targetCredits = user?.totalTargetCredits || 150;
+  const missingCredits = Math.max(0, targetCredits - result.totalCredits);
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
-      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 p-4 rounded-2xl flex items-center gap-3 animate-pulse-slow shadow-sm">
-        <div className="p-2 bg-white dark:bg-gray-800 rounded-lg text-amber-600 dark:text-amber-400 shrink-0 shadow-sm">
-          <AlertTriangle size={20} />
+      {/* TẦNG 1: OVERVIEW (Gọn - 1 thẻ duy nhất) */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            {/* Left: Title & Save */}
+            <div className="flex items-center gap-4">
+                <div className="p-3 bg-primary/10 rounded-xl text-primary dark:text-blue-400">
+                    <Calculator size={24} />
+                </div>
+                <div>
+                    <h1 className="text-xl font-black text-gray-800 dark:text-white">Hồ sơ học tập</h1>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Quản lý GPA & Lộ trình</p>
+                </div>
+            </div>
+
+            {/* Middle: Key Metrics Grid */}
+            <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 px-4 py-2 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700">
+                <div className="text-center border-r border-gray-200 dark:border-gray-700 last:border-0">
+                    <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">GPA Tích lũy</p>
+                    <p className="text-2xl font-black text-primary dark:text-blue-400">{result.gpa4}</p>
+                </div>
+                <div className="text-center border-r border-gray-200 dark:border-gray-700 last:border-0">
+                    <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Xếp loại</p>
+                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${classification.bg} ${classification.color}`}>
+                        {classification.label}
+                    </span>
+                </div>
+                <div className="text-center border-r border-gray-200 dark:border-gray-700 last:border-0">
+                    <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Mục tiêu GPA</p>
+                    <input
+                        type="number"
+                        placeholder="3.6"
+                        className="w-16 text-center bg-transparent font-bold text-gray-800 dark:text-white outline-none border-b border-dashed border-gray-300 focus:border-primary text-lg"
+                        value={targetGpa}
+                        onChange={(e) => setTargetGpa(e.target.value)}
+                    />
+                </div>
+                <div className="text-center">
+                    <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Tín chỉ</p>
+                    <p className="text-sm font-bold text-gray-800 dark:text-white">
+                        {result.totalCredits}<span className="text-gray-400 font-normal">/{targetCredits}</span>
+                    </p>
+                </div>
+            </div>
+
+            {/* Right: Save Button */}
+            <button
+                onClick={handleSaveGPA}
+                disabled={isSaving}
+                className={`px-4 py-3 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2 cursor-pointer text-sm shrink-0 ${
+                    isSaving
+                    ? "bg-gray-400 cursor-not-allowed text-white"
+                    : "bg-gray-900 dark:bg-gray-700 text-white hover:bg-black dark:hover:bg-gray-600"
+                }`}
+            >
+                <Save size={16} />
+                {isSaving ? "Đang lưu..." : "Lưu"}
+            </button>
         </div>
-        <p className="text-amber-800 dark:text-amber-200 text-sm font-bold leading-relaxed">
-          ⚠️ <span className="uppercase text-amber-900 dark:text-amber-100">Cảnh báo:</span> Bạn nhớ
-          bấm{" "}
-          <span className="underline decoration-2 underline-offset-4 text-amber-900 dark:text-amber-100">
-            "Lưu tất cả"
-          </span>{" "}
-          trước khi thoát tab, nếu không toàn bộ dữ liệu điểm vừa nhập sẽ "bay
-          màu" hết đấy nhé!
-        </p>
       </div>
 
-      {/* EARLY RISK ALERT - Cảnh báo sớm */}
-      <RiskAlertCard alerts={riskAlerts} />
-
-      {/* HEADER: Mục tiêu GPA */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <div>
-          <h1 className="text-2xl font-black text-gray-800 dark:text-white flex items-center gap-2">
-            <Calculator className="text-primary dark:text-blue-400" /> Tính GPA (Theo Kỳ)
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Quản lý lộ trình học tập chi tiết từng học kỳ.
-          </p>
+      {/* TẦNG 2: ACTIONABLE ALERT (Chỉ 1 khối) */}
+      {priorityAlert && (
+        <div className={`p-4 rounded-xl border-l-4 shadow-sm flex items-start gap-3 transition-all ${
+            priorityAlert.severity === 'danger' ? 'bg-red-50 dark:bg-red-900/10 border-red-500 text-red-900 dark:text-red-200' :
+            priorityAlert.severity === 'warning' ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-500 text-amber-900 dark:text-amber-200' :
+            priorityAlert.severity === 'success' ? 'bg-green-50 dark:bg-green-900/10 border-green-500 text-green-900 dark:text-green-200' :
+            'bg-blue-50 dark:bg-blue-900/10 border-blue-500 text-blue-900 dark:text-blue-200'
+        }`}>
+            <div className="mt-0.5 shrink-0">
+                {priorityAlert.icon ? <span className="text-xl">{priorityAlert.icon}</span> : <AlertTriangle size={20} />}
+            </div>
+            <div className="flex-1">
+                <p className="font-bold text-sm leading-tight">{priorityAlert.message}</p>
+                {priorityAlert.action && <p className="text-xs mt-1 opacity-90 font-medium">{priorityAlert.action}</p>}
+            </div>
         </div>
+      )}
 
-        <div className="flex items-center gap-4 bg-blue-50 dark:bg-blue-900/30 px-4 py-2 rounded-xl border border-blue-100 dark:border-blue-700">
-          <Target className="text-blue-600 dark:text-blue-400" size={20} />
-          <div>
-            <p className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase">
-              Mục tiêu GPA
-            </p>
-            <input
-              type="number"
-              placeholder="VD: 3.6"
-              className="bg-transparent font-black text-blue-800 dark:text-blue-300 w-20 outline-none text-lg placeholder-blue-300 dark:placeholder-blue-600"
-              value={targetGpa}
-              onChange={(e) => setTargetGpa(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <button
-          onClick={handleSaveGPA} // 👈 Gắn hàm lưu vào đây
-          disabled={isSaving} // 👈 Chặn bấm liên tục khi đang lưu
-          className={`px-5 py-2 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2 cursor-pointer ${
-            isSaving
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-gray-900 dark:bg-gray-700 text-white hover:bg-black dark:hover:bg-gray-600"
-          }`}
-        >
-          <Save size={18} />
-          {isSaving ? "Đang lưu..." : "Lưu tất cả"}
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* CỘT TRÁI: DANH SÁCH HỌC KỲ */}
-        <div className="lg:col-span-3 space-y-6">
+      <div className="space-y-8">
+        {/* TẦNG 3: MAIN ZONE (Trung tâm) */}
+        <div className="w-full space-y-6">
           {semesters.map((sem) => (
             <div
               key={sem.id}
@@ -902,32 +931,32 @@ const GpaCalc = () => {
                                     }
                                   />
                                 </div>
-                                <div className="flex gap-1">
-                                  {["general", "major"].map((t) => (
-                                    <button
-                                      key={t}
-                                      onClick={() =>
-                                        updateSubject(sem.id, sub.id, "type", t)
-                                      }
-                                      className={`text-[12px] px-1.5 py-0.5 my-2 rounded border transition-all cursor-pointer font-bold ${
-                                        sub.type === t
-                                          ? t === "general"
-                                            ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-700"
-                                            : "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-700"
-                                          : "text-gray-400 border-gray-200 hover:bg-gray-50"
-                                      }`}
-                                    >
-                                      {t === "general"
-                                        ? "Đại cương"
-                                        : "Chuyên ngành"}
-                                    </button>
-                                  ))}
+                                <div className="mt-1">
+                                  <button
+                                    onClick={() =>
+                                      updateSubject(sem.id, sub.id, "type", sub.type === "general" ? "major" : "general")
+                                    }
+                                    className={`text-[11px] flex items-center gap-1 transition-all cursor-pointer font-medium ${
+                                      sub.type === "major"
+                                        ? "text-purple-600 dark:text-purple-400"
+                                        : "text-gray-400 dark:text-gray-500 hover:text-gray-600"
+                                    }`}
+                                  >
+                                    {sub.type === "major" ? (
+                                        <>
+                                            <Zap size={12} className="fill-current" />
+                                            Chuyên ngành
+                                        </>
+                                    ) : (
+                                        "Đại cương"
+                                    )}
+                                  </button>
                                 </div>
                               </td>
                               <td className="p-3">
                                 <input
                                   type="number"
-                                  className="w-full text-center bg-gray-50 dark:bg-gray-700 rounded p-1 font-bold text-gray-700 dark:text-white outline-none text-sm border border-transparent focus:border-blue-500 dark:focus:border-blue-400 transition-all"
+                                  className="w-full text-center bg-transparent border-b border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 font-bold text-gray-700 dark:text-white outline-none text-sm py-1 transition-all"
                                   value={sub.credits}
                                   onChange={(e) =>
                                     updateSubject(
@@ -944,15 +973,15 @@ const GpaCalc = () => {
                                   {sub.components.map((comp) => (
                                     <div
                                       key={comp.id}
-                                      className="flex items-center gap-1"
+                                      className="flex items-center gap-1 group/comp"
                                     >
                                       <input
                                         type="number"
-                                        placeholder="?"
-                                        className={`w-17 h-8 border rounded px-1 py-0.5 text-xs font-bold outline-none text-center text-[16px] ${
+                                        placeholder="Điểm"
+                                        className={`w-14 h-7 text-center font-bold text-sm bg-transparent border-b outline-none transition-all ${
                                           comp.score === ""
-                                            ? "bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-700 text-gray-800 dark:text-gray-200"
-                                            : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200"
+                                            ? "border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200"
+                                            : "border-gray-300 dark:border-gray-600 text-gray-800 dark:text-white focus:border-blue-500"
                                         }`}
                                         value={comp.score}
                                         onChange={(e) =>
@@ -965,24 +994,28 @@ const GpaCalc = () => {
                                           )
                                         }
                                       />
-                                      <span className="text-gray-300 dark:text-gray-500 text-[17px]">
+                                      <span className="text-gray-300 dark:text-gray-600 text-xs mx-0.5">
                                         x
                                       </span>
-                                      <input
-                                        type="number"
-                                        placeholder="%"
-                                        className="w-13 h-8 bg-gray-50 dark:bg-gray-700 border-none rounded px-1 py-0.5 text-xs text-center text-[16px] text-gray-800 dark:text-gray-200"
-                                        value={comp.weight}
-                                        onChange={(e) =>
-                                          updateComponent(
-                                            sem.id,
-                                            sub.id,
-                                            comp.id,
-                                            "weight",
-                                            e.target.value
-                                          )
-                                        }
-                                      />
+                                      <div className="relative">
+                                          <input
+                                            type="number"
+                                            placeholder="%"
+                                            className="w-10 h-7 text-center text-xs text-gray-500 dark:text-gray-400 bg-transparent border-b border-gray-100 dark:border-gray-700 outline-none focus:border-blue-500 focus:text-blue-600"
+                                            value={comp.weight}
+                                            onChange={(e) =>
+                                              updateComponent(
+                                                sem.id,
+                                                sub.id,
+                                                comp.id,
+                                                "weight",
+                                                e.target.value
+                                              )
+                                            }
+                                          />
+                                          <span className="absolute top-1 right-0 text-[9px] text-gray-300 pointer-events-none">%</span>
+                                      </div>
+                                      
                                       {sub.components.length > 1 && (
                                         <button
                                           onClick={() =>
@@ -992,7 +1025,7 @@ const GpaCalc = () => {
                                               comp.id
                                             )
                                           }
-                                          className="text-gray-300 dark:text-gray-500 hover:text-red-500"
+                                          className="text-gray-300 dark:text-gray-600 hover:text-red-500 opacity-0 group-hover/comp:opacity-100 transition-opacity ml-1"
                                         >
                                           <Trash2 size={12} />
                                         </button>
@@ -1001,35 +1034,26 @@ const GpaCalc = () => {
                                   ))}
                                   <button
                                     onClick={() => addComponent(sem.id, sub.id)}
-                                    className="text-[14px] text-primary dark:text-blue-400 font-bold hover:underline flex items-center gap-1 cursor-pointer mx-5 py-2"
+                                    className="text-xs text-primary/70 dark:text-blue-400/70 hover:text-primary font-medium flex items-center gap-1 cursor-pointer mt-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                   >
-                                    <Plus size={12} /> Thêm cột
+                                    <Plus size={10} /> Thêm
                                   </button>
                                 </div>
                               </td>
                               <td className="p-3 align-top">
                                 {isFull && gradeInfo ? (
-                                  <div className="flex flex-col">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-lg font-black text-gray-800 dark:text-white">
+                                  <div className="flex flex-col gap-0.5">
+                                    <div className="flex items-baseline gap-2">
+                                      <span className={`text-lg font-black ${isPassed ? 'text-gray-800 dark:text-white' : 'text-red-600 dark:text-red-400'}`}>
                                         {finalScore10.toFixed(1)}
                                       </span>
-                                      <span className="text-xs font-bold text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-1 rounded">
-                                        ({gradeInfo.point})
-                                      </span>
-                                      <span
-                                        className={`px-1.5 py-0.5 rounded text-[14px] font-bold ${gradeInfo.bg} ${gradeInfo.color}`}
-                                      >
-                                        {gradeInfo.char}
+                                      <span className={`text-sm font-bold ${gradeInfo.color}`}>
+                                        {gradeInfo.char} <span className="text-gray-400 dark:text-gray-600 font-normal text-[10px]">/ {gradeInfo.point}</span>
                                       </span>
                                     </div>
-                                    {isPassed ? (
-                                      <span className="flex items-center gap-1 text-[15px] font-bold text-green-600 ">
-                                        <CheckCircle size={13} /> Qua môn
-                                      </span>
-                                    ) : (
-                                      <span className="flex items-center gap-1 text-[15px] font-bold text-red-500">
-                                        <XCircle size={13} /> Học lại
+                                    {!isPassed && (
+                                      <span className="flex items-center gap-1 text-[10px] font-bold text-red-500">
+                                        <XCircle size={10} /> Học lại
                                       </span>
                                     )}
                                   </div>
@@ -1133,425 +1157,274 @@ const GpaCalc = () => {
           </button>
         </div>
 
-        {/* CỘT PHẢI: TỔNG KẾT (Sticky) */}
-        <div className="lg:col-span-1">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl shadow-blue-100 dark:shadow-none border border-gray-100 dark:border-gray-700 p-6 sticky top-24 space-y-6">
-            {/* SCHOLARSHIP / GPA MODE TOGGLE */}
-            <ScholarshipToggle
-              scholarshipInfo={scholarshipInfo}
-              selectedLevel={selectedScholarshipLevel}
-              onLevelChange={setSelectedScholarshipLevel}
-              isScholarshipMode={isScholarshipMode}
-              onModeToggle={setIsScholarshipMode}
-            />
+        </div>
 
-            {/* GPA Display - chỉ hiện khi không ở scholarship mode */}
-            {!isScholarshipMode && (
-              <div>
-                {/* GPA Mode Tabs */}
-                <div className="flex gap-2 mb-3">
-                  <button
-                    onClick={() => setGpaDisplayMode('cumulative')}
-                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-                      gpaDisplayMode === 'cumulative'
-                        ? 'bg-primary text-white shadow-md'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    GPA Tích lũy
-                  </button>
-                  <button
-                    onClick={() => setGpaDisplayMode('semester')}
-                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-                      gpaDisplayMode === 'semester'
-                        ? 'bg-primary text-white shadow-md'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    GPA Học kỳ
-                  </button>
+        {/* TẦNG 4: ADVANCED ANALYSIS (Collapsible) */}
+        <div className="border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-sm mt-8">
+            <button
+                onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400">
+                        <BarChart3 size={20} />
+                    </div>
+                    <div className="text-left">
+                        <h3 className="font-bold text-gray-800 dark:text-white">Phân tích nâng cao & Chiến lược</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">GPA Map, Survival Mode, Gợi ý cải thiện điểm số</p>
+                    </div>
                 </div>
+                {isAdvancedOpen ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+            </button>
 
-                {/* Semester Selection Dropdown - only show in semester mode */}
-                {gpaDisplayMode === 'semester' && (
-                  <div className="mb-3">
-                    <select
-                      value={selectedSemesterId || ''}
-                      onChange={(e) => setSelectedSemesterId(parseInt(e.target.value))}
-                      className="w-full px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
-                    >
-                      <option value="">Chọn học kỳ</option>
-                      {semesterGpas.map((sem) => (
-                        <option key={sem.id} value={sem.id}>
-                          {sem.name} {sem.totalCredits > 0 ? `(GPA: ${sem.semesterGpa4.toFixed(2)})` : '(Chưa có điểm)'}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+            {isAdvancedOpen && (
+                <div className="p-6 border-t border-gray-100 dark:border-gray-700 space-y-8">
+                    {/* Scholarship Toggle */}
+                    <ScholarshipToggle
+                        scholarshipInfo={scholarshipInfo}
+                        selectedLevel={selectedScholarshipLevel}
+                        onLevelChange={setSelectedScholarshipLevel}
+                        isScholarshipMode={isScholarshipMode}
+                        onModeToggle={setIsScholarshipMode}
+                    />
 
-                {/* GPA Display Card */}
-                <div className="text-center py-6 bg-gradient-to-br from-primary to-blue-600 rounded-2xl text-white shadow-lg relative overflow-hidden">
-                  <div className="relative z-10">
-                    <p className="opacity-80 font-medium text-xs uppercase tracking-widest">
-                      {gpaDisplayMode === 'cumulative' ? 'GPA Tích lũy' : (displayedSemesterGpa ? displayedSemesterGpa.name : 'Chọn học kỳ')}
-                    </p>
-                    <div className="text-6xl font-black mt-1 tracking-tighter">
-                      {gpaDisplayMode === 'cumulative' 
-                        ? result.gpa4 
-                        : (displayedSemesterGpa ? displayedSemesterGpa.semesterGpa4.toFixed(2) : '0.00')}
+                    {/* MAIN ADVANCED GRID */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                         {/* COL 1: GPA Display Logic */}
+                         <div className="space-y-4">
+                            {!isScholarshipMode && (
+                                <div className="space-y-4">
+                                    <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Chế độ xem</h4>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setGpaDisplayMode('cumulative')}
+                                            className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                                                gpaDisplayMode === 'cumulative'
+                                                    ? 'bg-primary text-white shadow-md'
+                                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                            }`}
+                                        >
+                                            Tích lũy
+                                        </button>
+                                        <button
+                                            onClick={() => setGpaDisplayMode('semester')}
+                                            className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                                                gpaDisplayMode === 'semester'
+                                                    ? 'bg-primary text-white shadow-md'
+                                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                            }`}
+                                        >
+                                            Học kỳ
+                                        </button>
+                                    </div>
+                                    
+                                    {gpaDisplayMode === 'semester' && (
+                                        <select
+                                            value={selectedSemesterId || ''}
+                                            onChange={(e) => setSelectedSemesterId(parseInt(e.target.value))}
+                                            className="w-full px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-600 outline-none focus:ring-2 focus:ring-primary"
+                                        >
+                                            <option value="">Chọn học kỳ</option>
+                                            {semesterGpas.map((sem) => (
+                                                <option key={sem.id} value={sem.id}>
+                                                    {sem.name} {sem.totalCredits > 0 ? `(GPA: ${sem.semesterGpa4.toFixed(2)})` : '(Chưa có điểm)'}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
+
+                                    {/* Mini Display Card */}
+                                    <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700 text-center">
+                                         <p className="text-xs text-gray-500 uppercase font-bold">
+                                             {gpaDisplayMode === 'cumulative' ? 'GPA Tích lũy' : (displayedSemesterGpa ? displayedSemesterGpa.name : 'Chọn học kỳ')}
+                                         </p>
+                                         <p className="text-3xl font-black text-gray-800 dark:text-white my-1">
+                                             {gpaDisplayMode === 'cumulative' 
+                                                ? result.gpa4 
+                                                : (displayedSemesterGpa ? displayedSemesterGpa.semesterGpa4.toFixed(2) : '0.00')}
+                                         </p>
+                                         <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${gpaDisplayMode === 'cumulative' ? classification.bg : 'bg-gray-200'} ${gpaDisplayMode === 'cumulative' ? classification.color : 'text-gray-600'}`}>
+                                              {gpaDisplayMode === 'cumulative' 
+                                                ? classification.label 
+                                                : (displayedSemesterGpa ? getClassification(displayedSemesterGpa.semesterGpa4).label : 'N/A')}
+                                         </span>
+                                    </div>
+                                </div>
+                            )}
+                         </div>
+
+                         {/* COL 2: Strategy & Scenarios */}
+                         <div className="space-y-4">
+                            {!isScholarshipMode && targetGpa && strategyData.strategy?.feasibility && (
+                                <div className={`p-4 rounded-xl border ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).border}`}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-xs font-bold uppercase text-gray-500 flex items-center gap-1">
+                                            <Target size={14} /> Mục tiêu {targetGpa}
+                                        </p>
+                                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).text}`}>
+                                            {getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).label}
+                                        </span>
+                                    </div>
+                                    {result.prediction4 && result.prediction4 <= 4.0 ? (
+                                        <div>
+                                            <p className="text-sm font-bold">Cần đạt: <span className="text-purple-600">{result.prediction4.toFixed(2)}</span> / 4.0</p>
+                                            <p className="text-xs text-gray-500 mt-1">~ {result.prediction10} (thang 10)</p>
+                                            <p className="text-xs mt-2 italic opacity-80">{strategyData.strategy.feasibility.feasibilityMessage}</p>
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs font-bold text-red-500">Không khả thi</p>
+                                    )}
+                                </div>
+                            )}
+
+                            {!isScholarshipMode && strategyData.scenarios && (
+                                <div className="space-y-2">
+                                    <p className="text-xs font-bold uppercase text-gray-400">Kịch bản điểm số</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="p-2 bg-green-50 rounded border border-green-100">
+                                            <p className="text-[10px] font-bold text-green-700">An toàn</p>
+                                            <p className="text-sm font-black text-green-800">{strategyData.scenarios.safe.requiredScore}</p>
+                                        </div>
+                                        <div className="p-2 bg-blue-50 rounded border border-blue-100">
+                                            <p className="text-[10px] font-bold text-blue-700">Mục tiêu</p>
+                                            <p className="text-sm font-black text-blue-800">{strategyData.scenarios.balanced.requiredScore}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                         </div>
+
+                         {/* COL 3: Critical & Stats */}
+                         <div className="space-y-4">
+                             {!isScholarshipMode && strategyData.criticalSubject && (
+                                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-700">
+                                    <p className="text-xs font-bold uppercase text-amber-600 flex items-center gap-1 mb-1">
+                                        <Star size={14} /> Môn trọng điểm
+                                    </p>
+                                    <p className="font-bold text-gray-800 dark:text-white text-sm">{strategyData.criticalSubject.subjectName}</p>
+                                    <p className="text-xs text-amber-700 mt-1 italic">{strategyData.criticalSubject.suggestion}</p>
+                                </div>
+                             )}
+
+                             <div className="space-y-2">
+                                 <p className="text-xs font-bold uppercase text-gray-400">Thống kê</p>
+                                 <div className="grid grid-cols-2 gap-2">
+                                     <div className="p-2 bg-gray-50 rounded border border-gray-100">
+                                         <p className="text-[10px] text-gray-500">GPA (10)</p>
+                                         <p className="font-bold">{result.gpa10}</p>
+                                     </div>
+                                     <div className="p-2 bg-gray-50 rounded border border-gray-100">
+                                         <p className="text-[10px] text-gray-500">Đã đạt</p>
+                                         <p className="font-bold">{result.passedCredits} TC</p>
+                                     </div>
+                                 </div>
+                             </div>
+                         </div>
                     </div>
-                    {/* XẾP LOẠI HỌC LỰC */}
-                    <div
-                      className={`inline-block mt-2 px-3 py-1 rounded-lg font-bold text-sm bg-white/20 backdrop-blur-md border border-white/30`}
-                    >
-                      {gpaDisplayMode === 'cumulative' 
-                        ? classification.label 
-                        : (displayedSemesterGpa ? getClassification(displayedSemesterGpa.semesterGpa4).label : 'N/A')}
-                    </div>
-                    {gpaDisplayMode === 'semester' && displayedSemesterGpa && (
-                      <p className="text-xs mt-2 opacity-75">
-                        {displayedSemesterGpa.totalCredits} tín chỉ
-                      </p>
+
+                    {/* GPA MAP */}
+                    {(isScholarshipMode || targetGpa || survivalMode.activeSubjectId) && gpaMapData && (
+                        <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
+                            <GpaMapCard mapData={gpaMapData} />
+                        </div>
                     )}
-                  </div>
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
+
+                    {/* ACTION STEPS (Reused from Strategy Panel) */}
+                    {strategyData.strategy && (
+                        <div className="pt-6 border-t border-gray-100 dark:border-gray-700">
+                             <div 
+                                className="flex items-center justify-between cursor-pointer mb-4"
+                                onClick={() => setShowStrategyPanel(!showStrategyPanel)}
+                              >
+                                <div>
+                                  <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                                    <Lightbulb className="text-yellow-500" size={20} />
+                                    Gợi ý hành động chi tiết
+                                  </h3>
+                                </div>
+                                <ChevronDown 
+                                  size={20} 
+                                  className={`text-gray-500 transition-transform ${showStrategyPanel ? 'rotate-180' : ''}`}
+                                />
+                              </div>
+
+                              {showStrategyPanel && (
+                                <div className="space-y-4 pl-2">
+                                  <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl">
+                                    <p className="text-gray-800 dark:text-gray-200 font-medium">
+                                      {strategyData.strategy.summary}
+                                    </p>
+                                  </div>
+
+                                  {strategyData.strategy.actionSteps.length > 0 && (
+                                    <ul className="space-y-2">
+                                      {strategyData.strategy.actionSteps.map((step, idx) => (
+                                        <li key={idx} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                                          <span className="font-bold text-primary dark:text-blue-400 mt-0.5">{idx + 1}.</span>
+                                          <span>{step}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                  
+                                  {strategyData.strategy.riskWarning && (
+                                    <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl">
+                                      <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase mb-1 flex items-center gap-1">
+                                        <AlertOctagon size={12} /> Lưu ý quan trọng
+                                      </p>
+                                      <p className="text-sm text-red-700 dark:text-red-400">
+                                        {strategyData.strategy.riskWarning}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                        </div>
+                    )}
+                    
+                    {/* PRIORITY LIST (Reused from Top Critical Subjects) */}
+                    {strategyData.topCriticalSubjects.length > 0 && (
+                        <div className="pt-6 border-t border-gray-100 dark:border-gray-700">
+                            <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2 mb-1">
+                                <BarChart3 className="text-purple-500" size={20} />
+                                Danh sách môn cần ưu tiên
+                            </h3>
+                            <div className="space-y-3 mt-4">
+                                {strategyData.topCriticalSubjects.map((sub, idx) => {
+                                  const isCritical = idx === 0;
+                                  const getPriorityLabel = (score, index) => {
+                                    if (index === 0) return { label: 'Ưu tiên cao', color: 'text-amber-600 dark:text-amber-400', stars: 3 };
+                                    if (index <= 2) return { label: 'Ưu tiên', color: 'text-purple-600 dark:text-purple-400', stars: 2 };
+                                    return { label: 'Theo dõi', color: 'text-gray-500 dark:text-gray-400', stars: 1 };
+                                  };
+                                  const priority = getPriorityLabel(sub.impactScore, idx);
+                                  return (
+                                    <div key={sub.id} className={`flex items-center justify-between p-3 rounded-lg border transition-all ${isCritical ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700' : 'bg-gray-50 dark:bg-gray-700 border-transparent'}`}>
+                                      <div className="flex items-center gap-3">
+                                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isCritical ? 'bg-amber-500 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'}`}>
+                                          {idx + 1}
+                                        </span>
+                                        <div>
+                                          <p className="font-bold text-gray-800 dark:text-white text-sm">{sub.subjectName}</p>
+                                          <p className="text-xs text-gray-500 dark:text-gray-400">{sub.credits} TC • {sub.isFull ? `Điểm hiện tại: ${sub.currentScore}/10` : 'Chưa có điểm'}</p>
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className={`text-xs font-bold flex items-center gap-1 justify-end ${priority.color}`}>
+                                          {[...Array(priority.stars)].map((_, i) => <Star key={i} size={10} fill="currentColor" />)}
+                                          <span className="ml-1">{priority.label}</span>
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 dark:text-gray-500 max-w-[150px] truncate">{sub.suggestion}</p>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
-              </div>
             )}
-
-            {/* GPA MAP - Chỉ hiển thị khi cần thiết */}
-            {(isScholarshipMode || targetGpa || survivalMode.activeSubjectId) && gpaMapData && (
-              <GpaMapCard mapData={gpaMapData} />
-            )}
-
-            {/* FEASIBILITY BADGE & PREDICTION - Đánh giá khả năng đạt mục tiêu */}
-            {!isScholarshipMode && targetGpa && strategyData.strategy?.feasibility && (
-              <div
-                className={`p-4 rounded-xl border ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).border}`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                    <Target size={14} /> Mục tiêu: GPA {targetGpa}
-                  </p>
-                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).text}`}>
-                    {getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).icon} {getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).label}
-                  </span>
-                </div>
-                
-                {result.prediction4 ? (
-                  result.prediction4 <= 4.0 ? (
-                    <div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 leading-tight">
-                        Bạn cần đạt điểm trung bình:
-                      </p>
-
-                      {/* Điểm hệ 4 */}
-                      <p className="text-xl font-black text-purple-600 dark:text-purple-400 mt-2">
-                        {result.prediction4.toFixed(2)}{" "}
-                        <span className="text-xs font-normal text-gray-400 dark:text-gray-500">
-                          / 4.0
-                        </span>
-                      </p>
-
-                      {/* Quy đổi hệ 10 */}
-                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Hay tương đương:</p>
-                        <p className="font-bold text-purple-800 dark:text-purple-300 text-sm flex items-center gap-1">
-                          ~ {result.prediction10} thang 10 (
-                          {result.predictionChar})
-                        </p>
-                      </div>
-
-                      {/* Feasibility Message */}
-                      <p className={`text-xs mt-3 p-2 rounded-lg ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).text}`}>
-                        💡 {strategyData.strategy.feasibility.feasibilityMessage}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-xs font-bold text-red-600 flex gap-1 items-center">
-                      <AlertTriangle size={14} /> Không thể đạt được với dữ liệu hiện tại!
-                    </div>
-                  )
-                ) : (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 italic">
-                    Nhập thêm môn...
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* SCENARIO CARDS - Các mức điểm cần đạt */}
-            {!isScholarshipMode && strategyData.scenarios && (
-              <div className="space-y-2">
-                <p className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                  <Layers size={14} /> Điểm trung bình cần đạt
-                </p>
-                <p className="text-[10px] text-gray-400 dark:text-gray-500 -mt-1 mb-2">
-                  (cho các môn chưa có điểm)
-                </p>
-                
-                {/* Safe Scenario */}
-                <div className={`p-3 rounded-lg border ${getFeasibilityColors(strategyData.scenarios.safe.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.scenarios.safe.feasibilityLevel).border}`}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold flex items-center gap-1">
-                      <Shield size={12} className="text-green-600" /> An toàn
-                    </span>
-                    <span className="text-sm font-black">{strategyData.scenarios.safe.requiredScore}<span className="text-[10px] font-normal text-gray-400">/10</span></span>
-                  </div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
-                    Đạt GPA {strategyData.scenarios.safe.targetGpa.toFixed(1)} (cao hơn mục tiêu)
-                  </p>
-                </div>
-
-                {/* Balanced Scenario */}
-                <div className={`p-3 rounded-lg border-2 ${getFeasibilityColors(strategyData.scenarios.balanced.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.scenarios.balanced.feasibilityLevel).border}`}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold flex items-center gap-1">
-                      <Target size={12} className="text-blue-600" /> Mục tiêu
-                    </span>
-                    <span className="text-sm font-black">{strategyData.scenarios.balanced.requiredScore}<span className="text-[10px] font-normal text-gray-400">/10</span></span>
-                  </div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
-                    Đạt GPA {strategyData.scenarios.balanced.targetGpa.toFixed(1)} (đúng mục tiêu)
-                  </p>
-                </div>
-
-                {/* Risky Scenario */}
-                <div className={`p-3 rounded-lg border ${getFeasibilityColors(strategyData.scenarios.risky.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.scenarios.risky.feasibilityLevel).border}`}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold flex items-center gap-1">
-                      <Zap size={12} className="text-orange-600" /> Tối thiểu
-                    </span>
-                    <span className="text-sm font-black">{strategyData.scenarios.risky.requiredScore}<span className="text-[10px] font-normal text-gray-400">/10</span></span>
-                  </div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
-                    Đạt GPA {strategyData.scenarios.risky.targetGpa.toFixed(1)} (thấp hơn mục tiêu)
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* CRITICAL SUBJECT - Môn cần ưu tiên */}
-            {!isScholarshipMode && strategyData.criticalSubject && (
-              <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-700">
-                <p className="text-xs font-bold uppercase text-amber-600 dark:text-amber-400 flex items-center gap-1 mb-2">
-                  <Star size={14} /> Môn cần ưu tiên
-                </p>
-                <p className="font-bold text-gray-800 dark:text-white text-sm">
-                  {strategyData.criticalSubject.subjectName}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {strategyData.criticalSubject.credits} tín chỉ • 
-                  <span className="text-amber-600 dark:text-amber-400 font-semibold">Ưu tiên: Cao</span>
-                </p>
-                <p className="text-xs text-amber-700 dark:text-amber-300 mt-2 italic">
-                  💡 {strategyData.criticalSubject.suggestion}
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-3 pt-2">
-              <p className="text-xs font-bold uppercase text-gray-400 dark:text-gray-500 flex items-center gap-1">
-                Thống kê chi tiết
-              </p>
-              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-xl">
-                <span className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase">
-                  GPA hệ 10
-                </span>
-                <span className="font-bold text-gray-800 dark:text-white text-lg">
-                  {result.gpa10}
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-xl">
-                <span className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase">
-                  Tổng tín chỉ
-                </span>
-                <span className="font-bold text-gray-800 dark:text-white">
-                  {result.totalCredits} <span className="text-xs font-normal text-gray-400">TC</span>
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                <span className="text-blue-600 dark:text-blue-400 text-xs font-bold uppercase">
-                  Tín chỉ chưa điểm
-                </span>
-                <span className="font-bold text-blue-700 dark:text-blue-400">
-                  {result.pendingCredits || 0} <span className="text-xs font-normal text-blue-400">TC</span>
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
-                <span className="text-green-600 dark:text-green-400 text-xs font-bold uppercase">
-                  Tín chỉ tích lũy
-                </span>
-                <span className="font-bold text-green-700 dark:text-green-400">
-                  {result.passedCredits} <span className="text-xs font-normal text-green-400">TC</span>
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
-
-      {/* STRATEGY PANEL - Gợi ý cụ thể */}
-      {strategyData.strategy && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mt-6">
-          <div 
-            className="flex items-center justify-between cursor-pointer"
-            onClick={() => setShowStrategyPanel(!showStrategyPanel)}
-          >
-            <div>
-              <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                <Lightbulb className="text-yellow-500" size={20} />
-                Gợi ý học tập
-              </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Các bước cụ thể để cải thiện GPA
-              </p>
-            </div>
-            <ChevronDown 
-              size={20} 
-              className={`text-gray-500 transition-transform ${showStrategyPanel ? 'rotate-180' : ''}`}
-            />
-          </div>
-
-          {showStrategyPanel && (
-            <div className="mt-4 space-y-4">
-              {/* Summary */}
-              <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl">
-                <p className="text-gray-800 dark:text-gray-200 font-medium">
-                  {strategyData.strategy.summary}
-                </p>
-              </div>
-
-              {/* Action Steps - Các bước cần làm */}
-              {strategyData.strategy.actionSteps.length > 0 && (
-                <div>
-                  <p className="text-sm font-bold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1">
-                    <BarChart3 size={14} /> Bạn nên làm gì tiếp theo
-                  </p>
-                  <ul className="space-y-2">
-                    {strategyData.strategy.actionSteps.map((step, idx) => (
-                      <li 
-                        key={idx}
-                        className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg"
-                      >
-                        <span className="font-bold text-primary dark:text-blue-400 mt-0.5">{idx + 1}.</span>
-                        <span>{step}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Risk Warning - Lưu ý quan trọng */}
-              {strategyData.strategy.riskWarning && (
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl">
-                  <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase mb-1 flex items-center gap-1">
-                    <AlertOctagon size={12} /> Lưu ý quan trọng
-                  </p>
-                  <p className="text-sm text-red-700 dark:text-red-400">
-                    {strategyData.strategy.riskWarning}
-                  </p>
-                </div>
-              )}
-
-              {/* Stats - Tổng quan */}
-              {strategyData.strategy.stats && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
-                  <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <p className="text-2xl font-black text-gray-800 dark:text-white">
-                      {strategyData.strategy.stats.completedCredits}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Tín chỉ đã hoàn thành</p>
-                  </div>
-                  <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <p className="text-2xl font-black text-blue-600 dark:text-blue-400">
-                      {strategyData.strategy.stats.pendingCredits}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Tín chỉ chưa có điểm</p>
-                  </div>
-                  <div className="text-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                    <p className="text-2xl font-black text-orange-600 dark:text-orange-400">
-                      {strategyData.strategy.stats.lowScoreCount}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Môn cần cải thiện</p>
-                  </div>
-                  <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                    <p className="text-2xl font-black text-purple-600 dark:text-purple-400">
-                      {strategyData.strategy.stats.neededScore || '-'}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Điểm TB cần đạt (thang 10)</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TOP CRITICAL SUBJECTS - Môn cần ưu tiên */}
-      {strategyData.topCriticalSubjects.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mt-6">
-          <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2 mb-1">
-            <BarChart3 className="text-purple-500" size={20} />
-            Môn học cần ưu tiên
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            Những môn này ảnh hưởng nhiều nhất đến GPA của bạn
-          </p>
-          <div className="space-y-3">
-            {strategyData.topCriticalSubjects.map((sub, idx) => {
-              const isCritical = idx === 0;
-              // Convert impact score to priority level
-              const getPriorityLabel = (score, index) => {
-                if (index === 0) return { label: 'Ưu tiên cao', color: 'text-amber-600 dark:text-amber-400', stars: 3 };
-                if (index <= 2) return { label: 'Ưu tiên', color: 'text-purple-600 dark:text-purple-400', stars: 2 };
-                return { label: 'Theo dõi', color: 'text-gray-500 dark:text-gray-400', stars: 1 };
-              };
-              const priority = getPriorityLabel(sub.impactScore, idx);
-              return (
-                <div 
-                  key={sub.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
-                    isCritical 
-                      ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700' 
-                      : 'bg-gray-50 dark:bg-gray-700 border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                      isCritical 
-                        ? 'bg-amber-500 text-white' 
-                        : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-                    }`}>
-                      {idx + 1}
-                    </span>
-                    <div>
-                      <p className="font-bold text-gray-800 dark:text-white text-sm">
-                        {sub.subjectName}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {sub.credits} TC • {sub.isFull ? `Điểm hiện tại: ${sub.currentScore}/10` : 'Chưa có điểm'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-xs font-bold flex items-center gap-1 justify-end ${priority.color}`}>
-                      {[...Array(priority.stars)].map((_, i) => (
-                        <Star key={i} size={10} fill="currentColor" />
-                      ))}
-                      <span className="ml-1">{priority.label}</span>
-                    </p>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 max-w-[150px] truncate">
-                      {sub.suggestion}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       <datalist id="subject-suggestions">
         {SUGGESTED_SUBJECTS.map((s, index) => (

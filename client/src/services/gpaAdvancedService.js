@@ -541,27 +541,59 @@ export function calculateGpaMapData({ currentGpa4, targetGpa, pendingCredits, to
     { gpa: 3.6, label: 'Xuất sắc' },
     { gpa: 3.2, label: 'Giỏi' },
     { gpa: 2.5, label: 'Khá' },
-    { gpa: 2.0, label: 'TB' },
   ];
 
-  const nearestMilestone = milestones.find((m) => currentGpa4 < m.gpa);
-  // Tìm mốc hiện tại: duyệt từ cao xuống thấp
-  let currentMilestone = null;
-  for (let i = 0; i < milestones.length; i++) {
-    if (currentGpa4 >= milestones[i].gpa) {
-      currentMilestone = milestones[i];
-      break;
-    }
-  }
+  // Map over milestones to calculate gap
+  const milestoneGaps = milestones.map(m => ({
+    ...m,
+    gap: roundGpa(m.gpa - currentGpa4),
+    achieved: currentGpa4 >= m.gpa,
+  }));
 
   return {
-    currentGpa4,
-    targetGpa,
-    progress: Math.min(progress, 100),
+    progress,
     projectedGpa,
     trend,
-    nearestMilestone,
-    currentMilestone,
-    gapToTarget: targetGpa > 0 ? roundGpa(targetGpa - currentGpa4) : 0,
+    milestoneGaps,
   };
 }
+
+/**
+ * Helper for Alert Priority
+ * Chọn 1 cảnh báo quan trọng nhất để hiển thị
+ */
+export const getPriorityAlert = (riskAlerts, scholarshipAlerts) => {
+  // Combine all alerts
+  let allAlerts = [...(riskAlerts || [])];
+  
+  // Add specific alerts based on conditions if they exist and are array
+  if (scholarshipAlerts && Array.isArray(scholarshipAlerts)) {
+      allAlerts = [...allAlerts, ...scholarshipAlerts];
+  } else if (scholarshipAlerts && typeof scholarshipAlerts === 'object') {
+     // Handle case where scholarshipAlerts is a single object or has nested structure if needed
+     // For now, assuming it might be passed as an array or ignored if not.
+     // If it's the `scholarshipInfo` object which has `alerts` property?
+     // Based on usage in GpaCalc.jsx: getPriorityAlert(riskAlerts, scholarshipInfo?.alerts)
+     // So it expects an array.
+  }
+
+  const priorityMap = {
+    'missing-data': 0,
+    'danger': 1,        // High Risk / Failing
+    'danger-warning': 2, // Borderline drop
+    'warning': 3,       // Medium Risk
+    'encouragement': 4, // Opportunity
+    'scholarship': 5,   // Scholarship info
+    'info': 6,
+    'success': 7
+  };
+  
+  if (allAlerts.length === 0) return null;
+
+  // Sort and take top 1
+  return allAlerts.sort((a, b) => {
+    const pA = priorityMap[a.type] !== undefined ? priorityMap[a.type] : 99;
+    const pB = priorityMap[b.type] !== undefined ? priorityMap[b.type] : 99;
+    return pA - pB;
+  })[0];
+};
