@@ -18,12 +18,20 @@ import {
   TrendingUp,
   TrendingDown,
   Zap,
-  Shield,
-  AlertOctagon,
-  Lightbulb,
+  BarChart,
+  Minus,
+  Info,
+  ArrowRight,
+  Sparkles,
+  School,
+  GraduationCap,
+  BookOpen,
+  Calendar,
+  Clock,
+  Unlock,
+  Lock,
+  Trophy,
   BarChart3,
-  Star,
-  Sliders,
 } from "lucide-react";
 import AuthModal from '../components/AuthModal';
 import {
@@ -813,7 +821,7 @@ const GpaCalc = () => {
                   </div>
                 </div>
                 <div className="h-10 w-10 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400">
-                  <BarChart size={20} />
+                  <BarChart3 size={20} />
                 </div>
               </div>
 
