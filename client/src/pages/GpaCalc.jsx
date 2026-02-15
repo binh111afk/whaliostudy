@@ -34,6 +34,7 @@ import {
   Sliders,
   Star,
   Lightbulb,
+  AlertOctagon,
 } from "lucide-react";
 import AuthModal from '../components/AuthModal';
 import {
