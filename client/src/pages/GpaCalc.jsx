@@ -1045,18 +1045,21 @@ const GpaCalc = () => {
                                           className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                                             sub.type === "major"
                                               ? "bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800"
-                                              : "bg-gray-50 text-gray-400 border-gray-100 dark:bg-gray-700 dark:text-gray-500 dark:border-gray-600 hover:bg-gray-100"
-                                          }`}
-                                        >
-                                          {sub.type === "major" ? (
-                                              <>
-                                                  <Zap size={10} className="fill-current" />
-                                                  CHUYÊN NGÀNH
-                                              </>
-                                          ) : (
-                                              "ĐẠI CƯƠNG"
-                                          )}
-                                        </button>
+                                            : "bg-teal-50 text-teal-600 border-teal-100 dark:bg-teal-900/20 dark:text-teal-300 dark:border-teal-800 hover:bg-teal-100"
+                                        }`}
+                                      >
+                                        {sub.type === "major" ? (
+                                            <>
+                                                <Zap size={10} className="fill-current" />
+                                                CHUYÊN NGÀNH
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Layers size={10} className="fill-current" />
+                                                ĐẠI CƯƠNG
+                                            </>
+                                        )}
+                                      </button>
                                     </div>
                                   </div>
                                 </div>
@@ -1064,7 +1067,7 @@ const GpaCalc = () => {
                                 {/* 2. CREDITS (Informational Pill) */}
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide hidden md:inline-block">Số TC</span>
-                                    <div className="relative">
+                                    <div className="relative group/credits">
                                       <input
                                         type="number"
                                         className="w-10 text-center bg-gray-50 dark:bg-gray-700/50 rounded-md border border-transparent hover:border-gray-200 dark:hover:border-gray-600 focus:bg-white focus:border-blue-200 dark:focus:border-blue-800 font-bold text-gray-600 dark:text-gray-300 outline-none text-sm py-1 transition-all"
@@ -1078,7 +1081,6 @@ const GpaCalc = () => {
                                           )
                                         }
                                       />
-                                      <span className="absolute right-0 top-0 -mr-3 text-xs text-gray-300 font-medium select-none hidden group-hover:block">TC</span>
                                     </div>
                                 </div>
 
@@ -1089,29 +1091,7 @@ const GpaCalc = () => {
                                       key={comp.id}
                                       className="flex items-center gap-3 text-sm group/comp relative pl-2 border-l-2 border-transparent hover:border-gray-200 transition-all"
                                     >
-                                      {/* Weight Pill */}
-                                      <div className="flex items-center relative w-12">
-                                          <input
-                                            type="number"
-                                            className="w-full text-right text-xs font-bold text-gray-500 dark:text-gray-400 bg-transparent outline-none focus:text-blue-600"
-                                            value={comp.weight}
-                                            onChange={(e) =>
-                                              updateComponent(
-                                                sem.id,
-                                                sub.id,
-                                                comp.id,
-                                                "weight",
-                                                e.target.value
-                                              )
-                                            }
-                                          />
-                                          <span className="text-[10px] text-gray-400 ml-0.5">%</span>
-                                      </div>
-
-                                      {/* Separator */}
-                                      <div className="h-4 w-px bg-gray-200 dark:bg-gray-700"></div>
-
-                                      {/* Score Input */}
+                                       {/* Score Input (Swapped: Now First) */}
                                       <div className="relative flex-1">
                                           <input
                                             type="number"
@@ -1134,11 +1114,26 @@ const GpaCalc = () => {
                                           />
                                       </div>
 
-                                      {/* Actions */}
-                                      {sub.components.length > 1 && (
-                                        <button
-                                          onClick={() =>
-                                            removeComponent(
+                                      {/* Separator */}
+                                      <div className="h-4 w-px bg-gray-200 dark:bg-gray-700"></div>
+
+                                      {/* Weight Pill (Swapped: Now Second) */}
+                                      <div className="flex items-center relative w-12 justify-end">
+                                          <input
+                                            type="number"
+                                            className="w-full text-right text-xs font-bold text-gray-500 dark:text-gray-400 bg-transparent outline-none focus:text-blue-600"
+                                            value={comp.weight}
+                                            onChange={(e) =>
+                                              updateComponent(
+                                                sem.id,
+                                                sub.id,
+                                                comp.id,
+                                                "weight",
+                                                e.target.value
+                                              )
+                                            }
+                                          />
+                                          <span className="text-[10px] text-gray-400 ml-0.5">%</span>
                                               sem.id,
                                               sub.id,
                                               comp.id
@@ -1150,15 +1145,14 @@ const GpaCalc = () => {
                                         </button>
                                       )}
                                       
-                                      {/* Mini visual indicator */}
-                                      {comp.score && (
-                                          <div className="absolute bottom-0 left-16 right-0 h-[2px] bg-gray-100 rounded-full overflow-hidden w-16 opacity-0 group-hover/comp:opacity-100 transition-opacity">
-                                              <div 
-                                                className={`h-full ${parseFloat(comp.score) >= 8.5 ? 'bg-green-400' : parseFloat(comp.score) >= 7 ? 'bg-blue-400' : parseFloat(comp.score) >= 5 ? 'bg-yellow-400' : 'bg-red-400'}`} 
-                                                style={{ width: `${parseFloat(comp.score) * 10}%` }}
-                                              ></div>
-                                          </div>
-                                      )}
+                                      <div 
+                                        className={`absolute bottom-0 left-0 right-16 h-[2px] bg-gray-100 rounded-full overflow-hidden opacity-0 group-hover/comp:opacity-100 transition-opacity`}
+                                      >
+                                          <div 
+                                            className={`h-full ${parseFloat(comp.score) >= 8.5 ? 'bg-green-400' : parseFloat(comp.score) >= 7 ? 'bg-blue-400' : parseFloat(comp.score) >= 5 ? 'bg-yellow-400' : 'bg-red-400'}`} 
+                                            style={{ width: `${parseFloat(comp.score) * 10}%` }}
+                                          ></div>
+                                      </div>
                                     </div>
                                   ))}
                                   
@@ -1177,7 +1171,7 @@ const GpaCalc = () => {
                                         isPassed 
                                         ? `bg-${gradeInfo.color.split('-')[1]}-50/50 border-${gradeInfo.color.split('-')[1]}-100` 
                                         : 'bg-red-50 border-red-100'
-                                    }`}>
+                                    } ${gradeInfo.char === 'A' ? 'ring-2 ring-green-100 shadow-md scale-105' : ''}`}>
                                       <div>
                                           <div className={`text-2xl font-black leading-none ${gradeInfo.color}`}>
                                             {finalScore10.toFixed(1)}
@@ -1237,26 +1231,27 @@ const GpaCalc = () => {
                                   )}
                                 </div>
                                 
-                                {/* 5. ACTIONS (Hover only) */}
-                                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {/* 5. ACTIONS (Always visible but subtle, no overlap) */}
+                                <div className="flex flex-col items-center justify-center gap-1 ml-4 border-l border-gray-100 dark:border-gray-700 pl-4">
                                   {isFull && (
                                     <button
                                       onClick={() => handleOpenSurvivalMode(sub.id, parseFloat(finalScore10))}
-                                      className={`p-1.5 rounded-lg transition-all ${
+                                      className={`p-2 rounded-lg transition-all ${
                                         survivalMode.activeSubjectId === sub.id
                                           ? 'bg-blue-100 text-blue-600'
                                           : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
                                       }`}
                                       title="Giả lập điểm (Survival Mode)"
                                     >
-                                      <Sliders size={14} />
+                                      <Sliders size={16} />
                                     </button>
                                   )}
                                   <button
                                     onClick={() => removeSubject(sem.id, sub.id)}
-                                    className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                                    className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                    title="Xóa môn học"
                                   >
-                                    <Trash2 size={14} />
+                                    <Trash2 size={16} />
                                   </button>
                                 </div>
 
