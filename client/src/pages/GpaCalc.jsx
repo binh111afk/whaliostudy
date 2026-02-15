@@ -1379,213 +1379,228 @@ const GpaCalc = () => {
               />
             </div>
 
+            {/* CONTROL BAR: Display Mode & Semester Selection */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-2 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+              <div className="flex items-center gap-2 px-2">
+                <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400">
+                  <Layers size={18} />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 font-bold uppercase">Chế độ xem</p>
+                  <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                    {gpaDisplayMode === 'cumulative' ? 'Tích lũy toàn khóa' : 'Chi tiết học kỳ'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* Semester Dropdown (Only in Semester Mode) */}
+                {gpaDisplayMode === 'semester' && (
+                  <div className="relative min-w-[180px]">
+                    <select
+                      value={selectedSemesterId || ''}
+                      onChange={(e) => setSelectedSemesterId(parseInt(e.target.value))}
+                      className="w-full pl-4 pr-10 py-2 rounded-xl text-sm font-bold bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white border-none outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
+                    >
+                      <option value="">Chọn học kỳ...</option>
+                      {semesterGpas.map((sem) => (
+                        <option key={sem.id} value={sem.id}>
+                          {sem.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                )}
+
+                <div className="flex bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl">
+                  <button
+                    onClick={() => setGpaDisplayMode('cumulative')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${gpaDisplayMode === 'cumulative'
+                      ? 'bg-white text-primary shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                      }`}
+                  >
+                    Tích lũy
+                  </button>
+                  <button
+                    onClick={() => setGpaDisplayMode('semester')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${gpaDisplayMode === 'semester'
+                      ? 'bg-white text-primary shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                      }`}
+                  >
+                    Học kỳ
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* MAIN ADVANCED GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* COL 1: GPA Display Logic */}
-              <div className="flex flex-col h-full">
-                {!isScholarshipMode && (
-                  <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm h-full flex flex-col">
-                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                      <Layers size={14} /> Chế độ hiển thị
-                    </h4>
-                    <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl mb-6">
-                      <button
-                        onClick={() => setGpaDisplayMode('cumulative')}
-                        className={`flex-1 px-3 py-2.5 rounded-lg text-xs font-bold transition-all ${gpaDisplayMode === 'cumulative'
-                          ? 'bg-white text-primary shadow-sm'
-                          : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                          }`}
-                      >
-                        Tích lũy
-                      </button>
-                      <button
-                        onClick={() => setGpaDisplayMode('semester')}
-                        className={`flex-1 px-3 py-2.5 rounded-lg text-xs font-bold transition-all ${gpaDisplayMode === 'semester'
-                          ? 'bg-white text-primary shadow-sm'
-                          : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                          }`}
-                      >
-                        Học kỳ
-                      </button>
-                    </div>
+              {/* COL 1: WHERE I AM (Current Status) */}
+              <div className="flex flex-col h-full bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gray-200 to-gray-100 dark:from-gray-700 dark:to-gray-800"></div>
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                  Hiện trạng
+                </h4>
 
-                    {gpaDisplayMode === 'semester' && (
-                      <div className="mb-6 relative">
-                        <select
-                          value={selectedSemesterId || ''}
-                          onChange={(e) => setSelectedSemesterId(parseInt(e.target.value))}
-                          className="w-full px-4 py-3 pr-10 rounded-xl text-sm font-bold bg-gray-50 dark:bg-gray-700/50 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-600 outline-none focus:ring-2 focus:ring-primary/20 appearance-none transition-all cursor-pointer hover:border-primary/50"
-                        >
-                          <option value="">Chọn học kỳ...</option>
-                          {semesterGpas.map((sem) => (
-                            <option key={sem.id} value={sem.id}>
-                              {sem.name}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                      </div>
+                <div className="flex flex-col items-center justify-center flex-1 py-4">
+                  <div className="relative mb-4">
+                    <Calculator size={40} className="text-indigo-600 dark:text-indigo-400 opacity-20" />
+                    <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800 ${gpaDisplayMode === 'cumulative' ? classification.bg.replace('bg-', 'bg-') : 'bg-gray-400'}`}></div>
+                  </div>
+
+                  <p className="text-sm font-bold text-gray-500 uppercase mb-2">
+                    {gpaDisplayMode === 'cumulative' ? 'GPA Tích lũy' : (displayedSemesterGpa?.name || 'Chưa chọn học kỳ')}
+                  </p>
+                  <span className="text-6xl font-black text-gray-800 dark:text-white tracking-tighter mb-4">
+                    {gpaDisplayMode === 'cumulative'
+                      ? result.gpa4
+                      : (displayedSemesterGpa ? displayedSemesterGpa.semesterGpa4.toFixed(2) : '0.00')}
+                  </span>
+
+                  <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wide border ${gpaDisplayMode === 'cumulative' ? classification.bg + ' ' + classification.color + ' ' + classification.border : 'bg-gray-100 text-gray-500'}`}>
+                    {gpaDisplayMode === 'cumulative'
+                      ? classification.label
+                      : (displayedSemesterGpa ? getClassification(displayedSemesterGpa.semesterGpa4).label : 'N/A')}
+                  </span>
+                </div>
+
+                <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700 w-full">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500">Tín chỉ hoàn thành</span>
+                    <span className="font-bold text-gray-800 dark:text-gray-200">{result.passedCredits} TC</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* COL 2: THE GAP (Target & Gap) - Highlighted */}
+              <div className="flex flex-col h-full space-y-4 lg:-mt-4 lg:mb-4">
+                {/* Visual Connector (Desktop only) */}
+                <div className="hidden lg:flex justify-center items-center h-8 text-gray-300">
+                  <ArrowRight size={20} className="rotate-90 lg:rotate-0 text-gray-300 dark:text-gray-600" />
+                </div>
+
+                {!isScholarshipMode && (
+                  <div className={`flex-1 p-6 rounded-3xl border-2 bg-white dark:bg-gray-800 shadow-xl transition-all relative overflow-hidden ${targetGpa
+                      ? (strategyData.strategy?.feasibility ? getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).border : 'border-indigo-100')
+                      : 'border-dashed border-gray-200 dark:border-gray-700'
+                    }`}>
+                    {targetGpa && strategyData.strategy?.feasibility && (
+                      <div className={`absolute top-0 left-0 w-full h-1.5 ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).bg.replace('bg-', 'bg-')}`}></div>
                     )}
 
-                    {/* Mini Display Card */}
-                    <div className="mt-auto p-5 bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 text-center relative overflow-hidden group/mini">
-                      <div className="absolute top-0 right-0 p-2 opacity-10 group-hover/mini:opacity-20 transition-opacity">
-                        <Calculator size={48} />
+                    <h4 className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+                      Mục tiêu & Khoảng cách
+                    </h4>
+
+                    {!targetGpa ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center opacity-60 min-h-[200px]">
+                        <Target size={32} className="text-gray-400 mb-3" />
+                        <p className="text-sm font-bold text-gray-500 dark:text-gray-400">Chưa có mục tiêu</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Nhập mục tiêu ở trên để xem phân tích</p>
                       </div>
-                      <p className="text-xs text-gray-400 uppercase font-bold tracking-wide">
-                        {gpaDisplayMode === 'cumulative' ? 'GPA Tích lũy' : (displayedSemesterGpa ? displayedSemesterGpa.name : 'Chọn học kỳ')}
-                      </p>
-                      <p className="text-4xl font-black text-gray-800 dark:text-white my-2 tracking-tight">
-                        {gpaDisplayMode === 'cumulative'
-                          ? result.gpa4
-                          : (displayedSemesterGpa ? displayedSemesterGpa.semesterGpa4.toFixed(2) : '0.00')}
-                      </p>
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${gpaDisplayMode === 'cumulative' ? 'bg-white border-gray-100 shadow-sm' : 'bg-gray-100 border-transparent'} ${gpaDisplayMode === 'cumulative' ? classification.color : 'text-gray-500'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${gpaDisplayMode === 'cumulative' ? classification.bg.replace('bg-', 'bg-') : 'bg-gray-400'}`}></span>
-                        {gpaDisplayMode === 'cumulative'
-                          ? classification.label
-                          : (displayedSemesterGpa ? getClassification(displayedSemesterGpa.semesterGpa4).label : 'N/A')}
-                      </span>
-                    </div>
+                    ) : (
+                      result.prediction4 && result.prediction4 <= 4.0 ? (
+                        <>
+                          <div className="flex items-center justify-between mb-8">
+                            <div className="text-left">
+                              <p className="text-xs font-bold text-gray-400 uppercase mb-1">Muốn đạt tích lũy</p>
+                              <div className="flex items-baseline gap-1">
+                                <Target size={16} className="text-gray-400 self-center" />
+                                <span className="text-3xl font-black text-gray-700 dark:text-gray-300">{targetGpa}</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className={`inline-flex flex-col items-end`}>
+                                <span className={`text-xs font-bold uppercase mb-1 ${strategyData.strategy.feasibility.feasibilityLevel === 'hard' ? 'text-red-500' :
+                                    strategyData.strategy.feasibility.feasibilityLevel === 'medium' ? 'text-orange-500' : 'text-green-500'
+                                  }`}>Độ khó</span>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${strategyData.strategy.feasibility.feasibilityLevel === 'hard' ? 'bg-red-50 text-red-600 border-red-100' :
+                                    strategyData.strategy.feasibility.feasibilityLevel === 'medium' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-green-50 text-green-600 border-green-100'
+                                  }`}>
+                                  {strategyData.strategy.feasibility.feasibilityLevel === 'hard' ? 'Thử thách' :
+                                    strategyData.strategy.feasibility.feasibilityLevel === 'medium' ? 'Trung bình' : 'Khả thi'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-700/50 dark:to-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 mb-6 relative overflow-hidden">
+                            <p className="text-xs font-bold text-gray-500 uppercase mb-2">Cần đạt kỳ này</p>
+                            <div className="flex items-baseline gap-2">
+                              <span className={`text-5xl font-black tracking-tight ${result.prediction4 > 3.6 ? 'text-red-600' :
+                                  result.prediction4 > 3.2 ? 'text-orange-600' :
+                                    result.prediction4 > 2.5 ? 'text-blue-600' : 'text-green-600'
+                                }`}>
+                                {result.prediction4.toFixed(2)}
+                              </span>
+                              <span className="text-sm font-bold text-gray-400">/ 4.0</span>
+                            </div>
+                          </div>
+
+                          <p className="text-xs text-center text-gray-500 leading-relaxed italic bg-gray-50 dark:bg-gray-700/30 p-2 rounded-xl border border-gray-100 dark:border-gray-700/50">
+                            "Chênh lệch <strong>{(result.prediction4 - result.gpa4).toFixed(2)}</strong> điểm so với mức hiện tại."
+                          </p>
+                        </>
+                      ) : (
+                        <div className="text-center py-10">
+                          <XCircle size={40} className="text-red-500 mx-auto mb-4" />
+                          <p className="font-bold text-red-600">Không khả thi</p>
+                          <p className="text-xs text-gray-500 mt-2">Dù đạt 4.0 cũng không đủ để kéo tích lũy lên {targetGpa}</p>
+                        </div>
+                      )
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* COL 2: Strategy & Scenarios */}
-              <div className="flex flex-col h-full space-y-4">
-                {!isScholarshipMode && targetGpa && strategyData.strategy?.feasibility && (
-                  <div className={`p-5 rounded-2xl border bg-white dark:bg-gray-800 shadow-sm transition-all ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).border}`}>
+              {/* COL 3: WHAT TO DO (Actions) */}
+              <div className="flex flex-col h-full bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 to-emerald-400"></div>
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+                  Chiến lược hành động
+                </h4>
 
-                    {result.prediction4 && result.prediction4 <= 4.0 ? (
-                      <>
-                        {/* Header: Secondary Info */}
-                        <div className="flex items-center justify-between mb-3 border-b border-dashed border-gray-100 dark:border-gray-700 pb-3">
-                          <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Mục tiêu tích lũy</span>
-                          <span className="text-sm font-black text-gray-700 dark:text-gray-300">{targetGpa}</span>
-                        </div>
-
-                        {/* Main: Primary Info */}
-                        <div className="mb-4">
-                          <div className="flex items-end gap-2 mb-1">
-                            <span className={`text-4xl font-black ${result.prediction4 > 3.6 ? 'text-red-500' :
-                                result.prediction4 > 3.2 ? 'text-orange-500' :
-                                  result.prediction4 > 2.5 ? 'text-blue-500' : 'text-green-500'
-                              }`}>
-                              {result.prediction4.toFixed(2)}
-                            </span>
-                            <span className="text-sm font-bold text-gray-400 mb-2">/ 4.0</span>
-                          </div>
-                          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">
-                            GPA cần đạt trong học kỳ này
-                          </p>
-                        </div>
-
-                        {/* Explanation Line */}
-                        <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-3 mb-4">
-                          <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                            Để đạt tích lũy <strong>{targetGpa}</strong>, bạn cần đạt trung bình <strong>{result.prediction4.toFixed(2)}</strong> cho {result.pendingCredits} tín chỉ còn lại.
-                          </p>
-                        </div>
-
-                        {/* Progress/Effort Bar */}
-                        <div className="space-y-1.5">
-                          <div className="flex justify-between text-[10px] font-bold uppercase text-gray-400">
-                            <span>Mức độ nỗ lực yêu cầu</span>
-                            <span className={`${result.prediction4 > 3.6 ? 'text-red-500' :
-                                result.prediction4 > 3.2 ? 'text-orange-500' :
-                                  result.prediction4 > 2.5 ? 'text-blue-500' : 'text-green-500'
-                              }`}>
-                              {strategyData.strategy.feasibility.feasibilityLevel === 'hard' ? 'Thử thách' :
-                                strategyData.strategy.feasibility.feasibilityLevel === 'medium' ? 'Trung bình' : 'Khả thi'}
-                            </span>
-                          </div>
-                          <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${result.prediction4 > 3.6 ? 'bg-red-500' :
-                                  result.prediction4 > 3.2 ? 'bg-orange-500' :
-                                    result.prediction4 > 2.5 ? 'bg-blue-500' : 'bg-green-500'
-                                }`}
-                              style={{ width: `${Math.min((result.prediction4 / 4) * 100, 100)}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-center py-6">
-                        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-3">
-                          <XCircle size={24} className="text-red-500" />
-                        </div>
-                        <p className="text-sm font-bold text-red-600 uppercase mb-1">Mục tiêu không khả thi</p>
-                        <p className="text-xs text-gray-500">Cần > 4.0 để đạt được mục tiêu {targetGpa}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {!isScholarshipMode && strategyData.scenarios && (
-                  <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex-1">
-                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                      <Sliders size={14} /> Kịch bản điểm số
-                    </h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-green-50/50 border border-green-100 hover:border-green-200 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                          <span className="text-xs font-bold text-green-700 uppercase">An toàn</span>
-                        </div>
-                        <span className="text-lg font-black text-green-800">{strategyData.scenarios.safe.requiredScore}</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-blue-50/50 border border-blue-100 hover:border-blue-200 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                          <span className="text-xs font-bold text-blue-700 uppercase">Cân bằng</span>
-                        </div>
-                        <span className="text-lg font-black text-blue-800">{strategyData.scenarios.balanced.requiredScore}</span>
-                      </div>
+                {/* Critical Subject Suggestion */}
+                {strategyData.criticalSubject ? (
+                  <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-800/30">
+                    <div className="flex items-center gap-2 mb-2 text-amber-700 dark:text-amber-500">
+                      <Star size={14} fill="currentColor" />
+                      <span className="text-[10px] font-bold uppercase">Môn trọng điểm</span>
                     </div>
-                  </div>
-                )}
-
-                {/* Placeholder when no Target GPA */}
-                {!isScholarshipMode && !targetGpa && (
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-5 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 h-full flex flex-col items-center justify-center text-center opacity-70 hover:opacity-100 transition-opacity min-h-[200px]">
-                    <div className="p-3 bg-white dark:bg-gray-700 rounded-full mb-3 shadow-sm">
-                      <Target size={24} className="text-gray-400" />
-                    </div>
-                    <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Chưa có mục tiêu</h4>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 max-w-[200px]">
-                      Nhập mục tiêu GPA (ví dụ: 3.2, 3.6) ở trên để xem mức độ khả thi & kịch bản điểm số.
+                    <p className="font-bold text-gray-800 dark:text-white text-sm mb-1">{strategyData.criticalSubject.subjectName}</p>
+                    <p className="text-xs text-amber-800 dark:text-amber-400 italic leading-relaxed opacity-80">
+                      "{strategyData.criticalSubject.suggestion}"
                     </p>
                   </div>
-                )}
-              </div>
-
-              {/* COL 3: Critical & Stats */}
-              <div className="flex flex-col h-full space-y-4">
-                {!isScholarshipMode && strategyData.criticalSubject && (
-                  <div className="p-5 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-2xl border border-amber-100 dark:border-amber-800/50 shadow-sm">
-                    <h4 className="text-xs font-bold text-amber-600/80 uppercase tracking-wider mb-3 flex items-center gap-2">
-                      <Star size={14} fill="currentColor" /> Môn trọng điểm
-                    </h4>
-                    <p className="font-bold text-gray-800 dark:text-white text-base leading-tight">{strategyData.criticalSubject.subjectName}</p>
-                    <div className="mt-3 pt-3 border-t border-amber-200/50">
-                      <p className="text-xs text-amber-800 dark:text-amber-400 font-medium italic leading-relaxed">"{strategyData.criticalSubject.suggestion}"</p>
-                    </div>
+                ) : (
+                  <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Chưa có gợi ý môn học</p>
                   </div>
                 )}
 
-                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex-1">
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Thống kê nhanh</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700/50">
-                      <p className="text-[10px] text-gray-400 font-bold uppercase">GPA Hệ 10</p>
-                      <p className="text-xl font-black text-gray-700 dark:text-gray-200 mt-1">{result.gpa10}</p>
+                {/* Scenarios */}
+                <div className="flex-1">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-3">Kịch bản thay thế</p>
+                  {strategyData.scenarios ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-green-50/50 dark:bg-green-900/10 border border-green-100 dark:border-green-800/30 hover:border-green-200 transition-colors group cursor-default">
+                        <span className="text-xs font-bold text-green-700 dark:text-green-400 uppercase group-hover:text-green-800 dark:group-hover:text-green-300">An toàn</span>
+                        <span className="text-sm font-black text-green-800 dark:text-green-300">{strategyData.scenarios.safe.requiredScore}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 hover:border-blue-200 transition-colors group cursor-default">
+                        <span className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase group-hover:text-blue-800 dark:group-hover:text-blue-300">Cân bằng</span>
+                        <span className="text-sm font-black text-blue-800 dark:text-blue-300">{strategyData.scenarios.balanced.requiredScore}</span>
+                      </div>
                     </div>
-                    <div className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700/50">
-                      <p className="text-[10px] text-gray-400 font-bold uppercase">Đã đạt</p>
-                      <p className="text-xl font-black text-gray-700 dark:text-gray-200 mt-1">{result.passedCredits} <span className="text-xs font-medium text-gray-400">TC</span></p>
-                    </div>
-                  </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 text-center italic mt-4">Nhập mục tiêu để xem kịch bản</p>
+                  )}
                 </div>
               </div>
             </div>
