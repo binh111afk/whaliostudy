@@ -240,8 +240,8 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
 
         alerts.push({
           type: 'danger-warning',
-          message: `🚨 GPA ${currentGpa4.toFixed(2)} đang SÁT MỐC ${currentMilestone.label} (${currentMilestone.gpa})! ${ungradedSubjects.length === 1 ? 'Môn' : 'Các môn'} ${subjectNames} dưới 7.0 điểm → GPA xuống ${projected_7.toFixed(2)} (${fallLabel})`,
-          action: `An toàn: ≥ ${safeScore10.toFixed(1)} điểm`,
+          message: `CẢNH BÁO: GPA ${currentGpa4.toFixed(2)} đang sát mốc ${currentMilestone.label} (${currentMilestone.gpa})! Nếu ${ungradedSubjects.length === 1 ? 'môn' : 'các môn'} ${subjectNames} dưới 7.0 điểm thì GPA sẽ xuống ${projected_7.toFixed(2)} (${fallLabel})`,
+          action: `An toàn: từ ${safeScore10.toFixed(1)} điểm trở lên`,
           severity: 'danger',
           icon: '🚨',
         });
@@ -265,25 +265,27 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
         return { ...s, gpa, milestone: milestone?.label || 'Yếu' };
       });
       
-      // Tìm kịch bản tốt nhất trong tầm với
+      // Tìm kịch bản tốt nhất và trung bình
       const bestScenario = predictions[0];
+      const midScenario = predictions[1];
       const worstScenario = predictions[2];
       
       if (primaryAlertCreated) {
         // Đã có cảnh báo nguy hiểm → hiển thị kịch bản tích cực
         alerts.push({
           type: 'optimistic-scenario',
-          message: `📊 Dự đoán: ${ungradedSubjects.length === 1 ? 'Môn' : 'Các môn'} ${subjectNames} đạt ${bestScenario.score} điểm → GPA ${bestScenario.gpa.toFixed(2)} (${bestScenario.milestone})`,
-          action: `Tốt nhất: ${bestScenario.score}+ điểm`,
+          message: `Dự đoán: ${ungradedSubjects.length === 1 ? 'Môn' : 'Các môn'} ${subjectNames} đạt ${bestScenario.score} điểm để đạt GPA ${bestScenario.gpa.toFixed(2)} (${bestScenario.milestone})`,
+          action: `${ungradedSubjects.length} môn (${totalUngradedCredits} tín chỉ) chưa hoàn thành`,
           severity: 'info',
           icon: '📊',
         });
       } else {
         // Chưa có cảnh báo nguy hiểm → hiển thị kịch bản đầy đủ
+        const avgScore = ((bestScenario.score + worstScenario.score) / 2).toFixed(1);
         alerts.push({
           type: 'scenario-prediction',
-          message: `📊 Dự đoán GPA: ${ungradedSubjects.length === 1 ? 'Môn' : 'Các môn'} ${subjectNames} ở ${bestScenario.score}đ → ${bestScenario.gpa.toFixed(2)} | ${worstScenario.score}đ → ${worstScenario.gpa.toFixed(2)}`,
-          action: `${ungradedSubjects.length} môn (${totalUngradedCredits} TC) chưa hoàn thành`,
+          message: `Dự đoán: ${ungradedSubjects.length === 1 ? 'Môn' : 'Các môn'} ${subjectNames} đạt trung bình ${avgScore} điểm sẽ có GPA ${midScenario.gpa.toFixed(2)} (${midScenario.milestone}). Đạt ${bestScenario.score} điểm sẽ có GPA ${bestScenario.gpa.toFixed(2)} (${bestScenario.milestone})`,
+          action: `${ungradedSubjects.length} môn (${totalUngradedCredits} tín chỉ) chưa hoàn thành`,
           severity: 'warning',
           icon: '📊',
         });
