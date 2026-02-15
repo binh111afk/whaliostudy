@@ -32,6 +32,8 @@ import {
   Trophy,
   BarChart3,
   Sliders,
+  Star,
+  Lightbulb,
 } from "lucide-react";
 import AuthModal from '../components/AuthModal';
 import {
