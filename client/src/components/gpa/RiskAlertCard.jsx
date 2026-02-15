@@ -3,13 +3,11 @@ import { AlertTriangle } from 'lucide-react';
 
 /**
  * RiskAlertCard - Compact card hiển thị tối đa 2 cảnh báo quan trọng
- * Chỉ hiển thị khi có cảnh báo và không phải info-only
+ * Hiển thị tất cả cảnh báo, kể cả info
  */
 const RiskAlertCard = ({ alerts = [], onAlertClick }) => {
-  // Lọc bỏ alerts loại 'safe' nếu chỉ có 1 alert
-  const displayAlerts = alerts.filter(a => 
-    a.severity !== 'info' || alerts.length === 1
-  );
+  // Hiển thị tất cả alerts
+  const displayAlerts = alerts;
 
   if (!displayAlerts || displayAlerts.length === 0) return null;
 

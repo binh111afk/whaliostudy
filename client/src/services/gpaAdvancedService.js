@@ -278,11 +278,12 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
   // === CẢNH BÁO VỀ CÁC MÔN CHƯA CÓ ĐIỂM (TỔNG QUÁT) ===
   if (alerts.length < 2 && ungradedSubjects.length > 0) {
     const totalUngradedCredits = ungradedSubjects.reduce((sum, s) => sum + s.credits, 0);
+    const firstUngradedSubject = ungradedSubjects[0];
     alerts.push({
       type: 'ungraded-info',
-      message: `💡 Còn ${ungradedSubjects.length} môn chưa có điểm (${totalUngradedCredits} tín chỉ). Tập trung hoàn thiện để dự đoán GPA chính xác hơn.`,
-      action: `Môn gần nhất: ${ungradedSubjects[0].name}`,
-      severity: 'info',
+      message: `💡 Còn ${ungradedSubjects.length} môn chưa có điểm (${totalUngradedCredits} tín chỉ). Tập trung hoàn thiện để dự đoán GPA chính xác hơn!`,
+      action: firstUngradedSubject.name ? `Môn: ${firstUngradedSubject.name}` : 'Hoàn thiện các môn',
+      severity: 'warning',
       icon: '💡',
     });
   }
