@@ -1455,35 +1455,68 @@ const GpaCalc = () => {
               <div className="flex flex-col h-full space-y-4">
                 {!isScholarshipMode && targetGpa && strategyData.strategy?.feasibility && (
                   <div className={`p-5 rounded-2xl border bg-white dark:bg-gray-800 shadow-sm transition-all ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).border}`}>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500">
-                          <Target size={16} />
-                        </div>
-                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Mục tiêu {targetGpa}</span>
-                      </div>
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).text}`}>
-                        {getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).label}
-                      </span>
-                    </div>
 
                     {result.prediction4 && result.prediction4 <= 4.0 ? (
-                      <div className="space-y-3">
-                        <div className="flex items-end gap-2">
-                          <span className="text-3xl font-black text-gray-800 dark:text-white">{result.prediction4.toFixed(2)}</span>
-                          <span className="text-sm font-medium text-gray-400 mb-1">/ 4.0</span>
+                      <>
+                        {/* Header: Secondary Info */}
+                        <div className="flex items-center justify-between mb-3 border-b border-dashed border-gray-100 dark:border-gray-700 pb-3">
+                          <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Mục tiêu tích lũy</span>
+                          <span className="text-sm font-black text-gray-700 dark:text-gray-300">{targetGpa}</span>
                         </div>
-                        <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-purple-500 rounded-full" style={{ width: `${(result.prediction4 / 4) * 100}%` }}></div>
+
+                        {/* Main: Primary Info */}
+                        <div className="mb-4">
+                          <div className="flex items-end gap-2 mb-1">
+                            <span className={`text-4xl font-black ${result.prediction4 > 3.6 ? 'text-red-500' :
+                                result.prediction4 > 3.2 ? 'text-orange-500' :
+                                  result.prediction4 > 2.5 ? 'text-blue-500' : 'text-green-500'
+                              }`}>
+                              {result.prediction4.toFixed(2)}
+                            </span>
+                            <span className="text-sm font-bold text-gray-400 mb-2">/ 4.0</span>
+                          </div>
+                          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                            GPA cần đạt trong học kỳ này
+                          </p>
                         </div>
-                        <p className="text-xs text-gray-500 leading-relaxed pl-2 border-l-2 border-purple-200">
-                          {strategyData.strategy.feasibility.feasibilityMessage}
-                        </p>
-                      </div>
+
+                        {/* Explanation Line */}
+                        <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-3 mb-4">
+                          <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                            Để đạt tích lũy <strong>{targetGpa}</strong>, bạn cần đạt trung bình <strong>{result.prediction4.toFixed(2)}</strong> cho {result.pendingCredits} tín chỉ còn lại.
+                          </p>
+                        </div>
+
+                        {/* Progress/Effort Bar */}
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[10px] font-bold uppercase text-gray-400">
+                            <span>Mức độ nỗ lực yêu cầu</span>
+                            <span className={`${result.prediction4 > 3.6 ? 'text-red-500' :
+                                result.prediction4 > 3.2 ? 'text-orange-500' :
+                                  result.prediction4 > 2.5 ? 'text-blue-500' : 'text-green-500'
+                              }`}>
+                              {strategyData.strategy.feasibility.feasibilityLevel === 'hard' ? 'Thử thách' :
+                                strategyData.strategy.feasibility.feasibilityLevel === 'medium' ? 'Trung bình' : 'Khả thi'}
+                            </span>
+                          </div>
+                          <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${result.prediction4 > 3.6 ? 'bg-red-500' :
+                                  result.prediction4 > 3.2 ? 'bg-orange-500' :
+                                    result.prediction4 > 2.5 ? 'bg-blue-500' : 'bg-green-500'
+                                }`}
+                              style={{ width: `${Math.min((result.prediction4 / 4) * 100, 100)}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </>
                     ) : (
-                      <div className="text-center py-4">
-                        <p className="text-sm font-bold text-red-500">Mục tiêu không khả thi</p>
-                        <p className="text-xs text-gray-400 mt-1">Cần > 4.0 để đạt được</p>
+                      <div className="text-center py-6">
+                        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-3">
+                          <XCircle size={24} className="text-red-500" />
+                        </div>
+                        <p className="text-sm font-bold text-red-600 uppercase mb-1">Mục tiêu không khả thi</p>
+                        <p className="text-xs text-gray-500">Cần > 4.0 để đạt được mục tiêu {targetGpa}</p>
                       </div>
                     )}
                   </div>
