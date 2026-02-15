@@ -209,20 +209,18 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
     const totalAllCredits = totalCredits + totalUngradedCredits;
     const subjectNames = ungradedSubjects.map(s => s.name || 'Chưa đặt tên').join(', ');
     
-    let alertCreated = false;
+    let primaryAlertCreated = false;
     
-    // === 1. ƯU TIÊN: CẢNH BÁO NGUY CƠ TỤT MỐC (QUAN TRỌNG NHẤT) ===
+    // === 1. CẢNH BÁO NGUY CƠ TỤT MỐC (ƯU TIÊN CAO NHẤT) ===
     if (currentMilestone) {
       const gapToCurrentMilestone = currentGpa4 - currentMilestone.gpa;
       
-      // Các mốc nguy hiểm: 3.2-3.29, 2.5-2.59, 2.0-2.09, 3.6-3.69
-      // Nếu GPA gần sát mốc (gap < 0.4) → NGUY HIỂM
+      // Ngưỡng nguy hiểm: GPA cách mốc < 0.4 (VD: 3.29 vs 3.2, 2.55 vs 2.5)
       if (gapToCurrentMilestone < 0.4) {
-        // Tính điểm tối thiểu cần đạt để không tụt xuống dưới mốc hiện tại
+        // Tính điểm an toàn để giữ mốc
         const minTotalPointCredit = currentMilestone.gpa * totalAllCredits;
         const neededPoint4ToMaintain = (minTotalPointCredit - totalPointCredit) / totalUngradedCredits;
         
-        // Quy đổi về điểm hệ 10 - điểm THẤP NHẤT để giữ mốc
         let safeScore10 = 0;
         for (let score = 10; score >= 0; score -= 0.1) {
           const p4 = getPoint4FromScore10(score);
@@ -232,84 +230,65 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
           }
         }
         
-        // Tính GPA nếu các môn chỉ đạt 7.0 điểm (mức trung bình)
-        const testScore = 7.0;
-        const testPoint4 = getPoint4FromScore10(testScore);
-        const projectedTotalPointCredit = totalPointCredit + (testPoint4 * totalUngradedCredits);
-        const projectedGpa = roundGpa(projectedTotalPointCredit / totalAllCredits);
+        // Dự đoán GPA nếu các môn đạt 7.0 điểm (TB khá)
+        const testPoint4_7 = getPoint4FromScore10(7.0);
+        const projected_7 = roundGpa((totalPointCredit + testPoint4_7 * totalUngradedCredits) / totalAllCredits);
         
-        // Xác định mốc sẽ rơi xuống
-        const fallToMilestone = academicMilestones.find(m => projectedGpa >= m.gpa && projectedGpa < currentMilestone.gpa);
-        const fallLabel = fallToMilestone ? fallToMilestone.label : (nextLowerMilestone ? nextLowerMilestone.label : 'thấp hơn');
+        // Xác định xếp loại sau khi giảm
+        const newMilestone = [...academicMilestones].reverse().find(m => projected_7 >= m.gpa);
+        const fallLabel = newMilestone ? newMilestone.label : 'Yếu';
 
         alerts.push({
           type: 'danger-warning',
-          message: `🚨 CẢNH BÁO: GPA của bạn là ${currentGpa4.toFixed(2)}, đang sát mốc ${currentMilestone.label} (${currentMilestone.gpa})! Nếu ${ungradedSubjects.length === 1 ? 'môn' : 'các môn'} ${subjectNames} dưới ${testScore.toFixed(1)} điểm thì GPA sẽ xuống ${projectedGpa.toFixed(2)} (${fallLabel})`,
-          action: `Giữ mốc ${currentMilestone.label}: ≥ ${safeScore10.toFixed(1)} điểm`,
+          message: `🚨 GPA ${currentGpa4.toFixed(2)} đang SÁT MỐC ${currentMilestone.label} (${currentMilestone.gpa})! ${ungradedSubjects.length === 1 ? 'Môn' : 'Các môn'} ${subjectNames} dưới 7.0 điểm → GPA xuống ${projected_7.toFixed(2)} (${fallLabel})`,
+          action: `An toàn: ≥ ${safeScore10.toFixed(1)} điểm`,
           severity: 'danger',
           icon: '🚨',
         });
-        alertCreated = true;
+        primaryAlertCreated = true;
       }
     }
     
-    // === 2. CẢNH BÁO DUY TRÌ PHONG ĐỘ (GPA Ở MỨC CAO) ===
-    if (!alertCreated && currentGpa4 >= 3.6) {
-      // GPA xuất sắc - cảnh báo duy trì
-      alerts.push({
-        type: 'maintain-excellence',
-        message: `🌟 Tuyệt vời! GPA của bạn ở mức Xuất sắc (${currentGpa4.toFixed(2)}). Hãy duy trì phong độ này!`,
-        action: `Duy trì: GPA ≥ 3.6`,
-        severity: 'success',
-        icon: '🌟',
+    // === 2. DỰ ĐOÁN GPA THEO KỊCH BẢN (Luôn hiển thị nếu có môn chưa hoàn thành) ===
+    if (alerts.length < 2) {
+      // Tính GPA với 3 kịch bản: 8.5, 7.5, 6.5
+      const scenarios = [
+        { score: 8.5, label: 'Tốt' },
+        { score: 7.5, label: 'Khá' },
+        { score: 6.5, label: 'TB' }
+      ];
+      
+      const predictions = scenarios.map(s => {
+        const point4 = getPoint4FromScore10(s.score);
+        const gpa = roundGpa((totalPointCredit + point4 * totalUngradedCredits) / totalAllCredits);
+        const milestone = [...academicMilestones].reverse().find(m => gpa >= m.gpa);
+        return { ...s, gpa, milestone: milestone?.label || 'Yếu' };
       });
-      alertCreated = true;
-    } else if (!alertCreated && currentGpa4 >= 3.4 && currentGpa4 < 3.6) {
-      // GPA tốt - động viên
-      const targetTotalPointCredit = 3.6 * totalAllCredits;
-      const neededPoint4 = (targetTotalPointCredit - totalPointCredit) / totalUngradedCredits;
       
-      let requiredScore10 = 10.5; // Default không thể đạt
-      for (let score = 0; score <= 10; score += 0.1) {
-        const p4 = getPoint4FromScore10(score);
-        if (p4 >= neededPoint4) {
-          requiredScore10 = Math.ceil(score * 10) / 10;
-          break;
-        }
-      }
+      // Tìm kịch bản tốt nhất trong tầm với
+      const bestScenario = predictions[0];
+      const worstScenario = predictions[2];
       
-      if (requiredScore10 <= 10) {
+      if (primaryAlertCreated) {
+        // Đã có cảnh báo nguy hiểm → hiển thị kịch bản tích cực
         alerts.push({
-          type: 'good-performance',
-          message: `👍 GPA của bạn ở mức tốt (${currentGpa4.toFixed(2)}). ${ungradedSubjects.length === 1 ? 'Môn' : 'Các môn'} ${subjectNames} cần ≥${requiredScore10.toFixed(1)} điểm để đạt Xuất sắc (3.6)!`,
-          action: `Mục tiêu: ${requiredScore10.toFixed(1)}+ điểm`,
+          type: 'optimistic-scenario',
+          message: `📊 Dự đoán: ${ungradedSubjects.length === 1 ? 'Môn' : 'Các môn'} ${subjectNames} đạt ${bestScenario.score} điểm → GPA ${bestScenario.gpa.toFixed(2)} (${bestScenario.milestone})`,
+          action: `Tốt nhất: ${bestScenario.score}+ điểm`,
           severity: 'info',
-          icon: '👍',
+          icon: '📊',
         });
       } else {
+        // Chưa có cảnh báo nguy hiểm → hiển thị kịch bản đầy đủ
         alerts.push({
-          type: 'good-performance',
-          message: `👍 GPA của bạn ở mức tốt (${currentGpa4.toFixed(2)}). Tiếp tục giữ phong độ!`,
-          action: `Duy trì GPA ≥ ${currentGpa4.toFixed(1)}`,
-          severity: 'success',
-          icon: '👍',
+          type: 'scenario-prediction',
+          message: `📊 Dự đoán GPA: ${ungradedSubjects.length === 1 ? 'Môn' : 'Các môn'} ${subjectNames} ở ${bestScenario.score}đ → ${bestScenario.gpa.toFixed(2)} | ${worstScenario.score}đ → ${worstScenario.gpa.toFixed(2)}`,
+          action: `${ungradedSubjects.length} môn (${totalUngradedCredits} TC) chưa hoàn thành`,
+          severity: 'warning',
+          icon: '📊',
         });
       }
-      alertCreated = true;
     }
-  }
-
-  // === CẢNH BÁO VỀ CÁC MÔN CHƯA CÓ ĐIỂM (TỔNG QUÁT) ===
-  if (alerts.length < 2 && ungradedSubjects.length > 0) {
-    const totalUngradedCredits = ungradedSubjects.reduce((sum, s) => sum + s.credits, 0);
-    const firstUngradedSubject = ungradedSubjects[0];
-    alerts.push({
-      type: 'ungraded-info',
-      message: `💡 Còn ${ungradedSubjects.length} môn chưa có điểm (${totalUngradedCredits} tín chỉ). Tập trung hoàn thiện để dự đoán GPA chính xác hơn!`,
-      action: firstUngradedSubject.name ? `Môn: ${firstUngradedSubject.name}` : 'Hoàn thiện các môn',
-      severity: 'warning',
-      icon: '💡',
-    });
   }
 
   // Cảnh báo môn điểm thấp (chỉ thêm nếu chưa đủ 2 cảnh báo)
@@ -330,7 +309,7 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
   }
 
   // Sắp xếp theo severity và trả về tối đa 2
-  const severityOrder = { danger: 0, warning: 1, info: 2 };
+  const severityOrder = { danger: 0, warning: 1, info: 2, success: 3 };
   return alerts
     .sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity])
     .slice(0, 2);
