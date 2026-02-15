@@ -1511,6 +1511,19 @@ const GpaCalc = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Placeholder when no Target GPA */}
+                {!isScholarshipMode && !targetGpa && (
+                  <div className="bg-gray-50 dark:bg-gray-800/50 p-5 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 h-full flex flex-col items-center justify-center text-center opacity-70 hover:opacity-100 transition-opacity min-h-[200px]">
+                    <div className="p-3 bg-white dark:bg-gray-700 rounded-full mb-3 shadow-sm">
+                      <Target size={24} className="text-gray-400" />
+                    </div>
+                    <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Chưa có mục tiêu</h4>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 max-w-[200px]">
+                      Nhập mục tiêu GPA (ví dụ: 3.2, 3.6) ở trên để xem mức độ khả thi & kịch bản điểm số.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* COL 3: Critical & Stats */}
