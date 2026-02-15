@@ -744,26 +744,25 @@ const GpaCalc = () => {
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
       {/* TẦNG 1: HERO OVERVIEW (Premium Academic Dashboard) */}
       <div className="mb-2">
-        <div className="relative overflow-hidden bg-white rounded-2xl border border-gray-200/60 shadow-sm p-10 md:p-12">
-          {/* Subtle radial glow behind GPA - very light */}
+        <div className="relative overflow-hidden bg-[#F7FAFF] rounded-3xl border border-blue-100/60 shadow-sm p-10 md:p-12">
           <div className="absolute left-1/4 top-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
           
           <div className="relative grid grid-cols-1 md:grid-cols-10 gap-10 items-center">
             {/* LEFT SIDE: GPA Focus (60% width) */}
             <div className="md:col-span-6 text-center md:text-left">
-              <div className="inline-block mb-2 px-3 py-1 rounded-full bg-gray-50 border border-gray-100">
+              <div className="mb-2">
                 <span className="text-xs font-semibold tracking-wider uppercase text-gray-500">GPA Tích lũy</span>
               </div>
               
               {/* GPA - True Center */}
               <div className="flex flex-col md:flex-row items-center md:items-end gap-4 justify-center md:justify-start">
-                <h1 className="text-8xl md:text-9xl font-black tracking-tight bg-gradient-to-br from-blue-600 to-blue-700 bg-clip-text text-transparent">
+                <h1 className="text-8xl md:text-9xl font-black tracking-tight text-blue-700">
                   {result.gpa4}
                 </h1>
                 
                 {/* Classification Badge - Small & Subtle */}
                 <div className="mb-3">
-                  <span className="inline-block px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100/50">
+                  <span className="inline-block px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-blue-700 border border-blue-100">
                     {classification.label}
                   </span>
                 </div>
@@ -771,12 +770,12 @@ const GpaCalc = () => {
 
               {/* Momentum - Small & Below */}
               {result.momentum && (
-                <div className={`mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${
+                <div className={`mt-4 inline-flex items-center gap-2 text-sm font-medium ${
                   result.momentum.trend === 'up' 
-                    ? 'bg-green-50 text-green-700 border border-green-100' 
+                    ? 'text-green-600' 
                     : result.momentum.trend === 'down' 
-                    ? 'bg-red-50 text-red-700 border border-red-100' 
-                    : 'bg-gray-50 text-gray-600 border border-gray-100'
+                    ? 'text-red-600' 
+                    : 'text-gray-500'
                 }`}>
                   {result.momentum.trend === 'up' ? <TrendingUp size={14} /> : 
                    result.momentum.trend === 'down' ? <TrendingDown size={14} /> : 
@@ -784,7 +783,7 @@ const GpaCalc = () => {
                   <span className="font-semibold">
                     {result.momentum.delta > 0 ? '+' : ''}{result.momentum.delta}
                   </span>
-                  <span className="text-xs opacity-70">vs kỳ trước</span>
+                  <span className="text-xs text-gray-400">vs kỳ trước</span>
                 </div>
               )}
             </div>
@@ -810,7 +809,7 @@ const GpaCalc = () => {
               </div>
 
               {/* Divider */}
-              <div className="h-px bg-gray-100"></div>
+              <div className="h-px bg-blue-100/60"></div>
 
               {/* Target GPA */}
               <div>
@@ -827,14 +826,14 @@ const GpaCalc = () => {
                     min="0"
                     max="4"
                     placeholder="4.0"
-                    className="w-20 text-center bg-gray-50 px-3 py-2 rounded-lg font-semibold text-gray-800 outline-none border border-gray-200 focus:border-blue-500 focus:bg-white text-sm transition-all"
+                    className="w-20 text-center bg-white px-3 py-2 rounded-lg font-semibold text-gray-800 outline-none border border-blue-100 focus:border-blue-500 text-sm transition-all"
                     value={targetGpa}
                     onChange={(e) => setTargetGpa(e.target.value)}
                   />
                 </div>
                 {/* Target progress bar - only show if target is set */}
                 {targetGpa && parseFloat(targetGpa) > 0 && (
-                  <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-blue-100 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-blue-600 rounded-full transition-all duration-1000 ease-out"
                       style={{ width: `${Math.min(100, (parseFloat(result.gpa4) / parseFloat(targetGpa)) * 100)}%` }}
@@ -850,7 +849,7 @@ const GpaCalc = () => {
                 className={`w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${
                   isSaving
                     ? "bg-gray-200 cursor-not-allowed text-gray-400"
-                    : "bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] shadow-sm hover:shadow-md"
+                    : "bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] shadow-sm"
                 }`}
               >
                 <Save size={16} />
@@ -866,12 +865,12 @@ const GpaCalc = () => {
         <div className={`mx-1 mb-6 p-4 rounded-2xl border flex items-start gap-3 transition-all animate-in fade-in slide-in-from-top-4 duration-500 ${
           priorityAlert.severity === 'danger'
             ? 'bg-red-50/50 border-red-200/60 text-red-900'
-            : 'bg-blue-50/40 border-blue-200/50 text-blue-900'
+            : 'bg-blue-50/50 border-blue-100/80 text-blue-900'
         }`}>
           <div className={`p-2 rounded-lg shrink-0 ${
             priorityAlert.severity === 'danger'
               ? 'bg-red-100/80 text-red-600'
-              : 'bg-blue-100/60 text-blue-600'
+              : 'bg-blue-100/70 text-blue-600'
           }`}>
             {priorityAlert.icon ? <span className="text-base">{priorityAlert.icon}</span> : <AlertTriangle size={16} />}
           </div>
