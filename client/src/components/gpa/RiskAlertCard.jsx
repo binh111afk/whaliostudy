@@ -1,11 +1,13 @@
-import React from 'react';
-import { AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 
 /**
  * RiskAlertCard - Compact card hiển thị tối đa 2 cảnh báo quan trọng
- * Hiển thị tất cả cảnh báo, kể cả info
+ * Có thể ẩn/hiện để tiết kiệm không gian
  */
 const RiskAlertCard = ({ alerts = [], onAlertClick }) => {
+  const [isExpanded, setIsExpanded] = useState(true);
+  
   // Hiển thị tất cả alerts
   const displayAlerts = alerts;
 
@@ -37,7 +39,7 @@ const RiskAlertCard = ({ alerts = [], onAlertClick }) => {
           actionBg: 'bg-blue-100 dark:bg-blue-900/40',
           actionText: 'text-blue-800 dark:text-blue-300',
         };
-      default:
+      case 'success':
         return {
           bg: 'bg-green-50 dark:bg-green-900/20',
           border: 'border-green-200 dark:border-green-800',
@@ -45,19 +47,38 @@ const RiskAlertCard = ({ alerts = [], onAlertClick }) => {
           actionBg: 'bg-green-100 dark:bg-green-900/40',
           actionText: 'text-green-800 dark:text-green-300',
         };
+      default:
+        return {
+          bg: 'bg-gray-50 dark:bg-gray-900/20',
+          border: 'border-gray-200 dark:border-gray-700',
+          text: 'text-gray-700 dark:text-gray-400',
+          actionBg: 'bg-gray-100 dark:bg-gray-900/40',
+          actionText: 'text-gray-800 dark:text-gray-300',
+        };
     }
   };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-3">
-      <div className="flex items-center gap-2 mb-2">
-        <AlertTriangle size={14} className="text-amber-500" />
-        <span className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-          Cảnh báo
-        </span>
+      <div 
+        className="flex items-center justify-between cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-2">
+          <AlertTriangle size={14} className="text-amber-500" />
+          <span className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+            Cảnh báo học tập
+          </span>
+        </div>
+        {isExpanded ? (
+          <ChevronUp size={16} className="text-gray-400 transition-transform" />
+        ) : (
+          <ChevronDown size={16} className="text-gray-400 transition-transform" />
+        )}
       </div>
 
-      <div className="space-y-2">
+      {isExpanded && (
+        <div className="space-y-2 mt-2">
         {displayAlerts.map((alert, idx) => {
           const styles = getSeverityStyles(alert.severity);
           return (
@@ -77,7 +98,8 @@ const RiskAlertCard = ({ alerts = [], onAlertClick }) => {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
