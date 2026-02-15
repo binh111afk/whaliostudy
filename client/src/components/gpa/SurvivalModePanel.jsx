@@ -5,19 +5,19 @@ import { Sliders, RotateCcw, TrendingUp, TrendingDown, Minus, X } from 'lucide-r
  * SurvivalModePanel - Inline what-if simulation panel
  * Hiển thị bên dưới mỗi course item khi được chọn
  */
-const SurvivalModePanel = ({ 
-  subject, 
-  currentScore, 
+const SurvivalModePanel = ({
+  subject,
+  currentScore,
   simulatedScore,
-  onScoreChange, 
+  onScoreChange,
   onReset,
   onClose,
   simulationResult,
-  targetGpa 
+  targetGpa
 }) => {
   const minScore = 0;
   const maxScore = 10;
-  
+
   const gpaDelta = simulationResult?.gpaDelta || 0;
   const percentToTarget = simulationResult?.percentToTarget || 0;
   const newGpa = simulationResult?.newGpa4 || 0;
@@ -25,18 +25,18 @@ const SurvivalModePanel = ({
   return (
     <tr>
       <td colSpan={5} className="p-0">
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-t-2 border-blue-200 dark:border-blue-700 p-4">
+        <div className="bg-gradient-to-r from-blue-50/50 to-gray-50 dark:from-gray-800 dark:to-gray-800/50 border-t-2 border-[#134691] dark:border-[#134691]/80 p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Sliders size={14} className="text-blue-600 dark:text-blue-400" />
-              <span className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase">
+              <Sliders size={14} className="text-[#134691] dark:text-blue-400" />
+              <span className="text-xs font-bold text-[#134691] dark:text-blue-300 uppercase">
                 Survival Mode
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 - Thử thay đổi điểm {subject?.name || 'môn này'}
               </span>
             </div>
-            <button 
+            <button
               onClick={onClose}
               className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
             >
@@ -52,7 +52,7 @@ const SurvivalModePanel = ({
                   Điểm gốc: <span className="font-bold text-gray-700 dark:text-gray-300">{currentScore ?? '?'}</span>
                 </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Điểm mới: <span className="font-bold text-blue-700 dark:text-blue-300">{simulatedScore?.toFixed(1)}</span>
+                  Điểm mới: <span className="font-bold text-[#134691] dark:text-blue-300">{simulatedScore?.toFixed(1)}</span>
                 </span>
               </div>
               <input
@@ -62,7 +62,7 @@ const SurvivalModePanel = ({
                 step={0.1}
                 value={simulatedScore ?? currentScore ?? 5}
                 onChange={(e) => onScoreChange(parseFloat(e.target.value))}
-                className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#134691]"
               />
               <div className="flex justify-between text-[10px] text-gray-400 dark:text-gray-500 mt-1">
                 <span>0</span>
@@ -83,11 +83,10 @@ const SurvivalModePanel = ({
                   ) : (
                     <Minus size={12} className="text-gray-400" />
                   )}
-                  <span className={`text-sm font-black ${
-                    gpaDelta > 0 ? 'text-green-600 dark:text-green-400' : 
-                    gpaDelta < 0 ? 'text-red-600 dark:text-red-400' : 
-                    'text-gray-600 dark:text-gray-400'
-                  }`}>
+                  <span className={`text-sm font-black ${gpaDelta > 0 ? 'text-green-600 dark:text-green-400' :
+                      gpaDelta < 0 ? 'text-red-600 dark:text-red-400' :
+                        'text-gray-600 dark:text-gray-400'
+                    }`}>
                     {gpaDelta > 0 ? '+' : ''}{gpaDelta.toFixed(2)}
                   </span>
                 </div>
@@ -96,7 +95,7 @@ const SurvivalModePanel = ({
 
               {/* New GPA */}
               <div className="text-center px-3 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm min-w-[80px]">
-                <span className="text-sm font-black text-purple-600 dark:text-purple-400">
+                <span className="text-sm font-black text-[#134691] dark:text-blue-400">
                   {newGpa.toFixed(2)}
                 </span>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400">GPA mới</p>
@@ -105,11 +104,10 @@ const SurvivalModePanel = ({
               {/* Progress to Target */}
               {targetGpa > 0 && (
                 <div className="text-center px-3 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm min-w-[80px]">
-                  <span className={`text-sm font-black ${
-                    percentToTarget >= 100 ? 'text-green-600 dark:text-green-400' :
-                    percentToTarget >= 90 ? 'text-blue-600 dark:text-blue-400' :
-                    'text-orange-600 dark:text-orange-400'
-                  }`}>
+                  <span className={`text-sm font-black ${percentToTarget >= 100 ? 'text-green-600 dark:text-green-400' :
+                      percentToTarget >= 90 ? 'text-blue-600 dark:text-blue-400' :
+                        'text-orange-600 dark:text-orange-400'
+                    }`}>
                     {Math.min(percentToTarget, 100).toFixed(0)}%
                   </span>
                   <p className="text-[10px] text-gray-500 dark:text-gray-400">Mục tiêu</p>
@@ -119,7 +117,7 @@ const SurvivalModePanel = ({
               {/* Reset Button */}
               <button
                 onClick={onReset}
-                className="p-2 text-gray-500 hover:text-blue-600 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all"
+                className="p-2 text-gray-500 hover:text-[#134691] hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all"
                 title="Đặt lại điểm gốc"
               >
                 <RotateCcw size={16} />

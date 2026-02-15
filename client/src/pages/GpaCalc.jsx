@@ -526,10 +526,18 @@ const GpaCalc = () => {
 
   // Survival Mode handlers
   const handleOpenSurvivalMode = (subjectId, currentScore) => {
-    setSurvivalMode({
-      activeSubjectId: subjectId,
-      simulatedScore: currentScore ?? 5,
-    });
+    // Toggle: if clicking the same subject, close it
+    if (survivalMode.activeSubjectId === subjectId) {
+      setSurvivalMode({
+        activeSubjectId: null,
+        simulatedScore: null,
+      });
+    } else {
+      setSurvivalMode({
+        activeSubjectId: subjectId,
+        simulatedScore: currentScore ?? 5,
+      });
+    }
   };
 
   const handleCloseSurvivalMode = () => {
