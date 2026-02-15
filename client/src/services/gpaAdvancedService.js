@@ -218,7 +218,7 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
     
     let primaryAlertCreated = false;
     
-    // === 1. CẢNH BÁO NGUY CƠ TỤT MỐC (ƯU TIÊN CAO NHẤT) ===
+    // === 1. CẢNH BÁO NGUY CƠ TỤT MỐC VÀ ĐỘNG VIÊN VƯỢT MỐC ===
     if (currentMilestone) {
       const gapToCurrentMilestone = currentGpa4 - currentMilestone.gpa;
       
@@ -252,15 +252,61 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
 
         // CHỈ CẢNH BÁO NẾU THỰC SỰ TỤT MỐC (Xuất sắc→Giỏi, Giỏi→Khá, v.v...)
         if (fallLabel !== currentMilestone.label) {
+          // Tính điểm cần để vượt mốc (nếu có mốc cao hơn)
+          let encouragementMessage = '';
+          let encouragementAction = '';
+          
+          if (nextHigherMilestone) {
+            const neededPoint4ToUpgrade = (nextHigherMilestone.gpa * totalAllCredits - totalPointCredit) / totalUngradedCredits;
+            let upgradeScore10 = 0;
+            for (let score = 10; score >= 0; score -= 0.1) {
+              const p4 = getPoint4FromScore10(score);
+              if (p4 >= neededPoint4ToUpgrade) {
+                upgradeScore10 = Math.floor(score * 10) / 10;
+                break;
+              }
+            }
+            
+            encouragementMessage = `Để lên ${nextHigherMilestone.label}: cần trên ${upgradeScore10.toFixed(1)} điểm`;
+            encouragementAction = `Cơ hội: ${ungradedSubjects.length === 1 ? 'môn' : 'các môn'} ${subjectNames} trên ${upgradeScore10.toFixed(1)} điểm`;
+          }
+          
           alerts.push({
             type: 'danger-warning',
             message: `CẢNH BÁO: GPA ${currentGpa4.toFixed(2)} đang sát mốc ${currentMilestone.label} (${currentMilestone.gpa})! Nếu ${ungradedSubjects.length === 1 ? 'môn' : 'các môn'} ${subjectNames} dưới 7.0 điểm thì GPA sẽ xuống ${projected_7.toFixed(2)} (${fallLabel})`,
-            action: `An toàn: từ ${safeScore10.toFixed(1)} điểm trở lên`,
+            action: encouragementMessage || `An toàn: từ ${safeScore10.toFixed(1)} điểm trở lên`,
             severity: 'danger',
             icon: '🚨',
           });
           primaryAlertCreated = true;
         }
+      }
+      
+      // ĐỘNG VIÊN VƯỢT MỐC: Nếu GPA gần với mốc cao hơn (cách < 0.3)
+      if (nextHigherMilestone && (nextHigherMilestone.gpa - currentGpa4) < 0.3) {
+        const neededPoint4ToUpgrade = (nextHigherMilestone.gpa * totalAllCredits - totalPointCredit) / totalUngradedCredits;
+        
+        let upgradeScore10 = 0;
+        for (let score = 10; score >= 0; score -= 0.1) {
+          const p4 = getPoint4FromScore10(score);
+          if (p4 >= neededPoint4ToUpgrade) {
+            upgradeScore10 = Math.floor(score * 10) / 10;
+            break;
+          }
+        }
+        
+        // Tính GPA nếu đạt điểm upgrade
+        const upgradePoint4 = getPoint4FromScore10(upgradeScore10);
+        const projectedUpgrade = roundGpa((totalPointCredit + upgradePoint4 * totalUngradedCredits) / totalAllCredits);
+        
+        alerts.push({
+          type: 'encouragement',
+          message: `CƠ HỘI: GPA ${currentGpa4.toFixed(2)} gần mốc ${nextHigherMilestone.label} (${nextHigherMilestone.gpa})! Nếu ${ungradedSubjects.length === 1 ? 'môn' : 'các môn'} ${subjectNames} trên ${upgradeScore10.toFixed(1)} điểm thì GPA sẽ lên ${projectedUpgrade.toFixed(2)}`,
+          action: `Mục tiêu: ${ungradedSubjects.length === 1 ? 'môn' : 'các môn'} ${subjectNames} cần trên ${upgradeScore10.toFixed(1)} điểm`,
+          severity: 'success',
+          icon: '🎯',
+        });
+        primaryAlertCreated = true;
       }
     }
     
