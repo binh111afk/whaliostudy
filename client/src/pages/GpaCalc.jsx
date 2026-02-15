@@ -301,6 +301,9 @@ const GpaCalc = () => {
   // State for Layout
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
+  // Track unsaved changes
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
   // Load dữ liệu từ Server khi vào trang
   useEffect(() => {
     if (user) {
@@ -315,6 +318,11 @@ const GpaCalc = () => {
         .catch((err) => console.error("Lỗi tải GPA:", err));
     }
   }, []); // Chạy 1 lần khi mount
+
+  // Track unsaved changes whenever semesters or targetGpa changes
+  useEffect(() => {
+    setHasUnsavedChanges(true);
+  }, [semesters, targetGpa]);
 
   // Hàm Lưu dữ liệu lên Server
   const handleSaveGPA = async () => {
@@ -347,6 +355,7 @@ const GpaCalc = () => {
 
       if (data.success) {
         alert("✅ Đã lưu bảng điểm thành công!");
+        setHasUnsavedChanges(false); // Reset unsaved changes flag
       } else {
         alert("❌ Lỗi: " + data.message);
       }
@@ -1370,7 +1379,7 @@ const GpaCalc = () => {
             </div>
 
             {/* MAIN ADVANCED GRID */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* COL 1: GPA Display Logic */}
               <div className="flex flex-col h-full">
                 {!isScholarshipMode && (
@@ -1378,7 +1387,7 @@ const GpaCalc = () => {
                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                       <Layers size={14} /> Chế độ hiển thị
                     </h4>
-                    <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl mb-6">
+                    <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl mb-6">
                       <button
                         onClick={() => setGpaDisplayMode('cumulative')}
                         className={`flex-1 px-3 py-2.5 rounded-lg text-xs font-bold transition-all ${gpaDisplayMode === 'cumulative'
@@ -1664,6 +1673,35 @@ const GpaCalc = () => {
           window.location.reload();
         }}
       />
+
+      {/* Sticky Save Reminder Banner */}
+      {hasUnsavedChanges && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/30 dark:to-amber-900/30 border-t-2 border-orange-400 dark:border-orange-500 shadow-2xl animate-in slide-in-from-bottom-5 duration-300">
+          <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-800/50 flex items-center justify-center">
+                <AlertTriangle size={20} className="text-orange-600 dark:text-orange-400" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-orange-900 dark:text-orange-200">
+                  Bạn có thay đổi chưa lưu
+                </p>
+                <p className="text-xs text-orange-700 dark:text-orange-300">
+                  Hãy lưu dữ liệu trước khi rời khỏi trang
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleSaveGPA}
+              disabled={isSaving}
+              className="px-6 py-2.5 bg-gradient-to-r from-[#134691] to-blue-600 text-white font-bold text-sm rounded-xl hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Save size={16} />
+              {isSaving ? 'Đang lưu...' : 'Lưu ngay'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
