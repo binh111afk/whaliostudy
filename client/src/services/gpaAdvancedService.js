@@ -569,23 +569,21 @@ export const getPriorityAlert = (riskAlerts, scholarshipAlerts) => {
   // Add specific alerts based on conditions if they exist and are array
   if (scholarshipAlerts && Array.isArray(scholarshipAlerts)) {
       allAlerts = [...allAlerts, ...scholarshipAlerts];
-  } else if (scholarshipAlerts && typeof scholarshipAlerts === 'object') {
-     // Handle case where scholarshipAlerts is a single object or has nested structure if needed
-     // For now, assuming it might be passed as an array or ignored if not.
-     // If it's the `scholarshipInfo` object which has `alerts` property?
-     // Based on usage in GpaCalc.jsx: getPriorityAlert(riskAlerts, scholarshipInfo?.alerts)
-     // So it expects an array.
   }
 
   const priorityMap = {
     'missing-data': 0,
-    'danger': 1,        // High Risk / Failing
-    'danger-warning': 2, // Borderline drop
+    'failing': 1,       // Failing subjects
+    'danger': 1,        // General Danger
+    'danger-warning': 2, // Borderline drop (High risk rớt mốc)
     'warning': 3,       // Medium Risk
-    'encouragement': 4, // Opportunity
-    'scholarship': 5,   // Scholarship info
-    'info': 6,
-    'success': 7
+    'scholarship': 4,   // Scholarship sensitivity
+    'positive-momentum': 5, // GPA tăng mạnh
+    'encouragement': 6, // Opportunity
+    'info': 7,
+    'success': 8,
+    'optimistic-scenario': 9,
+    'scenario-prediction': 10
   };
   
   if (allAlerts.length === 0) return null;
@@ -597,3 +595,61 @@ export const getPriorityAlert = (riskAlerts, scholarshipAlerts) => {
     return pA - pB;
   })[0];
 };
+
+/**
+ * Tính toán Momentum (Đà tăng trưởng GPA)
+ * So sánh GPA tích lũy hiện tại với GPA tích lũy của học kỳ trước đó (đã có điểm)
+ */
+export function calculateGpaMomentum({ semesters }) {
+  // 1. Lọc ra các học kỳ có dữ liệu điểm
+  const validSemesters = semesters.filter(s => 
+    s.subjects.some(sub => {
+      const status = calculateSubjectStatus(sub.components);
+      return status.isFull && status.finalScore10 !== null;
+    })
+  );
+  
+  if (validSemesters.length < 2) return null; // Cần ít nhất 2 kỳ để so sánh
+  
+  // Helper tính GPA tích lũy cho danh sách học kỳ
+  const calculateCumulative = (semList) => {
+    let totalPoint = 0;
+    let totalCredits = 0;
+    
+    semList.forEach(sem => {
+      sem.subjects.forEach(sub => {
+        const status = calculateSubjectStatus(sub.components);
+        const credits = parseFloat(sub.credits) || 0;
+        
+        if (status.isFull && status.finalScore10 !== null) {
+          const point4 = getPoint4FromScore10(parseFloat(status.finalScore10));
+          totalPoint += point4 * credits;
+          totalCredits += credits;
+        }
+      });
+    });
+    
+    return totalCredits > 0 ? roundGpa(totalPoint / totalCredits) : 0;
+  };
+
+  // 2. Tính GPA hiện tại (Tất cả học kỳ)
+  const currentGpa = calculateCumulative(validSemesters);
+  
+  // 3. Tính GPA quá khứ (Trừ học kỳ gần nhất)
+  const previousSemesters = validSemesters.slice(0, -1);
+  const previousGpa = calculateCumulative(previousSemesters);
+  
+  const delta = roundGpa(currentGpa - previousGpa);
+  
+  // Xác định xu hướng
+  let trend = 'stable';
+  if (delta >= 0.05) trend = 'up';
+  else if (delta <= -0.05) trend = 'down';
+  
+  return {
+    currentGpa,
+    previousGpa,
+    delta,
+    trend
+  };
+}

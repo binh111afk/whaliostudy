@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   FolderPlus,
   TrendingUp,
+  TrendingDown,
   Zap,
   Shield,
   AlertOctagon,
@@ -240,6 +241,7 @@ const GpaCalc = () => {
     prediction10: null,
     predictionChar: null,
     pendingCredits: 0,
+    momentum: null,
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -403,6 +405,9 @@ const GpaCalc = () => {
       }
     }
 
+    // --- MOMENTUM CALCULATION ---
+    const momentum = calculateGpaMomentum({ semesters });
+
     setResult({
       gpa4,
       gpa10: totalCredits ? (totalScoreCredit / totalCredits).toFixed(2) : 0,
@@ -412,6 +417,7 @@ const GpaCalc = () => {
       prediction10,
       predictionChar,
       pendingCredits,
+      momentum,
     });
 
     // --- STRATEGY ANALYSIS ---
@@ -453,6 +459,18 @@ const GpaCalc = () => {
       targetGpa: targetNum,
       totalCredits,
     });
+
+    // Momentum Alert (Priority 5)
+    if (momentum && momentum.trend === 'up' && momentum.delta >= 0.05) {
+       alerts.push({
+         type: 'positive-momentum',
+         message: `Phong độ ấn tượng! GPA tăng +${momentum.delta} so với kỳ trước.`,
+         action: 'Giữ vững đà này nhé! 🚀',
+         severity: 'success',
+         icon: '📈'
+       });
+    }
+
     setRiskAlerts(alerts);
 
     // GPA Map Data
@@ -723,80 +741,150 @@ const GpaCalc = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
-      {/* TẦNG 1: OVERVIEW (Gọn - 1 thẻ duy nhất) */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            {/* Left: Title & Save */}
-            <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-xl text-primary dark:text-blue-400">
-                    <Calculator size={24} />
+      {/* TẦNG 1: HERO OVERVIEW (Premium Style) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-2">
+        {/* 1. Hero GPA Card */}
+        <div className="md:col-span-2 relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-900 rounded-3xl shadow-2xl p-8 text-white group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl transition-all duration-700 group-hover:bg-white/10"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full -ml-12 -mb-12 blur-2xl transition-all duration-700 group-hover:bg-purple-500/20"></div>
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8 h-full">
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm shadow-inner">
+                  <Award size={20} className="text-yellow-300" />
                 </div>
-                <div>
-                    <h1 className="text-xl font-black text-gray-800 dark:text-white">Hồ sơ học tập</h1>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Quản lý GPA & Lộ trình</p>
+                <span className="text-blue-100 font-semibold tracking-wide uppercase text-xs">GPA Tích lũy</span>
+              </div>
+              <div className="flex items-baseline gap-5">
+                <h1 className="text-7xl font-black tracking-tighter leading-none drop-shadow-lg">
+                  {result.gpa4}
+                </h1>
+                <div className="flex flex-col items-start gap-2">
+                   <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-white/20 backdrop-blur-md border border-white/10 shadow-lg ${
+                      classification.label === 'Xuất sắc' ? 'text-yellow-300 shadow-[0_0_15px_rgba(253,224,71,0.3)]' : 
+                      classification.label === 'Giỏi' ? 'text-blue-200' : 'text-white'
+                   }`}>
+                    {classification.label}
+                  </span>
+                  {/* Momentum Display */}
+                  {result.momentum && (
+                    <div className={`flex items-center gap-1.5 text-sm font-medium px-2 py-1 rounded-lg bg-black/20 backdrop-blur-sm ${
+                      result.momentum.trend === 'up' ? 'text-green-300' : 
+                      result.momentum.trend === 'down' ? 'text-red-300' : 'text-gray-300'
+                    }`}>
+                      {result.momentum.trend === 'up' ? <TrendingUp size={14} /> : 
+                       result.momentum.trend === 'down' ? <TrendingDown size={14} /> : <div className="w-3 h-0.5 bg-gray-300"></div>}
+                      <span>
+                        {result.momentum.delta > 0 ? '+' : ''}{result.momentum.delta}
+                      </span>
+                      <span className="text-[10px] opacity-70 uppercase tracking-wide">vs kỳ trước</span>
+                    </div>
+                  )}
                 </div>
+              </div>
             </div>
 
-            {/* Middle: Key Metrics Grid */}
-            <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 px-4 py-2 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700">
-                <div className="text-center border-r border-gray-200 dark:border-gray-700 last:border-0">
-                    <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">GPA Tích lũy</p>
-                    <p className="text-2xl font-black text-primary dark:text-blue-400">{result.gpa4}</p>
-                </div>
-                <div className="text-center border-r border-gray-200 dark:border-gray-700 last:border-0">
-                    <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Xếp loại</p>
-                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${classification.bg} ${classification.color}`}>
-                        {classification.label}
-                    </span>
-                </div>
-                <div className="text-center border-r border-gray-200 dark:border-gray-700 last:border-0">
-                    <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Mục tiêu GPA</p>
-                    <input
-                        type="number"
-                        placeholder="3.6"
-                        className="w-16 text-center bg-transparent font-bold text-gray-800 dark:text-white outline-none border-b border-dashed border-gray-300 focus:border-primary text-lg"
-                        value={targetGpa}
-                        onChange={(e) => setTargetGpa(e.target.value)}
-                    />
-                </div>
-                <div className="text-center">
-                    <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Tín chỉ</p>
-                    <p className="text-sm font-bold text-gray-800 dark:text-white">
-                        {result.totalCredits}<span className="text-gray-400 font-normal">/{targetCredits}</span>
-                    </p>
-                </div>
-            </div>
+            {/* Target Progress */}
+            {targetGpa && (
+               <div className="w-full md:w-64 bg-white/10 rounded-2xl p-5 backdrop-blur-sm border border-white/5 shadow-inner">
+                  <div className="flex justify-between items-end mb-3">
+                    <span className="text-xs text-blue-200 uppercase font-bold tracking-wider">Mục tiêu</span>
+                    <span className="text-2xl font-black text-white">{targetGpa}</span>
+                  </div>
+                   {/* Progress Bar */}
+                  <div className="h-2 w-full bg-black/30 rounded-full overflow-hidden shadow-inner">
+                     <div 
+                       className="h-full bg-gradient-to-r from-yellow-300 to-green-400 rounded-full shadow-[0_0_10px_rgba(253,224,71,0.5)] relative"
+                       style={{ width: `${Math.min(100, (result.gpa4 / parseFloat(targetGpa)) * 100)}%` }}
+                     >
+                        <div className="absolute inset-0 bg-white/30 animate-[shimmer_2s_infinite]"></div>
+                     </div>
+                  </div>
+                  <div className="flex justify-between mt-2 text-[10px] font-medium text-blue-200">
+                    <span className="opacity-80">Hiện tại: {result.gpa4}</span>
+                    <span className="bg-white/20 px-1.5 py-0.5 rounded text-white">{Math.round((result.gpa4 / parseFloat(targetGpa)) * 100)}%</span>
+                  </div>
+               </div>
+            )}
+          </div>
+        </div>
 
-            {/* Right: Save Button */}
-            <button
-                onClick={handleSaveGPA}
-                disabled={isSaving}
-                className={`px-4 py-3 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2 cursor-pointer text-sm shrink-0 ${
-                    isSaving
-                    ? "bg-gray-400 cursor-not-allowed text-white"
-                    : "bg-gray-900 dark:bg-gray-700 text-white hover:bg-black dark:hover:bg-gray-600"
-                }`}
-            >
-                <Save size={16} />
-                {isSaving ? "Đang lưu..." : "Lưu"}
-            </button>
+        {/* 2. Quick Stats & Save Actions */}
+        <div className="flex flex-col gap-4">
+           <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex-1 flex flex-col justify-center relative overflow-hidden">
+              <div className="flex items-center justify-between mb-4 relative z-10">
+                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tín chỉ tích lũy</span>
+                 <div className="p-2 bg-primary/10 rounded-full text-primary dark:text-blue-400">
+                    <Layers size={16} />
+                 </div>
+              </div>
+              <div className="flex items-baseline gap-2 relative z-10">
+                 <span className="text-4xl font-black text-gray-800 dark:text-white">{result.totalCredits}</span>
+                 <span className="text-sm text-gray-400 font-medium">/{targetCredits}</span>
+              </div>
+              <div className="w-full bg-gray-100 dark:bg-gray-700 h-2 rounded-full mt-4 overflow-hidden relative z-10">
+                 <div className="bg-primary dark:bg-blue-500 h-full rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (result.totalCredits / targetCredits) * 100)}%` }}></div>
+              </div>
+              
+              {/* Decorative bg */}
+              <div className="absolute -bottom-6 -right-6 text-gray-50 dark:text-gray-700/50 transform rotate-12">
+                  <Layers size={100} strokeWidth={1} />
+              </div>
+           </div>
+
+           <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              <div>
+                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Thiết lập mục tiêu</span>
+                 <span className="text-lg font-black text-gray-800 dark:text-white">
+                   {targetGpa ? targetGpa : <span className="text-gray-300 text-sm italic">Chưa đặt</span>}
+                 </span>
+              </div>
+              <div className="text-right">
+                   <input
+                      type="number"
+                      placeholder="Target"
+                      className="w-24 text-right bg-gray-50 dark:bg-gray-900 px-3 py-2 rounded-xl font-bold text-gray-800 dark:text-white outline-none border border-transparent focus:border-primary focus:bg-white dark:focus:bg-gray-800 text-sm transition-all"
+                      value={targetGpa}
+                      onChange={(e) => setTargetGpa(e.target.value)}
+                  />
+              </div>
+           </div>
+           
+           <button
+              onClick={handleSaveGPA}
+              disabled={isSaving}
+              className={`w-full py-4 rounded-2xl font-bold shadow-lg shadow-blue-900/10 transition-all flex items-center justify-center gap-2 cursor-pointer text-sm ${
+                  isSaving
+                  ? "bg-gray-400 cursor-not-allowed text-white"
+                  : "bg-gray-900 dark:bg-gray-700 text-white hover:bg-black dark:hover:bg-gray-600 hover:scale-[1.02] active:scale-[0.98]"
+              }`}
+          >
+              <Save size={18} />
+              {isSaving ? "Đang lưu..." : "Lưu lộ trình"}
+          </button>
         </div>
       </div>
 
-      {/* TẦNG 2: ACTIONABLE ALERT (Chỉ 1 khối) */}
+      {/* TẦNG 2: SMART PRIORITY ALERT */}
       {priorityAlert && (
-        <div className={`p-4 rounded-xl border-l-4 shadow-sm flex items-start gap-3 transition-all ${
-            priorityAlert.severity === 'danger' ? 'bg-red-50 dark:bg-red-900/10 border-red-500 text-red-900 dark:text-red-200' :
-            priorityAlert.severity === 'warning' ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-500 text-amber-900 dark:text-amber-200' :
-            priorityAlert.severity === 'success' ? 'bg-green-50 dark:bg-green-900/10 border-green-500 text-green-900 dark:text-green-200' :
-            'bg-blue-50 dark:bg-blue-900/10 border-blue-500 text-blue-900 dark:text-blue-200'
+        <div className={`mx-1 mb-6 p-4 rounded-2xl border flex items-start gap-4 shadow-sm transition-all animate-in fade-in slide-in-from-top-4 duration-500 ${
+            priorityAlert.severity === 'danger' ? 'bg-red-50/50 dark:bg-red-900/10 border-red-200 dark:border-red-800 text-red-900 dark:text-red-200' :
+            priorityAlert.severity === 'warning' ? 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200' :
+            priorityAlert.severity === 'success' ? 'bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800 text-green-900 dark:text-green-200' :
+            'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200'
         }`}>
-            <div className="mt-0.5 shrink-0">
+            <div className={`p-2 rounded-xl shrink-0 ${
+                 priorityAlert.severity === 'danger' ? 'bg-red-100 dark:bg-red-900/30 text-red-600' :
+                 priorityAlert.severity === 'warning' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600' :
+                 priorityAlert.severity === 'success' ? 'bg-green-100 dark:bg-green-900/30 text-green-600' :
+                 'bg-blue-100 dark:bg-blue-900/30 text-blue-600'
+            }`}>
                 {priorityAlert.icon ? <span className="text-xl">{priorityAlert.icon}</span> : <AlertTriangle size={20} />}
             </div>
-            <div className="flex-1">
-                <p className="font-bold text-sm leading-tight">{priorityAlert.message}</p>
-                {priorityAlert.action && <p className="text-xs mt-1 opacity-90 font-medium">{priorityAlert.action}</p>}
+            <div className="flex-1 py-1">
+                <p className="font-bold text-sm leading-snug">{priorityAlert.message}</p>
+                {priorityAlert.action && <p className="text-xs mt-1.5 opacity-80 font-medium">{priorityAlert.action}</p>}
             </div>
         </div>
       )}
@@ -851,17 +939,17 @@ const GpaCalc = () => {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[900px]">
                       <thead>
-                        <tr className="bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 text-[10px] uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
-                          <th className="p-3 font-bold w-1/4">
+                        <tr className="bg-gray-50/50 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 text-[10px] font-bold uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
+                          <th className="p-4 w-1/4 pl-6">
                             Tên môn & Loại
                           </th>
-                          <th className="p-3 font-bold w-16 text-center">TC</th>
-                          <th className="p-3 font-bold w-1/3">Thành phần</th>
-                          <th className="p-3 font-bold w-48">Kết quả</th>
-                          <th className="p-3 w-10"></th>
+                          <th className="p-4 text-center w-20">TC</th>
+                          <th className="p-4 w-1/3">Thành phần điểm</th>
+                          <th className="p-4 w-48">Kết quả</th>
+                          <th className="p-4 w-12"></th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                      <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
                         {sem.subjects.map((sub) => {
                           const {
                             currentScore,
@@ -900,108 +988,112 @@ const GpaCalc = () => {
                           return (
                             <React.Fragment key={sub.id}>
                             <tr
-                              className={`hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors align-top group ${
+                              className={`group hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-all align-top ${
                                 isCriticalSubject 
-                                  ? 'bg-amber-50/50 dark:bg-amber-900/10 ring-2 ring-amber-200 dark:ring-amber-700 ring-inset' 
+                                  ? 'bg-amber-50/30 dark:bg-amber-900/5' 
                                   : isTopCritical 
-                                  ? 'bg-purple-50/30 dark:bg-purple-900/5' 
+                                  ? 'bg-purple-50/20 dark:bg-purple-900/5' 
                                   : ''
                               }`}
                             >
-                              <td className="p-3">
-                                <div className="flex items-center gap-2">
+                              <td className="p-4 pl-6">
+                                <div className="flex items-start gap-3">
                                   {isCriticalSubject && (
-                                    <span className="text-amber-500" title="Môn có ảnh hưởng lớn nhất">
+                                    <div className="mt-1 text-amber-500 animate-pulse" title="Môn trọng điểm">
                                       <Star size={14} fill="currentColor" />
-                                    </span>
+                                    </div>
                                   )}
-                                  <input
-                                    list="subject-suggestions"
-                                    type="text"
-                                    placeholder="Nhập tên môn..."
-                                    className="w-full font-bold text-gray-700 dark:text-gray-200 bg-transparent outline-none placeholder-gray-300 dark:placeholder-gray-600 text-sm mb-1"
-                                    value={sub.name}
-                                    onChange={(e) =>
-                                      updateSubject(
-                                        sem.id,
-                                        sub.id,
-                                        "name",
-                                        e.target.value
-                                      )
-                                    }
-                                  />
-                                </div>
-                                <div className="mt-1">
-                                  <button
-                                    onClick={() =>
-                                      updateSubject(sem.id, sub.id, "type", sub.type === "general" ? "major" : "general")
-                                    }
-                                    className={`text-[11px] flex items-center gap-1 transition-all cursor-pointer font-medium ${
-                                      sub.type === "major"
-                                        ? "text-purple-600 dark:text-purple-400"
-                                        : "text-gray-400 dark:text-gray-500 hover:text-gray-600"
-                                    }`}
-                                  >
-                                    {sub.type === "major" ? (
-                                        <>
-                                            <Zap size={12} className="fill-current" />
-                                            Chuyên ngành
-                                        </>
-                                    ) : (
-                                        "Đại cương"
-                                    )}
-                                  </button>
-                                </div>
-                              </td>
-                              <td className="p-3">
-                                <input
-                                  type="number"
-                                  className="w-full text-center bg-transparent border-b border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 font-bold text-gray-700 dark:text-white outline-none text-sm py-1 transition-all"
-                                  value={sub.credits}
-                                  onChange={(e) =>
-                                    updateSubject(
-                                      sem.id,
-                                      sub.id,
-                                      "credits",
-                                      e.target.value
-                                    )
-                                  }
-                                />
-                              </td>
-                              <td className="p-3">
-                                <div className="space-y-1">
-                                  {sub.components.map((comp) => (
-                                    <div
-                                      key={comp.id}
-                                      className="flex items-center gap-1 group/comp"
-                                    >
+                                  <div className="w-full">
                                       <input
-                                        type="number"
-                                        placeholder="Điểm"
-                                        className={`w-14 h-7 text-center font-bold text-sm bg-transparent border-b outline-none transition-all ${
-                                          comp.score === ""
-                                            ? "border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200"
-                                            : "border-gray-300 dark:border-gray-600 text-gray-800 dark:text-white focus:border-blue-500"
-                                        }`}
-                                        value={comp.score}
+                                        list="subject-suggestions"
+                                        type="text"
+                                        placeholder="Tên môn học..."
+                                        className="w-full font-bold text-gray-800 dark:text-gray-100 bg-transparent outline-none placeholder-gray-300 dark:placeholder-gray-600 text-base mb-1.5"
+                                        value={sub.name}
                                         onChange={(e) =>
-                                          updateComponent(
+                                          updateSubject(
                                             sem.id,
                                             sub.id,
-                                            comp.id,
-                                            "score",
+                                            "name",
                                             e.target.value
                                           )
                                         }
                                       />
-                                      <span className="text-gray-300 dark:text-gray-600 text-xs mx-0.5">
-                                        x
-                                      </span>
+                                      <button
+                                        onClick={() =>
+                                          updateSubject(sem.id, sub.id, "type", sub.type === "general" ? "major" : "general")
+                                        }
+                                        className={`text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer font-bold tracking-wide border w-fit ${
+                                          sub.type === "major"
+                                            ? "bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800"
+                                            : "bg-gray-50 text-gray-400 border-gray-100 dark:bg-gray-800 dark:text-gray-500 dark:border-gray-700 hover:bg-gray-100"
+                                        }`}
+                                      >
+                                        {sub.type === "major" ? (
+                                            <>
+                                                <Zap size={10} className="fill-current" />
+                                                CHUYÊN NGÀNH
+                                            </>
+                                        ) : (
+                                            "ĐẠI CƯƠNG"
+                                        )}
+                                      </button>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <div className="flex justify-center">
+                                    <input
+                                      type="number"
+                                      className="w-12 text-center bg-gray-50 dark:bg-gray-800 rounded-lg border-transparent focus:bg-white focus:border-blue-200 dark:focus:border-blue-800 border focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/20 font-bold text-gray-700 dark:text-white outline-none text-sm py-1.5 transition-all"
+                                      value={sub.credits}
+                                      onChange={(e) =>
+                                        updateSubject(
+                                          sem.id,
+                                          sub.id,
+                                          "credits",
+                                          e.target.value
+                                        )
+                                      }
+                                    />
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <div className="space-y-2">
+                                  {sub.components.map((comp) => (
+                                    <div
+                                      key={comp.id}
+                                      className="flex items-center gap-2 group/comp"
+                                    >
                                       <div className="relative">
                                           <input
                                             type="number"
+                                            placeholder="--"
+                                            className={`w-16 text-center font-bold text-sm bg-transparent border-b-2 outline-none transition-all pb-0.5 ${
+                                              comp.score === ""
+                                                ? "border-gray-100 dark:border-gray-700 text-gray-400"
+                                                : "border-gray-300 dark:border-gray-600 text-gray-800 dark:text-white focus:border-blue-500"
+                                            }`}
+                                            value={comp.score}
+                                            onChange={(e) =>
+                                              updateComponent(
+                                                sem.id,
+                                                sub.id,
+                                                comp.id,
+                                                "score",
+                                                e.target.value
+                                              )
+                                            }
+                                          />
+                                      </div>
+                                      
+                                      <span className="text-gray-300 dark:text-gray-600 text-[10px]">✕</span>
+                                      
+                                      <div className="relative flex items-center">
+                                          <input
+                                            type="number"
                                             placeholder="%"
-                                            className="w-10 h-7 text-center text-xs text-gray-500 dark:text-gray-400 bg-transparent border-b border-gray-100 dark:border-gray-700 outline-none focus:border-blue-500 focus:text-blue-600"
+                                            className="w-10 text-center text-xs font-medium text-gray-500 dark:text-gray-400 bg-transparent border-b border-gray-100 dark:border-gray-700 outline-none focus:border-blue-500 focus:text-blue-600 pb-0.5"
                                             value={comp.weight}
                                             onChange={(e) =>
                                               updateComponent(
@@ -1013,7 +1105,7 @@ const GpaCalc = () => {
                                               )
                                             }
                                           />
-                                          <span className="absolute top-1 right-0 text-[9px] text-gray-300 pointer-events-none">%</span>
+                                          <span className="text-[10px] text-gray-400 ml-0.5">%</span>
                                       </div>
                                       
                                       {sub.components.length > 1 && (
@@ -1025,7 +1117,7 @@ const GpaCalc = () => {
                                               comp.id
                                             )
                                           }
-                                          className="text-gray-300 dark:text-gray-600 hover:text-red-500 opacity-0 group-hover/comp:opacity-100 transition-opacity ml-1"
+                                          className="text-gray-300 dark:text-gray-600 hover:text-red-500 opacity-0 group-hover/comp:opacity-100 transition-opacity ml-2 p-1"
                                         >
                                           <Trash2 size={12} />
                                         </button>
@@ -1034,92 +1126,104 @@ const GpaCalc = () => {
                                   ))}
                                   <button
                                     onClick={() => addComponent(sem.id, sub.id)}
-                                    className="text-xs text-primary/70 dark:text-blue-400/70 hover:text-primary font-medium flex items-center gap-1 cursor-pointer mt-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="text-[10px] text-blue-500/70 hover:text-blue-600 font-bold uppercase tracking-wide flex items-center gap-1 cursor-pointer mt-2 opacity-0 group-hover:opacity-100 transition-opacity py-1 px-2 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 w-fit"
                                   >
-                                    <Plus size={10} /> Thêm
+                                    <Plus size={10} /> Thêm cột điểm
                                   </button>
                                 </div>
                               </td>
-                              <td className="p-3 align-top">
+                              <td className="p-4 align-top">
                                 {isFull && gradeInfo ? (
-                                  <div className="flex flex-col gap-0.5">
-                                    <div className="flex items-baseline gap-2">
-                                      <span className={`text-lg font-black ${isPassed ? 'text-gray-800 dark:text-white' : 'text-red-600 dark:text-red-400'}`}>
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-3">
+                                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-black shadow-sm ${
+                                          isPassed 
+                                          ? 'bg-white border border-gray-100 text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white' 
+                                          : 'bg-red-50 text-red-600 border border-red-100 dark:bg-red-900/20 dark:text-red-400'
+                                      }`}>
                                         {finalScore10.toFixed(1)}
-                                      </span>
-                                      <span className={`text-sm font-bold ${gradeInfo.color}`}>
-                                        {gradeInfo.char} <span className="text-gray-400 dark:text-gray-600 font-normal text-[10px]">/ {gradeInfo.point}</span>
-                                      </span>
+                                      </div>
+                                      <div className="flex flex-col">
+                                          <span className={`text-sm font-black ${gradeInfo.color}`}>
+                                            {gradeInfo.char}
+                                          </span>
+                                          <span className="text-[10px] text-gray-400 font-medium">
+                                            Thang 4: {gradeInfo.point}
+                                          </span>
+                                      </div>
                                     </div>
                                     {!isPassed && (
-                                      <span className="flex items-center gap-1 text-[10px] font-bold text-red-500">
-                                        <XCircle size={10} /> Học lại
+                                      <span className="flex items-center gap-1 text-[10px] font-bold text-red-500 mt-1 bg-red-50 dark:bg-red-900/10 px-2 py-0.5 rounded-full w-fit">
+                                        <XCircle size={10} /> HỌC LẠI
                                       </span>
                                     )}
                                   </div>
                                 ) : missingComponent ? (
-                                  <div className="flex flex-wrap gap-1">
-                                    {predictions.length > 0 ? (
-                                      predictions.map((p, i) => (
-                                        <div
-                                          key={i}
-                                          className="flex items-center gap-1 bg-white dark:bg-gray-700 border dark:border-gray-600 px-1.5 py-0.5 rounded shadow-sm"
-                                        >
-                                          <span
-                                            className={`text-[10px] font-bold ${
-                                              p.char === "A"
-                                                ? "text-green-600"
-                                                : "text-blue-600"
-                                            }`}
+                                  <div className="flex flex-col gap-1.5">
+                                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wide">Cần đạt:</span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {predictions.length > 0 ? (
+                                        predictions.map((p, i) => (
+                                          <div
+                                            key={i}
+                                            className="flex items-center gap-1.5 bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 px-2 py-1 rounded-lg shadow-sm"
                                           >
-                                            {p.char}
-                                          </span>
-                                          <span className="text-gray-300 dark:text-gray-500 text-[10px]">
-                                            →
-                                          </span>
-                                          <span className="text-xs font-black text-gray-800 dark:text-white">
-                                            {p.score}
-                                          </span>
-                                        </div>
-                                      ))
-                                    ) : (
-                                      <span className="text-[10px] text-red-500 font-medium">
-                                        Rớt chắc rồi 😭
-                                      </span>
-                                    )}
+                                            <span
+                                              className={`text-xs font-black ${
+                                                p.char === "A"
+                                                  ? "text-green-600"
+                                                  : "text-blue-600"
+                                              }`}
+                                            >
+                                              {p.char}
+                                            </span>
+                                            <span className="text-gray-300 dark:text-gray-500 text-[10px]">
+                                              →
+                                            </span>
+                                            <span className="text-xs font-bold text-gray-700 dark:text-gray-200">
+                                              {p.score}
+                                            </span>
+                                          </div>
+                                        ))
+                                      ) : (
+                                        <span className="text-[10px] text-red-500 font-bold bg-red-50 px-2 py-1 rounded-lg">
+                                          Rớt chắc rồi 😭
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 ) : (
-                                  <span className="text-gray-400 dark:text-gray-500 text-xs italic">
-                                    ...
+                                  <span className="text-gray-300 dark:text-gray-600 text-xs italic pl-2">
+                                    Đang cập nhật...
                                   </span>
                                 )}
                               </td>
-                              <td className="p-3">
-                                <div className="flex items-center gap-1">
-                                  {/* Survival Mode Button - chỉ hiện khi có điểm đầy đủ */}
+                              <td className="p-4">
+                                <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {/* Survival Mode Button */}
                                   {isFull && (
                                     <button
                                       onClick={() => handleOpenSurvivalMode(sub.id, parseFloat(finalScore10))}
-                                      className={`p-1.5 rounded-lg transition-all ${
+                                      className={`p-2 rounded-lg transition-all ${
                                         survivalMode.activeSubjectId === sub.id
                                           ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
-                                          : 'text-gray-300 dark:text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30'
+                                          : 'text-gray-400 dark:text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                                       }`}
-                                      title="Survival Mode - Thử thay đổi điểm"
+                                      title="Survival Mode"
                                     >
-                                      <Sliders size={14} />
+                                      <Sliders size={16} />
                                     </button>
                                   )}
                                   <button
                                     onClick={() => removeSubject(sem.id, sub.id)}
-                                    className="text-gray-300 dark:text-gray-500 hover:text-red-500 p-1.5"
+                                    className="text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition-colors"
                                   >
-                                    <Trash2 size={14} />
+                                    <Trash2 size={16} />
                                   </button>
                                 </div>
                               </td>
                             </tr>
-                            {/* Survival Mode Panel - inline expansion */}
+                            {/* Survival Mode Panel */}
                             {survivalMode.activeSubjectId === sub.id && isFull && (
                               <SurvivalModePanel
                                 subject={sub}
@@ -1140,9 +1244,12 @@ const GpaCalc = () => {
                   </div>
                   <button
                     onClick={() => addSubject(sem.id)}
-                    className="w-full py-3 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm font-bold hover:bg-gray-100 dark:hover:bg-gray-600 transition-all flex items-center justify-center gap-2 border-t border-gray-100 dark:border-gray-600"
+                    className="w-full py-4 bg-white dark:bg-gray-800 text-blue-500/80 dark:text-blue-400/80 text-sm font-bold hover:text-blue-600 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-all flex items-center justify-center gap-2 border-t border-gray-50 dark:border-gray-700/50 group"
                   >
-                    <Plus size={16} /> Thêm môn vào {sem.name}
+                    <div className="p-1 rounded-md bg-blue-50 dark:bg-blue-900/20 group-hover:bg-blue-100 transition-colors">
+                        <Plus size={14} />
+                    </div>
+                    Thêm môn học mới
                   </button>
                 </div>
               )}
@@ -1151,67 +1258,76 @@ const GpaCalc = () => {
 
           <button
             onClick={addSemester}
-            className="w-full py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl text-gray-500 dark:text-gray-400 font-bold hover:border-primary hover:text-primary dark:hover:border-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all flex items-center justify-center gap-2"
+            className="w-full py-5 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-3xl text-gray-400 dark:text-gray-500 font-bold hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all flex items-center justify-center gap-3 group"
           >
-            <FolderPlus size={20} /> Thêm Học Kỳ Mới
+            <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors">
+                <FolderPlus size={20} className="group-hover:scale-110 transition-transform" />
+            </div>
+            Thêm Học Kỳ Mới
           </button>
         </div>
 
         </div>
 
-        {/* TẦNG 4: ADVANCED ANALYSIS (Collapsible) */}
-        <div className="border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-sm mt-8">
+        {/* TẦNG 4: ADVANCED ANALYSIS (Premium Collapsible) */}
+        <div className="border border-gray-200 dark:border-gray-700 rounded-3xl overflow-hidden bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-all duration-300 mt-8 group">
             <button
                 onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-                className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="w-full flex items-center justify-between p-5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
             >
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400">
-                        <BarChart3 size={20} />
+                <div className="flex items-center gap-5">
+                    <div className={`p-3 rounded-2xl transition-all duration-300 ${isAdvancedOpen ? 'bg-purple-100 text-purple-600 rotate-3 scale-110 shadow-sm' : 'bg-gray-100 text-gray-400 group-hover:bg-purple-50 group-hover:text-purple-500'}`}>
+                        <BarChart3 size={24} strokeWidth={isAdvancedOpen ? 2.5 : 2} />
                     </div>
                     <div className="text-left">
-                        <h3 className="font-bold text-gray-800 dark:text-white">Phân tích nâng cao & Chiến lược</h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">GPA Map, Survival Mode, Gợi ý cải thiện điểm số</p>
+                        <h3 className={`font-bold text-lg transition-colors ${isAdvancedOpen ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>Phân tích nâng cao</h3>
+                        <p className="text-sm text-gray-400 dark:text-gray-500 font-medium mt-0.5">Chiến lược, Giả lập điểm & Bản đồ GPA</p>
                     </div>
                 </div>
-                {isAdvancedOpen ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${isAdvancedOpen ? 'bg-gray-100 rotate-180 text-gray-900' : 'text-gray-400 group-hover:bg-gray-50'}`}>
+                    <ChevronDown size={20} />
+                </div>
             </button>
 
             {isAdvancedOpen && (
-                <div className="p-6 border-t border-gray-100 dark:border-gray-700 space-y-8">
+                <div className="p-6 border-t border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-900/20 space-y-8 animate-in fade-in slide-in-from-top-2 duration-300">
                     {/* Scholarship Toggle */}
-                    <ScholarshipToggle
-                        scholarshipInfo={scholarshipInfo}
-                        selectedLevel={selectedScholarshipLevel}
-                        onLevelChange={setSelectedScholarshipLevel}
-                        isScholarshipMode={isScholarshipMode}
-                        onModeToggle={setIsScholarshipMode}
-                    />
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-1 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <ScholarshipToggle
+                            scholarshipInfo={scholarshipInfo}
+                            selectedLevel={selectedScholarshipLevel}
+                            onLevelChange={setSelectedScholarshipLevel}
+                            isScholarshipMode={isScholarshipMode}
+                            onModeToggle={setIsScholarshipMode}
+                        />
+                    </div>
 
                     {/* MAIN ADVANCED GRID */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                          {/* COL 1: GPA Display Logic */}
-                         <div className="space-y-4">
+                         <div className="flex flex-col h-full">
                             {!isScholarshipMode && (
-                                <div className="space-y-4">
-                                    <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Chế độ xem</h4>
-                                    <div className="flex gap-2">
+                                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm h-full flex flex-col">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                        <Layers size={14} /> Chế độ hiển thị
+                                    </h4>
+                                    <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl mb-6">
                                         <button
                                             onClick={() => setGpaDisplayMode('cumulative')}
-                                            className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                                            className={`flex-1 px-3 py-2.5 rounded-lg text-xs font-bold transition-all ${
                                                 gpaDisplayMode === 'cumulative'
-                                                    ? 'bg-primary text-white shadow-md'
-                                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                                    ? 'bg-white text-primary shadow-sm'
+                                                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
                                             }`}
                                         >
                                             Tích lũy
                                         </button>
                                         <button
                                             onClick={() => setGpaDisplayMode('semester')}
-                                            className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                                            className={`flex-1 px-3 py-2.5 rounded-lg text-xs font-bold transition-all ${
                                                 gpaDisplayMode === 'semester'
-                                                    ? 'bg-primary text-white shadow-md'
-                                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                                    ? 'bg-white text-primary shadow-sm'
+                                                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
                                             }`}
                                         >
                                             Học kỳ
@@ -1219,31 +1335,38 @@ const GpaCalc = () => {
                                     </div>
                                     
                                     {gpaDisplayMode === 'semester' && (
-                                        <select
-                                            value={selectedSemesterId || ''}
-                                            onChange={(e) => setSelectedSemesterId(parseInt(e.target.value))}
-                                            className="w-full px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-600 outline-none focus:ring-2 focus:ring-primary"
-                                        >
-                                            <option value="">Chọn học kỳ</option>
-                                            {semesterGpas.map((sem) => (
-                                                <option key={sem.id} value={sem.id}>
-                                                    {sem.name} {sem.totalCredits > 0 ? `(GPA: ${sem.semesterGpa4.toFixed(2)})` : '(Chưa có điểm)'}
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <div className="mb-6 relative">
+                                            <select
+                                                value={selectedSemesterId || ''}
+                                                onChange={(e) => setSelectedSemesterId(parseInt(e.target.value))}
+                                                className="w-full px-4 py-3 pr-10 rounded-xl text-sm font-bold bg-gray-50 dark:bg-gray-700/50 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-600 outline-none focus:ring-2 focus:ring-primary/20 appearance-none transition-all cursor-pointer hover:border-primary/50"
+                                            >
+                                                <option value="">Chọn học kỳ...</option>
+                                                {semesterGpas.map((sem) => (
+                                                    <option key={sem.id} value={sem.id}>
+                                                        {sem.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                        </div>
                                     )}
 
                                     {/* Mini Display Card */}
-                                    <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700 text-center">
-                                         <p className="text-xs text-gray-500 uppercase font-bold">
+                                    <div className="mt-auto p-5 bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 text-center relative overflow-hidden group/mini">
+                                         <div className="absolute top-0 right-0 p-2 opacity-10 group-hover/mini:opacity-20 transition-opacity">
+                                            <Calculator size={48} />
+                                         </div>
+                                         <p className="text-xs text-gray-400 uppercase font-bold tracking-wide">
                                              {gpaDisplayMode === 'cumulative' ? 'GPA Tích lũy' : (displayedSemesterGpa ? displayedSemesterGpa.name : 'Chọn học kỳ')}
                                          </p>
-                                         <p className="text-3xl font-black text-gray-800 dark:text-white my-1">
+                                         <p className="text-4xl font-black text-gray-800 dark:text-white my-2 tracking-tight">
                                              {gpaDisplayMode === 'cumulative' 
                                                 ? result.gpa4 
                                                 : (displayedSemesterGpa ? displayedSemesterGpa.semesterGpa4.toFixed(2) : '0.00')}
                                          </p>
-                                         <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${gpaDisplayMode === 'cumulative' ? classification.bg : 'bg-gray-200'} ${gpaDisplayMode === 'cumulative' ? classification.color : 'text-gray-600'}`}>
+                                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${gpaDisplayMode === 'cumulative' ? 'bg-white border-gray-100 shadow-sm' : 'bg-gray-100 border-transparent'} ${gpaDisplayMode === 'cumulative' ? classification.color : 'text-gray-500'}`}>
+                                              <span className={`w-1.5 h-1.5 rounded-full ${gpaDisplayMode === 'cumulative' ? classification.bg.replace('bg-', 'bg-') : 'bg-gray-400'}`}></span>
                                               {gpaDisplayMode === 'cumulative' 
                                                 ? classification.label 
                                                 : (displayedSemesterGpa ? getClassification(displayedSemesterGpa.semesterGpa4).label : 'N/A')}
@@ -1254,40 +1377,62 @@ const GpaCalc = () => {
                          </div>
 
                          {/* COL 2: Strategy & Scenarios */}
-                         <div className="space-y-4">
+                         <div className="flex flex-col h-full space-y-4">
                             {!isScholarshipMode && targetGpa && strategyData.strategy?.feasibility && (
-                                <div className={`p-4 rounded-xl border ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).border}`}>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <p className="text-xs font-bold uppercase text-gray-500 flex items-center gap-1">
-                                            <Target size={14} /> Mục tiêu {targetGpa}
-                                        </p>
-                                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).text}`}>
+                                <div className={`p-5 rounded-2xl border bg-white dark:bg-gray-800 shadow-sm transition-all ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).border}`}>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500">
+                                                <Target size={16} />
+                                            </div>
+                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Mục tiêu {targetGpa}</span>
+                                        </div>
+                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).bg} ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).text}`}>
                                             {getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).label}
                                         </span>
                                     </div>
+                                    
                                     {result.prediction4 && result.prediction4 <= 4.0 ? (
-                                        <div>
-                                            <p className="text-sm font-bold">Cần đạt: <span className="text-purple-600">{result.prediction4.toFixed(2)}</span> / 4.0</p>
-                                            <p className="text-xs text-gray-500 mt-1">~ {result.prediction10} (thang 10)</p>
-                                            <p className="text-xs mt-2 italic opacity-80">{strategyData.strategy.feasibility.feasibilityMessage}</p>
+                                        <div className="space-y-3">
+                                            <div className="flex items-end gap-2">
+                                                <span className="text-3xl font-black text-gray-800 dark:text-white">{result.prediction4.toFixed(2)}</span>
+                                                <span className="text-sm font-medium text-gray-400 mb-1">/ 4.0</span>
+                                            </div>
+                                            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                <div className="h-full bg-purple-500 rounded-full" style={{ width: `${(result.prediction4 / 4) * 100}%` }}></div>
+                                            </div>
+                                            <p className="text-xs text-gray-500 leading-relaxed pl-2 border-l-2 border-purple-200">
+                                                {strategyData.strategy.feasibility.feasibilityMessage}
+                                            </p>
                                         </div>
                                     ) : (
-                                        <p className="text-xs font-bold text-red-500">Không khả thi</p>
+                                        <div className="text-center py-4">
+                                            <p className="text-sm font-bold text-red-500">Mục tiêu không khả thi</p>
+                                            <p className="text-xs text-gray-400 mt-1">Cần > 4.0 để đạt được</p>
+                                        </div>
                                     )}
                                 </div>
                             )}
 
                             {!isScholarshipMode && strategyData.scenarios && (
-                                <div className="space-y-2">
-                                    <p className="text-xs font-bold uppercase text-gray-400">Kịch bản điểm số</p>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="p-2 bg-green-50 rounded border border-green-100">
-                                            <p className="text-[10px] font-bold text-green-700">An toàn</p>
-                                            <p className="text-sm font-black text-green-800">{strategyData.scenarios.safe.requiredScore}</p>
+                                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex-1">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                        <Sliders size={14} /> Kịch bản điểm số
+                                    </h4>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between p-3 rounded-xl bg-green-50/50 border border-green-100 hover:border-green-200 transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                                <span className="text-xs font-bold text-green-700 uppercase">An toàn</span>
+                                            </div>
+                                            <span className="text-lg font-black text-green-800">{strategyData.scenarios.safe.requiredScore}</span>
                                         </div>
-                                        <div className="p-2 bg-blue-50 rounded border border-blue-100">
-                                            <p className="text-[10px] font-bold text-blue-700">Mục tiêu</p>
-                                            <p className="text-sm font-black text-blue-800">{strategyData.scenarios.balanced.requiredScore}</p>
+                                        <div className="flex items-center justify-between p-3 rounded-xl bg-blue-50/50 border border-blue-100 hover:border-blue-200 transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                                <span className="text-xs font-bold text-blue-700 uppercase">Cân bằng</span>
+                                            </div>
+                                            <span className="text-lg font-black text-blue-800">{strategyData.scenarios.balanced.requiredScore}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1295,86 +1440,98 @@ const GpaCalc = () => {
                          </div>
 
                          {/* COL 3: Critical & Stats */}
-                         <div className="space-y-4">
+                         <div className="flex flex-col h-full space-y-4">
                              {!isScholarshipMode && strategyData.criticalSubject && (
-                                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-700">
-                                    <p className="text-xs font-bold uppercase text-amber-600 flex items-center gap-1 mb-1">
-                                        <Star size={14} /> Môn trọng điểm
-                                    </p>
-                                    <p className="font-bold text-gray-800 dark:text-white text-sm">{strategyData.criticalSubject.subjectName}</p>
-                                    <p className="text-xs text-amber-700 mt-1 italic">{strategyData.criticalSubject.suggestion}</p>
+                                <div className="p-5 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-2xl border border-amber-100 dark:border-amber-800/50 shadow-sm">
+                                    <h4 className="text-xs font-bold text-amber-600/80 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                        <Star size={14} fill="currentColor" /> Môn trọng điểm
+                                    </h4>
+                                    <p className="font-bold text-gray-800 dark:text-white text-base leading-tight">{strategyData.criticalSubject.subjectName}</p>
+                                    <div className="mt-3 pt-3 border-t border-amber-200/50">
+                                        <p className="text-xs text-amber-800 dark:text-amber-400 font-medium italic leading-relaxed">"{strategyData.criticalSubject.suggestion}"</p>
+                                    </div>
                                 </div>
                              )}
 
-                             <div className="space-y-2">
-                                 <p className="text-xs font-bold uppercase text-gray-400">Thống kê</p>
-                                 <div className="grid grid-cols-2 gap-2">
-                                     <div className="p-2 bg-gray-50 rounded border border-gray-100">
-                                         <p className="text-[10px] text-gray-500">GPA (10)</p>
-                                         <p className="font-bold">{result.gpa10}</p>
+                             <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex-1">
+                                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Thống kê nhanh</h4>
+                                 <div className="grid grid-cols-2 gap-3">
+                                     <div className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700/50">
+                                         <p className="text-[10px] text-gray-400 font-bold uppercase">GPA Hệ 10</p>
+                                         <p className="text-xl font-black text-gray-700 dark:text-gray-200 mt-1">{result.gpa10}</p>
                                      </div>
-                                     <div className="p-2 bg-gray-50 rounded border border-gray-100">
-                                         <p className="text-[10px] text-gray-500">Đã đạt</p>
-                                         <p className="font-bold">{result.passedCredits} TC</p>
+                                     <div className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700/50">
+                                         <p className="text-[10px] text-gray-400 font-bold uppercase">Đã đạt</p>
+                                         <p className="text-xl font-black text-gray-700 dark:text-gray-200 mt-1">{result.passedCredits} <span className="text-xs font-medium text-gray-400">TC</span></p>
                                      </div>
                                  </div>
                              </div>
                          </div>
                     </div>
 
-                    {/* GPA MAP */}
+                    {/* GPA MAP - Conditional Render */}
                     {(isScholarshipMode || targetGpa || survivalMode.activeSubjectId) && gpaMapData && (
-                        <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
+                        <div className="mt-6 pt-8 border-t border-gray-200 dark:border-gray-700 border-dashed">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                                    <RotateCcw size={18} />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-800 dark:text-white">Bản đồ GPA</h3>
+                            </div>
                             <GpaMapCard mapData={gpaMapData} />
                         </div>
                     )}
 
-                    {/* ACTION STEPS (Reused from Strategy Panel) */}
+                    {/* ACTION STEPS */}
                     {strategyData.strategy && (
-                        <div className="pt-6 border-t border-gray-100 dark:border-gray-700">
-                             <div 
-                                className="flex items-center justify-between cursor-pointer mb-4"
+                        <div className="mt-6 pt-8 border-t border-gray-200 dark:border-gray-700 border-dashed">
+                             <button 
+                                className="w-full flex items-center justify-between group"
                                 onClick={() => setShowStrategyPanel(!showStrategyPanel)}
                               >
-                                <div>
-                                  <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                                    <Lightbulb className="text-yellow-500" size={20} />
-                                    Gợi ý hành động chi tiết
-                                  </h3>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-yellow-100 text-yellow-600 rounded-lg group-hover:bg-yellow-200 transition-colors">
+                                        <Lightbulb size={18} className="fill-current" />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-gray-800 dark:text-white group-hover:text-primary transition-colors">
+                                        Gợi ý hành động chi tiết
+                                    </h3>
                                 </div>
-                                <ChevronDown 
-                                  size={20} 
-                                  className={`text-gray-500 transition-transform ${showStrategyPanel ? 'rotate-180' : ''}`}
-                                />
-                              </div>
+                                <div className={`p-2 rounded-full bg-gray-50 text-gray-400 transition-all ${showStrategyPanel ? 'rotate-180 bg-gray-100 text-gray-600' : ''}`}>
+                                    <ChevronDown size={20} />
+                                </div>
+                              </button>
 
                               {showStrategyPanel && (
-                                <div className="space-y-4 pl-2">
-                                  <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl">
-                                    <p className="text-gray-800 dark:text-gray-200 font-medium">
+                                <div className="mt-6 space-y-6 animate-in fade-in slide-in-from-top-2">
+                                  <div className="p-5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-2xl border border-blue-100 dark:border-blue-800/30">
+                                    <p className="text-gray-800 dark:text-gray-200 font-medium leading-relaxed">
                                       {strategyData.strategy.summary}
                                     </p>
                                   </div>
 
                                   {strategyData.strategy.actionSteps.length > 0 && (
-                                    <ul className="space-y-2">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                       {strategyData.strategy.actionSteps.map((step, idx) => (
-                                        <li key={idx} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                                          <span className="font-bold text-primary dark:text-blue-400 mt-0.5">{idx + 1}.</span>
-                                          <span>{step}</span>
-                                        </li>
+                                        <div key={idx} className="flex items-start gap-3 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800 transition-colors shadow-sm">
+                                          <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xs font-bold mt-0.5">{idx + 1}</span>
+                                          <span className="text-sm text-gray-600 dark:text-gray-300 font-medium">{step}</span>
+                                        </div>
                                       ))}
-                                    </ul>
+                                    </div>
                                   )}
                                   
                                   {strategyData.strategy.riskWarning && (
-                                    <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl">
-                                      <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase mb-1 flex items-center gap-1">
-                                        <AlertOctagon size={12} /> Lưu ý quan trọng
-                                      </p>
-                                      <p className="text-sm text-red-700 dark:text-red-400">
-                                        {strategyData.strategy.riskWarning}
-                                      </p>
+                                    <div className="p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/50 rounded-2xl flex items-start gap-3">
+                                      <AlertOctagon size={20} className="text-red-500 shrink-0 mt-0.5" />
+                                      <div>
+                                        <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase mb-1">
+                                            Lưu ý quan trọng
+                                        </p>
+                                        <p className="text-sm text-red-700 dark:text-red-300 leading-relaxed">
+                                            {strategyData.strategy.riskWarning}
+                                        </p>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -1382,39 +1539,40 @@ const GpaCalc = () => {
                         </div>
                     )}
                     
-                    {/* PRIORITY LIST (Reused from Top Critical Subjects) */}
+                    {/* PRIORITY LIST */}
                     {strategyData.topCriticalSubjects.length > 0 && (
-                        <div className="pt-6 border-t border-gray-100 dark:border-gray-700">
-                            <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2 mb-1">
-                                <BarChart3 className="text-purple-500" size={20} />
+                        <div className="mt-6 pt-8 border-t border-gray-200 dark:border-gray-700 border-dashed">
+                            <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-3 mb-6">
+                                <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
+                                    <BarChart3 size={18} />
+                                </div>
                                 Danh sách môn cần ưu tiên
                             </h3>
-                            <div className="space-y-3 mt-4">
+                            <div className="space-y-3">
                                 {strategyData.topCriticalSubjects.map((sub, idx) => {
                                   const isCritical = idx === 0;
                                   const getPriorityLabel = (score, index) => {
-                                    if (index === 0) return { label: 'Ưu tiên cao', color: 'text-amber-600 dark:text-amber-400', stars: 3 };
-                                    if (index <= 2) return { label: 'Ưu tiên', color: 'text-purple-600 dark:text-purple-400', stars: 2 };
-                                    return { label: 'Theo dõi', color: 'text-gray-500 dark:text-gray-400', stars: 1 };
+                                    if (index === 0) return { label: 'Ưu tiên cao', color: 'text-amber-600 bg-amber-100', stars: 3 };
+                                    if (index <= 2) return { label: 'Ưu tiên', color: 'text-purple-600 bg-purple-100', stars: 2 };
+                                    return { label: 'Theo dõi', color: 'text-gray-500 bg-gray-100', stars: 1 };
                                   };
                                   const priority = getPriorityLabel(sub.impactScore, idx);
                                   return (
-                                    <div key={sub.id} className={`flex items-center justify-between p-3 rounded-lg border transition-all ${isCritical ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700' : 'bg-gray-50 dark:bg-gray-700 border-transparent'}`}>
-                                      <div className="flex items-center gap-3">
-                                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isCritical ? 'bg-amber-500 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'}`}>
+                                    <div key={sub.id} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isCritical ? 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-700 shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-gray-200'}`}>
+                                      <div className="flex items-center gap-4">
+                                        <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${isCritical ? 'bg-amber-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
                                           {idx + 1}
                                         </span>
                                         <div>
-                                          <p className="font-bold text-gray-800 dark:text-white text-sm">{sub.subjectName}</p>
-                                          <p className="text-xs text-gray-500 dark:text-gray-400">{sub.credits} TC • {sub.isFull ? `Điểm hiện tại: ${sub.currentScore}/10` : 'Chưa có điểm'}</p>
+                                          <p className="font-bold text-gray-800 dark:text-white text-base">{sub.subjectName}</p>
+                                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{sub.credits} TC • {sub.isFull ? `Điểm: ${sub.currentScore}/10` : 'Chưa có điểm'}</p>
                                         </div>
                                       </div>
                                       <div className="text-right">
-                                        <p className={`text-xs font-bold flex items-center gap-1 justify-end ${priority.color}`}>
-                                          {[...Array(priority.stars)].map((_, i) => <Star key={i} size={10} fill="currentColor" />)}
-                                          <span className="ml-1">{priority.label}</span>
-                                        </p>
-                                        <p className="text-[10px] text-gray-400 dark:text-gray-500 max-w-[150px] truncate">{sub.suggestion}</p>
+                                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${priority.color}`}>
+                                          {priority.label}
+                                        </span>
+                                        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 max-w-[200px] truncate">{sub.suggestion}</p>
                                       </div>
                                     </div>
                                   );
