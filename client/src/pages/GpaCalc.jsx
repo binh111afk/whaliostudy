@@ -749,9 +749,9 @@ const GpaCalc = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
-      {/* TẦNG 1: HERO OVERVIEW (Clean Academic Dashboard) */}
+      {/* TẦNG 1: HERO OVERVIEW (Enhanced Clean Dashboard) */}
       <div className="mb-8">
-        <div className="relative bg-white rounded-2xl border border-gray-100 p-8 md:p-10">
+        <div className="relative bg-gradient-to-br from-white via-blue-50/30 to-white rounded-2xl border border-gray-100 p-8 md:p-10 shadow-sm hover:shadow-md transition-shadow duration-300">
 
           <div className="grid grid-cols-1 md:grid-cols-10 gap-8 items-center">
             {/* LEFT SIDE: GPA Focus (60% width) */}
@@ -760,29 +760,29 @@ const GpaCalc = () => {
                 <span className="text-xs font-semibold tracking-wider uppercase text-gray-500">GPA Tích lũy</span>
               </div>
 
-              {/* GPA - Primary Focus */}
+              {/* GPA - Primary Focus with subtle shadow */}
               <div className="flex flex-col md:flex-row items-center md:items-end gap-4 justify-center md:justify-start">
-                <h1 className="text-7xl md:text-8xl font-black tracking-tight text-[#134691]">
+                <h1 className="text-7xl md:text-8xl font-black tracking-tight text-[#134691] drop-shadow-sm">
                   {result.gpa4}
                 </h1>
 
-                {/* Classification Badge - Minimal */}
+                {/* Classification Badge - Minimal with hover effect */}
                 <div className="mb-2">
-                  <span className="inline-block px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-50 text-gray-700 border border-gray-100">
+                  <span className="inline-block px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-50 text-gray-700 border border-gray-100 hover:bg-gray-100 hover:scale-105 transition-all duration-200 cursor-default">
                     {classification.label}
                   </span>
                 </div>
               </div>
 
-              {/* Momentum - Subtle */}
+              {/* Momentum - Subtle with animation */}
               {result.momentum && (
-                <div className={`mt-4 inline-flex items-center gap-2 text-sm font-medium ${result.momentum.trend === 'up'
+                <div className={`mt-4 inline-flex items-center gap-2 text-sm font-medium animate-in fade-in slide-in-from-bottom-2 duration-500 ${result.momentum.trend === 'up'
                   ? 'text-green-600'
                   : result.momentum.trend === 'down'
                     ? 'text-orange-600'
                     : 'text-gray-500'
                   }`}>
-                  {result.momentum.trend === 'up' ? <TrendingUp size={14} /> :
+                  {result.momentum.trend === 'up' ? <TrendingUp size={14} className="animate-pulse" /> :
                     result.momentum.trend === 'down' ? <TrendingDown size={14} /> :
                       <div className="w-3 h-0.5 bg-gray-400 rounded-full"></div>}
                   <span className="font-semibold">
@@ -804,10 +804,9 @@ const GpaCalc = () => {
                     <span className="text-sm font-medium text-gray-400 ml-0.5">/{targetCredits}</span>
                   </div>
                 </div>
-                {/* Thin progress bar - 6px */}
-                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-[#134691] rounded-full transition-all duration-1000 ease-out"
+                    className="h-full bg-gradient-to-r from-[#134691] to-blue-500 rounded-full transition-all duration-1000 ease-out shadow-sm"
                     style={{ width: `${Math.min(100, (result.totalCredits / targetCredits) * 100)}%` }}
                   ></div>
                 </div>
@@ -835,9 +834,9 @@ const GpaCalc = () => {
                 </div>
                 {/* Target progress bar - only show if target is set */}
                 {targetGpa && parseFloat(targetGpa) > 0 && (
-                  <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-[#134691] rounded-full transition-all duration-1000 ease-out"
+                      className="h-full bg-gradient-to-r from-[#134691] to-blue-500 rounded-full transition-all duration-1000 ease-out shadow-sm"
                       style={{ width: `${Math.min(100, (parseFloat(result.gpa4) / parseFloat(targetGpa)) * 100)}%` }}
                     ></div>
                   </div>
@@ -849,8 +848,8 @@ const GpaCalc = () => {
                 onClick={handleSaveGPA}
                 disabled={isSaving}
                 className={`w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${isSaving
-                  ? "bg-gray-100 cursor-not-allowed text-gray-400"
-                  : "bg-[#134691] text-white hover:bg-[#0f3570] active:scale-[0.98]"
+                    ? "bg-gray-100 cursor-not-allowed text-gray-400"
+                    : "bg-gradient-to-r from-[#134691] to-blue-600 text-white hover:from-[#0f3570] hover:to-blue-700 active:scale-[0.98] shadow-sm hover:shadow-md"
                   }`}
               >
                 <Save size={16} />
@@ -993,7 +992,7 @@ const GpaCalc = () => {
                       return (
                         <React.Fragment key={sub.id}>
                           <div
-                            className={`group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200 p-5 ${statusBorderClass}`}
+                            className={`group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-gray-200 hover:shadow-md dark:hover:border-gray-600 transition-all duration-200 p-5 ${statusBorderClass}`}
                           >
                             <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
                               {/* 1. SUBJECT NAME & TYPE (Anchor) */}
@@ -1154,8 +1153,8 @@ const GpaCalc = () => {
                               {/* 4. RESULT AREA (Capsule) */}
                               <div className="min-w-[140px] flex justify-end">
                                 {isFull && gradeInfo ? (
-                                  <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all ${isPassed
-                                    ? `${gradeInfo.bg} border-gray-100`
+                                  <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all duration-200 hover:scale-105 ${isPassed
+                                    ? `${gradeInfo.bg} border-gray-100 ${gradeInfo.char === 'A' ? 'shadow-md shadow-green-100' : ''}`
                                     : 'bg-red-50 border-red-100'
                                     }`}>
                                     <div>
