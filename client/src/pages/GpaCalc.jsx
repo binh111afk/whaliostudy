@@ -161,13 +161,20 @@ const calculateSubjectStatus = (components) => {
   let currentWeight = 0;
   let missingComponent = null;
 
+  // Sắp xếp component để tìm component cuối cùng bị thiếu nếu có nhiều cái thiếu
+  // Logic cũ: tìm cái nặng nhất. Logic mới fix: tìm cái cuối cùng bị thiếu (thường là thi cuối kỳ)
+  // Thực ra logic cũ tìm heaviest weight cũng make sense, nhưng để trực quan khi nhập liệu
+  // ta sẽ ưu tiên component *chưa nhập* mà có weight lớn nhất, hoặc nếu bằng nhau thì lấy cái sau cùng.
+  
   components.forEach((comp) => {
     const w = parseFloat(comp.weight) || 0;
     if (comp.score !== "") {
       currentScore += parseFloat(comp.score) * (w / 100);
       currentWeight += w;
     } else {
-      if (!missingComponent || w > missingComponent.weight) {
+       // Ưu tiên lấy component có weight lớn nhất. 
+       // Nếu weight bằng nhau, lấy cái sau cùng (ghi đè).
+      if (!missingComponent || w >= missingComponent.weight) {
         missingComponent = { ...comp, weight: w };
       }
     }
@@ -956,11 +963,24 @@ const GpaCalc = () => {
                                 (g) => parseFloat(finalScore10) >= g.min
                               ) || GRADE_SCALE[GRADE_SCALE.length - 1];
                           } else if (missingComponent) {
+                            // Logic cũ: luôn predict dựa trên missingComponent
+                            // Nhưng cóp-py từ code cũ thì nó chỉ hiển thị nếu missingComponent tồn tại
                             predictions = predictNeededScores(
                               currentScore,
                               missingComponent.weight,
                               sub.type
                             );
+                            
+                            // MOD: Nếu không thể tìm thấy prediction hợp lệ (ví dụ cần > 10 điểm)
+                            // Ta vẫn nên hiển thị cái gì đó hữu ích hơn là trống trơn
+                            if (predictions.length === 0 && missingComponent.weight > 0) {
+                                // Tính điểm max có thể đạt được
+                                const maxPossible = currentScore + (10 * (missingComponent.weight / 100));
+                                // Nếu max < 4.0 (trượt) -> Cảnh báo
+                                if (maxPossible < 4.0) {
+                                     // Special handling for "Impossible to pass"
+                                }
+                            }
                           }
                           const isPassed =
                             isFull &&
@@ -1181,10 +1201,10 @@ const GpaCalc = () => {
                                       <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wide">Cần đạt tối thiểu:</span>
                                       <div className="flex flex-wrap justify-end gap-2">
                                         {predictions.length > 0 ? (
-                                          predictions.slice(0, 2).map((p, i) => (
+                                          predictions.map((p, i) => (
                                             <div
                                               key={i}
-                                              className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 px-2 py-1.5 rounded-lg"
+                                              className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 px-2 py-1.5 rounded-lg whitespace-nowrap"
                                             >
                                               <span
                                                 className={`text-xs font-black ${
@@ -1204,8 +1224,8 @@ const GpaCalc = () => {
                                             </div>
                                           ))
                                         ) : (
-                                          <span className="text-[10px] text-red-500 font-bold bg-red-50 px-2 py-1 rounded-lg">
-                                            Không thể đạt
+                                          <span className="text-[10px] text-red-500 font-bold bg-red-50 px-2 py-1 rounded-lg whitespace-nowrap">
+                                            Rớt chắc rồi 😭
                                           </span>
                                         )}
                                       </div>
