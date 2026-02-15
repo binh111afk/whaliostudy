@@ -250,14 +250,17 @@ export function analyzeRisks({ semesters, currentGpa4, targetGpa, totalCredits }
           }
         }
 
-        alerts.push({
-          type: 'danger-warning',
-          message: `CẢNH BÁO: GPA ${currentGpa4.toFixed(2)} đang sát mốc ${currentMilestone.label} (${currentMilestone.gpa})! Nếu ${ungradedSubjects.length === 1 ? 'môn' : 'các môn'} ${subjectNames} dưới 7.0 điểm thì GPA sẽ xuống ${projected_7.toFixed(2)} (${fallLabel})`,
-          action: `An toàn: từ ${safeScore10.toFixed(1)} điểm trở lên`,
-          severity: 'danger',
-          icon: '🚨',
-        });
-        primaryAlertCreated = true;
+        // CHỈ CẢNH BÁO NẾU THỰC SỰ TỤT MỐC (Xuất sắc→Giỏi, Giỏi→Khá, v.v...)
+        if (fallLabel !== currentMilestone.label) {
+          alerts.push({
+            type: 'danger-warning',
+            message: `CẢNH BÁO: GPA ${currentGpa4.toFixed(2)} đang sát mốc ${currentMilestone.label} (${currentMilestone.gpa})! Nếu ${ungradedSubjects.length === 1 ? 'môn' : 'các môn'} ${subjectNames} dưới 7.0 điểm thì GPA sẽ xuống ${projected_7.toFixed(2)} (${fallLabel})`,
+            action: `An toàn: từ ${safeScore10.toFixed(1)} điểm trở lên`,
+            severity: 'danger',
+            icon: '🚨',
+          });
+          primaryAlertCreated = true;
+        }
       }
     }
     
