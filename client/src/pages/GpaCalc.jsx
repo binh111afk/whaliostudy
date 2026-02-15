@@ -949,11 +949,11 @@ const GpaCalc = () => {
                     }}
                   />
                   <div className="hidden sm:flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-semibold text-gray-500 bg-gray-50 px-2 py-1 rounded">
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-md shadow-sm">
                       {sem.subjects.length} môn
                     </span>
                     {sem.subjects.length > 0 && calculateSemesterGpa(sem).totalCredits > 0 && (
-                      <span className="text-[10px] uppercase font-semibold text-gray-600 bg-gray-50 px-2 py-1 rounded">
+                      <span className="text-xs font-bold text-[#134691] dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-md shadow-sm">
                         GPA: {calculateSemesterGpa(sem).semesterGpa4.toFixed(2)}
                       </span>
                     )}
@@ -1110,7 +1110,7 @@ const GpaCalc = () => {
                                 {sub.components.map((comp) => (
                                   <div
                                     key={comp.id}
-                                    className="flex items-center gap-2 text-sm group/comp relative pl-2 border-l-2 border-transparent hover:border-gray-200 transition-all"
+                                    className="flex items-center gap-2 text-sm group/comp relative pl-2"
                                   >
                                     {/* Score Input (Swapped: Now First) */}
                                     <div className="relative">
