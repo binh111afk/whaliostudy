@@ -742,88 +742,115 @@ const GpaCalc = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
-      {/* TẦNG 1: HERO OVERVIEW (Premium Style) */}
+      {/* TẦNG 1: HERO OVERVIEW (Premium Academic Dashboard) */}
       <div className="mb-2">
-        <div className="relative overflow-hidden bg-[#F7FAFF] rounded-3xl border border-blue-100/60 shadow-sm p-8 md:p-10">
-          <div className="absolute -left-10 top-1/2 -translate-y-1/2 w-56 h-56 bg-blue-400/10 rounded-full blur-3xl"></div>
-          <div className="relative grid grid-cols-1 md:grid-cols-5 gap-8 items-center">
-            <div className="md:col-span-3">
-              <span className="text-xs font-semibold tracking-widest uppercase text-gray-400">GPA Tích lũy</span>
-              <div className="mt-3 flex items-end gap-5">
-                <h1 className="text-7xl md:text-8xl font-black tracking-tight text-blue-700">
+        <div className="relative overflow-hidden bg-white rounded-2xl border border-gray-200/60 shadow-sm p-10 md:p-12">
+          {/* Subtle radial glow behind GPA - very light */}
+          <div className="absolute left-1/4 top-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
+          
+          <div className="relative grid grid-cols-1 md:grid-cols-10 gap-10 items-center">
+            {/* LEFT SIDE: GPA Focus (60% width) */}
+            <div className="md:col-span-6 text-center md:text-left">
+              <div className="inline-block mb-2 px-3 py-1 rounded-full bg-gray-50 border border-gray-100">
+                <span className="text-xs font-semibold tracking-wider uppercase text-gray-500">GPA Tích lũy</span>
+              </div>
+              
+              {/* GPA - True Center */}
+              <div className="flex flex-col md:flex-row items-center md:items-end gap-4 justify-center md:justify-start">
+                <h1 className="text-8xl md:text-9xl font-black tracking-tight bg-gradient-to-br from-blue-600 to-blue-700 bg-clip-text text-transparent">
                   {result.gpa4}
                 </h1>
-                <span className="px-3 py-1 rounded-full text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100">
-                  {classification.label}
-                </span>
+                
+                {/* Classification Badge - Small & Subtle */}
+                <div className="mb-3">
+                  <span className="inline-block px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100/50">
+                    {classification.label}
+                  </span>
+                </div>
               </div>
+
+              {/* Momentum - Small & Below */}
               {result.momentum && (
-                <div className={`mt-3 flex items-center gap-2 text-sm font-medium ${
-                  result.momentum.trend === 'up' ? 'text-green-600' : 
-                  result.momentum.trend === 'down' ? 'text-red-600' : 'text-gray-500'
+                <div className={`mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${
+                  result.momentum.trend === 'up' 
+                    ? 'bg-green-50 text-green-700 border border-green-100' 
+                    : result.momentum.trend === 'down' 
+                    ? 'bg-red-50 text-red-700 border border-red-100' 
+                    : 'bg-gray-50 text-gray-600 border border-gray-100'
                 }`}>
                   {result.momentum.trend === 'up' ? <TrendingUp size={14} /> : 
-                   result.momentum.trend === 'down' ? <TrendingDown size={14} /> : <div className="w-3 h-0.5 bg-gray-400"></div>}
-                  <span>
+                   result.momentum.trend === 'down' ? <TrendingDown size={14} /> : 
+                   <div className="w-3 h-0.5 bg-gray-400 rounded-full"></div>}
+                  <span className="font-semibold">
                     {result.momentum.delta > 0 ? '+' : ''}{result.momentum.delta}
                   </span>
-                  <span className="text-xs text-gray-400">vs kỳ trước</span>
+                  <span className="text-xs opacity-70">vs kỳ trước</span>
                 </div>
               )}
             </div>
 
-            <div className="md:col-span-2 md:pl-8 md:border-l md:border-blue-100/60 space-y-5">
+            {/* RIGHT SIDE: Metrics & Actions (40% width) */}
+            <div className="md:col-span-4 space-y-6">
+              {/* Credits Accumulated */}
               <div>
-                <div className="flex items-end justify-between gap-4">
-                  <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Tín chỉ tích lũy</span>
+                <div className="flex items-baseline justify-between mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Tín chỉ tích lũy</span>
                   <div className="text-right">
-                    <span className="text-3xl font-black text-gray-900">{result.totalCredits}</span>
-                    <span className="text-sm font-semibold text-gray-400">/{targetCredits}</span>
+                    <span className="text-2xl font-bold text-gray-900">{result.totalCredits}</span>
+                    <span className="text-sm font-medium text-gray-400 ml-0.5">/{targetCredits}</span>
                   </div>
                 </div>
-                <div className="mt-3 h-1.5 w-full bg-blue-100 rounded-full overflow-hidden">
+                {/* Thin progress bar - 6px */}
+                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-blue-600 rounded-full transition-all duration-1000"
+                    className="h-full bg-blue-600 rounded-full transition-all duration-1000 ease-out"
                     style={{ width: `${Math.min(100, (result.totalCredits / targetCredits) * 100)}%` }}
                   ></div>
                 </div>
               </div>
 
-              <div className="h-px bg-blue-100/60"></div>
+              {/* Divider */}
+              <div className="h-px bg-gray-100"></div>
 
+              {/* Target GPA */}
               <div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-widest text-gray-400">Mục tiêu GPA</div>
-                    <div className="text-2xl font-black text-gray-900">
-                      {targetGpa ? targetGpa : <span className="text-gray-400 text-base italic">Chưa đặt</span>}
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <div className="flex-1">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Mục tiêu GPA</div>
+                    <div className="text-xl font-bold text-gray-900">
+                      {targetGpa ? targetGpa : <span className="text-gray-400 text-sm font-normal italic">Chưa đặt</span>}
                     </div>
                   </div>
                   <input
                     type="number"
-                    placeholder="Target"
-                    className="w-24 text-right bg-white px-3 py-2 rounded-xl font-semibold text-gray-800 outline-none border border-blue-100 focus:border-blue-400 text-sm transition-all"
+                    step="0.1"
+                    min="0"
+                    max="4"
+                    placeholder="4.0"
+                    className="w-20 text-center bg-gray-50 px-3 py-2 rounded-lg font-semibold text-gray-800 outline-none border border-gray-200 focus:border-blue-500 focus:bg-white text-sm transition-all"
                     value={targetGpa}
                     onChange={(e) => setTargetGpa(e.target.value)}
                   />
                 </div>
-                {targetGpa && (
-                  <div className="mt-3 h-1.5 w-full bg-blue-100 rounded-full overflow-hidden">
+                {/* Target progress bar - only show if target is set */}
+                {targetGpa && parseFloat(targetGpa) > 0 && (
+                  <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-blue-600 rounded-full transition-all duration-1000"
-                      style={{ width: `${Math.min(100, (result.gpa4 / parseFloat(targetGpa)) * 100)}%` }}
+                      className="h-full bg-blue-600 rounded-full transition-all duration-1000 ease-out"
+                      style={{ width: `${Math.min(100, (parseFloat(result.gpa4) / parseFloat(targetGpa)) * 100)}%` }}
                     ></div>
                   </div>
                 )}
               </div>
 
+              {/* Save Button */}
               <button
                 onClick={handleSaveGPA}
                 disabled={isSaving}
-                className={`w-full py-3.5 rounded-xl font-semibold shadow-sm transition-all flex items-center justify-center gap-2 text-sm ${
+                className={`w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${
                   isSaving
-                    ? "bg-gray-300 cursor-not-allowed text-white"
-                    : "bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98]"
+                    ? "bg-gray-200 cursor-not-allowed text-gray-400"
+                    : "bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] shadow-sm hover:shadow-md"
                 }`}
               >
                 <Save size={16} />
@@ -834,23 +861,23 @@ const GpaCalc = () => {
         </div>
       </div>
 
-      {/* TẦNG 2: SMART PRIORITY ALERT */}
+      {/* TẦNG 2: SMART PRIORITY ALERT - Subtle & Harmonized */}
       {priorityAlert && (
-        <div className={`mx-1 mb-6 p-5 rounded-3xl border flex items-start gap-4 shadow-sm transition-all animate-in fade-in slide-in-from-top-4 duration-500 ${
+        <div className={`mx-1 mb-6 p-4 rounded-2xl border flex items-start gap-3 transition-all animate-in fade-in slide-in-from-top-4 duration-500 ${
           priorityAlert.severity === 'danger'
-            ? 'bg-red-50/70 border-red-200 text-red-900'
-            : 'bg-blue-50/70 border-blue-200 text-blue-900'
+            ? 'bg-red-50/50 border-red-200/60 text-red-900'
+            : 'bg-blue-50/40 border-blue-200/50 text-blue-900'
         }`}>
-          <div className={`p-2.5 rounded-xl shrink-0 ${
+          <div className={`p-2 rounded-lg shrink-0 ${
             priorityAlert.severity === 'danger'
-              ? 'bg-red-100 text-red-600'
-              : 'bg-blue-100 text-blue-600'
+              ? 'bg-red-100/80 text-red-600'
+              : 'bg-blue-100/60 text-blue-600'
           }`}>
-            {priorityAlert.icon ? <span className="text-lg">{priorityAlert.icon}</span> : <AlertTriangle size={18} />}
+            {priorityAlert.icon ? <span className="text-base">{priorityAlert.icon}</span> : <AlertTriangle size={16} />}
           </div>
           <div className="flex-1 py-0.5">
-            <p className="font-bold text-sm leading-snug">{priorityAlert.message}</p>
-            {priorityAlert.action && <p className="text-xs mt-2 opacity-80 font-medium">{priorityAlert.action}</p>}
+            <p className="font-semibold text-sm leading-relaxed">{priorityAlert.message}</p>
+            {priorityAlert.action && <p className="text-xs mt-1.5 opacity-75 font-medium">{priorityAlert.action}</p>}
           </div>
         </div>
       )}
