@@ -311,9 +311,13 @@ const GpaCalc = () => {
       fetch(`/api/gpa?username=${user.username}`)
         .then((res) => res.json())
         .then((data) => {
-          if (data.success && data.semesters && data.semesters.length > 0) {
-            // Nếu có dữ liệu cũ thì nạp vào
-            setSemesters(data.semesters);
+          if (data.success) {
+            if (data.semesters && data.semesters.length > 0) {
+              setSemesters(data.semesters);
+            }
+            if (data.targetGpa) {
+              setTargetGpa(data.targetGpa);
+            }
           }
         })
         .catch((err) => console.error("Lỗi tải GPA:", err));
@@ -350,7 +354,11 @@ const GpaCalc = () => {
       const res = await fetch("/api/gpa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: user.username, semesters }),
+        body: JSON.stringify({
+          username: user.username,
+          semesters,
+          targetGpa // 🔥 Gửi thêm targetGpa
+        }),
       });
       const data = await res.json();
 
@@ -1485,8 +1493,8 @@ const GpaCalc = () => {
 
                 {!isScholarshipMode && (
                   <div className={`flex-1 p-6 rounded-3xl border-2 bg-white dark:bg-gray-800 shadow-xl transition-all relative overflow-hidden ${targetGpa
-                      ? (strategyData.strategy?.feasibility ? getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).border : 'border-indigo-100')
-                      : 'border-dashed border-gray-200 dark:border-gray-700'
+                    ? (strategyData.strategy?.feasibility ? getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).border : 'border-indigo-100')
+                    : 'border-dashed border-gray-200 dark:border-gray-700'
                     }`}>
                     {targetGpa && strategyData.strategy?.feasibility && (
                       <div className={`absolute top-0 left-0 w-full h-1.5 ${getFeasibilityColors(strategyData.strategy.feasibility.feasibilityLevel).bg.replace('bg-', 'bg-')}`}></div>
@@ -1517,10 +1525,10 @@ const GpaCalc = () => {
                             <div className="text-right">
                               <div className={`inline-flex flex-col items-end`}>
                                 <span className={`text-xs font-bold uppercase mb-1 ${strategyData.strategy.feasibility.feasibilityLevel === 'hard' ? 'text-red-500' :
-                                    strategyData.strategy.feasibility.feasibilityLevel === 'medium' ? 'text-orange-500' : 'text-green-500'
+                                  strategyData.strategy.feasibility.feasibilityLevel === 'medium' ? 'text-orange-500' : 'text-green-500'
                                   }`}>Độ khó</span>
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${strategyData.strategy.feasibility.feasibilityLevel === 'hard' ? 'bg-red-50 text-red-600 border-red-100' :
-                                    strategyData.strategy.feasibility.feasibilityLevel === 'medium' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-green-50 text-green-600 border-green-100'
+                                  strategyData.strategy.feasibility.feasibilityLevel === 'medium' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-green-50 text-green-600 border-green-100'
                                   }`}>
                                   {strategyData.strategy.feasibility.feasibilityLevel === 'hard' ? 'Thử thách' :
                                     strategyData.strategy.feasibility.feasibilityLevel === 'medium' ? 'Trung bình' : 'Khả thi'}
@@ -1533,8 +1541,8 @@ const GpaCalc = () => {
                             <p className="text-xs font-bold text-gray-500 uppercase mb-2">Cần đạt kỳ này</p>
                             <div className="flex items-baseline gap-2">
                               <span className={`text-5xl font-black tracking-tight ${result.prediction4 > 3.6 ? 'text-red-600' :
-                                  result.prediction4 > 3.2 ? 'text-orange-600' :
-                                    result.prediction4 > 2.5 ? 'text-blue-600' : 'text-green-600'
+                                result.prediction4 > 3.2 ? 'text-orange-600' :
+                                  result.prediction4 > 2.5 ? 'text-blue-600' : 'text-green-600'
                                 }`}>
                                 {result.prediction4.toFixed(2)}
                               </span>

@@ -20,7 +20,7 @@ const { generateAIResponse } = require('./aiService'); // Bỏ cái /js/ đi là
 
 const app = express();
 // 1. CHỈ CẦN MỘT DÒNG NÀY LÀ ĐỦ CÂN CẢ THẾ GIỚI CORS
-app.use(cors()); 
+app.use(cors());
 
 // 2. Middleware xử lý JSON (để nhận tin nhắn và ảnh)
 app.use(express.json({ limit: '10mb' }));
@@ -287,21 +287,22 @@ const StudySession = mongoose.model('StudySession', studySessionSchema);
 // --- GPA Schema ---
 // --- GPA Schema (ĐÃ SỬA: KHỚP 100% VỚI FRONTEND) ---
 const gpaSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true }, 
+    username: { type: String, required: true, unique: true },
+    targetGpa: { type: String, default: "" }, // 🔥 Thêm field này
     semesters: [{
         id: Number,
         name: String,
         isExpanded: { type: Boolean, default: true }, // Thêm cái này để lưu trạng thái đóng/mở
-        
+
         // 👇 ĐỔI TÊN 'courses' -> 'subjects'
-        subjects: [{         
+        subjects: [{
             id: Number,
             name: String,
             credits: Number,
             type: { type: String, default: 'general' }, // 'general' hoặc 'major'
-            
+
             // 👇 THÊM 'components' để lưu điểm thành phần (Quan trọng!)
-            components: [{   
+            components: [{
                 id: Number,
                 score: String, // Lưu string vì frontend gửi cả chuỗi rỗng ""
                 weight: Number
@@ -467,16 +468,16 @@ const eventSchema = new mongoose.Schema({
 
 // ChatSession Schema - Lưu lịch sử trò chuyện với Whalio AI
 const chatSessionSchema = new mongoose.Schema({
-    sessionId: { 
-        type: String, 
-        required: true, 
-        unique: true, 
+    sessionId: {
+        type: String,
+        required: true,
+        unique: true,
         index: true,
         default: () => `chat_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
     },
     username: { type: String, ref: 'User', index: true }, // Optional: link to user if logged in
-    title: { 
-        type: String, 
+    title: {
+        type: String,
         default: 'Cuộc trò chuyện mới',
         maxlength: 100
     },
@@ -580,26 +581,26 @@ function normalizeFileName(str) {
 //            This is the MOST RELIABLE for direct file access/download
 function getCloudinaryResourceType(filename) {
     const ext = path.extname(filename).toLowerCase();
-    
+
     // Images: Use 'image' resource_type (Cloudinary optimizes these)
     const imageFormats = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
     if (imageFormats.includes(ext)) {
         return 'image';
     }
-    
+
     // Videos: Use 'video' resource_type
     const videoFormats = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
     if (videoFormats.includes(ext)) {
         return 'video';
     }
-    
+
     // 🔥 PDFs: Use 'raw' for RELIABLE direct viewing/downloading
     // Using 'image' causes 401/404 errors when accessing directly
     // 'raw' gives us a direct downloadable link that works in browsers
     if (ext === '.pdf') {
         return 'raw';
     }
-    
+
     // Everything else (Office, Archives, etc.): Use 'raw'
     // This ensures they're stored correctly and URLs work without modification
     return 'raw';
@@ -614,15 +615,15 @@ const storage = new CloudinaryStorage({
 
         // Lưu lại tên gốc
         file.decodedOriginalName = decodedName;
-        
+
         // Determine the correct resource_type based on file extension
         const resourceType = getCloudinaryResourceType(file.originalname);
-        
+
         console.log(`☁️ Cloudinary upload: ${file.originalname} → resource_type: ${resourceType}`);
 
         // Get file extension for proper handling
         const ext = path.extname(file.originalname).toLowerCase();
-        
+
         return {
             folder: 'whalio-documents',
             resource_type: resourceType, // Explicitly set based on file type
@@ -646,7 +647,7 @@ const chatFileUpload = multer({
     limits: { fileSize: 50 * 1024 * 1024 }, // Giới hạn 50MB cho file chat
     fileFilter: (req, file, cb) => {
         console.log(`📂 Checking chat file: ${file.originalname} (${file.mimetype})`);
-        
+
         // Cho phép ảnh và các loại file phổ biến
         const allowedMimes = [
             // Images
@@ -670,10 +671,10 @@ const chatFileUpload = multer({
             'text/html',
             'text/css'
         ];
-        
+
         const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.txt', '.xls', '.xlsx', '.ppt', '.pptx', '.zip', '.rar', '.js', '.html', '.css'];
         const ext = require('path').extname(file.originalname).toLowerCase();
-        
+
         if (allowedMimes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
             console.log(`   ✅ File allowed: ${file.originalname}`);
             cb(null, true);
@@ -747,46 +748,46 @@ async function uploadToCloudinary(buffer, originalFilename, mimeType) {
     const ext = path.extname(originalFilename).toLowerCase();
     const decodedName = decodeFileName(originalFilename);
     const safeName = normalizeFileName(decodedName);
-    
+
     // ==================== RESOURCE TYPE LOGIC ====================
     // 📌 RULES:
     //    - Images (.jpg, .png, etc.) → 'image' → Keep /image/upload/ URL
     //    - PDFs → 'auto' → Cloudinary stores as 'image' → Keep /image/upload/ URL ✅
     //    - Videos → 'video' → Keep /video/upload/ URL
     //    - Office/Archives → 'auto' → Need to force /raw/upload/ for viewers
-    
+
     const imageFormats = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
     const videoFormats = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
-    
+
     // 🔥 Use 'auto' for all - Cloudinary will decide best storage
     let resourceType = 'auto';
-    
+
     console.log(`☁️ Uploading to Cloudinary: ${originalFilename}`);
     console.log(`   → resource_type: ${resourceType}, extension: ${ext}`);
-    
+
     // Convert buffer to base64 Data URI
     const base64Data = buffer.toString('base64');
     const dataUri = `data:${mimeType || 'application/octet-stream'};base64,${base64Data}`;
-    
+
     try {
         const result = await cloudinary.uploader.upload(dataUri, {
             folder: 'whalio-documents',
             resource_type: resourceType,
             public_id: safeName,
         });
-        
+
         console.log(`✅ Cloudinary upload success!`);
         console.log(`   → URL: ${result.secure_url}`);
         console.log(`   → Resource type: ${result.resource_type}`);
         console.log(`   → Format: ${result.format}`);
-        
+
         // ==================== URL FIX LOGIC ====================
         // 🔥 WHITELIST: Only these formats need /raw/upload/ for Microsoft Viewer
         const rawFormats = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.rar', '.zip', '.7z'];
-        
+
         // Use 'let' to allow reassignment
         let finalUrl = result.secure_url;
-        
+
         if (rawFormats.includes(ext)) {
             // Office & Archive files: Force /raw/upload/ for Microsoft Office Viewer
             finalUrl = finalUrl.replace('/image/upload/', '/raw/upload/');
@@ -806,7 +807,7 @@ async function uploadToCloudinary(buffer, originalFilename, mimeType) {
             console.log(`   📎 Other file → Fixed to RAW: ${finalUrl}`);
         }
         // ==================== END URL FIX LOGIC ====================
-        
+
         return {
             ...result,
             secure_url: finalUrl,
@@ -1097,11 +1098,11 @@ app.post('/api/upload-document', (req, res, next) => {
         }
 
         const decodedOriginalName = decodeFileName(file.originalname);
-        
+
         // 🔥 UPLOAD TRỰC TIẾP QUA CLOUDINARY SDK với full control
         const cloudinaryResult = await uploadToCloudinary(file.buffer, file.originalname, file.mimetype);
         let cloudinaryUrl = cloudinaryResult.secure_url;
-        
+
         console.log(`☁️ Cloudinary result:`, {
             url: cloudinaryUrl,
             resource_type: cloudinaryResult.resource_type,
@@ -1301,12 +1302,12 @@ app.get('/api/exams', async (req, res) => {
     try {
         // Tuyệt chiêu: Lấy mọi thứ TRỪ questions và questionBank
         const exams = await Exam.find()
-            .select('-questions -questionBank') 
+            .select('-questions -questionBank')
             .sort({ createdAt: -1 })
             .lean();
-        
+
         // Giờ dữ liệu trả về cực nhẹ, Koyeb sẽ không bao giờ báo Unhealthy nữa
-        res.json(exams); 
+        res.json(exams);
     } catch (err) {
         console.error('Get exams error:', err);
         res.json([]);
@@ -1947,7 +1948,7 @@ app.get('/api/study/stats', async (req, res) => {
 
         // Gom nhóm theo ngày (Format: DD/MM)
         const stats = {};
-        
+
         // Tạo khung 7 ngày (để ngày nào không học vẫn hiện 0)
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
@@ -2199,10 +2200,10 @@ app.post('/api/timetable/update-note', async (req, res) => {
                 if (!note || !note.content) {
                     return res.json({ success: false, message: '❌ Nội dung ghi chú không được trống' });
                 }
-                
+
                 // 🔥 DEBUG: Log incoming deadline
                 console.log(`📝 Received deadline from client:`, note.deadline, `(type: ${typeof note.deadline})`);
-                
+
                 const newNote = {
                     id: note.id || Date.now().toString(),
                     content: note.content.trim(),
@@ -2210,10 +2211,10 @@ app.post('/api/timetable/update-note', async (req, res) => {
                     isDone: false,
                     createdAt: new Date()
                 };
-                
+
                 // 🔥 DEBUG: Log saved deadline
                 console.log(`📝 Saved deadline:`, newNote.deadline);
-                
+
                 classToUpdate.notes.push(newNote);
                 console.log(`📝 Added note to "${classToUpdate.subject}": "${newNote.content}"`);
                 break;
@@ -2266,10 +2267,10 @@ app.post('/api/timetable/update-note', async (req, res) => {
         classToUpdate.updatedAt = new Date();
         await classToUpdate.save();
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             message: 'Cập nhật ghi chú thành công!',
-            notes: classToUpdate.notes 
+            notes: classToUpdate.notes
         });
     } catch (err) {
         console.error('❌ Update note error:', err);
@@ -2414,36 +2415,36 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // OPTIMIZED: Tăng delay để giảm rate limit errors (2s → 5s → 10s)
 async function retryWithExponentialBackoff(fn, maxRetries = 3, baseDelay = 2000) {
     let lastError;
-    
+
     // Custom delays: 2s, 5s, 10s thay vì 2s, 4s, 8s
     const delays = [2000, 5000, 10000];
-    
+
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
             return await fn();
         } catch (error) {
             lastError = error;
-            
+
             // Check if error is retryable (429, quota, rate limit)
-            const isRetryableError = 
+            const isRetryableError =
                 error.message?.includes('429') ||
                 error.message?.includes('quota') ||
                 error.message?.includes('Too Many Requests') ||
                 error.message?.includes('RATE_LIMIT') ||
                 error.message?.includes('Resource has been exhausted');
-            
+
             if (!isRetryableError || attempt === maxRetries - 1) {
                 throw error; // Don't retry non-retryable errors or last attempt
             }
-            
+
             // Use custom delay with small jitter
             const delay = delays[attempt] + Math.random() * 500;
-            console.log(`🔄 Gemini API rate limited, retrying in ${(delay/1000).toFixed(1)}s... (Attempt ${attempt + 1}/${maxRetries})`);
-            
+            console.log(`🔄 Gemini API rate limited, retrying in ${(delay / 1000).toFixed(1)}s... (Attempt ${attempt + 1}/${maxRetries})`);
+
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
-    
+
     throw lastError;
 }
 
@@ -2484,7 +2485,7 @@ Bạn là **Whalio** – Trợ lý AI thân thiện và hài hước của cộn
 app.get('/api/sessions', async (req, res) => {
     try {
         const { username, limit = 50 } = req.query;
-        
+
         // SECURITY: Chỉ trả về sessions của user cụ thể
         // Nếu không có username, trả về mảng rỗng (guest không có lịch sử)
         if (!username) {
@@ -2493,13 +2494,13 @@ app.get('/api/sessions', async (req, res) => {
                 sessions: []
             });
         }
-        
+
         const sessions = await ChatSession.find({ username })
             .select('sessionId title createdAt updatedAt')
             .sort({ updatedAt: -1, createdAt: -1 })
             .limit(parseInt(limit))
             .lean();
-        
+
         res.json({
             success: true,
             sessions: sessions.map(s => ({
@@ -2521,10 +2522,10 @@ app.get('/api/session/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { username } = req.query; // Lấy username người đang xem
-        
+
         // 1. Tìm session theo ID trước
         const session = await ChatSession.findOne({ sessionId: id }).lean();
-        
+
         if (!session) {
             return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc trò chuyện' });
         }
@@ -2535,13 +2536,13 @@ app.get('/api/session/:id', async (req, res) => {
             // Nếu người xem không cung cấp username HOẶC username không khớp
             if (!username || session.username !== username) {
                 console.warn(`⛔ Cảnh báo bảo mật: ${username || 'Ẩn danh'} cố xem chat của ${session.username}`);
-                return res.status(403).json({ 
-                    success: false, 
-                    message: '⛔ Bạn không có quyền xem cuộc trò chuyện này!' 
+                return res.status(403).json({
+                    success: false,
+                    message: '⛔ Bạn không có quyền xem cuộc trò chuyện này!'
                 });
             }
         }
-        
+
         res.json({
             success: true,
             session: {
@@ -2563,22 +2564,22 @@ app.delete('/api/session/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { username } = req.query;
-        
+
         // Build query - kiểm tra cả sessionId và username nếu có
         const query = { sessionId: id };
         if (username) {
             query.username = username;
         }
-        
+
         const result = await ChatSession.findOneAndDelete(query);
-        
+
         if (!result) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Không tìm thấy cuộc trò chuyện' 
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy cuộc trò chuyện'
             });
         }
-        
+
         console.log(`🗑️ Chat session deleted: ${id}`);
         res.json({ success: true, message: 'Đã xóa cuộc trò chuyện' });
     } catch (err) {
@@ -2592,21 +2593,21 @@ app.put('/api/session/:id/title', async (req, res) => {
     try {
         const { id } = req.params;
         const { title } = req.body;
-        
+
         if (!title || title.trim() === '') {
             return res.status(400).json({ success: false, message: 'Tiêu đề không được để trống' });
         }
-        
+
         const session = await ChatSession.findOneAndUpdate(
             { sessionId: id },
             { title: title.trim().substring(0, 100), updatedAt: new Date() },
             { new: true }
         );
-        
+
         if (!session) {
             return res.status(404).json({ success: false, message: 'Không tìm thấy cuộc trò chuyện' });
         }
-        
+
         res.json({ success: true, session: { sessionId: session.sessionId, title: session.title } });
     } catch (err) {
         console.error('❌ Error updating session title:', err);
@@ -2623,13 +2624,13 @@ app.get('/api/gpa', async (req, res) => {
         if (!username) return res.status(400).json({ success: false });
 
         let gpaData = await GpaModel.findOne({ username });
-        
+
         // Nếu chưa có dữ liệu, trả về mảng rỗng để frontend tự tạo
         if (!gpaData) {
             return res.json({ success: true, semesters: [] });
         }
 
-        res.json({ success: true, semesters: gpaData.semesters });
+        res.json({ success: true, semesters: gpaData.semesters, targetGpa: gpaData.targetGpa || "" });
     } catch (err) {
         console.error('Get GPA error:', err);
         res.status(500).json({ success: false });
@@ -2639,12 +2640,17 @@ app.get('/api/gpa', async (req, res) => {
 // 2. Lưu dữ liệu GPA
 app.post('/api/gpa', async (req, res) => {
     try {
-        const { username, semesters } = req.body;
-        
+        const { username, semesters, targetGpa } = req.body;
+
         // Dùng findOneAndUpdate với option upsert: true (Nếu chưa có thì tạo mới, có rồi thì update)
         await GpaModel.findOneAndUpdate(
             { username },
-            { username, semesters, updatedAt: new Date() },
+            {
+                username,
+                semesters,
+                targetGpa: targetGpa || "", // Lưu targetGpa
+                updatedAt: new Date()
+            },
             { upsert: true, new: true }
         );
 
@@ -2695,7 +2701,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
         // ==================== SESSION MANAGEMENT ====================
         let session;
         let isNewSession = false;
-        
+
         if (sessionId) {
             // Tìm session hiện có
             session = await ChatSession.findOne({ sessionId });
@@ -2703,24 +2709,24 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                 console.log(`⚠️ Session ${sessionId} not found, creating new session`);
             }
         }
-        
+
         if (!session) {
             // Tạo session mới
             isNewSession = true;
             const newSessionId = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-            
+
             // OPTIMIZED: Lấy 30 ký tự đầu của tin nhắn làm tiêu đề (KHÔNG dùng AI)
             // Tiết kiệm 50% request API so với việc gọi AI tạo title
             const messageText = message ? message.trim() : (req.file ? `Phân tích ${req.file.originalname}` : 'Cuộc trò chuyện mới');
             const autoTitle = messageText.substring(0, 30) + (messageText.length > 30 ? '...' : '');
-            
+
             session = new ChatSession({
                 sessionId: newSessionId,
                 username: username || null,
                 title: autoTitle,
                 messages: []
             });
-            
+
             console.log(`🆕 Created new chat session: ${newSessionId} (Title: "${autoTitle}")`);
         }
 
@@ -2742,7 +2748,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
         let contentParts = [];
         let hasAttachment = false;
         let attachmentType = null;
-        
+
         // Thêm text message (nếu có)
         const textMessage = message ? message.trim() : 'Hãy phân tích file này.';
         contentParts.push(textMessage);
@@ -2755,7 +2761,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             const fileExt = path.extname(filename).toLowerCase();
             const fileSizeKB = (req.file.size / 1024).toFixed(2);
             const buffer = req.file.buffer;
-            
+
             // Xác định loại attachment
             if (mimetype.startsWith('image/')) attachmentType = 'image';
             else if (mimetype.includes('pdf')) attachmentType = 'pdf';
@@ -2763,12 +2769,12 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             else if (mimetype.includes('excel') || mimetype.includes('spreadsheet')) attachmentType = 'excel';
             else if (mimetype.includes('powerpoint') || mimetype.includes('presentation')) attachmentType = 'powerpoint';
             else attachmentType = 'other';
-            
+
             console.log(`📎 Nhận được file: ${filename} (${mimetype}, ${fileSizeKB} KB)`);
-            
+
             let extractedContent = null;
             let fileTypeIcon = '📁';
-            
+
             try {
                 // ==================== XỬ LÝ ẢNH ====================
                 if (mimetype.startsWith('image/')) {
@@ -2816,13 +2822,13 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                     console.log(`   📊 Đang đọc nội dung Excel...`);
                     const workbook = XLSX.read(buffer, { type: 'buffer' });
                     let excelContent = '';
-                    
+
                     workbook.SheetNames.forEach((sheetName, index) => {
                         const sheet = workbook.Sheets[sheetName];
                         const csvData = XLSX.utils.sheet_to_csv(sheet);
                         excelContent += `\n--- Sheet ${index + 1}: ${sheetName} ---\n${csvData}\n`;
                     });
-                    
+
                     extractedContent = excelContent;
                     console.log(`   ✅ Đã trích xuất ${extractedContent.length} ký tự từ ${workbook.SheetNames.length} sheet Excel`);
                 }
@@ -2833,11 +2839,11 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                     extractedContent = `[File PowerPoint: ${filename}]\nKích thước: ${fileSizeKB} KB\n\n⚠️ Hiện tại mình chưa hỗ trợ đọc nội dung PowerPoint trực tiếp. Bạn có thể:\n1. Chuyển sang PDF\n2. Copy nội dung text vào tin nhắn\n3. Chụp ảnh các slide quan trọng`;
                 }
                 // ==================== XỬ LÝ FILE TEXT ====================
-                else if (mimetype.startsWith('text/') || 
-                         mimetype === 'application/javascript' ||
-                         mimetype === 'application/json' ||
-                         mimetype === 'application/xml' ||
-                         ['.txt', '.html', '.css', '.js', '.json', '.xml', '.csv', '.md', '.py', '.java', '.c', '.cpp', '.h', '.php', '.sql', '.sh', '.bat', '.yaml', '.yml', '.ini', '.cfg', '.log'].includes(fileExt)) {
+                else if (mimetype.startsWith('text/') ||
+                    mimetype === 'application/javascript' ||
+                    mimetype === 'application/json' ||
+                    mimetype === 'application/xml' ||
+                    ['.txt', '.html', '.css', '.js', '.json', '.xml', '.csv', '.md', '.py', '.java', '.c', '.cpp', '.h', '.php', '.sql', '.sh', '.bat', '.yaml', '.yml', '.ini', '.cfg', '.log'].includes(fileExt)) {
                     fileTypeIcon = '📝';
                     console.log(`   📝 Đang đọc file text/code...`);
                     extractedContent = buffer.toString('utf-8');
@@ -2854,18 +2860,18 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                     console.log(`   ⚠️ Loại file không xác định: ${mimetype}`);
                     extractedContent = `[File: ${filename}]\nLoại: ${mimetype}\nKích thước: ${fileSizeKB} KB\n\n⚠️ Mình không thể đọc trực tiếp loại file này.`;
                 }
-                
+
                 // Nếu có nội dung được trích xuất (không phải ảnh), thêm vào message
                 if (extractedContent && !mimetype.startsWith('image/')) {
                     // Giới hạn độ dài để tránh quá tải
                     const maxLength = 100000; // 100K ký tự
-                    const truncatedContent = extractedContent.length > maxLength 
+                    const truncatedContent = extractedContent.length > maxLength
                         ? extractedContent.substring(0, maxLength) + '\n\n... [Nội dung đã được cắt bớt do quá dài]'
                         : extractedContent;
-                    
+
                     contentParts[0] = `${textMessage}\n\n${fileTypeIcon} Nội dung file "${filename}":\n\`\`\`\n${truncatedContent}\n\`\`\``;
                 }
-                
+
             } catch (parseError) {
                 console.error(`   ❌ Lỗi khi đọc file:`, parseError.message);
                 contentParts[0] = `${textMessage}\n\n📎 File đính kèm: ${filename}\n📊 Loại: ${mimetype}\n📏 Kích thước: ${fileSizeKB} KB\n\n⚠️ Đã xảy ra lỗi khi đọc file: ${parseError.message}`;
@@ -2875,7 +2881,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
         // ==================== GỌI AI SERVICE (Gemini → DeepSeek Fallback) ====================
         // Kết hợp history context với message hiện tại
         let finalMessage = '';
-        
+
         // Nếu có lịch sử chat, thêm context
         if (geminiHistory.length > 0) {
             finalMessage = '--- Lịch sử cuộc trò chuyện (để tham khảo context) ---\n';
@@ -2886,14 +2892,14 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             });
             finalMessage += '--- Tin nhắn hiện tại ---\n';
         }
-        
+
         // Thêm tin nhắn hiện tại (có thể là text + nội dung file đã extract)
         if (typeof contentParts[0] === 'string') {
             finalMessage += contentParts[0];
         } else if (contentParts[0]?.text) {
             finalMessage += contentParts[0].text;
         }
-        
+
         // Nếu có ảnh trong contentParts, xử lý riêng
         let hasImageData = false;
         if (contentParts.length > 1 && contentParts[1]?.inlineData) {
@@ -2901,26 +2907,26 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             hasImageData = true;
             console.log('🖼️ Phát hiện ảnh - sẽ sử dụng Gemini trực tiếp (multimodal)');
         }
-        
+
         let aiResponseText;
         let modelUsed = 'Unknown';
-        
+
         // Nếu có ảnh, dùng Gemini trực tiếp (vì DeepSeek không tốt với vision)
         // Nếu có ảnh, dùng Gemini trước -> Nếu lỗi thì Fallback sang Groq Vision
         if (hasImageData) {
             console.log('📸 Xử lý ảnh: Thử Gemini Multimodal trước...');
-            
+
             try {
                 // --- LỚP 1: GEMINI VISION ---
                 const model = genAI.getGenerativeModel({
                     model: 'gemini-2.5-flash',
                     systemInstruction: WHALIO_SYSTEM_INSTRUCTION
                 });
-                
+
                 const chat = model.startChat({
                     history: geminiHistory,
                 });
-                
+
                 // Thử gọi Gemini
                 const result = await chat.sendMessage(contentParts);
                 const response = await result.response;
@@ -2929,17 +2935,17 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
 
             } catch (geminiErr) {
                 console.warn(`⚠️ Gemini Vision lỗi: ${geminiErr.message}`);
-                
+
                 // Chỉ fallback nếu lỗi là quá tải (429) hoặc lỗi mạng
                 if (geminiErr.message.includes('429') || geminiErr.message.includes('Rate Limit') || geminiErr.message.includes('fetch failed')) {
                     console.log('🔄 Đang chuyển sang Groq Vision (Llama 3.2)...');
-                    
+
                     try {
                         // --- LỚP 2: GROQ VISION (LLAMA 3.2) ---
                         // Cần chuẩn bị dữ liệu ảnh đúng chuẩn OpenAI/Groq
                         const base64Image = contentParts[1].inlineData.data; // Lấy lại base64 từ contentParts đã tạo ở trên
                         const mimeType = contentParts[1].inlineData.mimeType;
-                        
+
                         // Gọi Groq Vision
                         const OpenAI = require('openai');
                         const groq = new OpenAI({
@@ -2983,7 +2989,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             // Không có ảnh -> Dùng aiService với fallback thông minh
             console.log('💬 Gọi AI Service với Fallback (Gemini → DeepSeek)...');
             const aiResult = await generateAIResponse(finalMessage);
-            
+
             if (!aiResult.success) {
                 // Cả hai models đều thất bại
                 console.error('❌ AI Service thất bại:', aiResult.error);
@@ -2994,10 +3000,10 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                     error: aiResult.error
                 });
             }
-            
+
             aiResponseText = aiResult.message;
             modelUsed = aiResult.model;
-            
+
             // Log nếu đã fallback
             if (aiResult.fallback) {
                 console.log(`🔄 Đã fallback sang ${modelUsed}`);
@@ -3006,7 +3012,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
 
         // ==================== SAVE TO DATABASE ====================
         const userMessageContent = message ? message.trim() : '[Gửi file đính kèm]';
-        
+
         // Thêm tin nhắn user vào session
         session.messages.push({
             role: 'user',
@@ -3015,14 +3021,14 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             hasAttachment: hasAttachment,
             attachmentType: attachmentType
         });
-        
+
         // Thêm phản hồi AI vào session
         session.messages.push({
             role: 'model',
             content: aiResponseText,
             timestamp: new Date()
         });
-        
+
         // Cập nhật thời gian và lưu
         session.updatedAt = new Date();
         await session.save();
@@ -3042,7 +3048,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
 
     } catch (err) {
         console.error('❌ Gemini AI Error:', err.message);
-        
+
         // Handle specific error types
         if (err.message?.includes('API_KEY_INVALID')) {
             return res.status(500).json({
@@ -3050,7 +3056,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                 message: 'Invalid API key configuration'
             });
         }
-        
+
         if (err.message?.includes('SAFETY')) {
             return res.status(400).json({
                 success: false,
@@ -3107,7 +3113,7 @@ async function checkAvailableModels() {
         const key = process.env.GEMINI_API_KEY;
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
         const data = await response.json();
-        
+
         if (data.models) {
             console.log("✅ DANH SÁCH MODEL KHẢ DỤNG:");
             data.models.forEach(m => {
