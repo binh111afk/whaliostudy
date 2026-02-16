@@ -2,8 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as FramerMotion from "framer-motion";
 import {
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Flame,
   Maximize2,
   Minimize2,
@@ -72,6 +74,9 @@ const ModePill = ({ active, disabled, label, onClick }) => (
 const StudyTimer = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   const nextBreakReminderRef = useRef(25 * 60);
+  const tasksListRef = useRef(null);
+  const deadlinesListRef = useRef(null);
+  const remindersListRef = useRef(null);
 
   const [mode, setMode] = useState("focus");
   const [focusDurationMinutes, setFocusDurationMinutes] = useState(25);
@@ -83,6 +88,9 @@ const StudyTimer = () => {
   const [newTask, setNewTask] = useState("");
   const [todayStudyHours, setTodayStudyHours] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
+  const [noteId, setNoteId] = useState("");
+  const [noteTitle, setNoteTitle] = useState("Ghi chú StudyTime");
+  const [noteContent, setNoteContent] = useState("");
 
   const [upcomingDeadlines, setUpcomingDeadlines] = useState([]);
   const [subjectReminders, setSubjectReminders] = useState([]);
@@ -165,6 +173,29 @@ const StudyTimer = () => {
     }
     return () => document.body.classList.remove("whalio-zen-active");
   }, [isZenMode]);
+
+  useEffect(() => {
+    const loadStudyTimerNote = async () => {
+      if (!user?.username) return;
+      try {
+        const res = await fetch(`/api/quick-notes?username=${user.username}`);
+        const data = await res.json();
+        if (!data?.success || !Array.isArray(data.notes)) return;
+        const studyTimerNote = [...data.notes]
+          .filter((item) => item?.source === "studytimer")
+          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0];
+
+        if (!studyTimerNote) return;
+        setNoteId(studyTimerNote._id || "");
+        setNoteTitle(studyTimerNote.title || "Ghi chú StudyTime");
+        setNoteContent(studyTimerNote.content || "");
+      } catch (err) {
+        console.error("Load StudyTimer note error:", err);
+      }
+    };
+
+    loadStudyTimerNote();
+  }, [user]);
 
   useEffect(() => {
     const loadAllData = async () => {
@@ -261,6 +292,84 @@ const StudyTimer = () => {
     setTasks((prev) => prev.map((task) => (task.id === id ? { ...task, done: !task.done } : task)));
   };
 
+  const scrollList = (ref, direction) => {
+    const list = ref.current;
+    if (!list) return;
+    const amount = direction === "up" ? -100 : 100;
+    list.scrollBy({ top: amount, behavior: "smooth" });
+  };
+
+  const saveStudyTimerNote = async () => {
+    if (!user?.username) return;
+    const title = noteTitle.trim();
+    const content = noteContent.trim();
+    if (!title || !content) {
+      toast.error("Vui lòng nhập tiêu đề và nội dung ghi chú.");
+      return;
+    }
+
+    try {
+      if (noteId) {
+        await fetch(`/api/quick-notes/${noteId}?username=${user.username}`, { method: "DELETE" });
+      }
+
+      const res = await fetch("/api/quick-notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: user.username,
+          title,
+          content,
+          color: "bg-blue-100",
+          source: "studytimer",
+        }),
+      });
+
+      const data = await res.json();
+      if (!data?.success) {
+        toast.error("Không thể lưu ghi chú.");
+        return;
+      }
+
+      const listRes = await fetch(`/api/quick-notes?username=${user.username}`);
+      const listData = await listRes.json();
+      const studyTimerNote = Array.isArray(listData?.notes)
+        ? [...listData.notes]
+            .filter((item) => item?.source === "studytimer")
+            .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0]
+        : null;
+
+      setNoteId(studyTimerNote?._id || "");
+      toast.success("Đã lưu ghi chú StudyTime.");
+    } catch (err) {
+      console.error("Save StudyTimer note error:", err);
+      toast.error("Lưu ghi chú thất bại.");
+    }
+  };
+
+  const deleteStudyTimerNote = async () => {
+    if (!user?.username || !noteId) {
+      setNoteTitle("Ghi chú StudyTime");
+      setNoteContent("");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/quick-notes/${noteId}?username=${user.username}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!data?.success) {
+        toast.error("Không thể xóa ghi chú.");
+        return;
+      }
+      setNoteId("");
+      setNoteTitle("Ghi chú StudyTime");
+      setNoteContent("");
+      toast.success("Đã xóa ghi chú.");
+    } catch (err) {
+      console.error("Delete StudyTimer note error:", err);
+      toast.error("Xóa ghi chú thất bại.");
+    }
+  };
+
   return (
     <div className="relative min-h-[calc(100dvh-4rem)] -m-6 overflow-x-hidden overflow-y-auto text-slate-800 dark:text-slate-100">
       <style>{`
@@ -290,7 +399,7 @@ const StudyTimer = () => {
           <div className="mx-auto flex h-full w-full max-w-5xl flex-col">
             <FramerMotion.motion.section
               layout
-              className="relative h-full rounded-[2rem] border border-white/60 dark:border-white/15 bg-white/65 dark:bg-white/10 p-4 md:p-5 xl:p-6 backdrop-blur-xl shadow-xl shadow-blue-200/40 dark:shadow-black/20">
+              className="relative h-full rounded-[2rem] border border-white/60 dark:border-white/15 bg-white/65 dark:bg-white/10 p-4 md:p-5 xl:p-6 backdrop-blur-xl shadow-xl shadow-blue-200/40 dark:shadow-black/20"
             >
               <div className="mb-5 flex items-center justify-between pr-12">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Focus Room</p>
@@ -434,6 +543,42 @@ const StudyTimer = () => {
                 >
                   {SMART_TIPS[tipIndex]}
                 </FramerMotion.motion.div>
+
+                <div className="mt-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/75 dark:bg-white/5 p-4 text-left">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Ghi chú nhanh</p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={saveStudyTimerNote}
+                        className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                      >
+                        Lưu ghi chú
+                      </button>
+                      <button
+                        type="button"
+                        onClick={deleteStudyTimerNote}
+                        className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-100 dark:border-rose-400/30 dark:bg-rose-500/10 dark:text-rose-300"
+                      >
+                        Xóa ghi chú
+                      </button>
+                    </div>
+                  </div>
+
+                  <input
+                    value={noteTitle}
+                    onChange={(e) => setNoteTitle(e.target.value)}
+                    placeholder="Tiêu đề ghi chú..."
+                    className="mb-2 w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/20 px-3 py-2 text-sm text-slate-700 dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-400"
+                  />
+                  <textarea
+                    value={noteContent}
+                    onChange={(e) => setNoteContent(e.target.value)}
+                    placeholder="Soạn ghi chú cho phiên học này..."
+                    rows={4}
+                    className="w-full resize-none rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/20 px-3 py-2 text-sm text-slate-700 dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-400"
+                  />
+                </div>
               </div>
             </FramerMotion.motion.section>
           </div>
@@ -460,8 +605,28 @@ const StudyTimer = () => {
 
               <div className="whalio-scrollbar space-y-4 pr-1 overflow-y-auto">
                 <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Task phiên này</h4>
-                  <div className="whalio-scrollbar max-h-48 space-y-2 overflow-y-auto pr-1">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-slate-800 dark:text-white">Task phiên này</h4>
+                    {tasks.length > 2 && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => scrollList(tasksListRef, "up")}
+                          className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 p-1 text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
+                        >
+                          <ChevronUp size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => scrollList(tasksListRef, "down")}
+                          className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 p-1 text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
+                        >
+                          <ChevronDown size={13} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div ref={tasksListRef} className="whalio-scrollbar max-h-28 space-y-2 overflow-y-auto pr-1">
                     {tasks.map((task) => (
                       <button
                         key={task.id}
@@ -488,8 +653,28 @@ const StudyTimer = () => {
                 </section>
 
                 <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Deadline sắp tới</h4>
-                  <div className="whalio-scrollbar max-h-44 space-y-2 overflow-y-auto pr-1">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-slate-800 dark:text-white">Deadline sắp tới</h4>
+                    {upcomingDeadlines.length > 2 && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => scrollList(deadlinesListRef, "up")}
+                          className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 p-1 text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
+                        >
+                          <ChevronUp size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => scrollList(deadlinesListRef, "down")}
+                          className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 p-1 text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
+                        >
+                          <ChevronDown size={13} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div ref={deadlinesListRef} className="whalio-scrollbar max-h-36 space-y-2 overflow-y-auto pr-1">
                     {upcomingDeadlines.length > 0 ? (
                       upcomingDeadlines.map((item) => (
                         <div key={item.id} className="rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2">
@@ -504,8 +689,28 @@ const StudyTimer = () => {
                 </section>
 
                 <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Nhắc nhở môn học</h4>
-                  <div className="whalio-scrollbar max-h-44 space-y-2 overflow-y-auto pr-1">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-slate-800 dark:text-white">Nhắc nhở môn học</h4>
+                    {subjectReminders.length > 2 && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => scrollList(remindersListRef, "up")}
+                          className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 p-1 text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
+                        >
+                          <ChevronUp size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => scrollList(remindersListRef, "down")}
+                          className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 p-1 text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
+                        >
+                          <ChevronDown size={13} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div ref={remindersListRef} className="whalio-scrollbar max-h-36 space-y-2 overflow-y-auto pr-1">
                     {subjectReminders.length > 0 ? (
                       subjectReminders.map((item) => (
                         <div key={`${item.subject}-${item.id}`} className="rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2">
