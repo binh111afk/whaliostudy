@@ -385,7 +385,7 @@ const Timetable = () => {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto p-4 md:p-6 pb-20">
+    <div className="max-w-[1600px] mx-auto p-4 md:p-6 pb-20 overflow-x-hidden">
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
         <div className="flex items-center gap-4 bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 w-full md:w-auto justify-between md:justify-start">

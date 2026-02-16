@@ -505,7 +505,7 @@ const QuickNotesTab = ({ user }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 animate-fade-in-up">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 animate-fade-in-up overflow-x-hidden">
       {/* CỘT TRÁI: GHI CHÚ CÁ NHÂN (MÀU VÀNG) */}
       <div>
         <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
@@ -1285,7 +1285,7 @@ const DailyScheduleTab = ({ user }) => {
   };
 
   return (
-    <div className="animate-fade-in-up">
+    <div className="animate-fade-in-up overflow-x-hidden">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
@@ -1570,7 +1570,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   const remainingCredits = Math.max(0, targetCredits - gpaMetrics.totalCredits);
 
   return (
-    <div className="space-y-6 sm:space-y-8 pb-10">
+    <div className="space-y-6 sm:space-y-8 pb-10 overflow-x-hidden">
       {/* 1. WELCOME SECTION */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
@@ -1599,7 +1599,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
 
       {/* 2. NAVIGATION TABS */}
       <div className="border-b border-gray-200 dark:border-gray-700">
-        <div className="flex gap-6 overflow-x-auto">
+        <div className="flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar">
           {[
             { id: "overview", label: "Tổng quan", icon: GraduationCap },
             { id: "exams", label: "Lịch trình hôm nay", icon: FileText },

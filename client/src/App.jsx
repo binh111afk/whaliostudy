@@ -110,7 +110,7 @@ function App() {
 
   return (
     <Router>
-      <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-gray-50 dark:bg-gray-900">
         <div className="hidden lg:block">
           <Sidebar />
         </div>
@@ -137,7 +137,7 @@ function App() {
           </div>
         )}
 
-        <div className="flex min-h-screen flex-1 flex-col lg:ml-64">
+        <div className="flex min-h-screen min-w-0 flex-1 flex-col lg:ml-64">
           <div className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-gray-200 bg-white/95 px-3 backdrop-blur-md dark:border-gray-700 dark:bg-gray-900/95 lg:hidden">
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
@@ -174,7 +174,7 @@ function App() {
           </div>
 
           {/* Main content */}
-          <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-5 lg:p-6 pb-24 lg:pb-6 scroll-smooth">
+          <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 md:p-5 lg:p-6 pb-24 lg:pb-6 scroll-smooth">
             <Routes>
             <Route path="/" element={<Dashboard user={user} darkMode={darkMode} setDarkMode={setDarkMode} />} />
               <Route path="/gpa" element={<GpaCalc />} />

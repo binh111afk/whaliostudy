@@ -61,7 +61,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
           
             // Gọi Toast Modal (Responsive Version)
             toast.custom((t) => (
-              <div className="relative w-[92vw] sm:w-full sm:max-w-[420px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-6 sm:p-7 shadow-[0_0_0_9999px_rgba(15,23,42,0.45)] z-[99999] animate-in zoom-in-95 fade-in duration-200">
+              <div className="relative w-[92vw] sm:w-full sm:max-w-[420px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-6 sm:p-7 shadow-2xl z-[99999] animate-in zoom-in-95 fade-in duration-200">
                 <button
                   onClick={() => toast.dismiss(t)}
                   className="absolute top-3 right-3 w-8 h-8 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -106,7 +106,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
             setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
           
             toast.custom((t) => (
-              <div className="relative w-[92vw] sm:w-full sm:max-w-[420px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-6 sm:p-7 shadow-[0_0_0_9999px_rgba(15,23,42,0.45)] z-[99999] animate-in zoom-in-95 fade-in duration-200">
+              <div className="relative w-[92vw] sm:w-full sm:max-w-[420px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-6 sm:p-7 shadow-2xl z-[99999] animate-in zoom-in-95 fade-in duration-200">
                 <button
                   onClick={() => toast.dismiss(t)}
                   className="absolute top-3 right-3 w-8 h-8 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
