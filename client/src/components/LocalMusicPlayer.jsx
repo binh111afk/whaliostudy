@@ -287,7 +287,7 @@ const LocalMusicPlayer = () => {
   const waveBars = useMemo(() => Array.from({ length: 18 }, (_, i) => i), []);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/60 backdrop-blur-xl p-4 text-slate-100">
+    <div className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 backdrop-blur-xl p-4 text-slate-800 dark:text-slate-100">
       <style>{`
         @keyframes whalio-wave {
           0%, 100% { transform: scaleY(0.35); opacity: 0.45; }
@@ -303,14 +303,14 @@ const LocalMusicPlayer = () => {
       />
 
       <div className="mb-3 flex items-center justify-between">
-        <div className="inline-flex items-center gap-2 text-cyan-300">
+        <div className="inline-flex items-center gap-2 text-blue-600 dark:text-cyan-300">
           <Disc3 size={16} />
           <span className="text-xs font-bold uppercase tracking-[0.16em]">Local Music</span>
         </div>
 
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center gap-2 rounded-xl border border-cyan-300/30 bg-cyan-400/15 px-3 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-400/25 transition-colors"
+          className="inline-flex items-center gap-2 rounded-xl border border-blue-200 dark:border-cyan-300/30 bg-blue-50 dark:bg-cyan-400/15 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-cyan-200 hover:bg-blue-100 dark:hover:bg-cyan-400/25 transition-colors"
         >
           <Plus size={14} />
           {isSaving ? "Đang lưu..." : "Thêm nhạc"}
@@ -330,12 +330,14 @@ const LocalMusicPlayer = () => {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`rounded-xl border bg-slate-950/50 p-3 transition-colors ${
-          isDragging ? "border-cyan-300/60 bg-cyan-500/10" : "border-white/10"
+        className={`rounded-xl border p-3 transition-colors ${
+          isDragging
+            ? "border-blue-300 dark:border-cyan-300/60 bg-blue-50/80 dark:bg-cyan-500/10"
+            : "border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-950/50"
         }`}
       >
         {isDragging && (
-          <p className="mb-2 text-center text-xs font-semibold text-cyan-200">
+          <p className="mb-2 text-center text-xs font-semibold text-blue-700 dark:text-cyan-200">
             Thả file MP3/MP4 vào đây để lưu offline
           </p>
         )}
@@ -343,7 +345,7 @@ const LocalMusicPlayer = () => {
           <>
             <div className="h-6 mb-2">
               <Marquee gradient={false} speed={35} pauseOnHover>
-                <span className="text-sm font-semibold text-cyan-200 mr-6">{currentTrack.name}</span>
+                <span className="text-sm font-semibold text-blue-700 dark:text-cyan-200 mr-6">{currentTrack.name}</span>
               </Marquee>
             </div>
 
@@ -365,28 +367,28 @@ const LocalMusicPlayer = () => {
             <div className="flex items-center justify-center gap-2 mb-3">
               <button
                 onClick={prevTrack}
-                className="p-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
+                className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
               >
                 <SkipBack size={16} />
               </button>
 
               <button
                 onClick={togglePlay}
-                className="p-3 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 shadow-[0_0_20px_rgba(34,211,238,0.45)] hover:shadow-[0_0_26px_rgba(59,130,246,0.55)] transition-all"
+                className="p-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-300/50 dark:shadow-[0_0_24px_rgba(59,130,246,0.45)] hover:brightness-105 transition-all"
               >
                 {isPlaying ? <Pause size={18} /> : <Play size={18} />}
               </button>
 
               <button
                 onClick={nextTrack}
-                className="p-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
+                className="p-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
               >
                 <SkipForward size={16} />
               </button>
             </div>
 
             <div className="flex items-center gap-2">
-              <Volume2 size={15} className="text-slate-300" />
+              <Volume2 size={15} className="text-slate-500 dark:text-slate-300" />
               <input
                 type="range"
                 min={0}
@@ -394,38 +396,40 @@ const LocalMusicPlayer = () => {
                 step={0.01}
                 value={volume}
                 onChange={(e) => setVolume(Number(e.target.value))}
-                className="w-full h-1.5 rounded-lg accent-cyan-400 bg-slate-700 cursor-pointer"
+                className="w-full h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
               />
             </div>
           </>
         ) : (
           <div className="py-8 text-center">
-            <Music2 className="mx-auto mb-2 text-slate-400" size={28} />
-            <p className="text-sm font-medium text-slate-200">Chưa có bài nhạc nào</p>
-            <p className="text-xs text-slate-400 mt-1">Thêm file MP3/MP4 để phát offline.</p>
+            <Music2 className="mx-auto mb-2 text-slate-400 dark:text-slate-400" size={28} />
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Chưa có bài nhạc nào</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Thêm file MP3/MP4 để phát offline.</p>
           </div>
         )}
       </div>
 
-      <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
+      <p className="mt-3 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
         Nhạc được lưu cục bộ tại trình duyệt này. Sao lưu/khôi phục playlist đã tích hợp trong mục Sao lưu & Khôi phục.
       </p>
-      {notice && <p className="mt-1 text-[11px] text-cyan-300/90">{notice}</p>}
+      {notice && <p className="mt-1 text-[11px] text-blue-600 dark:text-cyan-300/90">{notice}</p>}
 
-      <div className="mt-3 rounded-xl border border-white/10 bg-slate-950/40 max-h-52 overflow-auto">
+      <div className="mt-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-950/40 max-h-52 overflow-auto">
         {isLoading ? (
-          <p className="p-3 text-xs text-slate-400">Đang tải thư viện...</p>
+          <p className="p-3 text-xs text-slate-500 dark:text-slate-400">Đang tải thư viện...</p>
         ) : tracks.length === 0 ? (
-          <p className="p-3 text-xs text-slate-400">Playlist trống.</p>
+          <p className="p-3 text-xs text-slate-500 dark:text-slate-400">Playlist trống.</p>
         ) : (
-          <ul className="divide-y divide-white/5">
+          <ul className="divide-y divide-slate-200 dark:divide-white/5">
             {tracks.map((track, idx) => {
               const active = idx === currentIndex;
               return (
                 <li
                   key={track.id}
                   className={`flex items-center justify-between gap-2 px-3 py-2 transition-colors ${
-                    active ? "bg-cyan-500/15 text-cyan-100" : "text-slate-200 hover:bg-white/5"
+                    active
+                      ? "bg-blue-50 dark:bg-cyan-500/15 text-blue-700 dark:text-cyan-100"
+                      : "text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-white/5"
                   }`}
                 >
                   <button
@@ -440,7 +444,7 @@ const LocalMusicPlayer = () => {
 
                   <button
                     onClick={() => removeTrack(track.id)}
-                    className="p-1 rounded-md text-slate-400 hover:text-rose-300 hover:bg-rose-500/10"
+                    className="p-1 rounded-md text-slate-400 hover:text-rose-500 dark:hover:text-rose-300 hover:bg-rose-500/10"
                     aria-label={`Xóa ${track.name}`}
                   >
                     <X size={14} />
