@@ -1090,31 +1090,31 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
 
         <div className={isFloatingCollapsed ? "hidden" : ""}>
           <div className="mt-2.5 flex flex-col gap-2.5">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-nowrap items-center gap-2">
               <button
                 onClick={prevTrack}
-                className="rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                className="shrink-0 rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
                 aria-label="Bài trước"
               >
                 <SkipBack size={18} />
               </button>
               <button
                 onClick={togglePlay}
-                className="rounded-xl bg-blue-500 px-3 py-2.5 text-white shadow-md shadow-blue-500/25 transition-colors hover:bg-blue-600"
+                className="shrink-0 rounded-xl bg-blue-500 px-3 py-2.5 text-white shadow-md shadow-blue-500/25 transition-colors hover:bg-blue-600"
                 aria-label={isPlaying ? "Tạm dừng" : "Phát"}
               >
                 {isPlaying ? <Pause size={18} /> : <Play size={18} />}
               </button>
               <button
                 onClick={nextTrack}
-                className="rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                className="shrink-0 rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
                 aria-label="Bài tiếp"
               >
                 <SkipForward size={18} />
               </button>
 
-              <div className="ml-1 flex flex-1 items-center gap-2">
-                <Volume2 size={16} className="text-slate-500 dark:text-slate-300" />
+              <div className="ml-1 flex min-w-0 flex-1 items-center gap-2">
+                <Volume2 size={16} className="shrink-0 text-slate-500 dark:text-slate-300" />
                 <input
                   type="range"
                   min={0}
