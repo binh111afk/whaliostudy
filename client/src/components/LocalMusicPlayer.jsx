@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import localforage from "localforage";
 import Marquee from "react-fast-marquee";
-import { Music2, Play, Pause, SkipBack, SkipForward, Plus, X, Volume2, Disc3, ChevronUp, ChevronDown } from "lucide-react";
+import { Music2, Play, Pause, SkipBack, SkipForward, Plus, X, Volume2, Disc3, ChevronUp, ChevronDown, ListMusic, Timer } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 const musicDB = localforage.createInstance({
   name: "whalio_local_db",
@@ -9,8 +10,19 @@ const musicDB = localforage.createInstance({
 });
 
 const PLAYLIST_META_KEY = "__playlist_meta_v1__";
+const STUDY_OVERLAY_STORAGE_KEY = "whalio_study_overlay_state_v1";
 const ALLOWED_EXT = [".mp3", ".mp4"];
 const ALLOWED_MIME = ["audio/mpeg", "audio/mp3", "audio/mp4", "video/mp4"];
+
+const pad = (num) => String(num).padStart(2, "0");
+const formatOverlayTime = (seconds, forceHours = false) => {
+  const safe = Math.max(0, Number(seconds) || 0);
+  const h = Math.floor(safe / 3600);
+  const m = Math.floor((safe % 3600) / 60);
+  const s = safe % 60;
+  if (forceHours) return `${h}:${pad(m)}:${pad(s)}`;
+  return `${pad(Math.floor(safe / 60))}:${pad(safe % 60)}`;
+};
 
 const isValidAudioFile = (file) => {
   const name = String(file?.name || "").toLowerCase();
@@ -21,12 +33,14 @@ const isValidAudioFile = (file) => {
 };
 
 const LocalMusicPlayer = () => {
+  const location = useLocation();
   const audioRef = useRef(null);
   const fileInputRef = useRef(null);
   const objectUrlRef = useRef(null);
   const playlistRef = useRef(null);
   const autoCycleStartIndexRef = useRef(null);
   const autoRemainingIndexesRef = useRef([]);
+  const shouldForcePlayRef = useRef(false);
 
   const [tracks, setTracks] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
@@ -36,8 +50,11 @@ const LocalMusicPlayer = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [isFloatingPlaylistOpen, setIsFloatingPlaylistOpen] = useState(false);
+  const [overlayState, setOverlayState] = useState(null);
 
   const currentTrack = currentIndex >= 0 ? tracks[currentIndex] : null;
+  const isStudyTimerRoute = location.pathname === "/timer";
 
   const revokeCurrentObjectUrl = useCallback(() => {
     if (objectUrlRef.current) {
@@ -118,6 +135,21 @@ const LocalMusicPlayer = () => {
   }, [loadTracks]);
 
   useEffect(() => {
+    const readOverlay = () => {
+      try {
+        const raw = localStorage.getItem(STUDY_OVERLAY_STORAGE_KEY);
+        setOverlayState(raw ? JSON.parse(raw) : null);
+      } catch {
+        setOverlayState(null);
+      }
+    };
+
+    readOverlay();
+    const id = setInterval(readOverlay, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume;
     }
@@ -143,8 +175,9 @@ const LocalMusicPlayer = () => {
     audio.src = nextUrl;
     audio.load();
 
-    if (isPlaying) {
-      audio.play().catch(() => setIsPlaying(false));
+    if (isPlaying || shouldForcePlayRef.current) {
+      shouldForcePlayRef.current = false;
+      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
     }
   }, [currentTrack, isPlaying, revokeCurrentObjectUrl]);
 
@@ -226,6 +259,7 @@ const LocalMusicPlayer = () => {
       return;
     }
 
+    shouldForcePlayRef.current = false;
     audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
   }, [currentTrack, isPlaying]);
 
@@ -251,6 +285,7 @@ const LocalMusicPlayer = () => {
     }
 
     if (remaining.length === 0) {
+      shouldForcePlayRef.current = true;
       setCurrentIndex(cycleStart);
       setIsPlaying(true);
       resetAutoCycle();
@@ -260,6 +295,7 @@ const LocalMusicPlayer = () => {
     const randomIdx = remaining[Math.floor(Math.random() * remaining.length)];
     autoRemainingIndexesRef.current = remaining.filter((idx) => idx !== randomIdx);
     autoCycleStartIndexRef.current = cycleStart;
+    shouldForcePlayRef.current = true;
     setCurrentIndex(randomIdx);
     setIsPlaying(true);
   }, [currentIndex, resetAutoCycle, tracks.length]);
@@ -267,6 +303,7 @@ const LocalMusicPlayer = () => {
   const nextTrack = useCallback(() => {
     if (tracks.length === 0) return;
     resetAutoCycle();
+    shouldForcePlayRef.current = true;
     setCurrentIndex((prev) => (prev + 1) % tracks.length);
     setIsPlaying(true);
   }, [resetAutoCycle, tracks.length]);
@@ -274,6 +311,7 @@ const LocalMusicPlayer = () => {
   const prevTrack = useCallback(() => {
     if (tracks.length === 0) return;
     resetAutoCycle();
+    shouldForcePlayRef.current = true;
     setCurrentIndex((prev) => (prev - 1 + tracks.length) % tracks.length);
     setIsPlaying(true);
   }, [resetAutoCycle, tracks.length]);
@@ -344,8 +382,16 @@ const LocalMusicPlayer = () => {
     list.scrollBy({ top: offset, behavior: "smooth" });
   }, []);
 
+  const overlayIsRunning = Boolean(overlayState?.isRunning);
+  const overlayTimeLeft = overlayIsRunning && Number(overlayState?.endAtTs) > 0
+    ? Math.max(0, Math.ceil((Number(overlayState?.endAtTs) - Date.now()) / 1000))
+    : Math.max(0, Number(overlayState?.timeLeft) || 0);
+  const overlayTimeLabel = formatOverlayTime(overlayTimeLeft, Boolean(overlayState?.useHourFormat));
+  const floatingVisible = !isStudyTimerRoute && (Boolean(currentTrack) || overlayIsRunning);
+
   return (
-    <div className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 backdrop-blur-xl p-4 text-slate-800 dark:text-slate-100 overflow-hidden">
+    <>
+    <div className={`${isStudyTimerRoute ? "fixed bottom-24 left-2 right-2 sm:left-auto sm:right-4 sm:w-[360px] z-30" : "hidden"} rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 backdrop-blur-xl p-4 text-slate-800 dark:text-slate-100 overflow-hidden`}>
       <style>{`
         @keyframes whalio-wave {
           0%, 100% { transform: scaleY(0.35); opacity: 0.45; }
@@ -519,6 +565,7 @@ const LocalMusicPlayer = () => {
                     <button
                       onClick={() => {
                         resetAutoCycle();
+                        shouldForcePlayRef.current = true;
                         setCurrentIndex(idx);
                         setIsPlaying(true);
                       }}
@@ -542,6 +589,106 @@ const LocalMusicPlayer = () => {
         </div>
       </div>
     </div>
+    {floatingVisible && (
+      <div className="fixed bottom-[5.2rem] left-2 right-2 z-40 sm:left-auto sm:right-4 sm:w-[430px] rounded-2xl border border-slate-200/80 bg-white/95 p-3 shadow-xl backdrop-blur-lg dark:border-white/15 dark:bg-slate-900/85">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
+              StudyTime Live
+            </p>
+            <p className="mt-0.5 text-sm font-bold text-slate-800 dark:text-slate-100">
+              {currentTrack ? currentTrack.name : "Chưa phát nhạc"}
+            </p>
+            <div className="mt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <Timer size={12} />
+              <span>{overlayIsRunning ? `Đang học: ${overlayTimeLabel}` : `Tạm dừng: ${overlayTimeLabel}`}</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsFloatingPlaylistOpen((prev) => !prev)}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-white/15 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10"
+          >
+            <ListMusic size={13} />
+            List
+          </button>
+        </div>
+
+        {overlayState?.tip && (
+          <p className="mt-2 rounded-lg bg-slate-100/80 px-2 py-1 text-[11px] text-slate-600 dark:bg-white/10 dark:text-slate-300">
+            {overlayState.tip}
+          </p>
+        )}
+
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            onClick={prevTrack}
+            className="rounded-lg border border-slate-200 dark:border-white/15 p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10"
+            aria-label="Bài trước"
+          >
+            <SkipBack size={16} />
+          </button>
+          <button
+            onClick={togglePlay}
+            className="rounded-lg bg-blue-600 p-2 text-white hover:bg-blue-700"
+            aria-label={isPlaying ? "Tạm dừng" : "Phát"}
+          >
+            {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+          </button>
+          <button
+            onClick={nextTrack}
+            className="rounded-lg border border-slate-200 dark:border-white/15 p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10"
+            aria-label="Bài tiếp"
+          >
+            <SkipForward size={16} />
+          </button>
+
+          <div className="ml-1 flex flex-1 items-center gap-2">
+            <Volume2 size={14} className="text-slate-500 dark:text-slate-300" />
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={volume}
+              onChange={(e) => setVolume(Number(e.target.value))}
+              className="w-full h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
+            />
+          </div>
+        </div>
+
+        {isFloatingPlaylistOpen && (
+          <div className="mt-2 max-h-44 overflow-y-auto rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/80 dark:bg-slate-950/50">
+            {tracks.length === 0 ? (
+              <p className="p-3 text-xs text-slate-500 dark:text-slate-400">Playlist trống.</p>
+            ) : (
+              <ul className="divide-y divide-slate-200 dark:divide-white/5">
+                {tracks.map((track, idx) => {
+                  const active = idx === currentIndex;
+                  return (
+                    <li key={track.id} className={`${active ? "bg-blue-50 dark:bg-cyan-500/15" : ""}`}>
+                      <button
+                        onClick={() => {
+                          resetAutoCycle();
+                          shouldForcePlayRef.current = true;
+                          setCurrentIndex(idx);
+                          setIsPlaying(true);
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 truncate"
+                      >
+                        {track.name}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+    )}
+    </>
   );
 };
 

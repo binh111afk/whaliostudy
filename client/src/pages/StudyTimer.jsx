@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { studyService } from "../services/studyService";
-import LocalMusicPlayer from "../components/LocalMusicPlayer";
 
 const TIMER_MODES = {
   focus: { label: "Tập trung", minutes: 25, accent: "from-blue-500 to-indigo-500" },
@@ -35,6 +34,7 @@ const INITIAL_TASKS = [
   { id: 1, title: "Hoàn thành 2 bài tập Triết học", done: false },
   { id: 2, title: "Đọc chương 3 Cấu trúc dữ liệu", done: false },
 ];
+const STUDY_OVERLAY_STORAGE_KEY = "whalio_study_overlay_state_v1";
 
 const pad = (num) => String(num).padStart(2, "0");
 const formatDisplayTime = (seconds, forceHours = false) => {
@@ -95,6 +95,7 @@ const StudyTimer = () => {
   const [newTask, setNewTask] = useState("");
   const [todayStudyHours, setTodayStudyHours] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
+  const [endAtTs, setEndAtTs] = useState(null);
   const [noteId, setNoteId] = useState("");
   const [noteTitle, setNoteTitle] = useState("Ghi chú StudyTime");
   const [noteContent, setNoteContent] = useState("");
@@ -115,11 +116,16 @@ const StudyTimer = () => {
     let interval;
     if (isRunning) {
       interval = setInterval(() => {
+        if (endAtTs) {
+          const remain = Math.max(0, Math.ceil((endAtTs - Date.now()) / 1000));
+          setTimeLeft(remain);
+          return;
+        }
         setTimeLeft((prev) => Math.max(prev - 1, 0));
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isRunning]);
+  }, [endAtTs, isRunning]);
 
   useEffect(() => {
     document.title = isRunning ? `${formatDisplayTime(timeLeft, useHourFormat)} | StudyTime` : "Whalio Study";
@@ -133,6 +139,7 @@ const StudyTimer = () => {
 
     const completeSession = async () => {
       setIsRunning(false);
+      setEndAtTs(null);
       const minutes = currentModeMinutes;
 
       if (user?.username && mode === "focus") {
@@ -164,6 +171,48 @@ const StudyTimer = () => {
       nextBreakReminderRef.current += 25 * 60;
     }
   }, [mode, isRunning, timeLeft, totalSeconds]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STUDY_OVERLAY_STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved || typeof saved !== "object") return;
+
+      if (saved.mode && TIMER_MODES[saved.mode]) {
+        setMode(saved.mode);
+      }
+      if (typeof saved.focusDurationMinutes === "number" && saved.focusDurationMinutes >= 5) {
+        setFocusDurationMinutes(saved.focusDurationMinutes);
+      }
+
+      const savedEndAt = Number(saved.endAtTs || 0);
+      if (saved.isRunning && savedEndAt > Date.now()) {
+        setEndAtTs(savedEndAt);
+        setIsRunning(true);
+        setTimeLeft(Math.max(0, Math.ceil((savedEndAt - Date.now()) / 1000)));
+      } else if (typeof saved.timeLeft === "number") {
+        setTimeLeft(Math.max(0, saved.timeLeft));
+      }
+    } catch (err) {
+      console.error("Load study overlay state error:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    const payload = {
+      mode,
+      timeLeft,
+      isRunning,
+      endAtTs,
+      focusDurationMinutes,
+      tip: SMART_TIPS[tipIndex],
+      useHourFormat,
+      updatedAt: Date.now(),
+    };
+
+    localStorage.setItem(STUDY_OVERLAY_STORAGE_KEY, JSON.stringify(payload));
+  }, [mode, timeLeft, isRunning, endAtTs, focusDurationMinutes, tipIndex, useHourFormat]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -283,15 +332,27 @@ const StudyTimer = () => {
     setMode(nextMode);
     const nextMinutes = nextMode === "focus" ? focusDurationMinutes : TIMER_MODES[nextMode].minutes;
     setTimeLeft(nextMinutes * 60);
+    setEndAtTs(null);
     nextBreakReminderRef.current = 25 * 60;
   };
 
   const toggleTimer = () => {
-    setIsRunning((prev) => !prev);
+    if (isRunning) {
+      const remain = endAtTs ? Math.max(0, Math.ceil((endAtTs - Date.now()) / 1000)) : timeLeft;
+      setTimeLeft(remain);
+      setIsRunning(false);
+      setEndAtTs(null);
+      return;
+    }
+
+    const target = Date.now() + timeLeft * 1000;
+    setEndAtTs(target);
+    setIsRunning(true);
   };
 
   const resetTimer = () => {
     setIsRunning(false);
+    setEndAtTs(null);
     setTimeLeft(totalSeconds);
     nextBreakReminderRef.current = 25 * 60;
   };
@@ -541,6 +602,7 @@ const StudyTimer = () => {
                         const value = Math.min(300, Math.max(5, Number(e.target.value) || 25));
                         setFocusDurationMinutes(value);
                         setTimeLeft(value * 60);
+                        setEndAtTs(null);
                         nextBreakReminderRef.current = 25 * 60;
                       }}
                       className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-blue-500 disabled:opacity-50"
@@ -761,7 +823,6 @@ const StudyTimer = () => {
                   </div>
                 </section>
 
-                <LocalMusicPlayer />
               </div>
             </FramerMotion.motion.aside>
           )}

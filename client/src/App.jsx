@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import { Menu, X, Home, Hourglass, CalendarDays, LayoutGrid, Moon, Sun, Settings, LogOut, Save } from 'lucide-react';
+import { Menu, X, Home, FileText, Users, LayoutGrid, Moon, Sun, Settings, LogOut, Save } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header'; 
 import AuthModal from './components/AuthModal'; // Import Modal
@@ -14,6 +14,7 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Community from './pages/Community';
 import StudyTimer from './pages/StudyTimer';
+import LocalMusicPlayer from './components/LocalMusicPlayer';
 import Timetable from './pages/Timetable';
 import Documents from './pages/Documents';
 import Exams from './pages/Exams';
@@ -21,10 +22,10 @@ import DocumentViewer from './pages/DocumentViewer';
 import Portal from './pages/Portal';
 
 const MOBILE_NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: Home },
-  { to: '/timer', label: 'StudyTime', icon: Hourglass },
-  { to: '/timetable', label: 'Lịch', icon: CalendarDays },
+  { to: '/', label: 'Trang chủ', icon: Home },
   { to: '/portal', label: 'Tiện ích', icon: LayoutGrid },
+  { to: '/documents', label: 'Tài liệu', icon: FileText },
+  { to: '/community', label: 'Cộng đồng', icon: Users },
 ];
 
 const MobileBottomNav = ({ user, onLoginClick, onLogoutClick }) => {
@@ -299,6 +300,8 @@ function App() {
         </div>
 
         {/* MODAL: Đặt ở đây để nó phủ lên toàn bộ ứng dụng khi mở */}
+        <LocalMusicPlayer />
+
         <AuthModal 
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
