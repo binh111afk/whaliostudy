@@ -61,8 +61,10 @@ const ModePill = ({ active, disabled, label, onClick }) => (
 const StudyTimer = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   const audioRef = useRef(null);
+  const nextBreakReminderRef = useRef(25 * 60);
 
   const [mode, setMode] = useState("focus");
+  const [focusDurationMinutes, setFocusDurationMinutes] = useState(25);
   const [timeLeft, setTimeLeft] = useState(TIMER_MODES.focus.minutes * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -81,10 +83,11 @@ const StudyTimer = () => {
   const [isMusicOpen, setIsMusicOpen] = useState(false);
 
   const modeConfig = TIMER_MODES[mode];
-  const totalSeconds = modeConfig.minutes * 60;
+  const currentModeMinutes = mode === "focus" ? focusDurationMinutes : modeConfig.minutes;
+  const totalSeconds = currentModeMinutes * 60;
   const progress = ((totalSeconds - timeLeft) / totalSeconds) * 100;
   const activeTask = tasks.find((task) => !task.done) || tasks[0];
-  const isZenMode = isRunning || isManualFullscreen;
+  const isZenMode = isManualFullscreen;
 
   useEffect(() => {
     let interval;
@@ -108,7 +111,7 @@ const StudyTimer = () => {
 
     const completeSession = async () => {
       setIsRunning(false);
-      const minutes = modeConfig.minutes;
+      const minutes = currentModeMinutes;
 
       if (user?.username && mode === "focus") {
         const res = await studyService.saveSession(user.username, minutes);
@@ -122,11 +125,23 @@ const StudyTimer = () => {
       });
 
       setTimeLeft(totalSeconds);
-      setIsManualFullscreen(false);
     };
 
     completeSession();
-  }, [isRunning, mode, modeConfig.minutes, modeConfig.label, timeLeft, totalSeconds, user]);
+  }, [isRunning, mode, currentModeMinutes, modeConfig.label, timeLeft, totalSeconds, user]);
+
+  useEffect(() => {
+    if (mode !== "focus" || !isRunning) return;
+
+    const elapsed = totalSeconds - timeLeft;
+    if (nextBreakReminderRef.current <= totalSeconds && elapsed >= nextBreakReminderRef.current) {
+      const minuteMark = Math.floor(nextBreakReminderRef.current / 60);
+      toast.message("Nhắc nghỉ ngắn", {
+        description: `Bạn đã học ${minuteMark} phút. Nghỉ 1-2 phút rồi tiếp tục nhé.`,
+      });
+      nextBreakReminderRef.current += 25 * 60;
+    }
+  }, [mode, isRunning, timeLeft, totalSeconds]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -229,20 +244,19 @@ const StudyTimer = () => {
   const switchMode = (nextMode) => {
     if (isRunning) return;
     setMode(nextMode);
-    setTimeLeft(TIMER_MODES[nextMode].minutes * 60);
+    const nextMinutes = nextMode === "focus" ? focusDurationMinutes : TIMER_MODES[nextMode].minutes;
+    setTimeLeft(nextMinutes * 60);
+    nextBreakReminderRef.current = 25 * 60;
   };
 
   const toggleTimer = () => {
     setIsRunning((prev) => !prev);
-    if (!isRunning) {
-      setIsManualFullscreen(false);
-    }
   };
 
   const resetTimer = () => {
     setIsRunning(false);
-    setIsManualFullscreen(false);
     setTimeLeft(totalSeconds);
+    nextBreakReminderRef.current = 25 * 60;
   };
 
   const addTask = () => {
@@ -309,8 +323,16 @@ const StudyTimer = () => {
 
             <FramerMotion.motion.section
               layout
-              className="rounded-[2rem] border border-white/60 dark:border-white/15 bg-white/65 dark:bg-white/10 p-6 md:p-10 backdrop-blur-xl shadow-xl shadow-blue-200/40 dark:shadow-black/20"
+              className="relative rounded-[2rem] border border-white/60 dark:border-white/15 bg-white/65 dark:bg-white/10 p-6 md:p-10 backdrop-blur-xl shadow-xl shadow-blue-200/40 dark:shadow-black/20"
             >
+              <button
+                onClick={() => setIsManualFullscreen((prev) => !prev)}
+                className="absolute right-5 top-5 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-white/15 bg-white/80 dark:bg-white/10 px-3 py-2 text-slate-700 dark:text-slate-100 hover:bg-white dark:hover:bg-white/15 transition-colors"
+                title="Phóng to"
+              >
+                {isManualFullscreen ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
+              </button>
+
               <div className="mx-auto max-w-xl text-center">
                 <div className="relative mx-auto h-[19rem] w-[19rem] md:h-[22rem] md:w-[22rem]">
                   <svg className="h-full w-full -rotate-90" viewBox="0 0 320 320">
@@ -365,6 +387,31 @@ const StudyTimer = () => {
                   />
                 </div>
 
+                {mode === "focus" && (
+                  <div className="mt-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/75 dark:bg-white/5 px-4 py-3 text-left">
+                    <div className="mb-2 flex items-center justify-between text-sm">
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">Thời lượng phiên học</span>
+                      <span className="font-bold text-blue-600 dark:text-blue-300">{focusDurationMinutes} phút</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={5}
+                      max={300}
+                      step={5}
+                      disabled={isRunning}
+                      value={focusDurationMinutes}
+                      onChange={(e) => {
+                        const value = Math.min(300, Math.max(5, Number(e.target.value) || 25));
+                        setFocusDurationMinutes(value);
+                        setTimeLeft(value * 60);
+                        nextBreakReminderRef.current = 25 * 60;
+                      }}
+                      className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-blue-500 disabled:opacity-50"
+                    />
+                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Tối đa 5 tiếng. Bị khóa khi timer đang chạy.</p>
+                  </div>
+                )}
+
                 <div className="mt-7 flex items-center justify-center gap-3">
                   <FramerMotion.motion.button
                     whileHover={{ scale: 1.03 }}
@@ -384,14 +431,6 @@ const StudyTimer = () => {
                     title="Đặt lại"
                   >
                     <RotateCcw size={18} />
-                  </button>
-
-                  <button
-                    onClick={() => setIsManualFullscreen((prev) => !prev)}
-                    className="inline-flex items-center justify-center rounded-2xl border border-slate-200 dark:border-white/15 bg-white/80 dark:bg-white/10 px-4 py-3.5 text-slate-700 dark:text-slate-100 hover:bg-white dark:hover:bg-white/15 transition-colors"
-                    title="Phóng to"
-                  >
-                    {isManualFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                   </button>
                 </div>
 
