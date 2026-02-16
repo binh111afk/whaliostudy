@@ -27,6 +27,16 @@ const MOTIVATIONAL_QUOTES = [
   "Sự kiên trì là chìa khóa mở mọi cánh cửa dẫn đến thành công.",
   "Giáo dục là vũ khí mạnh nhất mà bạn có thể dùng để thay đổi thế giới.",
 ];
+const REMINDER_MESSAGES = [
+  "Ngồi thẳng lưng và thả lỏng vai nhé.",
+  "Uống một ngụm nước để giữ tỉnh táo.",
+  "Tập trung vào 1 việc duy nhất trong 2 phút tới.",
+  "Hít sâu 3 nhịp rồi tiếp tục nào.",
+  "Đặt mục tiêu nhỏ: hoàn thành thêm 1 phần nữa.",
+  "Đừng đa nhiệm, làm xong việc này rồi mới chuyển việc khác.",
+  "Nếu mỏi mắt, nhìn xa 20 giây để nghỉ.",
+  "Tiếp tục đều đặn, chậm mà chắc.",
+];
 
 const pad = (num) => String(num).padStart(2, "0");
 const formatOverlayTime = (seconds, forceHours = false) => {
@@ -91,6 +101,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   const [isSeekingProgress, setIsSeekingProgress] = useState(false);
   const [progressHover, setProgressHover] = useState({ visible: false, x: 0, time: 0 });
   const [motivationIndex, setMotivationIndex] = useState(0);
+  const [reminderIndex, setReminderIndex] = useState(0);
   const currentTrackIdRef = useRef(null);
   const lastLoadedTrackIdRef = useRef(null);
   const hasRestoredPlaybackRef = useRef(false);
@@ -762,6 +773,16 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    if (REMINDER_MESSAGES.length <= 1) return undefined;
+
+    const id = setInterval(() => {
+      setReminderIndex((prev) => (prev + 1) % REMINDER_MESSAGES.length);
+    }, 2 * 60 * 1000);
+
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <>
       <style>{`
@@ -1037,7 +1058,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
               {currentTrack ? currentTrack.name : "Chưa phát nhạc"}
             </p>
           </div>
-          <p className="min-w-0 flex-1 rounded-xl bg-slate-100/70 px-3 py-2 text-sm text-slate-600 italic text-center truncate dark:bg-white/10 dark:text-slate-300">
+          <p className="min-w-0 flex-1 px-3 py-1 text-sm text-slate-600 italic text-center truncate dark:text-slate-300">
             "{MOTIVATIONAL_QUOTES[motivationIndex]}"
           </p>
 
@@ -1068,12 +1089,6 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
         </div>
 
         <div className={isFloatingCollapsed ? "hidden" : ""}>
-          {overlayState?.tip && (
-            <p className="mt-2 rounded-xl bg-slate-100/80 px-3 py-1.5 text-sm text-slate-600 dark:bg-white/10 dark:text-slate-300 truncate">
-              {overlayState.tip}
-            </p>
-          )}
-
           <div className="mt-2.5 flex items-center gap-2">
             <button
               onClick={prevTrack}
@@ -1140,9 +1155,12 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
               />
             </div>
           </div>
-          <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-300">
-            <span>{formatOverlayTime(Math.floor(currentTime))}</span>
-            <span>{formatOverlayTime(Math.floor(duration))}</span>
+          <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-300">
+            <span className="shrink-0">{formatOverlayTime(Math.floor(currentTime))}</span>
+            <span className="min-w-0 flex-1 truncate text-center text-[10px] sm:text-[11px]">
+              {REMINDER_MESSAGES[reminderIndex]}
+            </span>
+            <span className="shrink-0">{formatOverlayTime(Math.floor(duration))}</span>
           </div>
 
           {isFloatingPlaylistOpen && (
