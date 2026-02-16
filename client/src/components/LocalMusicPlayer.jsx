@@ -40,6 +40,15 @@ const stripAudioExtension = (name) => {
   return stripped || raw;
 };
 
+const buildShuffledIndexes = (length, excludeIndex) => {
+  const pool = Array.from({ length }, (_, idx) => idx).filter((idx) => idx !== excludeIndex);
+  for (let i = pool.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool;
+};
+
 const LocalMusicPlayer = ({ globalMode = false }) => {
   const location = useLocation();
   const audioRef = useRef(null);
@@ -65,6 +74,8 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   const hasRestoredPlaybackRef = useRef(false);
   const lastPlaybackUpdatedAtRef = useRef(0);
   const pendingSeekRef = useRef(null);
+  const tracksRef = useRef([]);
+  const currentIndexRef = useRef(-1);
 
   const currentTrack = currentIndex >= 0 ? tracks[currentIndex] : null;
   const isStudyTimerRoute = location.pathname === "/timer";
@@ -82,6 +93,14 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     autoCycleStartIndexRef.current = null;
     autoRemainingIndexesRef.current = [];
   }, []);
+
+  useEffect(() => {
+    tracksRef.current = tracks;
+  }, [tracks]);
+
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
 
   const savePlaylistOrder = useCallback(async (nextTracks) => {
     try {
@@ -424,10 +443,12 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   }, [currentTrack, isPlaying]);
 
   const autoNextTrack = useCallback(() => {
-    if (tracks.length === 0) return;
+    const latestTracks = tracksRef.current;
+    const length = latestTracks.length;
+    if (length === 0) return;
     isAutoAdvancingRef.current = true;
 
-    if (tracks.length === 1) {
+    if (length === 1) {
       const audio = audioRef.current;
       if (audio) {
         audio.currentTime = 0;
@@ -447,33 +468,35 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
       return;
     }
 
-    const safeCurrentIndex = currentIndex >= 0 && currentIndex < tracks.length ? currentIndex : 0;
+    const latestIndex = currentIndexRef.current;
+    const safeCurrentIndex = latestIndex >= 0 && latestIndex < length ? latestIndex : 0;
     let cycleStart = autoCycleStartIndexRef.current;
     let remaining = Array.isArray(autoRemainingIndexesRef.current)
-      ? autoRemainingIndexesRef.current.filter((idx) => idx >= 0 && idx < tracks.length && idx !== safeCurrentIndex)
+      ? autoRemainingIndexesRef.current.filter((idx) => idx >= 0 && idx < length && idx !== safeCurrentIndex)
       : [];
 
-    const isInvalidCycleStart = cycleStart === null || cycleStart < 0 || cycleStart >= tracks.length;
+    const isInvalidCycleStart = cycleStart === null || cycleStart < 0 || cycleStart >= length;
     if (isInvalidCycleStart) {
       cycleStart = safeCurrentIndex;
-      remaining = Array.from({ length: tracks.length }, (_, idx) => idx).filter((idx) => idx !== cycleStart);
+      remaining = buildShuffledIndexes(length, cycleStart);
     }
 
     if (remaining.length === 0) {
       shouldForcePlayRef.current = true;
+      autoCycleStartIndexRef.current = cycleStart;
+      autoRemainingIndexesRef.current = buildShuffledIndexes(length, cycleStart);
       setCurrentIndex(cycleStart);
       setIsPlaying(true);
-      resetAutoCycle();
       return;
     }
 
-    const randomIdx = remaining[Math.floor(Math.random() * remaining.length)];
-    autoRemainingIndexesRef.current = remaining.filter((idx) => idx !== randomIdx);
+    const [nextIndex, ...restQueue] = remaining;
+    autoRemainingIndexesRef.current = restQueue;
     autoCycleStartIndexRef.current = cycleStart;
     shouldForcePlayRef.current = true;
-    setCurrentIndex(randomIdx);
+    setCurrentIndex(nextIndex);
     setIsPlaying(true);
-  }, [currentIndex, resetAutoCycle, tracks.length]);
+  }, []);
 
   const nextTrack = useCallback(() => {
     if (tracks.length === 0) return;
