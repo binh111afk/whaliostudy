@@ -1113,29 +1113,16 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
                 <SkipForward size={18} />
               </button>
 
-              <div className="ml-1 flex min-w-0 flex-1 items-center gap-2">
-                <Volume2 size={16} className="shrink-0 text-slate-500 dark:text-slate-300" />
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={volume}
-                  onChange={(e) => setVolume(Number(e.target.value))}
-                  className="w-20 sm:w-24 h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-300">
-              <span className="w-10 shrink-0 text-left tabular-nums">{formatOverlayTime(Math.floor(currentTime))}</span>
+              <span className="ml-1 w-10 shrink-0 text-left text-[11px] tabular-nums text-slate-500 dark:text-slate-300">
+                {formatOverlayTime(Math.floor(currentTime))}
+              </span>
               <div
                 ref={progressTrackRef}
                 onClick={handleProgressClick}
                 onPointerDown={handleProgressPointerDown}
                 onMouseMove={handleProgressMouseMove}
                 onMouseLeave={handleProgressMouseLeave}
-                className="group relative h-5 flex-1 cursor-pointer"
+                className="group relative h-5 min-w-0 flex-1 cursor-pointer"
               >
                 <div className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-slate-200 dark:bg-slate-700" />
                 <div
@@ -1159,7 +1146,21 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
                   </div>
                 )}
               </div>
-              <span className="w-10 shrink-0 text-right tabular-nums">{formatOverlayTime(Math.floor(duration))}</span>
+              <span className="w-10 shrink-0 text-right text-[11px] tabular-nums text-slate-500 dark:text-slate-300">
+                {formatOverlayTime(Math.floor(duration))}
+              </span>
+              <div className="ml-1 flex w-28 shrink-0 items-center gap-2 sm:w-32">
+                <Volume2 size={16} className="shrink-0 text-slate-500 dark:text-slate-300" />
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={volume}
+                  onChange={(e) => setVolume(Number(e.target.value))}
+                  className="w-full h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
+                />
+              </div>
             </div>
           </div>
 
