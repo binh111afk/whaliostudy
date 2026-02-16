@@ -98,11 +98,9 @@ const StudyTimer = () => {
   const [noteId, setNoteId] = useState("");
   const [noteTitle, setNoteTitle] = useState("Ghi chú StudyTime");
   const [noteContent, setNoteContent] = useState("");
-  const [quickNotesAvailable, setQuickNotesAvailable] = useState(true);
 
   const [upcomingDeadlines, setUpcomingDeadlines] = useState([]);
   const [subjectReminders, setSubjectReminders] = useState([]);
-  const noteStorageKey = username ? `whalio_studytimer_note_${username}` : "whalio_studytimer_note_guest";
 
 
   const modeConfig = TIMER_MODES[mode];
@@ -187,19 +185,6 @@ const StudyTimer = () => {
     const loadStudyTimerNote = async () => {
       if (!username) return;
 
-      const loadFromLocal = () => {
-        try {
-          const raw = localStorage.getItem(noteStorageKey);
-          if (!raw) return;
-          const parsed = JSON.parse(raw);
-          setNoteId("");
-          setNoteTitle(parsed?.title || "Ghi chú StudyTime");
-          setNoteContent(parsed?.content || "");
-        } catch (err) {
-          console.error("Load local StudyTimer note error:", err);
-        }
-      };
-
       try {
         const res = await fetch(`/api/quick-notes?username=${username}`);
         if (!res.ok) {
@@ -211,27 +196,21 @@ const StudyTimer = () => {
         }
         const data = await res.json();
         if (!data?.success || !Array.isArray(data.notes)) return;
-        setQuickNotesAvailable(true);
         const studyTimerNote = [...data.notes]
           .filter((item) => item?.source === "studytimer")
           .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0];
 
-        if (!studyTimerNote) {
-          loadFromLocal();
-          return;
-        }
+        if (!studyTimerNote) return;
         setNoteId(studyTimerNote._id || "");
         setNoteTitle(studyTimerNote.title || "Ghi chú StudyTime");
         setNoteContent(studyTimerNote.content || "");
       } catch (err) {
         console.error("Load StudyTimer note error:", err);
-        setQuickNotesAvailable(false);
-        loadFromLocal();
       }
     };
 
     loadStudyTimerNote();
-  }, [username, noteStorageKey]);
+  }, [username]);
 
   useEffect(() => {
     const loadAllData = async () => {
@@ -344,17 +323,6 @@ const StudyTimer = () => {
       return;
     }
 
-    const saveToLocal = () => {
-      localStorage.setItem(noteStorageKey, JSON.stringify({ title, content, updatedAt: Date.now() }));
-      setNoteId("");
-      toast.success("Đã lưu ghi chú (cục bộ).");
-    };
-
-    if (!quickNotesAvailable) {
-      saveToLocal();
-      return;
-    }
-
     try {
       if (noteId) {
         await fetch(`/api/quick-notes/${noteId}?username=${username}`, { method: "DELETE" });
@@ -392,30 +360,15 @@ const StudyTimer = () => {
         : null;
 
       setNoteId(studyTimerNote?._id || "");
-      localStorage.setItem(noteStorageKey, JSON.stringify({ title, content, updatedAt: Date.now() }));
       toast.success("Đã lưu ghi chú StudyTime.");
     } catch (err) {
       console.error("Save StudyTimer note error:", err);
-      setQuickNotesAvailable(false);
-      saveToLocal();
+      toast.error("Lưu ghi chú thất bại.");
     }
   };
 
   const deleteStudyTimerNote = async () => {
     if (!username) return;
-
-    const clearLocal = () => {
-      localStorage.removeItem(noteStorageKey);
-      setNoteId("");
-      setNoteTitle("Ghi chú StudyTime");
-      setNoteContent("");
-      toast.success("Đã xóa ghi chú.");
-    };
-
-    if (!quickNotesAvailable || !noteId) {
-      clearLocal();
-      return;
-    }
 
     if (!noteId) {
       setNoteTitle("Ghi chú StudyTime");
@@ -431,11 +384,13 @@ const StudyTimer = () => {
       if (!data?.success) {
         throw new Error("QUICK_NOTES_DELETE_FAILED");
       }
-      clearLocal();
+      setNoteId("");
+      setNoteTitle("Ghi chú StudyTime");
+      setNoteContent("");
+      toast.success("Đã xóa ghi chú.");
     } catch (err) {
       console.error("Delete StudyTimer note error:", err);
-      setQuickNotesAvailable(false);
-      clearLocal();
+      toast.error("Xóa ghi chú thất bại.");
     }
   };
 

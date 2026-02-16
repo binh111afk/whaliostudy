@@ -457,6 +457,19 @@ const timetableSchema = new mongoose.Schema({
 // Index để query nhanh theo tuần
 timetableSchema.index({ username: 1, weeks: 1 });
 
+// Quick Notes Schema (Dashboard + StudyTimer)
+const quickNoteSchema = new mongoose.Schema({
+    username: { type: String, required: true, index: true },
+    title: { type: String, required: true, trim: true, maxlength: 200 },
+    content: { type: String, required: true, trim: true },
+    color: { type: String, default: 'bg-yellow-100' },
+    source: { type: String, default: 'dashboard', enum: ['dashboard', 'studytimer'] },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+quickNoteSchema.index({ username: 1, createdAt: -1 });
+
 // Event Schema
 const eventSchema = new mongoose.Schema({
     username: { type: String, required: true, ref: 'User', index: true },
@@ -503,6 +516,7 @@ const Exam = mongoose.model('Exam', examSchema);
 const Post = mongoose.model('Post', postSchema);
 const Activity = mongoose.model('Activity', activitySchema);
 const Timetable = mongoose.model('Timetable', timetableSchema);
+const QuickNote = mongoose.model('QuickNote', quickNoteSchema);
 const Event = mongoose.model('Event', eventSchema);
 const ChatSession = mongoose.model('ChatSession', chatSessionSchema);
 const GpaModel = mongoose.model('Gpa', gpaSchema);
@@ -1033,6 +1047,65 @@ app.post('/api/upload-avatar', upload.single('avatar'), async (req, res) => {
     } catch (err) {
         console.error('Upload avatar error:', err);
         res.status(500).json({ success: false, message: "Lỗi server" });
+    }
+});
+
+// 4.1 Quick Notes APIs (MongoDB)
+app.get('/api/quick-notes', async (req, res) => {
+    try {
+        const { username } = req.query;
+        if (!username) {
+            return res.status(400).json({ success: false, message: 'Thiếu username' });
+        }
+
+        const notes = await QuickNote.find({ username }).sort({ createdAt: -1 }).lean();
+        return res.json({ success: true, notes });
+    } catch (err) {
+        console.error('Get quick notes error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+app.post('/api/quick-notes', async (req, res) => {
+    try {
+        const { username, title, content, color, source } = req.body;
+        if (!username || !title || !content) {
+            return res.status(400).json({ success: false, message: 'Thiếu dữ liệu ghi chú' });
+        }
+
+        const newNote = new QuickNote({
+            username: String(username).trim(),
+            title: String(title).trim(),
+            content: String(content).trim(),
+            color: color || 'bg-yellow-100',
+            source: source || 'dashboard'
+        });
+        await newNote.save();
+
+        return res.json({ success: true, note: newNote });
+    } catch (err) {
+        console.error('Create quick note error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+app.delete('/api/quick-notes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { username } = req.query;
+        if (!username) {
+            return res.status(400).json({ success: false, message: 'Thiếu username' });
+        }
+
+        const deleted = await QuickNote.findOneAndDelete({ _id: id, username });
+        if (!deleted) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy ghi chú' });
+        }
+
+        return res.json({ success: true });
+    } catch (err) {
+        console.error('Delete quick note error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
     }
 });
 
