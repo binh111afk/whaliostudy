@@ -1049,7 +1049,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
         >
           <X size={14} />
         </button>
-        <div className="flex items-start justify-between gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] items-start gap-3">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
               StudyTime Live
@@ -1058,12 +1058,9 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
               {currentTrack ? currentTrack.name : "Chưa phát nhạc"}
             </p>
           </div>
-          <div className="min-w-0 flex-1 px-3 py-1 text-sm text-slate-600 italic text-center dark:text-slate-300">
-            <p className="truncate">"{MOTIVATIONAL_QUOTES[motivationIndex]}"</p>
-            <p className="mt-0.5 truncate">
-              <span className="font-bold">Nhắc nhở:</span> {REMINDER_MESSAGES[reminderIndex]}
-            </p>
-          </div>
+          <p className="min-w-0 self-center px-2 text-sm leading-snug text-slate-600 italic text-center truncate dark:text-slate-300">
+            "{MOTIVATIONAL_QUOTES[motivationIndex]}"
+          </p>
 
           <div className="flex shrink-0 items-center gap-2">
             <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/90 px-2.5 py-1.5 text-sm font-semibold text-slate-600 dark:border-white/15 dark:bg-white/5 dark:text-slate-200">
@@ -1092,30 +1089,46 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
         </div>
 
         <div className={isFloatingCollapsed ? "hidden" : ""}>
-          <div className="mt-2.5 flex items-center gap-2">
-            <button
-              onClick={prevTrack}
-              className="rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-              aria-label="Bài trước"
-            >
-              <SkipBack size={18} />
-            </button>
-            <button
-              onClick={togglePlay}
-              className="rounded-xl bg-blue-500 px-3 py-2.5 text-white shadow-md shadow-blue-500/25 transition-colors hover:bg-blue-600"
-              aria-label={isPlaying ? "Tạm dừng" : "Phát"}
-            >
-              {isPlaying ? <Pause size={18} /> : <Play size={18} />}
-            </button>
-            <button
-              onClick={nextTrack}
-              className="rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-              aria-label="Bài tiếp"
-            >
-              <SkipForward size={18} />
-            </button>
+          <div className="mt-2.5 flex flex-col gap-2.5">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={prevTrack}
+                className="rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                aria-label="Bài trước"
+              >
+                <SkipBack size={18} />
+              </button>
+              <button
+                onClick={togglePlay}
+                className="rounded-xl bg-blue-500 px-3 py-2.5 text-white shadow-md shadow-blue-500/25 transition-colors hover:bg-blue-600"
+                aria-label={isPlaying ? "Tạm dừng" : "Phát"}
+              >
+                {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+              </button>
+              <button
+                onClick={nextTrack}
+                className="rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                aria-label="Bài tiếp"
+              >
+                <SkipForward size={18} />
+              </button>
 
-            <div className="ml-1 flex flex-1 items-center gap-2">
+              <div className="ml-1 flex flex-1 items-center gap-2">
+                <Volume2 size={16} className="text-slate-500 dark:text-slate-300" />
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={volume}
+                  onChange={(e) => setVolume(Number(e.target.value))}
+                  className="w-20 sm:w-24 h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-300">
+              <span className="w-10 shrink-0 text-left tabular-nums">{formatOverlayTime(Math.floor(currentTime))}</span>
               <div
                 ref={progressTrackRef}
                 onClick={handleProgressClick}
@@ -1146,21 +1159,8 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
                   </div>
                 )}
               </div>
-              <Volume2 size={16} className="text-slate-500 dark:text-slate-300" />
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={volume}
-                onChange={(e) => setVolume(Number(e.target.value))}
-                className="w-20 sm:w-24 h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
-              />
+              <span className="w-10 shrink-0 text-right tabular-nums">{formatOverlayTime(Math.floor(duration))}</span>
             </div>
-          </div>
-          <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-300">
-            <span className="shrink-0">{formatOverlayTime(Math.floor(currentTime))}</span>
-            <span className="shrink-0">{formatOverlayTime(Math.floor(duration))}</span>
           </div>
 
           {isFloatingPlaylistOpen && (
@@ -1191,6 +1191,10 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
               )}
             </div>
           )}
+
+          <p className="mt-2.5 text-center text-sm italic text-slate-500 dark:text-slate-300">
+            <span className="font-bold">Nhắc nhở:</span> {REMINDER_MESSAGES[reminderIndex]}
+          </p>
         </div>
       </div>
     )}
