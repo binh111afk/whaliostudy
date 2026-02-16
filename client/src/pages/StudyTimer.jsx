@@ -1,39 +1,32 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as FramerMotion from "framer-motion";
 import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  CloudRain,
-  Disc3,
   Flame,
+  Maximize2,
+  Minimize2,
   Pause,
   Play,
   Plus,
   RotateCcw,
   Volume2,
-  Waves,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { studyService } from "../services/studyService";
 
 const TIMER_MODES = {
-  focus: { label: "Tập trung", minutes: 25, accent: "from-cyan-400 to-blue-500" },
-  shortBreak: { label: "Nghỉ ngắn", minutes: 5, accent: "from-emerald-400 to-teal-500" },
-  longBreak: { label: "Nghỉ dài", minutes: 15, accent: "from-violet-400 to-indigo-500" },
+  focus: { label: "Tập trung", minutes: 25, accent: "from-blue-500 to-indigo-500" },
+  shortBreak: { label: "Nghỉ ngắn", minutes: 5, accent: "from-emerald-500 to-teal-500" },
+  longBreak: { label: "Nghỉ dài", minutes: 15, accent: "from-purple-500 to-indigo-500" },
 };
 
 const SMART_TIPS = [
   "Uống nước đi bạn ơi.",
-  "Deadline Triết học: Còn 2 tiếng.",
-  "Đứng dậy vươn vai 30 giây trước phiên tiếp theo.",
-  "Tắt tab mạng xã hội để giữ nhịp tập trung.",
-];
-
-const MOCK_EVENTS = [
-  { title: "Review đề cương CTDL", time: "14:30 - 15:00" },
-  { title: "Họp nhóm Web", time: "16:15 - 17:00" },
+  "Đặt mục tiêu nhỏ cho 25 phút này.",
+  "Tắt thông báo điện thoại để giữ nhịp tập trung.",
+  "Học xong phiên này nhớ đứng dậy đi lại 1 phút.",
 ];
 
 const INITIAL_TASKS = [
@@ -44,50 +37,54 @@ const INITIAL_TASKS = [
 const pad = (num) => String(num).padStart(2, "0");
 const formatTime = (seconds) => `${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}`;
 
+const formatVNDate = (value) => {
+  if (!value) return "Không có hạn";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "Không có hạn";
+  return d.toLocaleString("vi-VN", { hour12: false, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+};
+
 const ModePill = ({ active, disabled, label, onClick }) => (
   <button
     onClick={onClick}
     disabled={disabled}
     className={`px-4 py-2.5 rounded-full text-sm font-bold transition-all border ${
       active
-        ? "bg-white text-slate-900 border-white shadow-lg"
-        : "bg-white/10 text-slate-200 border-white/15 hover:bg-white/15"
-    } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+        ? "bg-blue-600 text-white border-blue-600 shadow-md"
+        : "bg-white/70 dark:bg-white/10 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-white/15 hover:bg-white dark:hover:bg-white/15"
+    } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
   >
-    {label}
-  </button>
-);
-
-const SoundButton = ({ active, icon, label, onClick }) => (
-  <button
-    onClick={onClick}
-    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-colors ${
-      active
-        ? "bg-cyan-400/20 border-cyan-300/40 text-cyan-100"
-        : "bg-white/5 border-white/10 text-slate-200 hover:bg-white/10"
-    }`}
-  >
-    {React.createElement(icon, { size: 16 })}
     {label}
   </button>
 );
 
 const StudyTimer = () => {
   const user = JSON.parse(localStorage.getItem("user"));
+  const audioRef = useRef(null);
+
   const [mode, setMode] = useState("focus");
   const [timeLeft, setTimeLeft] = useState(TIMER_MODES.focus.minutes * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isManualFullscreen, setIsManualFullscreen] = useState(false);
   const [tasks, setTasks] = useState(INITIAL_TASKS);
   const [newTask, setNewTask] = useState("");
-  const [activeSound, setActiveSound] = useState(null);
   const [todayStudyHours, setTodayStudyHours] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
 
+  const [upcomingDeadlines, setUpcomingDeadlines] = useState([]);
+  const [subjectReminders, setSubjectReminders] = useState([]);
+
+  const [musicFiles, setMusicFiles] = useState([]);
+  const [selectedMusicUrl, setSelectedMusicUrl] = useState("");
+  const [selectedMusicName, setSelectedMusicName] = useState("");
+  const [isMusicOpen, setIsMusicOpen] = useState(false);
+
   const modeConfig = TIMER_MODES[mode];
-  const progress = ((modeConfig.minutes * 60 - timeLeft) / (modeConfig.minutes * 60)) * 100;
-  const activeTask = tasks.find((t) => !t.done) || tasks[0];
-  const isZenMode = isRunning;
+  const totalSeconds = modeConfig.minutes * 60;
+  const progress = ((totalSeconds - timeLeft) / totalSeconds) * 100;
+  const activeTask = tasks.find((task) => !task.done) || tasks[0];
+  const isZenMode = isRunning || isManualFullscreen;
 
   useEffect(() => {
     let interval;
@@ -100,14 +97,7 @@ const StudyTimer = () => {
   }, [isRunning]);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setTipIndex((prev) => (prev + 1) % SMART_TIPS.length);
-    }, 10000);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    document.title = isRunning ? `${formatTime(timeLeft)} | Focus Room` : "Whalio Study";
+    document.title = isRunning ? `${formatTime(timeLeft)} | StudyTime` : "Whalio Study";
     return () => {
       document.title = "Whalio Study";
     };
@@ -115,6 +105,7 @@ const StudyTimer = () => {
 
   useEffect(() => {
     if (timeLeft !== 0 || !isRunning) return;
+
     const completeSession = async () => {
       setIsRunning(false);
       const minutes = modeConfig.minutes;
@@ -122,31 +113,27 @@ const StudyTimer = () => {
       if (user?.username && mode === "focus") {
         const res = await studyService.saveSession(user.username, minutes);
         if (res?.success) {
-          const newHours = Number((todayStudyHours + minutes / 60).toFixed(1));
-          setTodayStudyHours(newHours);
+          setTodayStudyHours((prev) => Number((prev + minutes / 60).toFixed(1)));
         }
       }
 
-      toast.success("Phiên học hoàn thành", {
+      toast.success("Hoàn thành phiên học", {
         description: `Bạn đã hoàn thành ${minutes} phút ${modeConfig.label.toLowerCase()}.`,
       });
 
-      setTimeLeft(modeConfig.minutes * 60);
+      setTimeLeft(totalSeconds);
+      setIsManualFullscreen(false);
     };
 
     completeSession();
-  }, [isRunning, mode, modeConfig, timeLeft, todayStudyHours, user]);
+  }, [isRunning, mode, modeConfig.minutes, modeConfig.label, timeLeft, totalSeconds, user]);
 
   useEffect(() => {
-    const loadTodayHours = async () => {
-      if (!user?.username) return;
-      const res = await studyService.getStats(user.username);
-      if (!res?.success || !Array.isArray(res.data) || res.data.length === 0) return;
-      const today = res.data[res.data.length - 1];
-      setTodayStudyHours(Number(((today.minutes || 0) / 60).toFixed(1)));
-    };
-    loadTodayHours();
-  }, [user]);
+    const id = setInterval(() => {
+      setTipIndex((prev) => (prev + 1) % SMART_TIPS.length);
+    }, 12000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (isZenMode) {
@@ -154,13 +141,85 @@ const StudyTimer = () => {
     } else {
       document.body.classList.remove("whalio-zen-active");
     }
-
-    return () => {
-      document.body.classList.remove("whalio-zen-active");
-    };
+    return () => document.body.classList.remove("whalio-zen-active");
   }, [isZenMode]);
 
-  const circle = useMemo(() => {
+  useEffect(() => {
+    const loadAllData = async () => {
+      if (!user?.username) return;
+
+      try {
+        const [studyRes, eventsRes, timetableRes] = await Promise.all([
+          studyService.getStats(user.username),
+          fetch(`/api/events?username=${user.username}`).then((r) => r.json()),
+          fetch(`/api/timetable?username=${user.username}`).then((r) => r.json()),
+        ]);
+
+        if (studyRes?.success && Array.isArray(studyRes.data) && studyRes.data.length > 0) {
+          const today = studyRes.data[studyRes.data.length - 1];
+          setTodayStudyHours(Number(((today.minutes || 0) / 60).toFixed(1)));
+        }
+
+        if (eventsRes?.success && Array.isArray(eventsRes.events)) {
+          const now = new Date();
+          const deadlines = eventsRes.events
+            .filter((event) => new Date(event.date) >= now)
+            .sort((a, b) => new Date(a.date) - new Date(b.date))
+            .slice(0, 3)
+            .map((event) => ({
+              id: event._id,
+              title: event.title,
+              date: event.date,
+            }));
+          setUpcomingDeadlines(deadlines);
+        }
+
+        if (timetableRes?.success && Array.isArray(timetableRes.timetable)) {
+          const reminders = timetableRes.timetable
+            .flatMap((subject) =>
+              (subject.notes || [])
+                .filter((note) => !note.isDone)
+                .map((note) => ({
+                  id: note.id,
+                  subject: subject.subject,
+                  content: note.content,
+                  deadline: note.deadline,
+                }))
+            )
+            .sort((a, b) => {
+              const timeA = a.deadline ? new Date(a.deadline).getTime() : Number.MAX_SAFE_INTEGER;
+              const timeB = b.deadline ? new Date(b.deadline).getTime() : Number.MAX_SAFE_INTEGER;
+              return timeA - timeB;
+            })
+            .slice(0, 3);
+
+          setSubjectReminders(reminders);
+        }
+      } catch (err) {
+        console.error("Load StudyTime synced data error:", err);
+      }
+    };
+
+    loadAllData();
+  }, [user]);
+
+  useEffect(() => {
+    const loadMusicFiles = async () => {
+      try {
+        const res = await fetch("/api/music/list");
+        const data = await res.json();
+        if (data?.success && Array.isArray(data.files)) {
+          setMusicFiles(data.files);
+        }
+      } catch (err) {
+        console.error("Load music list error:", err);
+      }
+    };
+
+    loadMusicFiles();
+  }, []);
+
+  const ring = useMemo(() => {
     const radius = 132;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (progress / 100) * circumference;
@@ -173,11 +232,17 @@ const StudyTimer = () => {
     setTimeLeft(TIMER_MODES[nextMode].minutes * 60);
   };
 
-  const toggleTimer = () => setIsRunning((prev) => !prev);
+  const toggleTimer = () => {
+    setIsRunning((prev) => !prev);
+    if (!isRunning) {
+      setIsManualFullscreen(false);
+    }
+  };
 
   const resetTimer = () => {
     setIsRunning(false);
-    setTimeLeft(modeConfig.minutes * 60);
+    setIsManualFullscreen(false);
+    setTimeLeft(totalSeconds);
   };
 
   const addTask = () => {
@@ -191,82 +256,92 @@ const StudyTimer = () => {
     setTasks((prev) => prev.map((task) => (task.id === id ? { ...task, done: !task.done } : task)));
   };
 
+  const playMusic = async (file) => {
+    setSelectedMusicUrl(file.url);
+    setSelectedMusicName(file.name);
+    setIsMusicOpen(true);
+
+    try {
+      await Promise.resolve();
+      if (audioRef.current) {
+        audioRef.current.load();
+        await audioRef.current.play();
+      }
+    } catch {
+      toast.message("Bấm Play trên player để bắt đầu nhạc.");
+    }
+  };
+
   return (
-    <div className="relative min-h-[calc(100vh-6rem)] -m-6 overflow-hidden text-slate-100">
+    <div className="relative min-h-[calc(100vh-6rem)] -m-6 overflow-hidden text-slate-800 dark:text-slate-100">
       <style>{`
         .whalio-zen-active .w-64.h-screen.fixed.left-0.top-0,
         .whalio-zen-active .h-16.sticky.top-0 {
-          opacity: 0.08;
+          opacity: 0.06;
           filter: blur(2px);
           pointer-events: none;
-          transition: opacity 280ms ease, filter 280ms ease;
+          transition: opacity 240ms ease, filter 240ms ease;
         }
       `}</style>
 
-      <div className="absolute inset-0 bg-[#060c19]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800" />
       <FramerMotion.motion.div
-        className="absolute -top-28 -left-24 h-[28rem] w-[28rem] rounded-full bg-blue-500/30 blur-[90px]"
-        animate={{ x: [0, 36, -8, 0], y: [0, 18, -12, 0] }}
+        className="absolute -top-28 -left-24 h-[28rem] w-[28rem] rounded-full bg-blue-300/35 dark:bg-blue-500/20 blur-[90px]"
+        animate={{ x: [0, 24, -10, 0], y: [0, 12, -8, 0] }}
         transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
       />
       <FramerMotion.motion.div
-        className="absolute top-1/3 -right-28 h-[26rem] w-[26rem] rounded-full bg-violet-500/30 blur-[100px]"
-        animate={{ x: [0, -22, 10, 0], y: [0, 20, -10, 0] }}
+        className="absolute top-1/3 -right-20 h-[24rem] w-[24rem] rounded-full bg-indigo-300/30 dark:bg-indigo-500/20 blur-[95px]"
+        animate={{ x: [0, -18, 10, 0], y: [0, 16, -8, 0] }}
         transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
       />
-      <FramerMotion.motion.div
-        className="absolute -bottom-24 left-1/3 h-[24rem] w-[24rem] rounded-full bg-teal-500/20 blur-[100px]"
-        animate={{ x: [0, 15, -20, 0], y: [0, -15, 8, 0] }}
-        transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_45%)]" />
 
       <div className="relative z-10 flex min-h-[calc(100vh-6rem)]">
         <div className="flex-1 px-5 py-7 md:px-10 md:py-10">
           <div className="mx-auto max-w-4xl">
             <div className="mb-6 flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-300/90">Focus Room</p>
-              <div className="inline-flex items-center gap-2 rounded-full border border-orange-200/20 bg-orange-400/15 px-3 py-1.5">
-                <Flame size={16} className="text-orange-300" />
-                <span className="text-sm font-semibold text-orange-100">{todayStudyHours}h hôm nay</span>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Focus Room</p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-orange-300/40 dark:border-orange-200/20 bg-orange-100/70 dark:bg-orange-400/10 px-3 py-1.5">
+                <Flame size={16} className="text-orange-500 dark:text-orange-300" />
+                <span className="text-sm font-semibold text-orange-700 dark:text-orange-100">{todayStudyHours}h hôm nay</span>
               </div>
             </div>
 
             <FramerMotion.motion.section
               layout
-              className="rounded-[2rem] border border-white/15 bg-white/10 p-6 md:p-10 backdrop-blur-2xl shadow-2xl shadow-black/20"
+              className="rounded-[2rem] border border-white/60 dark:border-white/15 bg-white/65 dark:bg-white/10 p-6 md:p-10 backdrop-blur-xl shadow-xl shadow-blue-200/40 dark:shadow-black/20"
             >
               <div className="mx-auto max-w-xl text-center">
                 <div className="relative mx-auto h-[19rem] w-[19rem] md:h-[22rem] md:w-[22rem]">
                   <svg className="h-full w-full -rotate-90" viewBox="0 0 320 320">
-                    <circle cx="160" cy="160" r={circle.radius} stroke="rgba(255,255,255,0.14)" strokeWidth="12" fill="none" />
+                    <circle cx="160" cy="160" r={ring.radius} stroke="rgba(148,163,184,0.32)" strokeWidth="12" fill="none" />
                     <FramerMotion.motion.circle
                       cx="160"
                       cy="160"
-                      r={circle.radius}
+                      r={ring.radius}
                       stroke="url(#timer-accent)"
                       strokeWidth="12"
                       strokeLinecap="round"
                       fill="none"
-                      strokeDasharray={circle.circumference}
-                      animate={{ strokeDashoffset: circle.offset }}
+                      strokeDasharray={ring.circumference}
+                      animate={{ strokeDashoffset: ring.offset }}
                       transition={{ duration: 0.45, ease: "easeOut" }}
                     />
                     <defs>
                       <linearGradient id="timer-accent" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#67e8f9" />
-                        <stop offset="100%" stopColor="#60a5fa" />
+                        <stop offset="0%" stopColor="#3b82f6" />
+                        <stop offset="100%" stopColor="#6366f1" />
                       </linearGradient>
                     </defs>
                   </svg>
 
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-300/90">{modeConfig.label}</p>
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">{modeConfig.label}</p>
                     <FramerMotion.motion.div
                       key={`${mode}-${timeLeft}`}
                       initial={{ opacity: 0.45, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="font-mono text-6xl md:text-7xl font-light tracking-tight text-white"
+                      className="font-mono text-6xl md:text-7xl font-light tracking-tight text-slate-800 dark:text-white"
                       style={{ fontFamily: "JetBrains Mono, Inter, ui-monospace, SFMono-Regular, Menlo, monospace" }}
                     >
                       {formatTime(timeLeft)}
@@ -295,7 +370,7 @@ const StudyTimer = () => {
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={toggleTimer}
-                    className={`inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r px-7 py-3.5 text-base font-bold text-slate-900 shadow-xl ${
+                    className={`inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r px-7 py-3.5 text-base font-bold text-white shadow-lg ${
                       modeConfig.accent
                     }`}
                   >
@@ -305,9 +380,18 @@ const StudyTimer = () => {
 
                   <button
                     onClick={resetTimer}
-                    className="inline-flex items-center justify-center rounded-2xl border border-white/15 bg-white/10 px-4 py-3.5 text-slate-100 hover:bg-white/15 transition-colors"
+                    className="inline-flex items-center justify-center rounded-2xl border border-slate-200 dark:border-white/15 bg-white/80 dark:bg-white/10 px-4 py-3.5 text-slate-700 dark:text-slate-100 hover:bg-white dark:hover:bg-white/15 transition-colors"
+                    title="Đặt lại"
                   >
                     <RotateCcw size={18} />
+                  </button>
+
+                  <button
+                    onClick={() => setIsManualFullscreen((prev) => !prev)}
+                    className="inline-flex items-center justify-center rounded-2xl border border-slate-200 dark:border-white/15 bg-white/80 dark:bg-white/10 px-4 py-3.5 text-slate-700 dark:text-slate-100 hover:bg-white dark:hover:bg-white/15 transition-colors"
+                    title="Phóng to"
+                  >
+                    {isManualFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                   </button>
                 </div>
 
@@ -315,7 +399,7 @@ const StudyTimer = () => {
                   key={tipIndex}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-7 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200"
+                  className="mt-7 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/75 dark:bg-white/5 px-4 py-3 text-sm text-slate-600 dark:text-slate-200"
                 >
                   {SMART_TIPS[tipIndex]}
                 </FramerMotion.motion.div>
@@ -331,30 +415,30 @@ const StudyTimer = () => {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "100%", opacity: 0 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="w-full max-w-sm border-l border-white/10 bg-slate-950/35 p-5 backdrop-blur-xl md:p-6"
+              className="w-full max-w-sm border-l border-white/40 dark:border-white/10 bg-white/55 dark:bg-slate-900/45 p-5 backdrop-blur-xl md:p-6"
             >
               <div className="mb-5 flex items-center justify-between">
-                <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-slate-200/90">Tiện ích</h3>
+                <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-slate-600 dark:text-slate-200">Tiện ích</h3>
                 <button
                   onClick={() => setIsSidebarOpen(false)}
-                  className="rounded-lg border border-white/15 bg-white/10 p-1.5 text-slate-200 hover:bg-white/20"
+                  className="rounded-lg border border-slate-200 dark:border-white/15 bg-white/80 dark:bg-white/10 p-1.5 text-slate-600 dark:text-slate-200 hover:bg-white dark:hover:bg-white/20"
                 >
                   <ChevronRight size={16} />
                 </button>
               </div>
 
               <div className="space-y-4">
-                <section className="rounded-2xl border border-white/15 bg-white/10 p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-white">Task phiên này</h4>
+                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
+                  <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Task phiên này</h4>
                   <div className="space-y-2">
                     {tasks.map((task) => (
                       <button
                         key={task.id}
                         onClick={() => toggleTask(task.id)}
-                        className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10"
+                        className="flex w-full items-center gap-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2 text-left text-sm hover:bg-white dark:hover:bg-white/10"
                       >
-                        <CheckCircle2 size={16} className={task.done ? "text-emerald-300" : "text-slate-500"} />
-                        <span className={task.done ? "line-through text-slate-400" : "text-slate-100"}>{task.title}</span>
+                        <CheckCircle2 size={16} className={task.done ? "text-emerald-500 dark:text-emerald-300" : "text-slate-400"} />
+                        <span className={task.done ? "line-through text-slate-400" : "text-slate-700 dark:text-slate-100"}>{task.title}</span>
                       </button>
                     ))}
                   </div>
@@ -364,50 +448,91 @@ const StudyTimer = () => {
                       onChange={(e) => setNewTask(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && addTask()}
                       placeholder="Thêm task..."
-                      className="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-slate-400 outline-none focus:border-cyan-300/50"
+                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/20 px-3 py-2 text-sm text-slate-700 dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-400"
                     />
-                    <button onClick={addTask} className="rounded-xl bg-cyan-400/85 p-2 text-slate-900 hover:bg-cyan-300">
+                    <button onClick={addTask} className="rounded-xl bg-blue-500 p-2 text-white hover:bg-blue-600">
                       <Plus size={16} />
                     </button>
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-white/15 bg-white/10 p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-white">Lịch trình sắp tới</h4>
+                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
+                  <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Deadline sắp tới</h4>
                   <div className="space-y-2">
-                    {MOCK_EVENTS.map((event) => (
-                      <div key={event.title} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                        <p className="text-sm font-medium text-slate-100">{event.title}</p>
-                        <p className="text-xs text-slate-400">{event.time}</p>
-                      </div>
-                    ))}
+                    {upcomingDeadlines.length > 0 ? (
+                      upcomingDeadlines.map((item) => (
+                        <div key={item.id} className="rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2">
+                          <p className="text-sm font-medium text-slate-700 dark:text-slate-100">{item.title}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{formatVNDate(item.date)}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Chưa có deadline nào.</p>
+                    )}
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-white/15 bg-white/10 p-4">
-                  <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
-                    <Volume2 size={16} /> Soundscapes
-                  </h4>
-                  <div className="grid grid-cols-1 gap-2">
-                    <SoundButton
-                      active={activeSound === "rain"}
-                      icon={CloudRain}
-                      label="Mưa"
-                      onClick={() => setActiveSound((prev) => (prev === "rain" ? null : "rain"))}
-                    />
-                    <SoundButton
-                      active={activeSound === "lofi"}
-                      icon={Disc3}
-                      label="Lo-fi"
-                      onClick={() => setActiveSound((prev) => (prev === "lofi" ? null : "lofi"))}
-                    />
-                    <SoundButton
-                      active={activeSound === "white-noise"}
-                      icon={Waves}
-                      label="White noise"
-                      onClick={() => setActiveSound((prev) => (prev === "white-noise" ? null : "white-noise"))}
-                    />
+                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
+                  <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Nhắc nhở môn học</h4>
+                  <div className="space-y-2">
+                    {subjectReminders.length > 0 ? (
+                      subjectReminders.map((item) => (
+                        <div key={`${item.subject}-${item.id}`} className="rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2">
+                          <p className="text-sm font-medium text-slate-700 dark:text-slate-100">{item.subject}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-300">{item.content}</p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">{formatVNDate(item.deadline)}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Chưa có nhắc nhở môn học.</p>
+                    )}
                   </div>
+                </section>
+
+                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
+                  <button
+                    onClick={() => setIsMusicOpen((prev) => !prev)}
+                    className="w-full flex items-center justify-between text-sm font-semibold text-slate-800 dark:text-white"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Volume2 size={16} /> Chọn nhạc
+                    </span>
+                    {isMusicOpen ? <ChevronRight size={16} className="rotate-90" /> : <ChevronRight size={16} />}
+                  </button>
+
+                  {isMusicOpen && (
+                    <div className="mt-3 space-y-2">
+                      {musicFiles.length > 0 ? (
+                        musicFiles.map((file) => (
+                          <button
+                            key={file.url}
+                            onClick={() => playMusic(file)}
+                            className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors ${
+                              selectedMusicUrl === file.url
+                                ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-300/60 dark:bg-blue-500/10 dark:text-blue-200"
+                                : "border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/5 text-slate-700 dark:text-slate-100 hover:bg-white dark:hover:bg-white/10"
+                            }`}
+                          >
+                            {file.name}
+                          </button>
+                        ))
+                      ) : (
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          Chưa có file `.mp4` trong thư mục `music`.
+                        </p>
+                      )}
+
+                      {selectedMusicUrl && (
+                        <div className="mt-3 rounded-xl border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3">
+                          <p className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-300 truncate">Đang chọn: {selectedMusicName}</p>
+                          <audio ref={audioRef} controls className="w-full">
+                            <source src={selectedMusicUrl} type="video/mp4" />
+                            Trình duyệt không hỗ trợ phát file này.
+                          </audio>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </section>
               </div>
             </FramerMotion.motion.aside>
@@ -418,7 +543,7 @@ const StudyTimer = () => {
       {!isSidebarOpen && (
         <button
           onClick={() => setIsSidebarOpen(true)}
-          className="absolute right-4 top-6 z-20 inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-slate-100 backdrop-blur-lg hover:bg-white/20 transition-colors"
+          className="absolute right-4 top-6 z-20 inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-white/15 bg-white/80 dark:bg-white/10 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-100 backdrop-blur-lg hover:bg-white dark:hover:bg-white/20 transition-colors"
         >
           <ChevronLeft size={16} />
           Tiện ích
@@ -431,7 +556,7 @@ const StudyTimer = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[110] bg-[#050812]/82 backdrop-blur-xl"
+            className="fixed inset-0 z-[110] bg-slate-900/70 backdrop-blur-xl"
           >
             <div className="flex h-full flex-col items-center justify-center px-5">
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Zen Mode</p>
@@ -466,11 +591,13 @@ const StudyTimer = () => {
                   Đặt lại
                 </button>
                 <button
-                  onClick={() => setIsRunning(false)}
-                  className="rounded-2xl border border-white/20 bg-white/10 p-3 text-white hover:bg-white/15 transition-colors"
-                  aria-label="Thoát Zen Mode"
+                  onClick={() => {
+                    setIsManualFullscreen(false);
+                    if (!isRunning) setIsRunning(false);
+                  }}
+                  className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-base font-semibold text-white hover:bg-white/15 transition-colors"
                 >
-                  <X size={18} />
+                  Thu nhỏ
                 </button>
               </div>
             </div>

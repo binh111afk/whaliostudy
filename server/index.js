@@ -518,6 +518,30 @@ app.use(express.json());
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/img', express.static(path.join(__dirname, '../img')));
+app.use('/music', express.static(path.join(__dirname, '../music')));
+
+app.get('/api/music/list', (req, res) => {
+    try {
+        const musicDir = path.join(__dirname, '../music');
+
+        if (!fs.existsSync(musicDir)) {
+            return res.json({ success: true, files: [] });
+        }
+
+        const files = fs
+            .readdirSync(musicDir)
+            .filter((file) => /\.mp4$/i.test(file))
+            .map((file) => ({
+                name: file,
+                url: `/music/${encodeURIComponent(file)}`
+            }));
+
+        res.json({ success: true, files });
+    } catch (err) {
+        console.error('Music list error:', err);
+        res.status(500).json({ success: false, files: [], message: 'Server error' });
+    }
+});
 
 // ==================== EJS TEMPLATE ENGINE ====================
 app.set('view engine', 'ejs');
