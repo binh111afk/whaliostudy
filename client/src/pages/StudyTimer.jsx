@@ -461,7 +461,7 @@ const StudyTimer = () => {
               <div className="space-y-4 pr-1">
                 <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4 min-h-[320px] flex flex-col">
                   <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Task phiên này</h4>
-                  <div className="whalio-scrollbar max-h-48 space-y-2 overflow-y-auto pr-1">
+                  <div className="whalio-scrollbar flex-1 space-y-2 overflow-y-auto pr-1">
                     {tasks.map((task) => (
                       <button
                         key={task.id}
@@ -489,7 +489,7 @@ const StudyTimer = () => {
 
                 <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4 min-h-[320px] flex flex-col">
                   <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Deadline sắp tới</h4>
-                  <div className="whalio-scrollbar max-h-44 space-y-2 overflow-y-auto pr-1">
+                  <div className="whalio-scrollbar flex-1 space-y-2 overflow-y-auto pr-1">
                     {upcomingDeadlines.length > 0 ? (
                       upcomingDeadlines.map((item) => (
                         <div key={item.id} className="rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2">
@@ -505,7 +505,7 @@ const StudyTimer = () => {
 
                 <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4 min-h-[320px] flex flex-col">
                   <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Nhắc nhở môn học</h4>
-                  <div className="whalio-scrollbar max-h-44 space-y-2 overflow-y-auto pr-1">
+                  <div className="whalio-scrollbar flex-1 space-y-2 overflow-y-auto pr-1">
                     {subjectReminders.length > 0 ? (
                       subjectReminders.map((item) => (
                         <div key={`${item.subject}-${item.id}`} className="rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2">
