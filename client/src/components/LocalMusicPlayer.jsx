@@ -15,6 +15,18 @@ const MUSIC_PLAYBACK_STORAGE_KEY = "whalio_music_playback_v1";
 const MUSIC_SYNC_EVENT = "whalio:music-playback-sync";
 const ALLOWED_EXT = [".mp3", ".mp4"];
 const ALLOWED_MIME = ["audio/mpeg", "audio/mp3", "audio/mp4", "video/mp4"];
+const MOTIVATIONAL_QUOTES = [
+  "Cách tốt nhất để bắt đầu là ngừng nói và bắt đầu làm.",
+  "Thành công là tổng hợp của những nỗ lực nhỏ bé, được lặp lại ngày qua ngày.",
+  "Hãy tập trung vào việc tạo ra hiệu quả, đừng chỉ tập trung vào việc bận rộn.",
+  "Mọi thứ dường như là không thể cho đến khi nó được hoàn thành.",
+  "Đừng dừng lại khi bạn mệt mỏi, hãy dừng lại khi bạn đã hoàn thành.",
+  "Kiến thức là kho báu sẽ theo chủ nhân của nó đi khắp mọi nơi.",
+  "Hôm nay làm những việc người khác không làm, ngày mai bạn sẽ có những thứ người khác không có.",
+  "Đừng so sánh mình với bất kỳ ai khác, hãy so sánh mình với phiên bản của chính mình ngày hôm qua.",
+  "Sự kiên trì là chìa khóa mở mọi cánh cửa dẫn đến thành công.",
+  "Giáo dục là vũ khí mạnh nhất mà bạn có thể dùng để thay đổi thế giới.",
+];
 
 const pad = (num) => String(num).padStart(2, "0");
 const formatOverlayTime = (seconds, forceHours = false) => {
@@ -78,6 +90,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   const [duration, setDuration] = useState(0);
   const [isSeekingProgress, setIsSeekingProgress] = useState(false);
   const [progressHover, setProgressHover] = useState({ visible: false, x: 0, time: 0 });
+  const [motivationIndex, setMotivationIndex] = useState(0);
   const currentTrackIdRef = useRef(null);
   const lastLoadedTrackIdRef = useRef(null);
   const hasRestoredPlaybackRef = useRef(false);
@@ -739,6 +752,16 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     }
   }, [floatingVisible]);
 
+  useEffect(() => {
+    if (MOTIVATIONAL_QUOTES.length <= 1) return undefined;
+
+    const id = setInterval(() => {
+      setMotivationIndex((prev) => (prev + 1) % MOTIVATIONAL_QUOTES.length);
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <>
       <style>{`
@@ -1040,6 +1063,9 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
             </button>
           </div>
         </div>
+        <p className="mt-2 rounded-xl bg-slate-100/80 px-3 py-2 text-sm text-slate-600 italic dark:bg-white/10 dark:text-slate-300">
+          "{MOTIVATIONAL_QUOTES[motivationIndex]}"
+        </p>
 
         <div className={isFloatingCollapsed ? "hidden" : ""}>
           {overlayState?.tip && (
