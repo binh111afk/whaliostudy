@@ -262,7 +262,7 @@ const StudyTimer = () => {
   };
 
   return (
-    <div className="relative min-h-[calc(100dvh-4rem)] -m-6 overflow-y-auto text-slate-800 dark:text-slate-100 xl:h-[calc(100dvh-4rem)] xl:overflow-hidden">
+    <div className="relative min-h-[calc(100dvh-4rem)] -m-6 overflow-x-hidden overflow-y-auto text-slate-800 dark:text-slate-100">
       <style>{`
         .whalio-zen-active .w-64.h-screen.fixed.left-0.top-0,
         .whalio-zen-active .h-16.sticky.top-0 {
@@ -285,9 +285,9 @@ const StudyTimer = () => {
         transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      <div className="relative z-10 flex min-h-full flex-col xl:h-full xl:min-h-0 xl:flex-row">
-        <div className="whalio-scrollbar flex min-h-0 flex-1 items-start justify-center overflow-y-visible px-4 py-5 md:px-8 md:py-6 xl:items-center xl:overflow-y-auto">
-          <div className="mx-auto flex w-full max-w-4xl flex-col justify-center">
+      <div className="relative z-10 mx-auto flex w-full max-w-[1650px] flex-col gap-4 px-4 py-4 md:px-6 md:py-6 xl:flex-row xl:items-start">
+        <div className="min-w-0 flex-1">
+          <div className="mx-auto flex w-full max-w-5xl flex-col">
             <div className="mb-4 flex items-center justify-between md:mb-6">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Focus Room</p>
               <div className="inline-flex items-center gap-2 rounded-full border border-orange-300/40 dark:border-orange-200/20 bg-orange-100/70 dark:bg-orange-400/10 px-3 py-1.5">
@@ -298,7 +298,7 @@ const StudyTimer = () => {
 
             <FramerMotion.motion.section
               layout
-              className="relative rounded-[2rem] border border-white/60 dark:border-white/15 bg-white/65 dark:bg-white/10 p-4 md:p-6 xl:p-8 backdrop-blur-xl shadow-xl shadow-blue-200/40 dark:shadow-black/20"
+              className="relative rounded-[2rem] border border-white/60 dark:border-white/15 bg-white/65 dark:bg-white/10 p-4 md:p-6 xl:p-7 backdrop-blur-xl shadow-xl shadow-blue-200/40 dark:shadow-black/20"
             >
               <button
                 onClick={() => setIsManualFullscreen((prev) => !prev)}
@@ -446,7 +446,7 @@ const StudyTimer = () => {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "100%", opacity: 0 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="mt-4 flex w-full flex-col border-t border-white/40 dark:border-white/10 bg-white/55 dark:bg-slate-900/45 p-4 backdrop-blur-xl md:p-5 xl:mt-0 xl:h-full xl:min-h-0 xl:max-w-[390px] xl:shrink-0 xl:border-t-0 xl:border-l"
+              className="mt-2 flex w-full flex-col border border-white/40 dark:border-white/10 bg-white/55 dark:bg-slate-900/45 p-4 backdrop-blur-xl md:p-5 xl:mt-0 xl:w-[390px] xl:shrink-0 xl:self-start xl:sticky xl:top-4"
             >
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-slate-600 dark:text-slate-200">Tiện ích</h3>
@@ -458,7 +458,7 @@ const StudyTimer = () => {
                 </button>
               </div>
 
-              <div className="space-y-4 pr-1 xl:whalio-scrollbar xl:flex-1 xl:overflow-y-auto">
+              <div className="space-y-4 pr-1 xl:whalio-scrollbar xl:max-h-[calc(100dvh-8.5rem)] xl:overflow-y-auto">
                 <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
                   <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Task phiên này</h4>
                   <div className="whalio-scrollbar max-h-48 space-y-2 overflow-y-auto pr-1">
@@ -530,7 +530,7 @@ const StudyTimer = () => {
       {!isSidebarOpen && (
         <button
           onClick={() => setIsSidebarOpen(true)}
-          className="fixed bottom-4 right-4 z-20 inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-white/15 bg-white/90 dark:bg-slate-900/70 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-100 shadow-lg backdrop-blur-lg hover:bg-white dark:hover:bg-white/20 transition-colors xl:absolute xl:bottom-auto xl:right-4 xl:top-6"
+          className="fixed bottom-4 right-4 z-20 inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-white/15 bg-white/90 dark:bg-slate-900/70 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-100 shadow-lg backdrop-blur-lg hover:bg-white dark:hover:bg-white/20 transition-colors"
         >
           <ChevronLeft size={16} />
           Tiện ích
