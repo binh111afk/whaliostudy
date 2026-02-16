@@ -295,7 +295,7 @@ const LocalMusicPlayer = () => {
   }, []);
 
   return (
-    <div className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 backdrop-blur-xl p-4 text-slate-800 dark:text-slate-100 overflow-hidden">
+    <div className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 backdrop-blur-xl p-4 text-slate-800 dark:text-slate-100 overflow-hidden min-h-[320px] flex flex-col">
       <style>{`
         @keyframes whalio-wave {
           0%, 100% { transform: scaleY(0.35); opacity: 0.45; }

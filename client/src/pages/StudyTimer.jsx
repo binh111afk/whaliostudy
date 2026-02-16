@@ -459,7 +459,7 @@ const StudyTimer = () => {
               </div>
 
               <div className="space-y-4 pr-1">
-                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
+                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4 min-h-[320px] flex flex-col">
                   <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Task phiên này</h4>
                   <div className="whalio-scrollbar max-h-48 space-y-2 overflow-y-auto pr-1">
                     {tasks.map((task) => (
@@ -487,7 +487,7 @@ const StudyTimer = () => {
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
+                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4 min-h-[320px] flex flex-col">
                   <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Deadline sắp tới</h4>
                   <div className="whalio-scrollbar max-h-44 space-y-2 overflow-y-auto pr-1">
                     {upcomingDeadlines.length > 0 ? (
@@ -503,7 +503,7 @@ const StudyTimer = () => {
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
+                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4 min-h-[320px] flex flex-col">
                   <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Nhắc nhở môn học</h4>
                   <div className="whalio-scrollbar max-h-44 space-y-2 overflow-y-auto pr-1">
                     {subjectReminders.length > 0 ? (
