@@ -27,6 +27,7 @@ const Header = ({
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   // Xử lý click ra ngoài để đóng menu
@@ -38,6 +39,17 @@ const Header = ({
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const handleEsc = (event) => {
+      if (event.key === "Escape") {
+        setIsLogoutConfirmOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
   }, []);
 
   const navLinkClass = ({ isActive }) =>
@@ -202,7 +214,7 @@ const Header = ({
                     <button
                       onClick={() => {
                         setIsDropdownOpen(false);
-                        onLogoutClick();
+                        setIsLogoutConfirmOpen(true);
                       }}
                       className="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors font-medium"
                     >
@@ -232,6 +244,47 @@ const Header = ({
           onClose={() => setIsBackupModalOpen(false)} 
           user={user} 
         />
+      )}
+
+      {user && isLogoutConfirmOpen && (
+        <div
+          className="fixed inset-0 z-[120] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setIsLogoutConfirmOpen(false)}
+        >
+          <div
+            className="w-full max-w-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl shadow-2xl p-7"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-16 h-16 mx-auto rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50 flex items-center justify-center text-4xl mb-4">
+              🥺
+            </div>
+
+            <h3 className="text-3xl font-black text-gray-900 dark:text-white text-center mb-3">
+              Bạn muốn rời đi sao?
+            </h3>
+            <p className="text-lg text-gray-600 dark:text-gray-300 text-center leading-relaxed mb-7">
+              Nếu đăng xuất, bạn sẽ không thể tải tài liệu hay bình luận được nữa đâu.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setIsLogoutConfirmOpen(false)}
+                className="py-3.5 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-bold bg-gray-50 dark:bg-gray-700/60 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                Ở lại
+              </button>
+              <button
+                onClick={() => {
+                  setIsLogoutConfirmOpen(false);
+                  onLogoutClick();
+                }}
+                className="py-3.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold shadow-lg shadow-red-500/20 transition-colors"
+              >
+                Đăng xuất
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
