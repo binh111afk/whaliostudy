@@ -290,7 +290,7 @@ const StudyTimer = () => {
           <div className="mx-auto flex h-full w-full max-w-5xl flex-col">
             <FramerMotion.motion.section
               layout
-              className="relative h-full rounded-[2rem] border border-white/60 dark:border-white/15 bg-white/65 dark:bg-white/10 p-4 md:p-6 xl:p-7 backdrop-blur-xl shadow-xl shadow-blue-200/40 dark:shadow-black/20">
+              className="relative h-full rounded-[2rem] border border-white/60 dark:border-white/15 bg-white/65 dark:bg-white/10 p-4 md:p-5 xl:p-6 backdrop-blur-xl shadow-xl shadow-blue-200/40 dark:shadow-black/20">
             >
               <div className="mb-5 flex items-center justify-between pr-12">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Focus Room</p>
@@ -309,7 +309,7 @@ const StudyTimer = () => {
               </button>
 
               <div className="mx-auto max-w-xl text-center">
-                <div className="relative mx-auto h-[16rem] w-[16rem] md:h-[19rem] md:w-[19rem] xl:h-[22rem] xl:w-[22rem]">
+                <div className="relative mx-auto h-[13rem] w-[13rem] md:h-[15rem] md:w-[15rem] xl:h-[17rem] xl:w-[17rem]">
                   <svg className="h-full w-full -rotate-90" viewBox="0 0 320 320">
                     <circle cx="160" cy="160" r={ring.radius} stroke="rgba(148,163,184,0.32)" strokeWidth="12" fill="none" />
                     <FramerMotion.motion.circle
@@ -350,12 +350,12 @@ const StudyTimer = () => {
                   </svg>
 
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">{modeConfig.label}</p>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">{modeConfig.label}</p>
                     <FramerMotion.motion.div
                       key={`${mode}-${timeLeft}`}
                       initial={{ opacity: 0.45, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="font-mono text-6xl md:text-7xl font-light tracking-tight text-slate-800 dark:text-white"
+                      className="font-mono text-5xl md:text-6xl font-light tracking-tight text-slate-800 dark:text-white"
                       style={{ fontFamily: "JetBrains Mono, Inter, ui-monospace, SFMono-Regular, Menlo, monospace" }}
                     >
                       {formatDisplayTime(timeLeft, useHourFormat)}
@@ -363,7 +363,7 @@ const StudyTimer = () => {
                   </div>
                 </div>
 
-                <div className="mt-7 flex flex-wrap items-center justify-center gap-2">
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
                   <ModePill active={mode === "focus"} disabled={isRunning} label="Tập trung" onClick={() => switchMode("focus")} />
                   <ModePill
                     active={mode === "shortBreak"}
@@ -380,7 +380,7 @@ const StudyTimer = () => {
                 </div>
 
                 {mode === "focus" && (
-                  <div className="mt-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/75 dark:bg-white/5 px-4 py-3 text-left">
+                  <div className="mt-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/75 dark:bg-white/5 px-4 py-2.5 text-left">
                     <div className="mb-2 flex items-center justify-between text-sm">
                       <span className="font-semibold text-slate-700 dark:text-slate-200">Thời lượng phiên học</span>
                       <span className="font-bold text-blue-600 dark:text-blue-300">{focusDurationMinutes} phút</span>
@@ -404,7 +404,7 @@ const StudyTimer = () => {
                   </div>
                 )}
 
-                <div className="mt-7 flex items-center justify-center gap-3">
+                <div className="mt-5 flex items-center justify-center gap-3">
                   <FramerMotion.motion.button
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.98 }}
@@ -430,7 +430,7 @@ const StudyTimer = () => {
                   key={tipIndex}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-7 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/75 dark:bg-white/5 px-4 py-3 text-sm text-slate-600 dark:text-slate-200"
+                  className="mt-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/75 dark:bg-white/5 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-200"
                 >
                   {SMART_TIPS[tipIndex]}
                 </FramerMotion.motion.div>
@@ -458,7 +458,7 @@ const StudyTimer = () => {
                 </button>
               </div>
 
-              <div className="space-y-4 pr-1">
+              <div className="whalio-scrollbar space-y-4 pr-1 overflow-y-auto">
                 <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
                   <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Task phiên này</h4>
                   <div className="whalio-scrollbar max-h-48 space-y-2 overflow-y-auto pr-1">
