@@ -1102,6 +1102,9 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
         </div>
 
         <div className={isFloatingCollapsed ? "hidden" : ""}>
+          <p className="mb-2.5 rounded-xl bg-slate-100/80 px-3 py-1.5 text-sm text-slate-600 truncate dark:bg-white/10 dark:text-slate-300 sm:hidden">
+            {REMINDER_MESSAGES[reminderIndex]}
+          </p>
           <div className="mt-2.5 flex flex-col gap-2.5">
             <div className="flex flex-nowrap items-center gap-2">
               <button
@@ -1126,9 +1129,10 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
                 <SkipForward size={18} />
               </button>
 
-              <span className="ml-1 w-10 shrink-0 text-left text-[11px] tabular-nums text-slate-500 dark:text-slate-300">
+              <span className="ml-1 hidden w-10 shrink-0 text-left text-[11px] tabular-nums text-slate-500 dark:text-slate-300 sm:block">
                 {formatOverlayTime(Math.floor(currentTime))}
               </span>
+              <Volume2 size={14} className="ml-1 shrink-0 text-slate-500 dark:text-slate-300 sm:hidden" />
               <div
                 ref={progressTrackRef}
                 onClick={handleProgressClick}
@@ -1159,10 +1163,10 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
                   </div>
                 )}
               </div>
-              <span className="w-10 shrink-0 text-right text-[11px] tabular-nums text-slate-500 dark:text-slate-300">
+              <span className="hidden w-10 shrink-0 text-right text-[11px] tabular-nums text-slate-500 dark:text-slate-300 sm:block">
                 {formatOverlayTime(Math.floor(duration))}
               </span>
-              <div className="ml-1 flex w-24 shrink-0 items-center gap-1.5 sm:w-32 sm:gap-2">
+              <div className="ml-1 hidden w-24 shrink-0 items-center gap-1.5 sm:flex sm:w-32 sm:gap-2">
                 <Volume2 size={16} className="shrink-0 text-slate-500 dark:text-slate-300" />
                 <input
                   type="range"
