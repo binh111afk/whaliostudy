@@ -300,7 +300,7 @@ function App() {
         </div>
 
         {/* MODAL: Đặt ở đây để nó phủ lên toàn bộ ứng dụng khi mở */}
-        <LocalMusicPlayer />
+        <LocalMusicPlayer globalMode />
 
         <AuthModal 
           isOpen={isModalOpen} 

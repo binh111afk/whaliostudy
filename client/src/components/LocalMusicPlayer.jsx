@@ -11,6 +11,7 @@ const musicDB = localforage.createInstance({
 
 const PLAYLIST_META_KEY = "__playlist_meta_v1__";
 const STUDY_OVERLAY_STORAGE_KEY = "whalio_study_overlay_state_v1";
+const MUSIC_PLAYBACK_STORAGE_KEY = "whalio_music_playback_v1";
 const ALLOWED_EXT = [".mp3", ".mp4"];
 const ALLOWED_MIME = ["audio/mpeg", "audio/mp3", "audio/mp4", "video/mp4"];
 
@@ -32,7 +33,7 @@ const isValidAudioFile = (file) => {
   return hasAllowedExt || hasAllowedMime;
 };
 
-const LocalMusicPlayer = () => {
+const LocalMusicPlayer = ({ globalMode = false }) => {
   const location = useLocation();
   const audioRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -52,9 +53,13 @@ const LocalMusicPlayer = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isFloatingPlaylistOpen, setIsFloatingPlaylistOpen] = useState(false);
   const [overlayState, setOverlayState] = useState(null);
+  const hasRestoredPlaybackRef = useRef(false);
+  const lastPlaybackUpdatedAtRef = useRef(0);
 
   const currentTrack = currentIndex >= 0 ? tracks[currentIndex] : null;
   const isStudyTimerRoute = location.pathname === "/timer";
+  const showFullPlayer = !globalMode && isStudyTimerRoute;
+  const isAudioActive = !globalMode || !isStudyTimerRoute;
 
   const revokeCurrentObjectUrl = useCallback(() => {
     if (objectUrlRef.current) {
@@ -149,6 +154,62 @@ const LocalMusicPlayer = () => {
     return () => clearInterval(id);
   }, []);
 
+  const syncPlaybackFromStorage = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(MUSIC_PLAYBACK_STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved || typeof saved !== "object") return;
+
+      const updatedAt = Number(saved.updatedAt || 0);
+      if (updatedAt <= lastPlaybackUpdatedAtRef.current && hasRestoredPlaybackRef.current) return;
+
+      if (typeof saved.volume === "number") {
+        setVolume(Math.min(1, Math.max(0, saved.volume)));
+      }
+
+      if (Array.isArray(tracks) && tracks.length > 0) {
+        const idx = tracks.findIndex((track) => track.id === saved.currentTrackId);
+        if (idx >= 0) {
+          setCurrentIndex(idx);
+          if (saved.isPlaying) shouldForcePlayRef.current = true;
+          setIsPlaying(Boolean(saved.isPlaying));
+        } else if (currentIndex === -1) {
+          setCurrentIndex(0);
+          setIsPlaying(Boolean(saved.isPlaying));
+        }
+      }
+
+      lastPlaybackUpdatedAtRef.current = updatedAt;
+      hasRestoredPlaybackRef.current = true;
+    } catch (err) {
+      console.error("Sync playback state error:", err);
+    }
+  }, [currentIndex, tracks]);
+
+  useEffect(() => {
+    if (!tracks.length) return;
+    syncPlaybackFromStorage();
+  }, [tracks, syncPlaybackFromStorage]);
+
+  useEffect(() => {
+    if (!globalMode) return;
+    const id = setInterval(syncPlaybackFromStorage, 1000);
+    return () => clearInterval(id);
+  }, [globalMode, syncPlaybackFromStorage]);
+
+  useEffect(() => {
+    if (currentIndex < 0 || !tracks[currentIndex]) return;
+    const payload = {
+      currentTrackId: tracks[currentIndex].id,
+      isPlaying,
+      volume,
+      updatedAt: Date.now(),
+    };
+    lastPlaybackUpdatedAtRef.current = payload.updatedAt;
+    localStorage.setItem(MUSIC_PLAYBACK_STORAGE_KEY, JSON.stringify(payload));
+  }, [currentIndex, isPlaying, tracks, volume]);
+
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume;
@@ -158,6 +219,11 @@ const LocalMusicPlayer = () => {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    if (!isAudioActive) {
+      audio.pause();
+      return;
+    }
 
     if (!currentTrack?.blob) {
       audio.pause();
@@ -179,7 +245,7 @@ const LocalMusicPlayer = () => {
       shouldForcePlayRef.current = false;
       audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
     }
-  }, [currentTrack, isPlaying, revokeCurrentObjectUrl]);
+  }, [currentTrack, isAudioActive, isPlaying, revokeCurrentObjectUrl]);
 
   useEffect(() => {
     return () => {
@@ -387,11 +453,10 @@ const LocalMusicPlayer = () => {
     ? Math.max(0, Math.ceil((Number(overlayState?.endAtTs) - Date.now()) / 1000))
     : Math.max(0, Number(overlayState?.timeLeft) || 0);
   const overlayTimeLabel = formatOverlayTime(overlayTimeLeft, Boolean(overlayState?.useHourFormat));
-  const floatingVisible = !isStudyTimerRoute && (Boolean(currentTrack) || overlayIsRunning);
+  const floatingVisible = globalMode && !isStudyTimerRoute && (Boolean(currentTrack) || overlayIsRunning);
 
   return (
     <>
-    <div className={`${isStudyTimerRoute ? "fixed bottom-24 left-2 right-2 sm:left-auto sm:right-4 sm:w-[360px] z-30" : "hidden"} rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 backdrop-blur-xl p-4 text-slate-800 dark:text-slate-100 overflow-hidden`}>
       <style>{`
         @keyframes whalio-wave {
           0%, 100% { transform: scaleY(0.35); opacity: 0.45; }
@@ -405,6 +470,9 @@ const LocalMusicPlayer = () => {
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
       />
+
+    {showFullPlayer && (
+    <div className="w-full rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 backdrop-blur-xl p-4 text-slate-800 dark:text-slate-100 overflow-hidden">
 
       <div className="mb-3 flex items-center justify-between">
         <div className="inline-flex items-center gap-2 text-blue-600 dark:text-cyan-300">
@@ -589,8 +657,9 @@ const LocalMusicPlayer = () => {
         </div>
       </div>
     </div>
+    )}
     {floatingVisible && (
-      <div className="fixed bottom-[5.2rem] left-2 right-2 z-40 sm:left-auto sm:right-4 sm:w-[430px] rounded-2xl border border-slate-200/80 bg-white/95 p-3 shadow-xl backdrop-blur-lg dark:border-white/15 dark:bg-slate-900/85">
+      <div className="fixed bottom-[5.2rem] left-1/2 z-40 w-[92vw] -translate-x-1/2 rounded-2xl border border-slate-200/80 bg-white/95 p-3 shadow-xl backdrop-blur-lg sm:w-[88vw] md:w-[82vw] lg:bottom-5 lg:w-[80vw] lg:max-w-[1100px] dark:border-white/15 dark:bg-slate-900/85">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { studyService } from "../services/studyService";
+import LocalMusicPlayer from "../components/LocalMusicPlayer";
 
 const TIMER_MODES = {
   focus: { label: "Tập trung", minutes: 25, accent: "from-blue-500 to-indigo-500" },
@@ -702,6 +703,8 @@ const StudyTimer = () => {
               </div>
 
               <div className="whalio-scrollbar space-y-4 pr-1 overflow-y-auto">
+                <LocalMusicPlayer />
+
                 <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-slate-800 dark:text-white">Task phiên này</h4>
