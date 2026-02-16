@@ -1054,9 +1054,9 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
         >
           <X size={14} />
         </button>
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0 flex flex-1 items-center gap-[40px]">
-            <div className="min-w-0 max-w-[48%]">
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0 flex flex-col gap-1.5 sm:flex-1 sm:flex-row sm:items-center sm:gap-[6px]">
+            <div className="min-w-0 sm:max-w-[48%]">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
                 StudyTime Live
               </p>
@@ -1065,7 +1065,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
               </p>
             </div>
             <p
-              className="min-w-0 flex-1 text-left text-lg leading-snug italic tracking-wide whitespace-normal break-words text-slate-900/90 drop-shadow-sm dark:text-white/90"
+              className="min-w-0 text-left text-base leading-snug italic tracking-wide whitespace-normal break-words text-slate-900/90 drop-shadow-sm dark:text-white/90 sm:flex-1 sm:text-lg"
               style={{
                 animation: "breathe 5s ease-in-out infinite",
                 fontFamily: "'Playfair Display', serif",
@@ -1075,7 +1075,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
             </p>
           </div>
 
-          <div className="flex shrink-0 items-center justify-end gap-2">
+          <div className="flex shrink-0 items-center justify-end gap-2 self-end sm:self-auto">
             <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/90 px-2.5 py-1.5 text-sm font-semibold text-slate-600 dark:border-white/15 dark:bg-white/5 dark:text-slate-200">
               <Timer size={14} />
               <span>{overlayTimeLabel}</span>
@@ -1103,7 +1103,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
 
         <div className={isFloatingCollapsed ? "hidden" : ""}>
           <div className="mt-2.5 flex flex-col gap-2.5">
-            <div className="flex flex-nowrap items-center gap-2">
+            <div className="flex items-center gap-2">
               <button
                 onClick={prevTrack}
                 className="shrink-0 rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
@@ -1125,8 +1125,22 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
               >
                 <SkipForward size={18} />
               </button>
+              <div className="ml-auto flex w-24 shrink-0 items-center gap-1.5 sm:w-32 sm:gap-2">
+                <Volume2 size={16} className="shrink-0 text-slate-500 dark:text-slate-300" />
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={volume}
+                  onChange={(e) => setVolume(Number(e.target.value))}
+                  className="w-full h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
+                />
+              </div>
+            </div>
 
-              <span className="ml-1 w-10 shrink-0 text-left text-[11px] tabular-nums text-slate-500 dark:text-slate-300">
+            <div className="flex items-center gap-1.5">
+              <span className="w-10 shrink-0 text-left text-[11px] tabular-nums text-slate-500 dark:text-slate-300">
                 {formatOverlayTime(Math.floor(currentTime))}
               </span>
               <div
@@ -1162,18 +1176,6 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
               <span className="w-10 shrink-0 text-right text-[11px] tabular-nums text-slate-500 dark:text-slate-300">
                 {formatOverlayTime(Math.floor(duration))}
               </span>
-              <div className="ml-1 flex w-28 shrink-0 items-center gap-2 sm:w-32">
-                <Volume2 size={16} className="shrink-0 text-slate-500 dark:text-slate-300" />
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={volume}
-                  onChange={(e) => setVolume(Number(e.target.value))}
-                  className="w-full h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
-                />
-              </div>
             </div>
           </div>
 
