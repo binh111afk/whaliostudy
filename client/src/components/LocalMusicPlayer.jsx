@@ -295,7 +295,7 @@ const LocalMusicPlayer = () => {
   }, []);
 
   return (
-    <div className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 backdrop-blur-xl p-4 text-slate-800 dark:text-slate-100 overflow-hidden min-h-[320px] flex flex-col">
+    <div className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 backdrop-blur-xl p-4 text-slate-800 dark:text-slate-100 overflow-hidden">
       <style>{`
         @keyframes whalio-wave {
           0%, 100% { transform: scaleY(0.35); opacity: 0.45; }
@@ -422,7 +422,7 @@ const LocalMusicPlayer = () => {
       </p>
       {notice && <p className="mt-1 text-[11px] text-blue-600 dark:text-cyan-300/90">{notice}</p>}
 
-      <div className="mt-3 flex-1 flex flex-col overflow-hidden rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-950/40">
+      <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-950/40">
         <div className="sticky top-0 z-[1] flex items-center justify-between gap-2 border-b border-slate-200/70 dark:border-white/10 bg-white/85 dark:bg-slate-900/75 px-3 py-2 backdrop-blur-sm">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
             Playlist ({tracks.length})
@@ -448,7 +448,7 @@ const LocalMusicPlayer = () => {
             </div>
           )}
         </div>
-        <div ref={playlistRef} className="whalio-scrollbar flex-1 overflow-y-auto">
+        <div ref={playlistRef} className="whalio-scrollbar max-h-36 overflow-y-auto">
           {isLoading ? (
             <p className="p-3 text-xs text-slate-500 dark:text-slate-400">Đang tải thư viện...</p>
           ) : tracks.length === 0 ? (

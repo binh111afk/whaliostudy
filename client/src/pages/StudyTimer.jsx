@@ -287,10 +287,10 @@ const StudyTimer = () => {
 
       <div className="relative z-10 mx-auto flex w-full max-w-[1650px] flex-col gap-4 px-4 py-4 md:px-6 md:py-6 xl:flex-row xl:items-stretch">
         <div className="min-w-0 flex-1">
-          <div className="mx-auto flex w-full max-w-5xl flex-col">
+          <div className="mx-auto flex h-full w-full max-w-5xl flex-col">
             <FramerMotion.motion.section
               layout
-              className="relative rounded-[2rem] border border-white/60 dark:border-white/15 bg-white/65 dark:bg-white/10 p-4 md:p-6 xl:p-7 backdrop-blur-xl shadow-xl shadow-blue-200/40 dark:shadow-black/20"
+              className="relative h-full rounded-[2rem] border border-white/60 dark:border-white/15 bg-white/65 dark:bg-white/10 p-4 md:p-6 xl:p-7 backdrop-blur-xl shadow-xl shadow-blue-200/40 dark:shadow-black/20">
             >
               <div className="mb-5 flex items-center justify-between pr-12">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Focus Room</p>
@@ -446,7 +446,7 @@ const StudyTimer = () => {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "100%", opacity: 0 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="mt-0 flex w-full flex-col border border-white/40 dark:border-white/10 bg-white/55 dark:bg-slate-900/45 p-4 backdrop-blur-xl md:p-5 xl:w-[390px] xl:shrink-0"
+              className="mt-0 flex h-full w-full flex-col border border-white/40 dark:border-white/10 bg-white/55 dark:bg-slate-900/45 p-4 backdrop-blur-xl md:p-5 xl:w-[390px] xl:shrink-0"
             >
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-slate-600 dark:text-slate-200">Tiện ích</h3>
@@ -459,9 +459,9 @@ const StudyTimer = () => {
               </div>
 
               <div className="space-y-4 pr-1">
-                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4 min-h-[320px] flex flex-col">
+                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
                   <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Task phiên này</h4>
-                  <div className="whalio-scrollbar flex-1 space-y-2 overflow-y-auto pr-1">
+                  <div className="whalio-scrollbar max-h-48 space-y-2 overflow-y-auto pr-1">
                     {tasks.map((task) => (
                       <button
                         key={task.id}
@@ -487,9 +487,9 @@ const StudyTimer = () => {
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4 min-h-[320px] flex flex-col">
+                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
                   <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Deadline sắp tới</h4>
-                  <div className="whalio-scrollbar flex-1 space-y-2 overflow-y-auto pr-1">
+                  <div className="whalio-scrollbar max-h-44 space-y-2 overflow-y-auto pr-1">
                     {upcomingDeadlines.length > 0 ? (
                       upcomingDeadlines.map((item) => (
                         <div key={item.id} className="rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2">
@@ -503,9 +503,9 @@ const StudyTimer = () => {
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4 min-h-[320px] flex flex-col">
+                <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
                   <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Nhắc nhở môn học</h4>
-                  <div className="whalio-scrollbar flex-1 space-y-2 overflow-y-auto pr-1">
+                  <div className="whalio-scrollbar max-h-44 space-y-2 overflow-y-auto pr-1">
                     {subjectReminders.length > 0 ? (
                       subjectReminders.map((item) => (
                         <div key={`${item.subject}-${item.id}`} className="rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2">
