@@ -1055,8 +1055,8 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
           <X size={14} />
         </button>
         <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0 flex flex-1 items-center gap-[55px]">
-            <div className="min-w-0 max-w-[48%]">
+          <div className="min-w-0 flex flex-1 items-center gap-[6px]">
+            <div className="min-w-0 sm:max-w-[48%]">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
                 StudyTime Live
               </p>
@@ -1132,14 +1132,13 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
               <span className="ml-1 hidden w-10 shrink-0 text-left text-[11px] tabular-nums text-slate-500 dark:text-slate-300 sm:block">
                 {formatOverlayTime(Math.floor(currentTime))}
               </span>
-              <Volume2 size={14} className="ml-1 shrink-0 text-slate-500 dark:text-slate-300 sm:hidden" />
               <div
                 ref={progressTrackRef}
                 onClick={handleProgressClick}
                 onPointerDown={handleProgressPointerDown}
                 onMouseMove={handleProgressMouseMove}
                 onMouseLeave={handleProgressMouseLeave}
-                className="group relative h-5 min-w-0 flex-1 cursor-pointer"
+                className="group relative ml-1 h-5 w-40 shrink-0 cursor-pointer sm:ml-0 sm:min-w-0 sm:flex-1"
               >
                 <div className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-slate-200 dark:bg-slate-700" />
                 <div
