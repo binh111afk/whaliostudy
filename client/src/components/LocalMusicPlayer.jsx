@@ -452,6 +452,20 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     [currentIndex, resetAutoCycle, savePlaylistOrder]
   );
 
+  const dismissFloatingPlayer = useCallback(() => {
+    setIsFloatingDismissed(true);
+    try {
+      localStorage.setItem(FLOATING_DISMISSED_KEY, 'true');
+    } catch {}
+  }, []);
+
+  const showFloatingPlayer = useCallback(() => {
+    setIsFloatingDismissed(false);
+    try {
+      localStorage.removeItem(FLOATING_DISMISSED_KEY);
+    } catch {}
+  }, []);
+
   const handleFileUpload = useCallback(
     async (event) => {
       const files = Array.from(event.target.files || []);
@@ -650,20 +664,6 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     : Math.max(0, Number(overlayState?.timeLeft) || 0);
   const overlayTimeLabel = formatOverlayTime(overlayTimeLeft, Boolean(overlayState?.useHourFormat));
   const floatingVisible = globalMode && !isStudyTimerRoute && !isFloatingDismissed && (Boolean(currentTrack) || overlayIsRunning);
-
-  const dismissFloatingPlayer = useCallback(() => {
-    setIsFloatingDismissed(true);
-    try {
-      localStorage.setItem(FLOATING_DISMISSED_KEY, 'true');
-    } catch {}
-  }, []);
-
-  const showFloatingPlayer = useCallback(() => {
-    setIsFloatingDismissed(false);
-    try {
-      localStorage.removeItem(FLOATING_DISMISSED_KEY);
-    } catch {}
-  }, []);
 
   useEffect(() => {
     currentTrackIdRef.current = currentTrack?.id || null;
