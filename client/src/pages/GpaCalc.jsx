@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from 'sonner';
 import {
   Calculator,
@@ -298,6 +298,8 @@ const GpaCalc = () => {
   // GPA Display Mode - 'cumulative' or 'semester'
   const [gpaDisplayMode, setGpaDisplayMode] = useState('cumulative');
   const [selectedSemesterId, setSelectedSemesterId] = useState(null);
+  const [isSemesterDropdownOpen, setIsSemesterDropdownOpen] = useState(false);
+  const semesterDropdownRef = useRef(null);
 
   // State for Layout
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
@@ -605,6 +607,23 @@ const GpaCalc = () => {
     }
   }, [gpaDisplayMode, selectedSemesterId, semesterGpas]);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (semesterDropdownRef.current && !semesterDropdownRef.current.contains(event.target)) {
+        setIsSemesterDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (gpaDisplayMode !== 'semester') {
+      setIsSemesterDropdownOpen(false);
+    }
+  }, [gpaDisplayMode]);
+
   // Get currently displayed semester GPA
   const displayedSemesterGpa = useMemo(() => {
     if (gpaDisplayMode === 'semester' && selectedSemesterId) {
@@ -612,6 +631,11 @@ const GpaCalc = () => {
     }
     return null;
   }, [gpaDisplayMode, selectedSemesterId, semesterGpas]);
+
+  const handleSelectSemester = (semesterId) => {
+    setSelectedSemesterId(semesterId);
+    setIsSemesterDropdownOpen(false);
+  };
 
   // --- ACTIONS ---
 
@@ -1405,20 +1429,53 @@ const GpaCalc = () => {
               <div className="flex items-center gap-3">
                 {/* Semester Dropdown (Only in Semester Mode) */}
                 {gpaDisplayMode === 'semester' && (
-                  <div className="relative min-w-[180px]">
-                    <select
-                      value={selectedSemesterId || ''}
-                      onChange={(e) => setSelectedSemesterId(parseInt(e.target.value))}
-                      className="w-full pl-4 pr-10 py-2 rounded-xl text-sm font-bold bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white border-none outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
+                  <div ref={semesterDropdownRef} className="relative min-w-[220px]">
+                    <button
+                      type="button"
+                      onClick={() => setIsSemesterDropdownOpen((prev) => !prev)}
+                      className={`w-full pl-4 pr-10 py-2.5 rounded-2xl text-sm font-bold border transition-all duration-200 text-left cursor-pointer ${isSemesterDropdownOpen
+                        ? 'bg-white dark:bg-gray-800 border-[#134691]/40 ring-2 ring-[#134691]/20 shadow-md'
+                        : 'bg-gray-50 dark:bg-gray-700/70 border-gray-200 dark:border-gray-600 hover:border-[#134691]/40 hover:bg-white dark:hover:bg-gray-700'
+                        } text-gray-800 dark:text-white`}
                     >
-                      <option value="">Chọn học kỳ...</option>
-                      {semesterGpas.map((sem) => (
-                        <option key={sem.id} value={sem.id}>
-                          {sem.name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      {selectedSemesterId
+                        ? semesterGpas.find((sem) => sem.id === selectedSemesterId)?.name
+                        : 'Chọn học kỳ...'}
+                    </button>
+                    <ChevronDown
+                      size={16}
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none transition-transform duration-200 ${isSemesterDropdownOpen ? 'rotate-180' : ''}`}
+                    />
+
+                    {isSemesterDropdownOpen && (
+                      <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl">
+                        <button
+                          type="button"
+                          onClick={() => handleSelectSemester(null)}
+                          className={`w-full px-4 py-2.5 text-left text-sm font-semibold transition-colors ${selectedSemesterId === null
+                            ? 'bg-[#134691] text-white'
+                            : 'text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-gray-700'
+                            }`}
+                        >
+                          Chọn học kỳ...
+                        </button>
+                        <div className="max-h-56 overflow-y-auto">
+                          {semesterGpas.map((sem) => (
+                            <button
+                              key={sem.id}
+                              type="button"
+                              onClick={() => handleSelectSemester(sem.id)}
+                              className={`w-full px-4 py-2.5 text-left text-sm font-semibold transition-colors ${selectedSemesterId === sem.id
+                                ? 'bg-[#134691] text-white'
+                                : 'text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-gray-700'
+                                }`}
+                            >
+                              {sem.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
