@@ -3,7 +3,9 @@
     "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/typography": "^0.5.19",
     "date-fns": "^4.1.0",
+    "localforage": "^1.10.0",
     "mammoth": "^1.11.0",
+    "react-fast-marquee": "^1.6.5",
     "remark-gfm": "^4.0.1"
   }
 }
