@@ -12,6 +12,7 @@ const musicDB = localforage.createInstance({
 const PLAYLIST_META_KEY = "__playlist_meta_v1__";
 const STUDY_OVERLAY_STORAGE_KEY = "whalio_study_overlay_state_v1";
 const MUSIC_PLAYBACK_STORAGE_KEY = "whalio_music_playback_v1";
+const MUSIC_SYNC_EVENT = "whalio:music-playback-sync";
 const ALLOWED_EXT = [".mp3", ".mp4"];
 const ALLOWED_MIME = ["audio/mpeg", "audio/mp3", "audio/mp4", "video/mp4"];
 
@@ -48,6 +49,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   const autoCycleStartIndexRef = useRef(null);
   const autoRemainingIndexesRef = useRef([]);
   const shouldForcePlayRef = useRef(false);
+  const isAutoAdvancingRef = useRef(false);
 
   const [tracks, setTracks] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
@@ -58,6 +60,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   const [notice, setNotice] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [isFloatingPlaylistOpen, setIsFloatingPlaylistOpen] = useState(false);
+  const [isFloatingCollapsed, setIsFloatingCollapsed] = useState(false);
   const [overlayState, setOverlayState] = useState(null);
   const hasRestoredPlaybackRef = useRef(false);
   const lastPlaybackUpdatedAtRef = useRef(0);
@@ -161,59 +164,62 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     return () => clearInterval(id);
   }, []);
 
-  const syncPlaybackFromStorage = useCallback(() => {
+  const applyPlaybackSnapshot = useCallback((saved) => {
+    if (!saved || typeof saved !== "object") return;
     if (globalMode && isStudyTimerRoute) return;
+
+    const updatedAt = Number(saved.updatedAt || 0);
+    if (updatedAt <= lastPlaybackUpdatedAtRef.current && hasRestoredPlaybackRef.current) return;
+
+    if (typeof saved.volume === "number") {
+      setVolume(Math.min(1, Math.max(0, saved.volume)));
+    }
+    if (typeof saved.currentTime === "number" && Number.isFinite(saved.currentTime)) {
+      const nextTime = Math.max(0, saved.currentTime);
+      pendingSeekRef.current = nextTime;
+      const audio = audioRef.current;
+      if (audio && audio.src) {
+        const applySeek = () => {
+          try {
+            audio.currentTime = nextTime;
+          } catch {
+            return;
+          }
+          pendingSeekRef.current = null;
+        };
+        if (audio.readyState >= 1) {
+          applySeek();
+        } else {
+          audio.addEventListener("loadedmetadata", applySeek, { once: true });
+        }
+      }
+    }
+
+    if (Array.isArray(tracks) && tracks.length > 0) {
+      const idx = tracks.findIndex((track) => track.id === saved.currentTrackId);
+      if (idx >= 0) {
+        setCurrentIndex(idx);
+        if (saved.isPlaying) shouldForcePlayRef.current = true;
+        setIsPlaying(Boolean(saved.isPlaying));
+      } else if (currentIndex === -1) {
+        setCurrentIndex(0);
+        setIsPlaying(Boolean(saved.isPlaying));
+      }
+    }
+
+    lastPlaybackUpdatedAtRef.current = updatedAt;
+    hasRestoredPlaybackRef.current = true;
+  }, [currentIndex, globalMode, isStudyTimerRoute, tracks]);
+
+  const syncPlaybackFromStorage = useCallback(() => {
     try {
       const raw = localStorage.getItem(MUSIC_PLAYBACK_STORAGE_KEY);
       if (!raw) return;
-      const saved = JSON.parse(raw);
-      if (!saved || typeof saved !== "object") return;
-
-      const updatedAt = Number(saved.updatedAt || 0);
-      if (updatedAt <= lastPlaybackUpdatedAtRef.current && hasRestoredPlaybackRef.current) return;
-
-      if (typeof saved.volume === "number") {
-        setVolume(Math.min(1, Math.max(0, saved.volume)));
-      }
-      if (typeof saved.currentTime === "number" && Number.isFinite(saved.currentTime)) {
-        const nextTime = Math.max(0, saved.currentTime);
-        pendingSeekRef.current = nextTime;
-        const audio = audioRef.current;
-        if (audio && audio.src) {
-          const applySeek = () => {
-            try {
-              audio.currentTime = nextTime;
-            } catch {
-              return;
-            }
-            pendingSeekRef.current = null;
-          };
-          if (audio.readyState >= 1) {
-            applySeek();
-          } else {
-            audio.addEventListener("loadedmetadata", applySeek, { once: true });
-          }
-        }
-      }
-
-      if (Array.isArray(tracks) && tracks.length > 0) {
-        const idx = tracks.findIndex((track) => track.id === saved.currentTrackId);
-        if (idx >= 0) {
-          setCurrentIndex(idx);
-          if (saved.isPlaying) shouldForcePlayRef.current = true;
-          setIsPlaying(Boolean(saved.isPlaying));
-        } else if (currentIndex === -1) {
-          setCurrentIndex(0);
-          setIsPlaying(Boolean(saved.isPlaying));
-        }
-      }
-
-      lastPlaybackUpdatedAtRef.current = updatedAt;
-      hasRestoredPlaybackRef.current = true;
+      applyPlaybackSnapshot(JSON.parse(raw));
     } catch (err) {
       console.error("Sync playback state error:", err);
     }
-  }, [currentIndex, globalMode, isStudyTimerRoute, tracks]);
+  }, [applyPlaybackSnapshot]);
 
   useEffect(() => {
     if (!tracks.length || (globalMode && isStudyTimerRoute)) return;
@@ -222,9 +228,22 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
 
   useEffect(() => {
     if (!globalMode || isStudyTimerRoute) return;
+    syncPlaybackFromStorage();
+  }, [globalMode, isStudyTimerRoute, syncPlaybackFromStorage]);
+
+  useEffect(() => {
+    if (!globalMode || isStudyTimerRoute) return;
     const id = setInterval(syncPlaybackFromStorage, 1000);
     return () => clearInterval(id);
   }, [globalMode, isStudyTimerRoute, syncPlaybackFromStorage]);
+
+  useEffect(() => {
+    const onSync = (event) => {
+      applyPlaybackSnapshot(event?.detail);
+    };
+    window.addEventListener(MUSIC_SYNC_EVENT, onSync);
+    return () => window.removeEventListener(MUSIC_SYNC_EVENT, onSync);
+  }, [applyPlaybackSnapshot]);
 
   useEffect(() => {
     if (globalMode && !isAudioActive) return;
@@ -240,6 +259,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
       };
       lastPlaybackUpdatedAtRef.current = payload.updatedAt;
       localStorage.setItem(MUSIC_PLAYBACK_STORAGE_KEY, JSON.stringify(payload));
+      window.dispatchEvent(new CustomEvent(MUSIC_SYNC_EVENT, { detail: payload }));
     };
 
     persistPlaybackState();
@@ -307,7 +327,16 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
 
     if (isPlaying || shouldForcePlayRef.current) {
       shouldForcePlayRef.current = false;
-      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      audio
+        .play()
+        .then(() => {
+          isAutoAdvancingRef.current = false;
+          setIsPlaying(true);
+        })
+        .catch(() => {
+          isAutoAdvancingRef.current = false;
+          setIsPlaying(false);
+        });
     }
   }, [currentTrack, isAudioActive, isPlaying, revokeCurrentObjectUrl]);
 
@@ -384,6 +413,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     if (!audio || !currentTrack) return;
 
     if (isPlaying) {
+      isAutoAdvancingRef.current = false;
       audio.pause();
       setIsPlaying(false);
       return;
@@ -395,8 +425,23 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
 
   const autoNextTrack = useCallback(() => {
     if (tracks.length === 0) return;
+    isAutoAdvancingRef.current = true;
 
     if (tracks.length === 1) {
+      const audio = audioRef.current;
+      if (audio) {
+        audio.currentTime = 0;
+        audio
+          .play()
+          .then(() => {
+            isAutoAdvancingRef.current = false;
+            setIsPlaying(true);
+          })
+          .catch(() => {
+            isAutoAdvancingRef.current = false;
+            setIsPlaying(false);
+          });
+      }
       setCurrentIndex(0);
       setIsPlaying(true);
       return;
@@ -519,6 +564,12 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   const overlayTimeLabel = formatOverlayTime(overlayTimeLeft, Boolean(overlayState?.useHourFormat));
   const floatingVisible = globalMode && !isStudyTimerRoute && (Boolean(currentTrack) || overlayIsRunning);
 
+  useEffect(() => {
+    if (!floatingVisible) {
+      setIsFloatingCollapsed(false);
+    }
+  }, [floatingVisible]);
+
   return (
     <>
       <style>{`
@@ -531,8 +582,14 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
       <audio
         ref={audioRef}
         onEnded={autoNextTrack}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
+        onPlay={() => {
+          isAutoAdvancingRef.current = false;
+          setIsPlaying(true);
+        }}
+        onPause={() => {
+          if (isAutoAdvancingRef.current) return;
+          setIsPlaying(false);
+        }}
       />
 
     {showFullPlayer && (
@@ -742,6 +799,15 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
 
             <button
               type="button"
+              onClick={() => setIsFloatingCollapsed((prev) => !prev)}
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/70 p-2 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10 lg:hidden"
+              aria-label={isFloatingCollapsed ? "Hiện player" : "Ẩn player"}
+            >
+              {isFloatingCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+
+            <button
+              type="button"
               onClick={() => setIsFloatingPlaylistOpen((prev) => !prev)}
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
             >
@@ -751,77 +817,79 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
           </div>
         </div>
 
-        {overlayState?.tip && (
-          <p className="mt-2 rounded-xl bg-slate-100/80 px-3 py-1.5 text-sm text-slate-600 dark:bg-white/10 dark:text-slate-300 truncate">
-            {overlayState.tip}
-          </p>
-        )}
+        <div className={isFloatingCollapsed ? "hidden lg:block" : ""}>
+          {overlayState?.tip && (
+            <p className="mt-2 rounded-xl bg-slate-100/80 px-3 py-1.5 text-sm text-slate-600 dark:bg-white/10 dark:text-slate-300 truncate">
+              {overlayState.tip}
+            </p>
+          )}
 
-        <div className="mt-2.5 flex items-center gap-2">
-          <button
-            onClick={prevTrack}
-            className="rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-            aria-label="Bài trước"
-          >
-            <SkipBack size={18} />
-          </button>
-          <button
-            onClick={togglePlay}
-            className="rounded-xl bg-blue-500 px-3 py-2.5 text-white shadow-md shadow-blue-500/25 transition-colors hover:bg-blue-600"
-            aria-label={isPlaying ? "Tạm dừng" : "Phát"}
-          >
-            {isPlaying ? <Pause size={18} /> : <Play size={18} />}
-          </button>
-          <button
-            onClick={nextTrack}
-            className="rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-            aria-label="Bài tiếp"
-          >
-            <SkipForward size={18} />
-          </button>
+          <div className="mt-2.5 flex items-center gap-2">
+            <button
+              onClick={prevTrack}
+              className="rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+              aria-label="Bài trước"
+            >
+              <SkipBack size={18} />
+            </button>
+            <button
+              onClick={togglePlay}
+              className="rounded-xl bg-blue-500 px-3 py-2.5 text-white shadow-md shadow-blue-500/25 transition-colors hover:bg-blue-600"
+              aria-label={isPlaying ? "Tạm dừng" : "Phát"}
+            >
+              {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+            </button>
+            <button
+              onClick={nextTrack}
+              className="rounded-xl border border-slate-200 bg-white/70 p-2.5 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+              aria-label="Bài tiếp"
+            >
+              <SkipForward size={18} />
+            </button>
 
-          <div className="ml-1 flex flex-1 items-center gap-2">
-            <Volume2 size={16} className="text-slate-500 dark:text-slate-300" />
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={volume}
-              onChange={(e) => setVolume(Number(e.target.value))}
-              className="w-full h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
-            />
+            <div className="ml-1 flex flex-1 items-center gap-2">
+              <Volume2 size={16} className="text-slate-500 dark:text-slate-300" />
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={volume}
+                onChange={(e) => setVolume(Number(e.target.value))}
+                className="w-full h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
+              />
+            </div>
           </div>
+
+          {isFloatingPlaylistOpen && (
+            <div className="mt-2.5 max-h-40 overflow-y-auto rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/80 dark:bg-slate-950/50">
+              {tracks.length === 0 ? (
+                <p className="p-4 text-sm text-slate-500 dark:text-slate-400">Playlist trống.</p>
+              ) : (
+                <ul className="divide-y divide-slate-200 dark:divide-white/5">
+                  {tracks.map((track, idx) => {
+                    const active = idx === currentIndex;
+                    return (
+                      <li key={track.id} className={`${active ? "bg-blue-50 dark:bg-cyan-500/15" : ""}`}>
+                        <button
+                          onClick={() => {
+                            resetAutoCycle();
+                            shouldForcePlayRef.current = true;
+                            setCurrentIndex(idx);
+                            setIsPlaying(true);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-base text-slate-700 dark:text-slate-200 truncate"
+                        >
+                          {track.name}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
-
-        {isFloatingPlaylistOpen && (
-          <div className="mt-2.5 max-h-40 overflow-y-auto rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/80 dark:bg-slate-950/50">
-            {tracks.length === 0 ? (
-              <p className="p-4 text-sm text-slate-500 dark:text-slate-400">Playlist trống.</p>
-            ) : (
-              <ul className="divide-y divide-slate-200 dark:divide-white/5">
-                {tracks.map((track, idx) => {
-                  const active = idx === currentIndex;
-                  return (
-                    <li key={track.id} className={`${active ? "bg-blue-50 dark:bg-cyan-500/15" : ""}`}>
-                      <button
-                        onClick={() => {
-                          resetAutoCycle();
-                          shouldForcePlayRef.current = true;
-                          setCurrentIndex(idx);
-                          setIsPlaying(true);
-                        }}
-                        className="w-full px-4 py-2.5 text-left text-base text-slate-700 dark:text-slate-200 truncate"
-                      >
-                        {track.name}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        )}
       </div>
     )}
     </>
