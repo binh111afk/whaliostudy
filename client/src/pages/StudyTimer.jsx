@@ -288,18 +288,18 @@ const StudyTimer = () => {
       <div className="relative z-10 mx-auto flex w-full max-w-[1650px] flex-col gap-4 px-4 py-4 md:px-6 md:py-6 xl:flex-row xl:items-start">
         <div className="min-w-0 flex-1">
           <div className="mx-auto flex w-full max-w-5xl flex-col">
-            <div className="mb-4 flex items-center justify-between md:mb-6">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Focus Room</p>
-              <div className="inline-flex items-center gap-2 rounded-full border border-orange-300/40 dark:border-orange-200/20 bg-orange-100/70 dark:bg-orange-400/10 px-3 py-1.5">
-                <Flame size={16} className="text-orange-500 dark:text-orange-300" />
-                <span className="text-sm font-semibold text-orange-700 dark:text-orange-100">{todayStudyHours}h hôm nay</span>
-              </div>
-            </div>
-
             <FramerMotion.motion.section
               layout
               className="relative rounded-[2rem] border border-white/60 dark:border-white/15 bg-white/65 dark:bg-white/10 p-4 md:p-6 xl:p-7 backdrop-blur-xl shadow-xl shadow-blue-200/40 dark:shadow-black/20"
             >
+              <div className="mb-5 flex items-center justify-between pr-12">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Focus Room</p>
+                <div className="inline-flex items-center gap-2 rounded-full border border-orange-300/40 dark:border-orange-200/20 bg-orange-100/70 dark:bg-orange-400/10 px-3 py-1.5">
+                  <Flame size={16} className="text-orange-500 dark:text-orange-300" />
+                  <span className="text-sm font-semibold text-orange-700 dark:text-orange-100">{todayStudyHours}h hôm nay</span>
+                </div>
+              </div>
+
               <button
                 onClick={() => setIsManualFullscreen((prev) => !prev)}
                 className="absolute right-5 top-5 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-white/15 bg-white/80 dark:bg-white/10 px-3 py-2 text-slate-700 dark:text-slate-100 hover:bg-white dark:hover:bg-white/15 transition-colors"
@@ -446,7 +446,7 @@ const StudyTimer = () => {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "100%", opacity: 0 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="mt-2 flex w-full flex-col border border-white/40 dark:border-white/10 bg-white/55 dark:bg-slate-900/45 p-4 backdrop-blur-xl md:p-5 xl:mt-0 xl:w-[390px] xl:shrink-0 xl:self-start xl:sticky xl:top-4"
+              className="mt-0 flex w-full flex-col border border-white/40 dark:border-white/10 bg-white/55 dark:bg-slate-900/45 p-4 backdrop-blur-xl md:p-5 xl:w-[390px] xl:shrink-0 xl:self-start xl:sticky xl:top-4"
             >
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-slate-600 dark:text-slate-200">Tiện ích</h3>
