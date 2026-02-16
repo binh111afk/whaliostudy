@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as FramerMotion from "framer-motion";
 import {
   CheckCircle2,
@@ -11,6 +11,7 @@ import {
   Play,
   Plus,
   RotateCcw,
+  Upload,
   Volume2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -72,6 +73,7 @@ const ModePill = ({ active, disabled, label, onClick }) => (
 const StudyTimer = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   const audioRef = useRef(null);
+  const musicInputRef = useRef(null);
   const nextBreakReminderRef = useRef(25 * 60);
 
   const [mode, setMode] = useState("focus");
@@ -92,6 +94,7 @@ const StudyTimer = () => {
   const [selectedMusicUrl, setSelectedMusicUrl] = useState("");
   const [selectedMusicName, setSelectedMusicName] = useState("");
   const [isMusicOpen, setIsMusicOpen] = useState(false);
+  const [isUploadingMusic, setIsUploadingMusic] = useState(false);
 
   const modeConfig = TIMER_MODES[mode];
   const currentModeMinutes = mode === "focus" ? focusDurationMinutes : modeConfig.minutes;
@@ -230,21 +233,22 @@ const StudyTimer = () => {
     loadAllData();
   }, [user]);
 
-  useEffect(() => {
-    const loadMusicFiles = async () => {
-      try {
-        const res = await fetch("/api/music/list");
-        const data = await res.json();
-        if (data?.success && Array.isArray(data.files)) {
-          setMusicFiles(data.files);
-        }
-      } catch (err) {
-        console.error("Load music list error:", err);
+  const loadMusicFiles = useCallback(async () => {
+    try {
+      const usernameQuery = user?.username ? `?username=${encodeURIComponent(user.username)}` : "";
+      const res = await fetch(`/api/music/list${usernameQuery}`);
+      const data = await res.json();
+      if (data?.success && Array.isArray(data.files)) {
+        setMusicFiles(data.files);
       }
-    };
+    } catch (err) {
+      console.error("Load music list error:", err);
+    }
+  }, [user?.username]);
 
+  useEffect(() => {
     loadMusicFiles();
-  }, []);
+  }, [loadMusicFiles]);
 
   const ring = useMemo(() => {
     const radius = 132;
@@ -295,6 +299,50 @@ const StudyTimer = () => {
       }
     } catch {
       toast.message("Bấm Play trên player để bắt đầu nhạc.");
+    }
+  };
+
+  const handleUploadMusic = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!user?.username) {
+      toast.error("Đăng nhập để tải nhạc cá nhân.");
+      return;
+    }
+
+    if (!/\.mp4$/i.test(file.name)) {
+      toast.error("Chỉ hỗ trợ file .mp4");
+      return;
+    }
+
+    try {
+      setIsUploadingMusic(true);
+      const formData = new FormData();
+      formData.append("username", user.username);
+      formData.append("musicFile", file);
+
+      const res = await fetch("/api/music/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (!data?.success) {
+        throw new Error(data?.message || "Upload thất bại");
+      }
+
+      toast.success("Đã tải nhạc lên.");
+      await loadMusicFiles();
+
+      if (data.file) {
+        await playMusic(data.file);
+      }
+    } catch (err) {
+      toast.error(err.message || "Không thể tải nhạc lên");
+    } finally {
+      setIsUploadingMusic(false);
     }
   };
 
@@ -354,7 +402,7 @@ const StudyTimer = () => {
                       cy="160"
                       r={ring.radius}
                       className="hidden dark:block"
-                      stroke="#3b82f6"
+                      stroke="#60a5fa"
                       strokeWidth="14"
                       strokeLinecap="round"
                       fill="none"
@@ -363,7 +411,7 @@ const StudyTimer = () => {
                       transition={{ duration: 0.45, ease: "easeOut" }}
                       style={{
                         filter:
-                          "drop-shadow(0 0 8px rgba(59,130,246,0.95)) drop-shadow(0 0 18px rgba(59,130,246,0.75)) drop-shadow(0 0 30px rgba(37,99,235,0.45))",
+                          "drop-shadow(0 0 10px rgba(96,165,250,0.95)) drop-shadow(0 0 22px rgba(59,130,246,0.85)) drop-shadow(0 0 36px rgba(37,99,235,0.6))",
                       }}
                     />
                     <FramerMotion.motion.circle
@@ -570,6 +618,18 @@ const StudyTimer = () => {
 
                   {isMusicOpen && (
                     <div className="mt-3 space-y-2">
+                      <input ref={musicInputRef} type="file" accept=".mp4,video/mp4" className="hidden" onChange={handleUploadMusic} />
+                      <button
+                        onClick={() => musicInputRef.current?.click()}
+                        disabled={isUploadingMusic}
+                        className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-100 hover:bg-white dark:hover:bg-white/10 transition-colors disabled:opacity-60"
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          <Upload size={15} />
+                          {isUploadingMusic ? "Đang tải lên..." : "Tải nhạc .mp4 của bạn"}
+                        </span>
+                      </button>
+
                       {musicFiles.length > 0 ? (
                         musicFiles.map((file) => (
                           <button
@@ -581,7 +641,16 @@ const StudyTimer = () => {
                                 : "border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/5 text-slate-700 dark:text-slate-100 hover:bg-white dark:hover:bg-white/10"
                             }`}
                           >
-                            {file.name}
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="truncate">{file.name}</span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                                file.scope === "user"
+                                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
+                                  : "bg-slate-100 text-slate-600 dark:bg-slate-700/70 dark:text-slate-200"
+                              }`}>
+                                {file.scope === "user" ? "Cá nhân" : "Mặc định"}
+                              </span>
+                            </div>
                           </button>
                         ))
                       ) : (

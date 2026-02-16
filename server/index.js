@@ -518,29 +518,150 @@ app.use(express.json());
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/img', express.static(path.join(__dirname, '../img')));
-app.use('/music', express.static(path.join(__dirname, '../music')));
+
+const MUSIC_ROOT = path.join(__dirname, '../music');
+const USER_MUSIC_ROOT = path.join(MUSIC_ROOT, 'users');
+fs.mkdirSync(USER_MUSIC_ROOT, { recursive: true });
+
+function sanitizeUsername(username = '') {
+    return String(username).replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
+function sanitizeFileName(filename = '') {
+    return path.basename(String(filename));
+}
+
+function listMp4Files(dirPath) {
+    if (!fs.existsSync(dirPath)) return [];
+    return fs.readdirSync(dirPath).filter((file) => /\.mp4$/i.test(file));
+}
+
+const musicUpload = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+            const username = sanitizeUsername(req.body?.username);
+            if (!username) {
+                return cb(new Error('Missing username'));
+            }
+            const userDir = path.join(USER_MUSIC_ROOT, username);
+            fs.mkdirSync(userDir, { recursive: true });
+            cb(null, userDir);
+        },
+        filename: (req, file, cb) => {
+            const ext = path.extname(file.originalname).toLowerCase();
+            const safeBase = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9._-]/g, '_');
+            cb(null, `${Date.now()}-${safeBase}${ext}`);
+        }
+    }),
+    fileFilter: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (ext !== '.mp4') {
+            return cb(new Error('Only .mp4 files are allowed'));
+        }
+        cb(null, true);
+    },
+    limits: {
+        fileSize: 100 * 1024 * 1024
+    }
+});
 
 app.get('/api/music/list', (req, res) => {
     try {
-        const musicDir = path.join(__dirname, '../music');
+        const username = sanitizeUsername(req.query.username || '');
 
-        if (!fs.existsSync(musicDir)) {
-            return res.json({ success: true, files: [] });
-        }
+        const defaultFiles = listMp4Files(MUSIC_ROOT).map((file) => ({
+            name: file,
+            scope: 'default',
+            url: `/api/music/stream?scope=default&file=${encodeURIComponent(file)}`
+        }));
 
-        const files = fs
-            .readdirSync(musicDir)
-            .filter((file) => /\.mp4$/i.test(file))
-            .map((file) => ({
+        const userFiles = username
+            ? listMp4Files(path.join(USER_MUSIC_ROOT, username)).map((file) => ({
                 name: file,
-                url: `/music/${encodeURIComponent(file)}`
-            }));
+                scope: 'user',
+                url: `/api/music/stream?scope=user&username=${encodeURIComponent(username)}&file=${encodeURIComponent(file)}`
+            }))
+            : [];
 
-        res.json({ success: true, files });
+        res.json({ success: true, files: [...userFiles, ...defaultFiles] });
     } catch (err) {
         console.error('Music list error:', err);
         res.status(500).json({ success: false, files: [], message: 'Server error' });
     }
+});
+
+app.get('/api/music/stream', (req, res) => {
+    try {
+        const scope = req.query.scope === 'user' ? 'user' : 'default';
+        const file = sanitizeFileName(req.query.file);
+        const username = sanitizeUsername(req.query.username || '');
+
+        if (!file || path.extname(file).toLowerCase() !== '.mp4') {
+            return res.status(400).json({ success: false, message: 'Invalid file' });
+        }
+
+        const targetDir = scope === 'user'
+            ? path.join(USER_MUSIC_ROOT, username)
+            : MUSIC_ROOT;
+
+        if (scope === 'user' && !username) {
+            return res.status(400).json({ success: false, message: 'Missing username' });
+        }
+
+        const filePath = path.resolve(targetDir, file);
+        if (!filePath.startsWith(path.resolve(targetDir))) {
+            return res.status(400).json({ success: false, message: 'Invalid path' });
+        }
+
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ success: false, message: 'File not found' });
+        }
+
+        res.sendFile(filePath);
+    } catch (err) {
+        console.error('Music stream error:', err);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+app.post('/api/music/upload', (req, res) => {
+    musicUpload.single('musicFile')(req, res, async (err) => {
+        try {
+            if (err) {
+                return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+            }
+
+            const username = sanitizeUsername(req.body?.username);
+            if (!username) {
+                return res.status(400).json({ success: false, message: 'Missing username' });
+            }
+
+            const user = await User.findOne({ username });
+            if (!user) {
+                if (req.file?.path && fs.existsSync(req.file.path)) {
+                    fs.unlinkSync(req.file.path);
+                }
+                return res.status(403).json({ success: false, message: 'User not found' });
+            }
+
+            if (!req.file) {
+                return res.status(400).json({ success: false, message: 'No file uploaded' });
+            }
+
+            const safeFile = sanitizeFileName(req.file.filename);
+            return res.json({
+                success: true,
+                file: {
+                    name: safeFile,
+                    scope: 'user',
+                    url: `/api/music/stream?scope=user&username=${encodeURIComponent(username)}&file=${encodeURIComponent(safeFile)}`
+                }
+            });
+        } catch (uploadErr) {
+            console.error('Music upload error:', uploadErr);
+            return res.status(500).json({ success: false, message: 'Server error' });
+        }
+    });
 });
 
 // ==================== EJS TEMPLATE ENGINE ====================
