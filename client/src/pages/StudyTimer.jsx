@@ -262,7 +262,7 @@ const StudyTimer = () => {
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-6rem)] -m-6 overflow-hidden text-slate-800 dark:text-slate-100">
+    <div className="relative h-screen -m-6 overflow-hidden text-slate-800 dark:text-slate-100">
       <style>{`
         .whalio-zen-active .w-64.h-screen.fixed.left-0.top-0,
         .whalio-zen-active .h-16.sticky.top-0 {
@@ -285,10 +285,10 @@ const StudyTimer = () => {
         transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      <div className="relative z-10 flex min-h-[calc(100vh-6rem)]">
-        <div className="flex-1 px-5 py-7 md:px-10 md:py-10">
-          <div className="mx-auto max-w-4xl">
-            <div className="mb-6 flex items-center justify-between">
+      <div className="relative z-10 flex h-full min-h-0">
+        <div className="flex min-h-0 flex-1 items-center justify-center px-4 py-6 md:px-8 md:py-8">
+          <div className="mx-auto flex w-full max-w-4xl flex-col justify-center">
+            <div className="mb-4 flex items-center justify-between md:mb-6">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Focus Room</p>
               <div className="inline-flex items-center gap-2 rounded-full border border-orange-300/40 dark:border-orange-200/20 bg-orange-100/70 dark:bg-orange-400/10 px-3 py-1.5">
                 <Flame size={16} className="text-orange-500 dark:text-orange-300" />
@@ -298,7 +298,7 @@ const StudyTimer = () => {
 
             <FramerMotion.motion.section
               layout
-              className="relative rounded-[2rem] border border-white/60 dark:border-white/15 bg-white/65 dark:bg-white/10 p-6 md:p-10 backdrop-blur-xl shadow-xl shadow-blue-200/40 dark:shadow-black/20"
+              className="relative rounded-[2rem] border border-white/60 dark:border-white/15 bg-white/65 dark:bg-white/10 p-5 md:p-8 backdrop-blur-xl shadow-xl shadow-blue-200/40 dark:shadow-black/20"
             >
               <button
                 onClick={() => setIsManualFullscreen((prev) => !prev)}
@@ -446,9 +446,9 @@ const StudyTimer = () => {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "100%", opacity: 0 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="w-full max-w-sm border-l border-white/40 dark:border-white/10 bg-white/55 dark:bg-slate-900/45 p-5 backdrop-blur-xl md:p-6"
+              className="flex h-full w-full min-h-0 max-w-[390px] shrink-0 flex-col border-l border-white/40 dark:border-white/10 bg-white/55 dark:bg-slate-900/45 p-4 backdrop-blur-xl md:p-5"
             >
-              <div className="mb-5 flex items-center justify-between">
+              <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-slate-600 dark:text-slate-200">Tiện ích</h3>
                 <button
                   onClick={() => setIsSidebarOpen(false)}
@@ -458,10 +458,10 @@ const StudyTimer = () => {
                 </button>
               </div>
 
-              <div className="space-y-4">
+              <div className="whalio-scrollbar flex-1 space-y-4 overflow-y-auto pr-1">
                 <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
                   <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Task phiên này</h4>
-                  <div className="space-y-2">
+                  <div className="whalio-scrollbar max-h-48 space-y-2 overflow-y-auto pr-1">
                     {tasks.map((task) => (
                       <button
                         key={task.id}
@@ -489,7 +489,7 @@ const StudyTimer = () => {
 
                 <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
                   <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Deadline sắp tới</h4>
-                  <div className="space-y-2">
+                  <div className="whalio-scrollbar max-h-44 space-y-2 overflow-y-auto pr-1">
                     {upcomingDeadlines.length > 0 ? (
                       upcomingDeadlines.map((item) => (
                         <div key={item.id} className="rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2">
@@ -505,7 +505,7 @@ const StudyTimer = () => {
 
                 <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
                   <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Nhắc nhở môn học</h4>
-                  <div className="space-y-2">
+                  <div className="whalio-scrollbar max-h-44 space-y-2 overflow-y-auto pr-1">
                     {subjectReminders.length > 0 ? (
                       subjectReminders.map((item) => (
                         <div key={`${item.subject}-${item.id}`} className="rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2">

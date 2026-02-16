@@ -287,7 +287,7 @@ const LocalMusicPlayer = () => {
   const waveBars = useMemo(() => Array.from({ length: 18 }, (_, i) => i), []);
 
   return (
-    <div className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 backdrop-blur-xl p-4 text-slate-800 dark:text-slate-100">
+    <div className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 backdrop-blur-xl p-4 text-slate-800 dark:text-slate-100 overflow-hidden">
       <style>{`
         @keyframes whalio-wave {
           0%, 100% { transform: scaleY(0.35); opacity: 0.45; }
@@ -414,46 +414,53 @@ const LocalMusicPlayer = () => {
       </p>
       {notice && <p className="mt-1 text-[11px] text-blue-600 dark:text-cyan-300/90">{notice}</p>}
 
-      <div className="mt-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-950/40 max-h-52 overflow-auto">
-        {isLoading ? (
-          <p className="p-3 text-xs text-slate-500 dark:text-slate-400">Đang tải thư viện...</p>
-        ) : tracks.length === 0 ? (
-          <p className="p-3 text-xs text-slate-500 dark:text-slate-400">Playlist trống.</p>
-        ) : (
-          <ul className="divide-y divide-slate-200 dark:divide-white/5">
-            {tracks.map((track, idx) => {
-              const active = idx === currentIndex;
-              return (
-                <li
-                  key={track.id}
-                  className={`flex items-center justify-between gap-2 px-3 py-2 transition-colors ${
-                    active
-                      ? "bg-blue-50 dark:bg-cyan-500/15 text-blue-700 dark:text-cyan-100"
-                      : "text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-white/5"
-                  }`}
-                >
-                  <button
-                    onClick={() => {
-                      setCurrentIndex(idx);
-                      setIsPlaying(true);
-                    }}
-                    className="text-left min-w-0 flex-1"
+      <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-950/40">
+        <div className="sticky top-0 z-[1] border-b border-slate-200/70 dark:border-white/10 bg-white/85 dark:bg-slate-900/75 px-3 py-2 backdrop-blur-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
+            Playlist ({tracks.length})
+          </p>
+        </div>
+        <div className="whalio-scrollbar max-h-52 overflow-y-auto">
+          {isLoading ? (
+            <p className="p-3 text-xs text-slate-500 dark:text-slate-400">Đang tải thư viện...</p>
+          ) : tracks.length === 0 ? (
+            <p className="p-3 text-xs text-slate-500 dark:text-slate-400">Playlist trống.</p>
+          ) : (
+            <ul className="divide-y divide-slate-200 dark:divide-white/5">
+              {tracks.map((track, idx) => {
+                const active = idx === currentIndex;
+                return (
+                  <li
+                    key={track.id}
+                    className={`flex items-center justify-between gap-2 px-3 py-2 transition-colors ${
+                      active
+                        ? "bg-blue-50 dark:bg-cyan-500/15 text-blue-700 dark:text-cyan-100"
+                        : "text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-white/5"
+                    }`}
                   >
-                    <p className="text-sm truncate">{track.name}</p>
-                  </button>
+                    <button
+                      onClick={() => {
+                        setCurrentIndex(idx);
+                        setIsPlaying(true);
+                      }}
+                      className="text-left min-w-0 flex-1"
+                    >
+                      <p className="text-sm truncate">{track.name}</p>
+                    </button>
 
-                  <button
-                    onClick={() => removeTrack(track.id)}
-                    className="p-1 rounded-md text-slate-400 hover:text-rose-500 dark:hover:text-rose-300 hover:bg-rose-500/10"
-                    aria-label={`Xóa ${track.name}`}
-                  >
-                    <X size={14} />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                    <button
+                      onClick={() => removeTrack(track.id)}
+                      className="p-1 rounded-md text-slate-400 hover:text-rose-500 dark:hover:text-rose-300 hover:bg-rose-500/10"
+                      aria-label={`Xóa ${track.name}`}
+                    >
+                      <X size={14} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );

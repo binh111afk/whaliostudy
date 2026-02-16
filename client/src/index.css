@@ -53,3 +53,31 @@ body {
 .dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background: #6b7280;
 }
+
+/* Whalio glassmorphism scrollbar */
+.whalio-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+}
+
+.whalio-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.whalio-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.whalio-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.4), rgba(148, 163, 184, 0.2));
+}
+
+.dark .whalio-scrollbar {
+  scrollbar-color: rgba(148, 163, 184, 0.32) transparent;
+}
+
+.dark .whalio-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.38), rgba(71, 85, 105, 0.34));
+}
