@@ -1029,7 +1029,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
           <X size={14} />
         </button>
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
               StudyTime Live
             </p>
@@ -1037,6 +1037,9 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
               {currentTrack ? currentTrack.name : "Chưa phát nhạc"}
             </p>
           </div>
+          <p className="min-w-0 flex-1 rounded-xl bg-slate-100/70 px-3 py-2 text-sm text-slate-600 italic text-center truncate dark:bg-white/10 dark:text-slate-300">
+            "{MOTIVATIONAL_QUOTES[motivationIndex]}"
+          </p>
 
           <div className="flex shrink-0 items-center gap-2">
             <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/90 px-2.5 py-1.5 text-sm font-semibold text-slate-600 dark:border-white/15 dark:bg-white/5 dark:text-slate-200">
@@ -1063,9 +1066,6 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
             </button>
           </div>
         </div>
-        <p className="mt-2 rounded-xl bg-slate-100/80 px-3 py-2 text-sm text-slate-600 italic dark:bg-white/10 dark:text-slate-300">
-          "{MOTIVATIONAL_QUOTES[motivationIndex]}"
-        </p>
 
         <div className={isFloatingCollapsed ? "hidden" : ""}>
           {overlayState?.tip && (
