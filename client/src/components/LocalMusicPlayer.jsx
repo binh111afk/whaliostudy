@@ -1090,8 +1090,8 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
           </div>
         </div>
 
-        <div className="hidden items-center justify-between gap-4 sm:flex">
-          <div className="min-w-0 flex flex-1 items-center gap-[6px]">
+        <div className="hidden items-center justify-between gap-6 sm:flex">
+          <div className="min-w-0 flex flex-1 items-center gap-[55px]">
             <div className="min-w-0 sm:max-w-[48%]">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
                 StudyTime Live
