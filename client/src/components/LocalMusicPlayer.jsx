@@ -1058,9 +1058,12 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
               {currentTrack ? currentTrack.name : "Chưa phát nhạc"}
             </p>
           </div>
-          <p className="min-w-0 flex-1 px-3 py-1 text-sm text-slate-600 italic text-center truncate dark:text-slate-300">
-            "{MOTIVATIONAL_QUOTES[motivationIndex]}"
-          </p>
+          <div className="min-w-0 flex-1 px-3 py-1 text-sm text-slate-600 italic text-center dark:text-slate-300">
+            <p className="truncate">"{MOTIVATIONAL_QUOTES[motivationIndex]}"</p>
+            <p className="mt-0.5 truncate">
+              <span className="font-bold">Nhắc nhở:</span> {REMINDER_MESSAGES[reminderIndex]}
+            </p>
+          </div>
 
           <div className="flex shrink-0 items-center gap-2">
             <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/90 px-2.5 py-1.5 text-sm font-semibold text-slate-600 dark:border-white/15 dark:bg-white/5 dark:text-slate-200">
@@ -1155,11 +1158,8 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
               />
             </div>
           </div>
-          <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-300">
+          <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-300">
             <span className="shrink-0">{formatOverlayTime(Math.floor(currentTime))}</span>
-            <span className="min-w-0 flex-1 truncate text-center text-[10px] sm:text-[11px]">
-              {REMINDER_MESSAGES[reminderIndex]}
-            </span>
             <span className="shrink-0">{formatOverlayTime(Math.floor(duration))}</span>
           </div>
 
