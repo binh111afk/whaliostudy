@@ -61,41 +61,47 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
           
             // Gọi Toast Modal (Responsive Version)
             toast.custom((t) => (
-              <div className="relative w-[90vw] sm:w-full sm:max-w-[400px] bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-[24px] sm:rounded-[32px] flex flex-col items-center text-center 
-                animate-in zoom-in-95 duration-300
-                shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] z-[99999]"> 
-                {/* 👆 Shadow hack vẫn giữ nguyên để làm tối nền */}
-                
-                {/* Icon Ăn mừng - Tự co nhỏ trên mobile */}
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-4 sm:mb-6 shadow-inner">
-                  <span className="text-3xl sm:text-4xl animate-bounce">🎉</span>
+              <div className="relative w-[92vw] sm:w-full sm:max-w-[440px] rounded-[28px] sm:rounded-[34px] overflow-hidden shadow-[0_0_0_9999px_rgba(2,6,23,0.6)] z-[99999] animate-in zoom-in-95 fade-in duration-300">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 opacity-95"></div>
+                <div className="absolute -top-16 -right-12 w-44 h-44 rounded-full bg-white/20 blur-2xl"></div>
+                <div className="absolute -bottom-16 -left-10 w-40 h-40 rounded-full bg-cyan-300/20 blur-2xl"></div>
+
+                <div className="relative p-6 sm:p-8 text-white">
+                  <button
+                    onClick={() => toast.dismiss(t)}
+                    className="absolute top-3 right-3 sm:top-4 sm:right-4 w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white/90 hover:text-white transition-colors"
+                  >
+                    ✕
+                  </button>
+
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center mb-5 shadow-lg">
+                    <span className="text-3xl sm:text-4xl">🎉</span>
+                  </div>
+
+                  <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-white/80 font-semibold mb-2">
+                    Đăng nhập thành công
+                  </p>
+                  <h2 className="text-2xl sm:text-3xl font-black leading-tight mb-2">
+                    Chào mừng trở lại!
+                  </h2>
+                  <p className="text-sm sm:text-base text-blue-50/95 mb-6 leading-relaxed">
+                    Xin chào <span className="font-bold text-white">{data.user.fullName}</span>. Sẵn sàng tiếp tục mục tiêu học tập hôm nay chưa?
+                  </p>
+
+                  <div className="flex items-center justify-between bg-white/10 border border-white/20 rounded-2xl px-4 py-3 mb-6">
+                    <span className="text-sm text-white/85">Tên đăng nhập</span>
+                    <span className="text-sm font-bold text-white">{data.user.username}</span>
+                  </div>
+
+                  <button
+                    onClick={() => toast.dismiss(t)}
+                    className="w-full py-3.5 rounded-2xl bg-white text-blue-700 font-extrabold text-base sm:text-lg hover:bg-blue-50 transition-all shadow-xl active:scale-[0.98]"
+                  >
+                    Vào học ngay
+                  </button>
                 </div>
-          
-                {/* Tiêu đề */}
-                <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white mb-2">
-                  Chào mừng trở lại!
-                </h2>
-                <p className="text-sm sm:text-base text-gray-500 dark:text-gray-300 mb-6 sm:mb-8 leading-relaxed">
-                  Xin chào <span className="text-blue-600 dark:text-blue-400 font-bold">{data.user.fullName}</span>, chúc bạn một ngày học tập thật năng suất nhé!
-                </p>
-          
-                {/* Nút bấm */}
-                <button
-                  onClick={() => toast.dismiss(t)}
-                  className="w-full py-3 sm:py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-base sm:text-lg rounded-2xl shadow-lg shadow-blue-500/40 transform active:scale-95 hover:scale-[1.02] transition-all"
-                >
-                  Vào học ngay 🚀
-                </button>
-          
-                {/* Nút tắt nhỏ góc trên */}
-                <button 
-                  onClick={() => toast.dismiss(t)}
-                  className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                >
-                  ✕
-                </button>
               </div>
-            ), { 
+            ), {
               duration: Infinity, 
               position: 'top-center', 
             });
@@ -106,36 +112,42 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
             setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
           
             toast.custom((t) => (
-              <div className="relative w-[90vw] sm:w-full sm:max-w-[400px] bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-[24px] sm:rounded-[32px] flex flex-col items-center text-center 
-                animate-in zoom-in-95 duration-300
-                shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] z-[99999]">
-                
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4 sm:mb-6 shadow-inner">
-                  <span className="text-3xl sm:text-4xl">✅</span>
+              <div className="relative w-[92vw] sm:w-full sm:max-w-[440px] rounded-[28px] sm:rounded-[34px] overflow-hidden shadow-[0_0_0_9999px_rgba(2,6,23,0.6)] z-[99999] animate-in zoom-in-95 fade-in duration-300">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 opacity-95"></div>
+                <div className="absolute -top-16 -right-12 w-44 h-44 rounded-full bg-white/20 blur-2xl"></div>
+                <div className="absolute -bottom-16 -left-10 w-40 h-40 rounded-full bg-lime-200/20 blur-2xl"></div>
+
+                <div className="relative p-6 sm:p-8 text-white">
+                  <button
+                    onClick={() => toast.dismiss(t)}
+                    className="absolute top-3 right-3 sm:top-4 sm:right-4 w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white/90 hover:text-white transition-colors"
+                  >
+                    ✕
+                  </button>
+
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center mb-5 shadow-lg">
+                    <span className="text-3xl sm:text-4xl">✅</span>
+                  </div>
+
+                  <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-white/80 font-semibold mb-2">
+                    Đăng ký thành công
+                  </p>
+                  <h2 className="text-2xl sm:text-3xl font-black leading-tight mb-2">
+                    Tài khoản đã sẵn sàng
+                  </h2>
+                  <p className="text-sm sm:text-base text-emerald-50/95 mb-6 leading-relaxed">
+                    Bây giờ bạn có thể đăng nhập và bắt đầu hành trình học tập trên Whalio.
+                  </p>
+
+                  <button
+                    onClick={() => toast.dismiss(t)}
+                    className="w-full py-3.5 rounded-2xl bg-white text-emerald-700 font-extrabold text-base sm:text-lg hover:bg-emerald-50 transition-all shadow-xl active:scale-[0.98]"
+                  >
+                    Đăng nhập ngay
+                  </button>
                 </div>
-          
-                <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white mb-2">
-                  Đăng ký thành công!
-                </h2>
-                <p className="text-sm sm:text-base text-gray-500 dark:text-gray-300 mb-6 sm:mb-8">
-                  Tài khoản đã sẵn sàng. Đăng nhập ngay để bắt đầu hành trình nhé.
-                </p>
-          
-                <button
-                  onClick={() => toast.dismiss(t)}
-                  className="w-full py-3 sm:py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold text-base sm:text-lg rounded-2xl shadow-lg shadow-green-500/40 transform active:scale-95 hover:scale-[1.02] transition-all"
-                >
-                  Đăng nhập ngay
-                </button>
-          
-                <button 
-                  onClick={() => toast.dismiss(t)}
-                  className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                >
-                  ✕
-                </button>
               </div>
-            ), { duration: 5000, position: 'top-center' });
+            ), { duration: 6000, position: 'top-center' });
           }
         } else {
             // Server trả về lỗi (sai pass, user tồn tại...)
