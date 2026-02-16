@@ -1,5 +1,115 @@
+import localforage from 'localforage';
+
+const musicDB = localforage.createInstance({
+    name: 'whalio_local_db',
+    storeName: 'music_library'
+});
+
+const PLAYLIST_META_KEY = '__playlist_meta_v1__';
+
 // Service để sao lưu và khôi phục dữ liệu
 export const backupService = {
+    async getLocalMusicSnapshot() {
+        const tracks = [];
+        await musicDB.iterate((value, key) => {
+            if (key === PLAYLIST_META_KEY) return;
+            if (!value?.blob) return;
+            tracks.push({
+                id: key,
+                name: value.name || 'Unknown Track',
+                type: value.type || '',
+                size: value.size || 0,
+                createdAt: value.createdAt || Date.now()
+            });
+        });
+
+        tracks.sort((a, b) => a.createdAt - b.createdAt);
+        const meta = await musicDB.getItem(PLAYLIST_META_KEY);
+        return {
+            version: 1,
+            tracks,
+            orderIds: Array.isArray(meta?.orderIds) ? meta.orderIds : tracks.map(t => t.id)
+        };
+    },
+
+    async restoreLocalMusicSnapshot(snapshot) {
+        if (!snapshot || !Array.isArray(snapshot.tracks)) {
+            return { restored: false, missing: 0, message: 'Không có snapshot nhạc local trong backup.' };
+        }
+
+        const existingTracks = [];
+        await musicDB.iterate((value, key) => {
+            if (key === PLAYLIST_META_KEY) return;
+            if (!value?.blob) return;
+            existingTracks.push({
+                id: key,
+                name: value.name || '',
+                createdAt: value.createdAt || 0
+            });
+        });
+
+        const byId = new Map(existingTracks.map(t => [t.id, t]));
+        const byName = new Map();
+        existingTracks.forEach((track) => {
+            const key = track.name.toLowerCase();
+            if (!byName.has(key)) byName.set(key, []);
+            byName.get(key).push(track);
+        });
+
+        const used = new Set();
+        const restoredOrder = [];
+        let missing = 0;
+
+        snapshot.orderIds?.forEach((id) => {
+            const match = byId.get(id);
+            if (match && !used.has(match.id)) {
+                restoredOrder.push(match.id);
+                used.add(match.id);
+            } else {
+                missing += 1;
+            }
+        });
+
+        snapshot.tracks.forEach((metaTrack) => {
+            const direct = byId.get(metaTrack.id);
+            if (direct && !used.has(direct.id)) {
+                restoredOrder.push(direct.id);
+                used.add(direct.id);
+                return;
+            }
+
+            const sameName = byName.get(String(metaTrack.name || '').toLowerCase()) || [];
+            const alt = sameName.find((candidate) => !used.has(candidate.id));
+            if (alt) {
+                restoredOrder.push(alt.id);
+                used.add(alt.id);
+            } else {
+                missing += 1;
+            }
+        });
+
+        existingTracks.forEach((track) => {
+            if (!used.has(track.id)) restoredOrder.push(track.id);
+        });
+
+        if (restoredOrder.length === 0 && existingTracks.length > 0) {
+            restoredOrder.push(...existingTracks.map(t => t.id));
+        }
+
+        await musicDB.setItem(PLAYLIST_META_KEY, {
+            orderIds: restoredOrder,
+            updatedAt: Date.now()
+        });
+
+        return {
+            restored: true,
+            missing,
+            message: missing > 0
+                ? `Khôi phục thứ tự playlist local. Thiếu ${missing} bài cần thêm lại file.`
+                : 'Khôi phục thứ tự playlist local thành công.'
+        };
+    },
+
     /**
      * Sao lưu dữ liệu của user và tải xuống dưới dạng JSON
      */
@@ -17,8 +127,14 @@ export const backupService = {
                 throw new Error(result.message || 'Lỗi khi sao lưu dữ liệu');
             }
 
+            const localMusic = await this.getLocalMusicSnapshot();
+            const combinedBackup = {
+                ...result.data,
+                localMusic
+            };
+
             // Tạo file JSON và tải xuống
-            const jsonString = JSON.stringify(result.data, null, 2);
+            const jsonString = JSON.stringify(combinedBackup, null, 2);
             const blob = new Blob([jsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -44,7 +160,7 @@ export const backupService = {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = (e) => reject(new Error('Không thể đọc file'));
+            reader.onerror = () => reject(new Error('Không thể đọc file'));
             reader.readAsText(file);
         });
     },
@@ -81,13 +197,16 @@ export const backupService = {
                 throw new Error(result.message || 'Lỗi khi khôi phục dữ liệu');
             }
 
+            const localMusicRestore = await this.restoreLocalMusicSnapshot(backupData.localMusic);
+
             return { 
                 success: true, 
                 message: 'Khôi phục thành công!',
                 backupInfo: {
                     version: backupData.version,
-                    exportDate: backupData.exportDate
-                }
+                    exportDate: backupData.exportDate,
+                    localMusic: localMusicRestore.message
+                },
             };
         } catch (error) {
             console.error('Import error:', error);

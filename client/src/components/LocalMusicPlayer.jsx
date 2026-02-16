@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import localforage from "localforage";
 import Marquee from "react-fast-marquee";
-import { Music2, Play, Pause, SkipBack, SkipForward, Plus, X, Volume2, Disc3, Download, Upload } from "lucide-react";
+import { Music2, Play, Pause, SkipBack, SkipForward, Plus, X, Volume2, Disc3 } from "lucide-react";
 
 const musicDB = localforage.createInstance({
   name: "whalio_local_db",
@@ -23,7 +23,6 @@ const isValidAudioFile = (file) => {
 const LocalMusicPlayer = () => {
   const audioRef = useRef(null);
   const fileInputRef = useRef(null);
-  const importInputRef = useRef(null);
   const objectUrlRef = useRef(null);
 
   const [tracks, setTracks] = useState([]);
@@ -33,6 +32,7 @@ const LocalMusicPlayer = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [notice, setNotice] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
 
   const currentTrack = currentIndex >= 0 ? tracks[currentIndex] : null;
 
@@ -146,12 +146,9 @@ const LocalMusicPlayer = () => {
     };
   }, [revokeCurrentObjectUrl]);
 
-  const handleFileUpload = useCallback(
-    async (event) => {
-      const fileList = Array.from(event.target.files || []);
-      event.target.value = "";
-      if (fileList.length === 0) return;
-
+  const saveFilesToLibrary = useCallback(
+    async (fileList) => {
+      if (!Array.isArray(fileList) || fileList.length === 0) return;
       const validFiles = fileList.filter(isValidAudioFile);
       if (validFiles.length === 0) {
         setNotice("Chỉ hỗ trợ file MP3/MP4 hợp lệ.");
@@ -199,6 +196,15 @@ const LocalMusicPlayer = () => {
       }
     },
     [currentIndex, savePlaylistOrder]
+  );
+
+  const handleFileUpload = useCallback(
+    async (event) => {
+      const files = Array.from(event.target.files || []);
+      event.target.value = "";
+      await saveFilesToLibrary(files);
+    },
+    [saveFilesToLibrary]
   );
 
   const togglePlay = useCallback(() => {
@@ -258,108 +264,24 @@ const LocalMusicPlayer = () => {
     [currentIndex, savePlaylistOrder]
   );
 
-  const exportPlaylist = useCallback(() => {
-    if (tracks.length === 0) {
-      setNotice("Không có dữ liệu để xuất.");
-      return;
-    }
+  const handleDragOver = useCallback((event) => {
+    event.preventDefault();
+    setIsDragging(true);
+  }, []);
 
-    const payload = {
-      version: 1,
-      app: "Whalio LocalMusicPlayer",
-      exportedAt: new Date().toISOString(),
-      tracks: tracks.map((track, order) => ({
-        id: track.id,
-        name: track.name,
-        type: track.type,
-        size: track.size,
-        createdAt: track.createdAt,
-        order,
-      })),
-    };
+  const handleDragLeave = useCallback((event) => {
+    event.preventDefault();
+    setIsDragging(false);
+  }, []);
 
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `whalio-playlist-${Date.now()}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setNotice("Đã xuất playlist JSON.");
-  }, [tracks]);
-
-  const importPlaylist = useCallback(
+  const handleDrop = useCallback(
     async (event) => {
-      const file = event.target.files?.[0];
-      event.target.value = "";
-      if (!file) return;
-
-      try {
-        const text = await file.text();
-        const parsed = JSON.parse(text);
-        if (!parsed || !Array.isArray(parsed.tracks)) {
-          setNotice("File JSON không hợp lệ.");
-          return;
-        }
-
-        const byId = new Map(tracks.map((track) => [track.id, track]));
-        const byName = new Map();
-        tracks.forEach((track) => {
-          const key = track.name.toLowerCase();
-          if (!byName.has(key)) byName.set(key, []);
-          byName.get(key).push(track);
-        });
-
-        const used = new Set();
-        const restored = [];
-        let missing = 0;
-
-        parsed.tracks.forEach((meta) => {
-          const direct = byId.get(meta.id);
-          if (direct && !used.has(direct.id)) {
-            restored.push(direct);
-            used.add(direct.id);
-            return;
-          }
-
-          const sameName = byName.get(String(meta.name || "").toLowerCase()) || [];
-          const alt = sameName.find((track) => !used.has(track.id));
-          if (alt) {
-            restored.push(alt);
-            used.add(alt.id);
-          } else {
-            missing += 1;
-          }
-        });
-
-        tracks.forEach((track) => {
-          if (!used.has(track.id)) restored.push(track);
-        });
-
-        if (restored.length === 0) {
-          setNotice("Không tìm thấy bài nào khớp trong thư viện cục bộ. Hãy upload lại file nhạc.");
-          return;
-        }
-
-        setTracks(restored);
-        setCurrentIndex((prev) => {
-          if (prev < 0 || prev >= tracks.length) return 0;
-          const oldId = tracks[prev]?.id;
-          const nextIndex = restored.findIndex((track) => track.id === oldId);
-          return nextIndex >= 0 ? nextIndex : 0;
-        });
-        await savePlaylistOrder(restored);
-        setNotice(
-          missing > 0
-            ? `Đã nhập playlist. Thiếu ${missing} bài (cần upload lại file local).`
-            : "Đã nhập playlist thành công."
-        );
-      } catch (err) {
-        console.error("Import playlist error:", err);
-        setNotice("Không thể đọc file JSON.");
-      }
+      event.preventDefault();
+      setIsDragging(false);
+      const files = Array.from(event.dataTransfer?.files || []);
+      await saveFilesToLibrary(files);
     },
-    [tracks, savePlaylistOrder]
+    [saveFilesToLibrary]
   );
 
   const waveBars = useMemo(() => Array.from({ length: 18 }, (_, i) => i), []);
@@ -386,29 +308,13 @@ const LocalMusicPlayer = () => {
           <span className="text-xs font-bold uppercase tracking-[0.16em]">Local Music</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => importInputRef.current?.click()}
-            className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 hover:bg-white/10 transition-colors"
-          >
-            <Upload size={13} />
-            Nhập
-          </button>
-          <button
-            onClick={exportPlaylist}
-            className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 hover:bg-white/10 transition-colors"
-          >
-            <Download size={13} />
-            Xuất
-          </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-2 rounded-xl border border-cyan-300/30 bg-cyan-400/15 px-3 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-400/25 transition-colors"
-          >
-            <Plus size={14} />
-            {isSaving ? "Đang lưu..." : "Thêm nhạc"}
-          </button>
-        </div>
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="inline-flex items-center gap-2 rounded-xl border border-cyan-300/30 bg-cyan-400/15 px-3 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-400/25 transition-colors"
+        >
+          <Plus size={14} />
+          {isSaving ? "Đang lưu..." : "Thêm nhạc"}
+        </button>
       </div>
 
       <input
@@ -419,9 +325,20 @@ const LocalMusicPlayer = () => {
         className="hidden"
         onChange={handleFileUpload}
       />
-      <input ref={importInputRef} type="file" accept=".json,application/json" className="hidden" onChange={importPlaylist} />
 
-      <div className="rounded-xl border border-white/10 bg-slate-950/50 p-3">
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`rounded-xl border bg-slate-950/50 p-3 transition-colors ${
+          isDragging ? "border-cyan-300/60 bg-cyan-500/10" : "border-white/10"
+        }`}
+      >
+        {isDragging && (
+          <p className="mb-2 text-center text-xs font-semibold text-cyan-200">
+            Thả file MP3/MP4 vào đây để lưu offline
+          </p>
+        )}
         {currentTrack ? (
           <>
             <div className="h-6 mb-2">
@@ -491,7 +408,7 @@ const LocalMusicPlayer = () => {
       </div>
 
       <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-        Nhạc được lưu cục bộ tại trình duyệt này. Nếu bạn xóa dữ liệu duyệt web, danh sách nhạc sẽ bị mất.
+        Nhạc được lưu cục bộ tại trình duyệt này. Sao lưu/khôi phục playlist đã tích hợp trong mục Sao lưu & Khôi phục.
       </p>
       {notice && <p className="mt-1 text-[11px] text-cyan-300/90">{notice}</p>}
 

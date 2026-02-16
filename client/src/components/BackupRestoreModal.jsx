@@ -29,7 +29,8 @@ const BackupRestoreModal = ({ isOpen, onClose, user }) => {
       `• Thời khóa biểu\n` +
       `• Điểm GPA\n` +
       `• Lịch sử học tập\n` +
-      `• Ghi chú nhanh\n\n` +
+      `• Ghi chú nhanh\n` +
+      `• Thứ tự playlist nhạc local\n\n` +
       `Bạn có chắc chắn muốn tiếp tục?`
     );
 
@@ -44,7 +45,8 @@ const BackupRestoreModal = ({ isOpen, onClose, user }) => {
       alert(
         `✅ Khôi phục thành công!\n\n` +
         `Phiên bản: ${result.backupInfo.version}\n` +
-        `Ngày sao lưu: ${result.backupInfo.exportDate}\n\n` +
+        `Ngày sao lưu: ${result.backupInfo.exportDate}\n` +
+        `Playlist local: ${result.backupInfo.localMusic || 'Không có dữ liệu'}\n\n` +
         `Trang sẽ tải lại để cập nhật dữ liệu...`
       );
       setTimeout(() => window.location.reload(), 1500);
@@ -83,7 +85,7 @@ const BackupRestoreModal = ({ isOpen, onClose, user }) => {
               <p className="font-semibold mb-1">Lưu ý quan trọng</p>
               <p className="text-xs">
                 Chức năng này chỉ sao lưu dữ liệu cá nhân (sự kiện, thời khóa biểu, GPA...). 
-                Không bao gồm tài liệu đã upload và bài viết cộng đồng.
+                Không bao gồm tài liệu đã upload và bài viết cộng đồng. Playlist nhạc local chỉ sao lưu metadata/thứ tự.
               </p>
             </div>
           </div>
