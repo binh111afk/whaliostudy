@@ -3,9 +3,10 @@ import { NavLink } from 'react-router-dom'; // 1. Import cái này
 import { LayoutDashboard, BookOpen, Calculator, Calendar, MessageSquare, Settings, Hourglass } from 'lucide-react';
 
 // 2. Sửa Component con: Dùng NavLink thay cho div
-const SidebarItem = ({ icon: Icon, label, to }) => (
+const SidebarItem = ({ icon: Icon, label, to, onNavigate }) => (
   <NavLink
     to={to}
+    onClick={onNavigate}
     className={({ isActive }) =>
       `flex items-center space-x-3 p-3 rounded-xl cursor-pointer transition-all ${
         isActive 
@@ -19,9 +20,13 @@ const SidebarItem = ({ icon: Icon, label, to }) => (
   </NavLink>
 );
 
-const Sidebar = () => {
+const Sidebar = ({ isMobile = false, onNavigate }) => {
+  const containerClasses = isMobile
+    ? 'h-full w-full bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 p-4 flex flex-col'
+    : 'w-64 h-screen bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 p-4 flex flex-col fixed left-0 top-0';
+
   return (
-    <div className="w-64 h-screen bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 p-4 flex flex-col fixed left-0 top-0"> {/* Thêm fixed để Sidebar đứng im */}
+    <div className={containerClasses}> {/* Thêm fixed để Sidebar đứng im */}
       <div className="flex items-center space-x-2 px-2 mb-10">
         <div className="w-8 h-8 bg-primary dark:bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">W</div>
         <span className="text-xl font-bold text-gray-800 dark:text-white tracking-tight">Whalio <span className="text-primary dark:text-blue-400">2.0</span></span>
@@ -29,14 +34,14 @@ const Sidebar = () => {
 
       <nav className="flex-1 space-y-2">
         {/* 3. Truyền đường dẫn (to) khớp với App.jsx */}
-        <SidebarItem icon={LayoutDashboard} label="Dashboard" to="/" />
-        <SidebarItem icon={Calculator} label="Tính điểm GPA" to="/gpa" />
-        <SidebarItem icon={MessageSquare} label="AI Assistant" to="/ai-assistant" />
+        <SidebarItem icon={LayoutDashboard} label="Dashboard" to="/" onNavigate={onNavigate} />
+        <SidebarItem icon={Calculator} label="Tính điểm GPA" to="/gpa" onNavigate={onNavigate} />
+        <SidebarItem icon={MessageSquare} label="AI Assistant" to="/ai-assistant" onNavigate={onNavigate} />
         
         {/* Mấy cái này chưa làm thì để tạm link # hoặc tạo trang sau */}
-        <SidebarItem icon={BookOpen} label="Thư viện đề" to="/exams" />
-        <SidebarItem icon={Hourglass} label="StudyTime" to="/timer" />
-        <SidebarItem icon={Calendar} label="Thời khóa biểu" to="/timetable" />
+        <SidebarItem icon={BookOpen} label="Thư viện đề" to="/exams" onNavigate={onNavigate} />
+        <SidebarItem icon={Hourglass} label="StudyTime" to="/timer" onNavigate={onNavigate} />
+        <SidebarItem icon={Calendar} label="Thời khóa biểu" to="/timetable" onNavigate={onNavigate} />
       </nav>
 
       <div className="pt-4 border-t border-gray-100 dark:border-gray-700">

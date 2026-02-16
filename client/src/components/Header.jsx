@@ -252,21 +252,21 @@ const Header = ({
           onClick={() => setIsLogoutConfirmOpen(false)}
         >
           <div
-            className="w-full max-w-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl shadow-2xl p-7"
+            className="w-[95vw] max-w-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 sm:p-7 self-end sm:self-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-16 h-16 mx-auto rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50 flex items-center justify-center text-4xl mb-4">
               🥺
             </div>
 
-            <h3 className="text-3xl font-black text-gray-900 dark:text-white text-center mb-3">
+            <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white text-center mb-3">
               Bạn muốn rời đi sao?
             </h3>
-            <p className="text-lg text-gray-600 dark:text-gray-300 text-center leading-relaxed mb-7">
+            <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300 text-center leading-relaxed mb-6 sm:mb-7">
               Nếu đăng xuất, bạn sẽ không thể tải tài liệu hay bình luận được nữa đâu.
             </p>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={() => setIsLogoutConfirmOpen(false)}
                 className="py-3.5 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-bold bg-gray-50 dark:bg-gray-700/60 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"

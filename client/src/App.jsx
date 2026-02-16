@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { Menu, X, Home, Hourglass, CalendarDays, LayoutGrid, Moon, Sun } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header'; 
 import AuthModal from './components/AuthModal'; // Import Modal
@@ -17,6 +18,39 @@ import Documents from './pages/Documents';
 import Exams from './pages/Exams';
 import DocumentViewer from './pages/DocumentViewer';
 import Portal from './pages/Portal';
+
+const MOBILE_NAV_ITEMS = [
+  { to: '/', label: 'Dashboard', icon: Home },
+  { to: '/timer', label: 'StudyTime', icon: Hourglass },
+  { to: '/timetable', label: 'Lịch', icon: CalendarDays },
+  { to: '/portal', label: 'Tiện ích', icon: LayoutGrid },
+];
+
+const MobileBottomNav = () => (
+  <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-2 py-2 backdrop-blur-lg dark:border-gray-700 dark:bg-gray-900/95 lg:hidden">
+    <div className="mx-auto grid max-w-xl grid-cols-4 gap-1">
+      {MOBILE_NAV_ITEMS.map((item) => {
+        const Icon = item.icon;
+        return (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-[11px] font-semibold transition-colors ${
+                isActive
+                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
+                  : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+              }`
+            }
+          >
+            <Icon size={18} />
+            <span>{item.label}</span>
+          </NavLink>
+        );
+      })}
+    </div>
+  </nav>
+);
 
 function App() {
   // 1. Khai báo State quản lý User và Modal
@@ -61,12 +95,70 @@ function App() {
     localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsMobileSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <Router>
       <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
-        <Sidebar />
+        <div className="hidden lg:block">
+          <Sidebar />
+        </div>
 
-        <div className="flex-1 ml-64 flex flex-col h-screen">
+        {isMobileSidebarOpen && (
+          <div className="fixed inset-0 z-[90] flex lg:hidden">
+            <div
+              className="flex-1 bg-black/45 backdrop-blur-[1px]"
+              onClick={() => setIsMobileSidebarOpen(false)}
+            />
+            <div className="relative h-full w-[86vw] max-w-xs">
+              <button
+                onClick={() => setIsMobileSidebarOpen(false)}
+                className="absolute right-3 top-3 z-10 rounded-lg border border-gray-200 bg-white/90 p-1.5 text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-300"
+                aria-label="Đóng menu"
+              >
+                <X size={16} />
+              </button>
+              <Sidebar
+                isMobile
+                onNavigate={() => setIsMobileSidebarOpen(false)}
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="flex min-h-screen flex-1 flex-col lg:ml-64">
+          <div className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-gray-200 bg-white/95 px-3 backdrop-blur-md dark:border-gray-700 dark:bg-gray-900/95 lg:hidden">
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+              aria-label="Mở menu"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="text-sm font-extrabold tracking-tight text-gray-800 dark:text-white">
+              Whalio 2.0
+            </div>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+              aria-label="Đổi giao diện"
+            >
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+          </div>
+
+          <div className="hidden lg:block">
           {/* HEADER: Truyền props xuống để Header biết:
              - user: Có ai đang đăng nhập không?
              - onLoginClick: Khi bấm nút "Đăng nhập" thì làm gì? (Mở modal)
@@ -79,9 +171,10 @@ function App() {
             darkMode={darkMode}
             onToggleDarkMode={() => setDarkMode(!darkMode)}
           /> 
+          </div>
 
           {/* Main content */}
-          <main className="flex-1 overflow-y-auto p-6 scroll-smooth">
+          <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-5 lg:p-6 pb-24 lg:pb-6 scroll-smooth">
             <Routes>
             <Route path="/" element={<Dashboard user={user} darkMode={darkMode} setDarkMode={setDarkMode} />} />
               <Route path="/gpa" element={<GpaCalc />} />
@@ -98,6 +191,8 @@ function App() {
               <Route path="/portal" element={<Portal user={user} />} />
             </Routes>
           </main>
+
+          <MobileBottomNav />
         </div>
 
         {/* MODAL: Đặt ở đây để nó phủ lên toàn bộ ứng dụng khi mở */}

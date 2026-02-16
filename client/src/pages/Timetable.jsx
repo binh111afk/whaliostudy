@@ -25,6 +25,14 @@ import {
   Building,
 } from "lucide-react";
 
+const isMobileViewport = () =>
+  typeof window !== "undefined" && window.innerWidth < 640;
+
+const getConfirmToastOptions = () => ({
+  position: isMobileViewport() ? "bottom-center" : "top-center",
+  duration: Infinity,
+});
+
 const Timetable = () => {
   const user = JSON.parse(localStorage.getItem("user"));
 
@@ -108,7 +116,7 @@ const Timetable = () => {
 
   const handleDeleteClass = (classId) => {
     toast.custom((t) => (
-      <div className="w-[90vw] sm:max-w-[320px] bg-white dark:bg-gray-900 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+      <div className="w-[calc(100vw-1rem)] sm:w-full sm:max-w-[360px] bg-white dark:bg-gray-900 p-4 sm:p-5 rounded-t-2xl sm:rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
         
         {/* Tiêu đề ngắn gọn */}
         <h3 className="text-lg font-bold text-gray-900 dark:text-white">
@@ -119,12 +127,12 @@ const Timetable = () => {
         </p>
   
         {/* Nút bấm ngang hàng */}
-        <div className="flex w-full gap-3">
+        <div className="flex w-full flex-col-reverse sm:flex-row gap-2 sm:gap-3">
           
           {/* Nút Hủy */}
           <button
             onClick={() => toast.dismiss(t)}
-            className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+            className="w-full flex-1 py-3 sm:py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
           >
             Hủy
           </button>
@@ -136,25 +144,29 @@ const Timetable = () => {
               try {
                 await timetableService.deleteClass(classId, user.username);
                 loadTimetable();
-                toast.success("Đã xóa môn học!", { position: 'top-center' });
+                toast.success("Đã xóa môn học!", {
+                  position: isMobileViewport() ? "bottom-center" : "top-center",
+                });
               } catch (error) {
                 console.error(error);
-                toast.error("Lỗi khi xóa môn!", { position: 'top-center' });
+                toast.error("Lỗi khi xóa môn!", {
+                  position: isMobileViewport() ? "bottom-center" : "top-center",
+                });
               }
             }}
-            className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
+            className="w-full flex-1 py-3 sm:py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
           >
             Xóa
           </button>
         </div>
   
       </div>
-    ), { position: 'top-center', duration: Infinity });
+    ), getConfirmToastOptions());
   };
 
   const handleDeleteAll = () => {
     toast.custom((t) => (
-      <div className="w-[90vw] sm:max-w-[320px] bg-white dark:bg-gray-900 p-5 rounded-2xl shadow-xl border border-red-100 dark:border-red-900/30 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
+      <div className="w-[calc(100vw-1rem)] sm:w-full sm:max-w-[360px] bg-white dark:bg-gray-900 p-4 sm:p-5 rounded-t-2xl sm:rounded-2xl shadow-xl border border-red-100 dark:border-red-900/30 flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
         
         {/* Tiêu đề Cảnh báo mạnh */}
         <h3 className="text-lg font-bold text-red-600 dark:text-red-500">
@@ -165,11 +177,11 @@ const Timetable = () => {
         </p>
   
         {/* Nút bấm */}
-        <div className="flex w-full gap-3">
+        <div className="flex w-full flex-col-reverse sm:flex-row gap-2 sm:gap-3">
           
           <button
             onClick={() => toast.dismiss(t)}
-            className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+            className="w-full flex-1 py-3 sm:py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
           >
             Giữ lại
           </button>
@@ -180,20 +192,24 @@ const Timetable = () => {
               try {
                 await timetableService.clearTimetable(user.username);
                 loadTimetable();
-                toast.success("Đã dọn sạch thời khóa biểu!", { position: 'top-center' });
+                toast.success("Đã dọn sạch thời khóa biểu!", {
+                  position: isMobileViewport() ? "bottom-center" : "top-center",
+                });
               } catch (error) {
                 console.error(error);
-                toast.error("Lỗi khi xóa dữ liệu!", { position: 'top-center' });
+                toast.error("Lỗi khi xóa dữ liệu!", {
+                  position: isMobileViewport() ? "bottom-center" : "top-center",
+                });
               }
             }}
-            className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-red-500/30 transition-all"
+            className="w-full flex-1 py-3 sm:py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-red-500/30 transition-all"
           >
             Xóa hết
           </button>
         </div>
   
       </div>
-    ), { position: 'top-center', duration: Infinity });
+    ), getConfirmToastOptions());
   };
 
   const handleFileUpload = async (e) => {
@@ -314,14 +330,14 @@ const Timetable = () => {
       <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative">
         <div className="flex justify-between items-start">
           <div className="flex-1">
-            <h3 className="font-bold text-gray-800 dark:text-white text-lg leading-tight mb-2">
-              {cls.subject}
-            </h3>
             <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
               <span className="flex items-center gap-2 font-medium text-blue-600">
                 <Clock size={16} /> {timeDisplay} (Tiết {cls.startPeriod}-
                 {endPeriod})
               </span>
+              <h3 className="font-bold text-gray-800 dark:text-white text-lg leading-tight pt-0.5">
+                {cls.subject}
+              </h3>
               <span className="flex items-center gap-2">
                 <MapPin size={16} /> {cls.room} - {cls.campus}
               </span>
@@ -511,7 +527,7 @@ const Timetable = () => {
 
       {/* --- MOBILE VIEW (TABS) --- */}
       <div className="md:hidden">
-        <div className="flex overflow-x-auto pb-4 gap-2 no-scrollbar mb-2">
+        <div className="flex overflow-x-auto pb-4 gap-2 no-scrollbar mb-2 whitespace-nowrap snap-x snap-mandatory">
           {days.map((day, index) => {
             const date = new Date(currentWeekStart);
             date.setDate(date.getDate() + index);
@@ -522,7 +538,7 @@ const Timetable = () => {
               <button
                 key={day}
                 onClick={() => setSelectedMobileDay(day)}
-                className={`flex flex-col items-center min-w-[70px] p-2 rounded-xl border-2 transition-all ${
+                className={`flex flex-col items-center min-w-[74px] p-2 rounded-xl border-2 transition-all snap-start ${
                   isSelected
                     ? "border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-blue-900/30"
                     : isToday
