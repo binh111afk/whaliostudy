@@ -453,7 +453,7 @@ const StudyTimer = () => {
                 {isManualFullscreen ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
               </button>
 
-              <div className="mx-auto max-w-xl text-center">
+              <div className="mx-auto max-w-2xl text-center">
                 <div className="relative mx-auto h-[13rem] w-[13rem] md:h-[15rem] md:w-[15rem] xl:h-[17rem] xl:w-[17rem]">
                   <svg className="h-full w-full -rotate-90" viewBox="0 0 320 320">
                     <circle cx="160" cy="160" r={ring.radius} stroke="rgba(148,163,184,0.32)" strokeWidth="12" fill="none" />
@@ -580,7 +580,7 @@ const StudyTimer = () => {
                   {SMART_TIPS[tipIndex]}
                 </FramerMotion.motion.div>
 
-                <div className="mt-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/75 dark:bg-white/5 p-4 text-left">
+                <div className="mt-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/75 dark:bg-white/5 p-4 text-left min-h-[300px] flex flex-col">
                   <div className="mb-3 flex items-center justify-between gap-2">
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Ghi chú nhanh</p>
                     <div className="flex items-center gap-2">
@@ -611,8 +611,8 @@ const StudyTimer = () => {
                     value={noteContent}
                     onChange={(e) => setNoteContent(e.target.value)}
                     placeholder="Soạn ghi chú cho phiên học này..."
-                    rows={4}
-                    className="w-full resize-none rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/20 px-3 py-2 text-sm text-slate-700 dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-400"
+                    rows={8}
+                    className="w-full flex-1 min-h-[220px] resize-none rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/20 px-3 py-2 text-sm text-slate-700 dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-400"
                   />
                 </div>
               </div>
@@ -837,3 +837,4 @@ const StudyTimer = () => {
 };
 
 export default StudyTimer;
+

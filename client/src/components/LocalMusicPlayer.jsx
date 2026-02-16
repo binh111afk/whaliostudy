@@ -25,6 +25,8 @@ const LocalMusicPlayer = () => {
   const fileInputRef = useRef(null);
   const objectUrlRef = useRef(null);
   const playlistRef = useRef(null);
+  const autoCycleStartIndexRef = useRef(null);
+  const autoRemainingIndexesRef = useRef([]);
 
   const [tracks, setTracks] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
@@ -42,6 +44,11 @@ const LocalMusicPlayer = () => {
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = null;
     }
+  }, []);
+
+  const resetAutoCycle = useCallback(() => {
+    autoCycleStartIndexRef.current = null;
+    autoRemainingIndexesRef.current = [];
   }, []);
 
   const savePlaylistOrder = useCallback(async (nextTracks) => {
@@ -180,6 +187,7 @@ const LocalMusicPlayer = () => {
           )
         );
 
+        resetAutoCycle();
         setTracks((prev) => {
           const next = [...prev, ...entries].sort((a, b) => a.createdAt - b.createdAt);
           if (currentIndex === -1 && next.length > 0) {
@@ -196,7 +204,7 @@ const LocalMusicPlayer = () => {
         setIsSaving(false);
       }
     },
-    [currentIndex, savePlaylistOrder]
+    [currentIndex, resetAutoCycle, savePlaylistOrder]
   );
 
   const handleFileUpload = useCallback(
@@ -221,22 +229,60 @@ const LocalMusicPlayer = () => {
     audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
   }, [currentTrack, isPlaying]);
 
+  const autoNextTrack = useCallback(() => {
+    if (tracks.length === 0) return;
+
+    if (tracks.length === 1) {
+      setCurrentIndex(0);
+      setIsPlaying(true);
+      return;
+    }
+
+    const safeCurrentIndex = currentIndex >= 0 && currentIndex < tracks.length ? currentIndex : 0;
+    let cycleStart = autoCycleStartIndexRef.current;
+    let remaining = Array.isArray(autoRemainingIndexesRef.current)
+      ? autoRemainingIndexesRef.current.filter((idx) => idx >= 0 && idx < tracks.length && idx !== safeCurrentIndex)
+      : [];
+
+    const isInvalidCycleStart = cycleStart === null || cycleStart < 0 || cycleStart >= tracks.length;
+    if (isInvalidCycleStart) {
+      cycleStart = safeCurrentIndex;
+      remaining = Array.from({ length: tracks.length }, (_, idx) => idx).filter((idx) => idx !== cycleStart);
+    }
+
+    if (remaining.length === 0) {
+      setCurrentIndex(cycleStart);
+      setIsPlaying(true);
+      resetAutoCycle();
+      return;
+    }
+
+    const randomIdx = remaining[Math.floor(Math.random() * remaining.length)];
+    autoRemainingIndexesRef.current = remaining.filter((idx) => idx !== randomIdx);
+    autoCycleStartIndexRef.current = cycleStart;
+    setCurrentIndex(randomIdx);
+    setIsPlaying(true);
+  }, [currentIndex, resetAutoCycle, tracks.length]);
+
   const nextTrack = useCallback(() => {
     if (tracks.length === 0) return;
+    resetAutoCycle();
     setCurrentIndex((prev) => (prev + 1) % tracks.length);
     setIsPlaying(true);
-  }, [tracks.length]);
+  }, [resetAutoCycle, tracks.length]);
 
   const prevTrack = useCallback(() => {
     if (tracks.length === 0) return;
+    resetAutoCycle();
     setCurrentIndex((prev) => (prev - 1 + tracks.length) % tracks.length);
     setIsPlaying(true);
-  }, [tracks.length]);
+  }, [resetAutoCycle, tracks.length]);
 
   const removeTrack = useCallback(
     async (id) => {
       try {
         await musicDB.removeItem(id);
+        resetAutoCycle();
         setTracks((prev) => {
           const removedIndex = prev.findIndex((t) => t.id === id);
           const next = prev.filter((t) => t.id !== id);
@@ -262,7 +308,7 @@ const LocalMusicPlayer = () => {
         console.error("Delete track error:", err);
       }
     },
-    [currentIndex, savePlaylistOrder]
+    [currentIndex, resetAutoCycle, savePlaylistOrder]
   );
 
   const handleDragOver = useCallback((event) => {
@@ -285,6 +331,10 @@ const LocalMusicPlayer = () => {
     [saveFilesToLibrary]
   );
 
+  useEffect(() => {
+    resetAutoCycle();
+  }, [tracks.length, resetAutoCycle]);
+
   const waveBars = useMemo(() => Array.from({ length: 18 }, (_, i) => i), []);
 
   const scrollPlaylist = useCallback((direction) => {
@@ -305,7 +355,7 @@ const LocalMusicPlayer = () => {
 
       <audio
         ref={audioRef}
-        onEnded={nextTrack}
+        onEnded={autoNextTrack}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
       />
@@ -468,6 +518,7 @@ const LocalMusicPlayer = () => {
                   >
                     <button
                       onClick={() => {
+                        resetAutoCycle();
                         setCurrentIndex(idx);
                         setIsPlaying(true);
                       }}
@@ -495,3 +546,4 @@ const LocalMusicPlayer = () => {
 };
 
 export default LocalMusicPlayer;
+
