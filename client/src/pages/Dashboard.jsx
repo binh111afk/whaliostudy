@@ -1722,10 +1722,10 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                 </h3>
 
                 {/* NÚT CHUYỂN ĐỔI CHART */}
-                <div className="bg-gray-100 dark:bg-gray-700 p-1 rounded-lg flex text-xs font-bold">
+                <div className="w-full sm:w-auto max-w-[280px] bg-gray-100 dark:bg-gray-700 p-1 rounded-lg grid grid-cols-2 text-xs font-bold">
                   <button
                     onClick={() => setChartMode("credit")}
-                    className={`px-3 py-1.5 rounded-md transition-all ${
+                    className={`px-3 py-2 rounded-md text-center transition-all ${
                       chartMode === "credit"
                         ? "bg-white dark:bg-gray-600 text-green-600 dark:text-green-400 shadow-sm"
                         : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
@@ -1735,7 +1735,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                   </button>
                   <button
                     onClick={() => setChartMode("study")}
-                    className={`px-3 py-1.5 rounded-md transition-all ${
+                    className={`px-3 py-2 rounded-md text-center transition-all ${
                       chartMode === "study"
                         ? "bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm"
                         : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"

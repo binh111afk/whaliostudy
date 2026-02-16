@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import { Menu, X, Home, Hourglass, CalendarDays, LayoutGrid, Moon, Sun } from 'lucide-react';
+import { Menu, X, Home, Hourglass, CalendarDays, LayoutGrid, Moon, Sun, Settings, LogOut, Save } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header'; 
 import AuthModal from './components/AuthModal'; // Import Modal
+import BackupRestoreModal from './components/BackupRestoreModal';
 
 // Import các trang
 import GpaCalc from './pages/GpaCalc';
@@ -26,31 +27,129 @@ const MOBILE_NAV_ITEMS = [
   { to: '/portal', label: 'Tiện ích', icon: LayoutGrid },
 ];
 
-const MobileBottomNav = () => (
-  <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-2 py-2 backdrop-blur-lg dark:border-gray-700 dark:bg-gray-900/95 lg:hidden">
-    <div className="mx-auto grid max-w-xl grid-cols-4 gap-1">
-      {MOBILE_NAV_ITEMS.map((item) => {
-        const Icon = item.icon;
-        return (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-[11px] font-semibold transition-colors ${
-                isActive
-                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
-                  : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-              }`
-            }
-          >
-            <Icon size={18} />
-            <span>{item.label}</span>
-          </NavLink>
-        );
-      })}
-    </div>
-  </nav>
-);
+const MobileBottomNav = ({ user, onLoginClick, onLogoutClick }) => {
+  const navigate = useNavigate();
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+  const profileMenuRef = useRef(null);
+
+  useEffect(() => {
+    const onClickOutside = (event) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', onClickOutside);
+    return () => document.removeEventListener('pointerdown', onClickOutside);
+  }, []);
+
+  return (
+    <>
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-2 py-2 backdrop-blur-lg dark:border-gray-700 dark:bg-gray-900/95 lg:hidden">
+        <div className="mx-auto grid max-w-xl grid-cols-5 gap-1">
+          {MOBILE_NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-[11px] font-semibold transition-colors ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
+                      : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                  }`
+                }
+              >
+                <Icon size={18} />
+                <span>{item.label}</span>
+              </NavLink>
+            );
+          })}
+
+          <div ref={profileMenuRef} className="relative flex items-center justify-center">
+            <button
+              onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-transparent bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              aria-label="Mở menu người dùng"
+            >
+              {user?.avatar && user.avatar.includes('/') ? (
+                <img
+                  src={user.avatar}
+                  alt="Avatar"
+                  className="h-9 w-9 rounded-full border border-gray-200 object-cover dark:border-gray-600"
+                />
+              ) : (
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+                  {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
+                </span>
+              )}
+            </button>
+
+            {isProfileMenuOpen && (
+              <div className="absolute bottom-12 right-0 w-56 rounded-2xl border border-gray-200 bg-white p-2 shadow-2xl dark:border-gray-700 dark:bg-gray-800">
+                <button
+                  onClick={() => {
+                    setIsProfileMenuOpen(false);
+                    navigate('/profile');
+                  }}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                >
+                  <Settings size={16} />
+                  Cài đặt
+                </button>
+
+                {user ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        setIsBackupModalOpen(true);
+                      }}
+                      className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                    >
+                      <Save size={16} />
+                      Sao lưu & Khôi phục
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        onLogoutClick();
+                      }}
+                      className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                    >
+                      <LogOut size={16} />
+                      Đăng xuất
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      onLoginClick();
+                    }}
+                    className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                  >
+                    Đăng nhập
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      {user && (
+        <BackupRestoreModal
+          isOpen={isBackupModalOpen}
+          onClose={() => setIsBackupModalOpen(false)}
+          user={user}
+        />
+      )}
+    </>
+  );
+};
 
 function App() {
   // 1. Khai báo State quản lý User và Modal
@@ -192,7 +291,11 @@ function App() {
             </Routes>
           </main>
 
-          <MobileBottomNav />
+          <MobileBottomNav
+            user={user}
+            onLoginClick={() => setIsModalOpen(true)}
+            onLogoutClick={handleLogout}
+          />
         </div>
 
         {/* MODAL: Đặt ở đây để nó phủ lên toàn bộ ứng dụng khi mở */}
