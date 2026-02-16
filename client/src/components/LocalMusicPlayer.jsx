@@ -33,6 +33,12 @@ const isValidAudioFile = (file) => {
   return hasAllowedExt || hasAllowedMime;
 };
 
+const stripAudioExtension = (name) => {
+  const raw = String(name || "Unknown Track").trim();
+  const stripped = raw.replace(/\.(mp3|mp4)$/i, "").trim();
+  return stripped || raw;
+};
+
 const LocalMusicPlayer = ({ globalMode = false }) => {
   const location = useLocation();
   const audioRef = useRef(null);
@@ -55,6 +61,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   const [overlayState, setOverlayState] = useState(null);
   const hasRestoredPlaybackRef = useRef(false);
   const lastPlaybackUpdatedAtRef = useRef(0);
+  const pendingSeekRef = useRef(null);
 
   const currentTrack = currentIndex >= 0 ? tracks[currentIndex] : null;
   const isStudyTimerRoute = location.pathname === "/timer";
@@ -93,7 +100,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
         if (!value?.blob) return;
         loaded.push({
           id: key,
-          name: value.name || "Unknown Track",
+          name: stripAudioExtension(value.name || "Unknown Track"),
           type: value.type || "audio/mpeg",
           size: value.size || 0,
           createdAt: value.createdAt || Date.now(),
@@ -155,6 +162,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   }, []);
 
   const syncPlaybackFromStorage = useCallback(() => {
+    if (globalMode && isStudyTimerRoute) return;
     try {
       const raw = localStorage.getItem(MUSIC_PLAYBACK_STORAGE_KEY);
       if (!raw) return;
@@ -166,6 +174,26 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
 
       if (typeof saved.volume === "number") {
         setVolume(Math.min(1, Math.max(0, saved.volume)));
+      }
+      if (typeof saved.currentTime === "number" && Number.isFinite(saved.currentTime)) {
+        const nextTime = Math.max(0, saved.currentTime);
+        pendingSeekRef.current = nextTime;
+        const audio = audioRef.current;
+        if (audio && audio.src) {
+          const applySeek = () => {
+            try {
+              audio.currentTime = nextTime;
+            } catch {
+              return;
+            }
+            pendingSeekRef.current = null;
+          };
+          if (audio.readyState >= 1) {
+            applySeek();
+          } else {
+            audio.addEventListener("loadedmetadata", applySeek, { once: true });
+          }
+        }
       }
 
       if (Array.isArray(tracks) && tracks.length > 0) {
@@ -185,30 +213,49 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     } catch (err) {
       console.error("Sync playback state error:", err);
     }
-  }, [currentIndex, tracks]);
+  }, [currentIndex, globalMode, isStudyTimerRoute, tracks]);
 
   useEffect(() => {
-    if (!tracks.length) return;
+    if (!tracks.length || (globalMode && isStudyTimerRoute)) return;
     syncPlaybackFromStorage();
-  }, [tracks, syncPlaybackFromStorage]);
+  }, [globalMode, isStudyTimerRoute, tracks, syncPlaybackFromStorage]);
 
   useEffect(() => {
-    if (!globalMode) return;
+    if (!globalMode || isStudyTimerRoute) return;
     const id = setInterval(syncPlaybackFromStorage, 1000);
     return () => clearInterval(id);
-  }, [globalMode, syncPlaybackFromStorage]);
+  }, [globalMode, isStudyTimerRoute, syncPlaybackFromStorage]);
 
   useEffect(() => {
-    if (currentIndex < 0 || !tracks[currentIndex]) return;
-    const payload = {
-      currentTrackId: tracks[currentIndex].id,
-      isPlaying,
-      volume,
-      updatedAt: Date.now(),
+    if (globalMode && !isAudioActive) return;
+
+    const persistPlaybackState = () => {
+      if (currentIndex < 0 || !tracks[currentIndex]) return;
+      const payload = {
+        currentTrackId: tracks[currentIndex].id,
+        isPlaying,
+        volume,
+        currentTime: Math.max(0, Number(audioRef.current?.currentTime) || 0),
+        updatedAt: Date.now(),
+      };
+      lastPlaybackUpdatedAtRef.current = payload.updatedAt;
+      localStorage.setItem(MUSIC_PLAYBACK_STORAGE_KEY, JSON.stringify(payload));
     };
-    lastPlaybackUpdatedAtRef.current = payload.updatedAt;
-    localStorage.setItem(MUSIC_PLAYBACK_STORAGE_KEY, JSON.stringify(payload));
-  }, [currentIndex, isPlaying, tracks, volume]);
+
+    persistPlaybackState();
+
+    if (isPlaying && isAudioActive) {
+      const id = setInterval(persistPlaybackState, 1000);
+      return () => {
+        clearInterval(id);
+        persistPlaybackState();
+      };
+    }
+
+    return () => {
+      persistPlaybackState();
+    };
+  }, [currentIndex, isAudioActive, isPlaying, tracks, volume]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -241,6 +288,23 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     audio.src = nextUrl;
     audio.load();
 
+    const pendingSeek = pendingSeekRef.current;
+    if (pendingSeek !== null && Number.isFinite(pendingSeek)) {
+      const applySeek = () => {
+        try {
+          audio.currentTime = Math.max(0, pendingSeek);
+        } catch {
+          return;
+        }
+        pendingSeekRef.current = null;
+      };
+      if (audio.readyState >= 1) {
+        applySeek();
+      } else {
+        audio.addEventListener("loadedmetadata", applySeek, { once: true });
+      }
+    }
+
     if (isPlaying || shouldForcePlayRef.current) {
       shouldForcePlayRef.current = false;
       audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
@@ -267,7 +331,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
         const now = Date.now();
         const entries = validFiles.map((file, index) => ({
           id: `track_${now}_${index}_${Math.random().toString(36).slice(2, 8)}`,
-          name: file.name,
+          name: stripAudioExtension(file.name),
           type: file.type || "audio/mpeg",
           size: file.size,
           blob: file,
