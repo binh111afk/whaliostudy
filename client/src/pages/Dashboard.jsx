@@ -1708,7 +1708,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
           {/* Main Grid: Chart & Schedule */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* CỘT TRÁI: BIỂU ĐỒ ĐA NĂNG */}
-              <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative">
+              <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden">
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-6">
                 <h3 className="font-bold text-gray-800 dark:text-white flex items-center gap-2">
                   {chartMode === "credit" ? (
@@ -1746,12 +1746,12 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                 </div>
               </div>
 
-              <div className="h-64 w-full">
+              <div className={chartMode === "credit" ? "w-full" : "h-64 w-full"}>
                 {chartMode === "credit" ? (
                   // --- BIỂU ĐỒ TIẾN ĐỘ (REMASTERED) ---
-                  <div className="flex flex-col sm:flex-row items-center justify-center h-full gap-6 sm:gap-10 p-2">
+                  <div className="flex flex-col items-center justify-center lg:flex-row gap-5 sm:gap-6 lg:gap-10 p-2">
                     {/* PHẦN 1: BIỂU ĐỒ TRÒN */}
-                    <div className="relative w-56 h-56 flex-shrink-0 group">
+                    <div className="relative w-44 h-44 sm:w-52 sm:h-52 lg:w-56 lg:h-56 flex-shrink-0 group">
                       <ResponsiveContainer width="100%" height="100%">
                         <RadialBarChart
                           innerRadius="75%"
@@ -1801,7 +1801,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
 
                       {/* Text ở giữa biểu đồ */}
                       <div className="absolute inset-0 flex flex-col items-center justify-center pt-8 pointer-events-none">
-                        <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 drop-shadow-sm">
+                        <span className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 drop-shadow-sm">
                           {creditPercent}%
                         </span>
                         <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-1">
@@ -1814,7 +1814,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                     <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 w-full max-w-sm">
                       {/* Box 1: Mục tiêu (Màu Xanh Dương) */}
                       <div
-                        className="flex flex-col p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 transition-transform hover:scale-105 cursor-pointer"
+                        className="flex flex-col p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 transition-transform lg:hover:scale-105 cursor-pointer"
                         onClick={() => setIsTargetModalOpen(true)}
                       >
                         <div className="flex items-center gap-2 mb-1">
@@ -1832,7 +1832,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                       </div>
 
                       {/* Box 2: Đã tích lũy (Màu Xanh Lá) */}
-                      <div className="flex flex-col p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 transition-transform hover:scale-105">
+                      <div className="flex flex-col p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 transition-transform lg:hover:scale-105">
                         <div className="flex items-center gap-2 mb-1">
                           <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                           <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-300 uppercase">
@@ -1848,7 +1848,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                       </div>
 
                       {/* Box 3: Còn lại (Màu Cam) */}
-                      <div className="flex flex-col p-4 rounded-2xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 transition-transform hover:scale-105">
+                      <div className="flex flex-col p-4 rounded-2xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 transition-transform lg:hover:scale-105">
                         <div className="flex items-center gap-2 mb-1">
                           <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                           <span className="text-xs font-semibold text-orange-600 dark:text-orange-300 uppercase">
@@ -1864,7 +1864,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                       </div>
 
                       {/* Box 4: Môn đã qua (Màu Tím) */}
-                      <div className="flex flex-col p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 transition-transform hover:scale-105">
+                      <div className="flex flex-col p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 transition-transform lg:hover:scale-105">
                         <div className="flex items-center gap-2 mb-1">
                           <BookOpen className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                           <span className="text-xs font-semibold text-purple-600 dark:text-purple-300 uppercase">
