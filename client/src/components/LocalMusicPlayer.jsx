@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import localforage from "localforage";
 import Marquee from "react-fast-marquee";
-import { Music2, Play, Pause, SkipBack, SkipForward, Plus, X, Volume2, Disc3, ChevronUp, ChevronDown, ListMusic, Timer } from "lucide-react";
+import { Music2, Play, Pause, SkipBack, SkipForward, Plus, X, Volume2, Disc3, ChevronUp, ChevronDown, ListMusic, Timer, XCircle } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 const musicDB = localforage.createInstance({
@@ -13,6 +13,7 @@ const PLAYLIST_META_KEY = "__playlist_meta_v1__";
 const STUDY_OVERLAY_STORAGE_KEY = "whalio_study_overlay_state_v1";
 const MUSIC_PLAYBACK_STORAGE_KEY = "whalio_music_playback_v1";
 const MUSIC_SYNC_EVENT = "whalio:music-playback-sync";
+const FLOATING_DISMISSED_KEY = "whalio_floating_dismissed_v1";
 const ALLOWED_EXT = [".mp3", ".mp4"];
 const ALLOWED_MIME = ["audio/mpeg", "audio/mp3", "audio/mp4", "video/mp4"];
 
@@ -70,7 +71,16 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isFloatingPlaylistOpen, setIsFloatingPlaylistOpen] = useState(false);
   const [isFloatingCollapsed, setIsFloatingCollapsed] = useState(false);
+  const [isFloatingDismissed, setIsFloatingDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(FLOATING_DISMISSED_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [overlayState, setOverlayState] = useState(null);
+  const currentTrackIdRef = useRef(null);
+  const lastLoadedTrackIdRef = useRef(null);
   const hasRestoredPlaybackRef = useRef(false);
   const lastPlaybackUpdatedAtRef = useRef(0);
   const pendingSeekRef = useRef(null);
@@ -317,6 +327,29 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
       audio.load();
       setIsPlaying(false);
       revokeCurrentObjectUrl();
+      lastLoadedTrackIdRef.current = null;
+      return;
+    }
+
+    const trackId = currentTrack.id;
+    const alreadyLoaded = lastLoadedTrackIdRef.current === trackId && audio.src;
+    
+    if (alreadyLoaded) {
+      if (isPlaying || shouldForcePlayRef.current) {
+        shouldForcePlayRef.current = false;
+        if (audio.paused) {
+          audio
+            .play()
+            .then(() => {
+              isAutoAdvancingRef.current = false;
+              setIsPlaying(true);
+            })
+            .catch(() => {
+              isAutoAdvancingRef.current = false;
+              setIsPlaying(false);
+            });
+        }
+      }
       return;
     }
 
@@ -326,6 +359,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     objectUrlRef.current = nextUrl;
     audio.src = nextUrl;
     audio.load();
+    lastLoadedTrackIdRef.current = trackId;
 
     const pendingSeek = pendingSeekRef.current;
     if (pendingSeek !== null && Number.isFinite(pendingSeek)) {
@@ -438,17 +472,25 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
       return;
     }
 
+    if (isStudyTimerRoute) {
+      showFloatingPlayer();
+    }
     shouldForcePlayRef.current = false;
     audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
-  }, [currentTrack, isPlaying]);
+  }, [currentTrack, isPlaying, isStudyTimerRoute, showFloatingPlayer]);
 
   const autoNextTrack = useCallback(() => {
+    console.log('🎵 autoNextTrack triggered');
     const latestTracks = tracksRef.current;
     const length = latestTracks.length;
-    if (length === 0) return;
+    if (length === 0) {
+      console.log('❌ No tracks available');
+      return;
+    }
     isAutoAdvancingRef.current = true;
 
     if (length === 1) {
+      console.log('🔁 Only 1 track, replaying');
       const audio = audioRef.current;
       if (audio) {
         audio.currentTime = 0;
@@ -472,16 +514,22 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     const safeCurrentIndex = latestIndex >= 0 && latestIndex < length ? latestIndex : 0;
     let cycleStart = autoCycleStartIndexRef.current;
     let remaining = Array.isArray(autoRemainingIndexesRef.current)
-      ? autoRemainingIndexesRef.current.filter((idx) => idx >= 0 && idx < length && idx !== safeCurrentIndex)
+      ? autoRemainingIndexesRef.current.filter((idx) => idx >= 0 && idx < length)
       : [];
 
     const isInvalidCycleStart = cycleStart === null || cycleStart < 0 || cycleStart >= length;
     if (isInvalidCycleStart) {
+      console.log('🆕 Starting new cycle from index', safeCurrentIndex);
       cycleStart = safeCurrentIndex;
       remaining = buildShuffledIndexes(length, cycleStart);
+      autoCycleStartIndexRef.current = cycleStart;
+      autoRemainingIndexesRef.current = remaining;
     }
 
+    console.log('📋 Remaining queue:', remaining, 'Cycle start:', cycleStart);
+
     if (remaining.length === 0) {
+      console.log('♻️ Queue empty, restarting cycle from', cycleStart);
       shouldForcePlayRef.current = true;
       autoCycleStartIndexRef.current = cycleStart;
       autoRemainingIndexesRef.current = buildShuffledIndexes(length, cycleStart);
@@ -491,6 +539,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     }
 
     const [nextIndex, ...restQueue] = remaining;
+    console.log('▶️ Playing next track index:', nextIndex, 'Queue left:', restQueue.length);
     autoRemainingIndexesRef.current = restQueue;
     autoCycleStartIndexRef.current = cycleStart;
     shouldForcePlayRef.current = true;
@@ -571,6 +620,21 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     resetAutoCycle();
   }, [tracks.length, resetAutoCycle]);
 
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleEnded = () => {
+      console.log('🎼 Audio ended event fired');
+      autoNextTrack();
+    };
+
+    audio.addEventListener('ended', handleEnded);
+    return () => {
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [autoNextTrack]);
+
   const waveBars = useMemo(() => Array.from({ length: 18 }, (_, i) => i), []);
 
   const scrollPlaylist = useCallback((direction) => {
@@ -585,7 +649,25 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     ? Math.max(0, Math.ceil((Number(overlayState?.endAtTs) - Date.now()) / 1000))
     : Math.max(0, Number(overlayState?.timeLeft) || 0);
   const overlayTimeLabel = formatOverlayTime(overlayTimeLeft, Boolean(overlayState?.useHourFormat));
-  const floatingVisible = globalMode && !isStudyTimerRoute && (Boolean(currentTrack) || overlayIsRunning);
+  const floatingVisible = globalMode && !isStudyTimerRoute && !isFloatingDismissed && (Boolean(currentTrack) || overlayIsRunning);
+
+  const dismissFloatingPlayer = useCallback(() => {
+    setIsFloatingDismissed(true);
+    try {
+      localStorage.setItem(FLOATING_DISMISSED_KEY, 'true');
+    } catch {}
+  }, []);
+
+  const showFloatingPlayer = useCallback(() => {
+    setIsFloatingDismissed(false);
+    try {
+      localStorage.removeItem(FLOATING_DISMISSED_KEY);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    currentTrackIdRef.current = currentTrack?.id || null;
+  }, [currentTrack]);
 
   useEffect(() => {
     if (!floatingVisible) {
@@ -604,7 +686,6 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
 
       <audio
         ref={audioRef}
-        onEnded={autoNextTrack}
         onPlay={() => {
           isAutoAdvancingRef.current = false;
           setIsPlaying(true);
@@ -780,6 +861,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
                         shouldForcePlayRef.current = true;
                         setCurrentIndex(idx);
                         setIsPlaying(true);
+                        if (isStudyTimerRoute) showFloatingPlayer();
                       }}
                       className="text-left min-w-0 flex-1"
                     >
@@ -804,6 +886,15 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     )}
     {floatingVisible && (
       <div className="fixed bottom-[5.35rem] left-1/2 z-40 w-[93vw] -translate-x-1/2 rounded-3xl border border-slate-200/85 bg-white/95 p-3 shadow-2xl shadow-slate-900/10 backdrop-blur-xl sm:w-[89vw] sm:p-4 md:w-[84vw] lg:bottom-6 lg:w-[80vw] lg:max-w-[1120px] dark:border-white/15 dark:bg-slate-900/85">
+        <button
+          type="button"
+          onClick={dismissFloatingPlayer}
+          className="absolute -top-2 -left-2 z-10 flex items-center justify-center rounded-full bg-slate-500 p-1.5 text-white shadow-lg transition-colors hover:bg-rose-500 dark:bg-slate-600 dark:hover:bg-rose-500"
+          aria-label="Đóng player"
+          title="Đóng player (phát nhạc trên StudyTime để mở lại)"
+        >
+          <X size={14} />
+        </button>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
@@ -823,7 +914,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
             <button
               type="button"
               onClick={() => setIsFloatingCollapsed((prev) => !prev)}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/70 p-2 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10 lg:hidden"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/70 p-2 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
               aria-label={isFloatingCollapsed ? "Hiện player" : "Ẩn player"}
             >
               {isFloatingCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -840,7 +931,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
           </div>
         </div>
 
-        <div className={isFloatingCollapsed ? "hidden lg:block" : ""}>
+        <div className={isFloatingCollapsed ? "hidden" : ""}>
           {overlayState?.tip && (
             <p className="mt-2 rounded-xl bg-slate-100/80 px-3 py-1.5 text-sm text-slate-600 dark:bg-white/10 dark:text-slate-300 truncate">
               {overlayState.tip}
