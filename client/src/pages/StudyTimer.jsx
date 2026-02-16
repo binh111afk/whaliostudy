@@ -285,7 +285,7 @@ const StudyTimer = () => {
         transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[1650px] flex-col gap-4 px-4 py-4 md:px-6 md:py-6 xl:flex-row xl:items-start">
+      <div className="relative z-10 mx-auto flex w-full max-w-[1650px] flex-col gap-4 px-4 py-4 md:px-6 md:py-6 xl:flex-row xl:items-stretch">
         <div className="min-w-0 flex-1">
           <div className="mx-auto flex w-full max-w-5xl flex-col">
             <FramerMotion.motion.section
@@ -446,7 +446,7 @@ const StudyTimer = () => {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "100%", opacity: 0 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="mt-0 flex w-full flex-col border border-white/40 dark:border-white/10 bg-white/55 dark:bg-slate-900/45 p-4 backdrop-blur-xl md:p-5 xl:w-[390px] xl:shrink-0 xl:self-start xl:sticky xl:top-4"
+              className="mt-0 flex w-full flex-col border border-white/40 dark:border-white/10 bg-white/55 dark:bg-slate-900/45 p-4 backdrop-blur-xl md:p-5 xl:w-[390px] xl:shrink-0"
             >
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-slate-600 dark:text-slate-200">Tiện ích</h3>
@@ -458,7 +458,7 @@ const StudyTimer = () => {
                 </button>
               </div>
 
-              <div className="space-y-4 pr-1 xl:whalio-scrollbar xl:max-h-[calc(100dvh-8.5rem)] xl:overflow-y-auto">
+              <div className="space-y-4 pr-1">
                 <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
                   <h4 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Task phiên này</h4>
                   <div className="whalio-scrollbar max-h-48 space-y-2 overflow-y-auto pr-1">
