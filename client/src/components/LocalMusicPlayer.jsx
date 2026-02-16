@@ -790,6 +790,10 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
           0%, 100% { transform: scaleY(0.35); opacity: 0.45; }
           50% { transform: scaleY(1); opacity: 1; }
         }
+        @keyframes breathe {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
+        }
       `}</style>
 
       <audio
@@ -1058,7 +1062,10 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
               {currentTrack ? currentTrack.name : "Chưa phát nhạc"}
             </p>
           </div>
-          <p className="min-w-0 self-center px-2 text-sm leading-snug text-slate-600 italic text-center truncate dark:text-slate-300">
+          <p
+            className="min-w-0 self-center px-2 text-lg sm:text-xl leading-snug text-slate-600 italic text-center font-serif font-light tracking-[0.2em] truncate drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] dark:text-slate-200"
+            style={{ animation: "breathe 5s ease-in-out infinite" }}
+          >
             "{MOTIVATIONAL_QUOTES[motivationIndex]}"
           </p>
 
@@ -1193,7 +1200,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
             </div>
           )}
 
-          <p className="mt-2.5 text-center text-sm italic text-slate-500 dark:text-slate-300">
+          <p className="mt-2.5 text-center text-sm italic text-slate-400 dark:text-slate-500">
             <span className="font-bold">Nhắc nhở:</span> {REMINDER_MESSAGES[reminderIndex]}
           </p>
         </div>
