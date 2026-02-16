@@ -1055,7 +1055,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
           <X size={14} />
         </button>
         <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0 flex flex-1 items-center gap-[6px]">
+          <div className="min-w-0 flex flex-1 items-center gap-[55px]">
             <div className="min-w-0 sm:max-w-[48%]">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
                 StudyTime Live
