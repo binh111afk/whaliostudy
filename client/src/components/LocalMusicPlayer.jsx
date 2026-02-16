@@ -1054,28 +1054,26 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
         >
           <X size={14} />
         </button>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1" />
-
-          <div className="min-w-0 flex-1 text-center">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] items-center gap-4">
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
               StudyTime Live
             </p>
-            <p className="mt-1 text-base font-bold leading-tight text-slate-800 dark:text-slate-100 sm:text-lg">
+            <p className="mt-1 truncate text-base font-bold leading-tight text-slate-800 dark:text-slate-100 sm:text-lg">
               {currentTrack ? currentTrack.name : "Chưa phát nhạc"}
             </p>
-            <p
-              className="mt-2 min-w-0 px-2 text-lg leading-snug italic tracking-wide text-white/90 truncate drop-shadow-sm"
-              style={{
-                animation: "breathe 5s ease-in-out infinite",
-                fontFamily: "'Playfair Display', serif",
-              }}
-            >
-              "{MOTIVATIONAL_QUOTES[motivationIndex]}"
-            </p>
           </div>
+          <p
+            className="min-w-0 px-2 text-center text-lg leading-snug italic tracking-wide text-slate-900/90 truncate drop-shadow-sm dark:text-white/90"
+            style={{
+              animation: "breathe 5s ease-in-out infinite",
+              fontFamily: "'Playfair Display', serif",
+            }}
+          >
+            "{MOTIVATIONAL_QUOTES[motivationIndex]}"
+          </p>
 
-          <div className="flex flex-1 shrink-0 items-center justify-end gap-2">
+          <div className="flex shrink-0 items-center justify-end gap-2">
             <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/90 px-2.5 py-1.5 text-sm font-semibold text-slate-600 dark:border-white/15 dark:bg-white/5 dark:text-slate-200">
               <Timer size={14} />
               <span>{overlayTimeLabel}</span>
