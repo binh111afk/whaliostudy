@@ -1054,8 +1054,44 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
         >
           <X size={14} />
         </button>
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0 flex flex-1 items-center gap-[55px]">
+        <div className="flex items-start justify-between gap-2 sm:hidden">
+          <div className="min-w-0 flex-1">
+            <p className="whitespace-nowrap text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
+              StudyTime Live
+            </p>
+            <p className="mt-1 text-base font-bold leading-tight text-slate-800 dark:text-slate-100 break-words">
+              {currentTrack ? currentTrack.name : "Chưa phát nhạc"}
+            </p>
+          </div>
+
+          <div className="flex shrink-0 items-center justify-end gap-2">
+            <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/90 px-2.5 py-1.5 text-sm font-semibold text-slate-600 dark:border-white/15 dark:bg-white/5 dark:text-slate-200">
+              <Timer size={14} />
+              <span>{overlayTimeLabel}</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsFloatingCollapsed((prev) => !prev)}
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/70 p-2 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+              aria-label={isFloatingCollapsed ? "Hiện player" : "Ẩn player"}
+            >
+              {isFloatingCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsFloatingPlaylistOpen((prev) => !prev)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+            >
+              <ListMusic size={15} />
+              List
+            </button>
+          </div>
+        </div>
+
+        <div className="hidden items-center justify-between gap-4 sm:flex">
+          <div className="min-w-0 flex flex-1 items-center gap-[6px]">
             <div className="min-w-0 sm:max-w-[48%]">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
                 StudyTime Live
