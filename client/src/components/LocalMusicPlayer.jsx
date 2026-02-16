@@ -659,17 +659,17 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     </div>
     )}
     {floatingVisible && (
-      <div className="fixed bottom-[5.2rem] left-1/2 z-40 w-[92vw] -translate-x-1/2 rounded-2xl border border-slate-200/80 bg-white/95 p-3 shadow-xl backdrop-blur-lg sm:w-[88vw] md:w-[82vw] lg:bottom-5 lg:w-[80vw] lg:max-w-[1100px] dark:border-white/15 dark:bg-slate-900/85">
+      <div className="fixed bottom-[5.35rem] left-1/2 z-40 w-[93vw] -translate-x-1/2 rounded-3xl border border-slate-200/85 bg-white/95 p-4 shadow-2xl shadow-slate-900/10 backdrop-blur-xl sm:w-[89vw] sm:p-5 md:w-[84vw] lg:bottom-6 lg:w-[80vw] lg:max-w-[1120px] dark:border-white/15 dark:bg-slate-900/85">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
               StudyTime Live
             </p>
-            <p className="mt-0.5 text-sm font-bold text-slate-800 dark:text-slate-100">
+            <p className="mt-1 text-lg font-bold leading-tight text-slate-800 dark:text-slate-100 sm:text-xl">
               {currentTrack ? currentTrack.name : "Chưa phát nhạc"}
             </p>
-            <div className="mt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-              <Timer size={12} />
+            <div className="mt-1.5 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+              <Timer size={15} />
               <span>{overlayIsRunning ? `Đang học: ${overlayTimeLabel}` : `Tạm dừng: ${overlayTimeLabel}`}</span>
             </div>
           </div>
@@ -677,44 +677,44 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
           <button
             type="button"
             onClick={() => setIsFloatingPlaylistOpen((prev) => !prev)}
-            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-white/15 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
           >
-            <ListMusic size={13} />
+            <ListMusic size={15} />
             List
           </button>
         </div>
 
         {overlayState?.tip && (
-          <p className="mt-2 rounded-lg bg-slate-100/80 px-2 py-1 text-[11px] text-slate-600 dark:bg-white/10 dark:text-slate-300">
+          <p className="mt-3 rounded-xl bg-slate-100/80 px-3 py-2 text-sm text-slate-600 dark:bg-white/10 dark:text-slate-300">
             {overlayState.tip}
           </p>
         )}
 
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mt-3 flex items-center gap-2.5">
           <button
             onClick={prevTrack}
-            className="rounded-lg border border-slate-200 dark:border-white/15 p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10"
+            className="rounded-xl border border-slate-200 bg-white/70 p-3 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
             aria-label="Bài trước"
           >
-            <SkipBack size={16} />
+            <SkipBack size={20} />
           </button>
           <button
             onClick={togglePlay}
-            className="rounded-lg bg-blue-600 p-2 text-white hover:bg-blue-700"
+            className="rounded-xl bg-blue-500 px-3 py-3 text-white shadow-md shadow-blue-500/25 transition-colors hover:bg-blue-600"
             aria-label={isPlaying ? "Tạm dừng" : "Phát"}
           >
-            {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+            {isPlaying ? <Pause size={20} /> : <Play size={20} />}
           </button>
           <button
             onClick={nextTrack}
-            className="rounded-lg border border-slate-200 dark:border-white/15 p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10"
+            className="rounded-xl border border-slate-200 bg-white/70 p-3 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
             aria-label="Bài tiếp"
           >
-            <SkipForward size={16} />
+            <SkipForward size={20} />
           </button>
 
-          <div className="ml-1 flex flex-1 items-center gap-2">
-            <Volume2 size={14} className="text-slate-500 dark:text-slate-300" />
+          <div className="ml-1 flex flex-1 items-center gap-2.5">
+            <Volume2 size={17} className="text-slate-500 dark:text-slate-300" />
             <input
               type="range"
               min={0}
@@ -722,15 +722,15 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
               step={0.01}
               value={volume}
               onChange={(e) => setVolume(Number(e.target.value))}
-              className="w-full h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
+              className="w-full h-2 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
             />
           </div>
         </div>
 
         {isFloatingPlaylistOpen && (
-          <div className="mt-2 max-h-44 overflow-y-auto rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/80 dark:bg-slate-950/50">
+          <div className="mt-3 max-h-48 overflow-y-auto rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/80 dark:bg-slate-950/50">
             {tracks.length === 0 ? (
-              <p className="p-3 text-xs text-slate-500 dark:text-slate-400">Playlist trống.</p>
+              <p className="p-4 text-sm text-slate-500 dark:text-slate-400">Playlist trống.</p>
             ) : (
               <ul className="divide-y divide-slate-200 dark:divide-white/5">
                 {tracks.map((track, idx) => {
@@ -744,7 +744,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
                           setCurrentIndex(idx);
                           setIsPlaying(true);
                         }}
-                        className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 truncate"
+                        className="w-full px-4 py-2.5 text-left text-base text-slate-700 dark:text-slate-200 truncate"
                       >
                         {track.name}
                       </button>
