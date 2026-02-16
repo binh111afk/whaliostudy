@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import localforage from "localforage";
 import Marquee from "react-fast-marquee";
-import { Music2, Play, Pause, SkipBack, SkipForward, Plus, X, Volume2, Disc3, ChevronUp, ChevronDown, ListMusic, Timer, XCircle } from "lucide-react";
+import { Music2, Play, Pause, SkipBack, SkipForward, Plus, X, Volume2, Disc3, ChevronUp, ChevronDown, ListMusic, Timer } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 const musicDB = localforage.createInstance({
@@ -13,7 +13,6 @@ const PLAYLIST_META_KEY = "__playlist_meta_v1__";
 const STUDY_OVERLAY_STORAGE_KEY = "whalio_study_overlay_state_v1";
 const MUSIC_PLAYBACK_STORAGE_KEY = "whalio_music_playback_v1";
 const MUSIC_SYNC_EVENT = "whalio:music-playback-sync";
-const FLOATING_DISMISSED_KEY = "whalio_floating_dismissed_v1";
 const ALLOWED_EXT = [".mp3", ".mp4"];
 const ALLOWED_MIME = ["audio/mpeg", "audio/mp3", "audio/mp4", "video/mp4"];
 
@@ -71,13 +70,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isFloatingPlaylistOpen, setIsFloatingPlaylistOpen] = useState(false);
   const [isFloatingCollapsed, setIsFloatingCollapsed] = useState(false);
-  const [isFloatingDismissed, setIsFloatingDismissed] = useState(() => {
-    try {
-      return localStorage.getItem(FLOATING_DISMISSED_KEY) === 'true';
-    } catch {
-      return false;
-    }
-  });
+  const [isFloatingDismissed, setIsFloatingDismissed] = useState(false);
   const [overlayState, setOverlayState] = useState(null);
   const currentTrackIdRef = useRef(null);
   const lastLoadedTrackIdRef = useRef(null);
@@ -454,16 +447,10 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
 
   const dismissFloatingPlayer = useCallback(() => {
     setIsFloatingDismissed(true);
-    try {
-      localStorage.setItem(FLOATING_DISMISSED_KEY, 'true');
-    } catch {}
   }, []);
 
   const showFloatingPlayer = useCallback(() => {
     setIsFloatingDismissed(false);
-    try {
-      localStorage.removeItem(FLOATING_DISMISSED_KEY);
-    } catch {}
   }, []);
 
   const handleFileUpload = useCallback(
@@ -486,12 +473,10 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
       return;
     }
 
-    if (isStudyTimerRoute) {
-      showFloatingPlayer();
-    }
+    showFloatingPlayer();
     shouldForcePlayRef.current = false;
     audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
-  }, [currentTrack, isPlaying, isStudyTimerRoute, showFloatingPlayer]);
+  }, [currentTrack, isPlaying, showFloatingPlayer]);
 
   const autoNextTrack = useCallback(() => {
     console.log('🎵 autoNextTrack triggered');
@@ -668,6 +653,12 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   useEffect(() => {
     currentTrackIdRef.current = currentTrack?.id || null;
   }, [currentTrack]);
+
+  useEffect(() => {
+    if (globalMode && !isStudyTimerRoute && isPlaying && currentTrack && isFloatingDismissed) {
+      setIsFloatingDismissed(false);
+    }
+  }, [globalMode, isStudyTimerRoute, isPlaying, currentTrack, isFloatingDismissed]);
 
   useEffect(() => {
     if (!floatingVisible) {
@@ -861,7 +852,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
                         shouldForcePlayRef.current = true;
                         setCurrentIndex(idx);
                         setIsPlaying(true);
-                        if (isStudyTimerRoute) showFloatingPlayer();
+                        showFloatingPlayer();
                       }}
                       className="text-left min-w-0 flex-1"
                     >
