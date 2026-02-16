@@ -59,6 +59,8 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   const autoRemainingIndexesRef = useRef([]);
   const shouldForcePlayRef = useRef(false);
   const isAutoAdvancingRef = useRef(false);
+  const progressTrackRef = useRef(null);
+  const isSeekingRef = useRef(false);
 
   const [tracks, setTracks] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
@@ -72,6 +74,10 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   const [isFloatingCollapsed, setIsFloatingCollapsed] = useState(false);
   const [isFloatingDismissed, setIsFloatingDismissed] = useState(false);
   const [overlayState, setOverlayState] = useState(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isSeekingProgress, setIsSeekingProgress] = useState(false);
+  const [progressHover, setProgressHover] = useState({ visible: false, x: 0, time: 0 });
   const currentTrackIdRef = useRef(null);
   const lastLoadedTrackIdRef = useRef(null);
   const hasRestoredPlaybackRef = useRef(false);
@@ -319,6 +325,8 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
       audio.removeAttribute("src");
       audio.load();
       setIsPlaying(false);
+      setCurrentTime(0);
+      setDuration(0);
       revokeCurrentObjectUrl();
       lastLoadedTrackIdRef.current = null;
       return;
@@ -649,6 +657,71 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     : Math.max(0, Number(overlayState?.timeLeft) || 0);
   const overlayTimeLabel = formatOverlayTime(overlayTimeLeft, Boolean(overlayState?.useHourFormat));
   const floatingVisible = globalMode && !isStudyTimerRoute && !isFloatingDismissed && (Boolean(currentTrack) || overlayIsRunning);
+  const progressPercent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+
+  const seekToFromClientX = useCallback((clientX) => {
+    const track = progressTrackRef.current;
+    const audio = audioRef.current;
+    if (!track || !audio || !Number.isFinite(duration) || duration <= 0) return;
+
+    const rect = track.getBoundingClientRect();
+    const rawX = clientX - rect.left;
+    const clampedX = Math.max(0, Math.min(rect.width, rawX));
+    const ratio = rect.width > 0 ? clampedX / rect.width : 0;
+    const nextTime = ratio * duration;
+
+    audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
+    setProgressHover((prev) => ({ ...prev, x: clampedX, time: nextTime }));
+  }, [duration]);
+
+  const handleProgressClick = useCallback((event) => {
+    seekToFromClientX(event.clientX);
+  }, [seekToFromClientX]);
+
+  const handleProgressPointerDown = useCallback((event) => {
+    if (!duration) return;
+    setIsSeekingProgress(true);
+    isSeekingRef.current = true;
+    seekToFromClientX(event.clientX);
+  }, [duration, seekToFromClientX]);
+
+  const handleProgressMouseMove = useCallback((event) => {
+    const track = progressTrackRef.current;
+    if (!track || !Number.isFinite(duration) || duration <= 0) return;
+
+    const rect = track.getBoundingClientRect();
+    const rawX = event.clientX - rect.left;
+    const clampedX = Math.max(0, Math.min(rect.width, rawX));
+    const ratio = rect.width > 0 ? clampedX / rect.width : 0;
+    setProgressHover({ visible: true, x: clampedX, time: ratio * duration });
+  }, [duration]);
+
+  const handleProgressMouseLeave = useCallback(() => {
+    if (isSeekingRef.current) return;
+    setProgressHover((prev) => ({ ...prev, visible: false }));
+  }, []);
+
+  useEffect(() => {
+    if (!isSeekingProgress) return;
+
+    const handlePointerMove = (event) => {
+      seekToFromClientX(event.clientX);
+    };
+
+    const handlePointerUp = () => {
+      isSeekingRef.current = false;
+      setIsSeekingProgress(false);
+      setProgressHover((prev) => ({ ...prev, visible: false }));
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [isSeekingProgress, seekToFromClientX]);
 
   useEffect(() => {
     currentTrackIdRef.current = currentTrack?.id || null;
@@ -677,6 +750,15 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
 
       <audio
         ref={audioRef}
+        onLoadedMetadata={(event) => {
+          const nextDuration = Number(event.currentTarget.duration) || 0;
+          setDuration(nextDuration);
+          setCurrentTime(Math.min(Number(event.currentTarget.currentTime) || 0, nextDuration || 0));
+        }}
+        onTimeUpdate={(event) => {
+          if (isSeekingRef.current) return;
+          setCurrentTime(Number(event.currentTarget.currentTime) || 0);
+        }}
         onPlay={() => {
           isAutoAdvancingRef.current = false;
           setIsPlaying(true);
@@ -752,6 +834,43 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
               ))}
             </div>
 
+            <div className="mb-3">
+              <div
+                ref={progressTrackRef}
+                onClick={handleProgressClick}
+                onPointerDown={handleProgressPointerDown}
+                onMouseMove={handleProgressMouseMove}
+                onMouseLeave={handleProgressMouseLeave}
+                className="group relative h-5 cursor-pointer"
+              >
+                <div className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-slate-200 dark:bg-slate-700" />
+                <div
+                  className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-blue-500"
+                  style={{ width: `${progressPercent}%` }}
+                />
+                <div
+                  className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-blue-500 shadow transition-transform duration-150 group-hover:scale-110"
+                  style={{
+                    left: `${progressPercent}%`,
+                    width: "16px",
+                    height: "16px",
+                  }}
+                />
+                {progressHover.visible && duration > 0 && (
+                  <div
+                    className="pointer-events-none absolute -top-7 -translate-x-1/2 rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-medium text-white"
+                    style={{ left: `${progressHover.x}px` }}
+                  >
+                    {formatOverlayTime(Math.floor(progressHover.time))}
+                  </div>
+                )}
+              </div>
+              <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-300">
+                <span>{formatOverlayTime(Math.floor(currentTime))}</span>
+                <span>{formatOverlayTime(Math.floor(duration))}</span>
+              </div>
+            </div>
+
             <div className="flex items-center justify-center gap-2 mb-3">
               <button
                 onClick={prevTrack}
@@ -784,7 +903,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
                 step={0.01}
                 value={volume}
                 onChange={(e) => setVolume(Number(e.target.value))}
-                className="w-full h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
+                className="w-24 sm:w-28 h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
               />
             </div>
           </>
@@ -953,6 +1072,36 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
             </button>
 
             <div className="ml-1 flex flex-1 items-center gap-2">
+              <div
+                ref={progressTrackRef}
+                onClick={handleProgressClick}
+                onPointerDown={handleProgressPointerDown}
+                onMouseMove={handleProgressMouseMove}
+                onMouseLeave={handleProgressMouseLeave}
+                className="group relative h-5 flex-1 cursor-pointer"
+              >
+                <div className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-slate-200 dark:bg-slate-700" />
+                <div
+                  className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-blue-500"
+                  style={{ width: `${progressPercent}%` }}
+                />
+                <div
+                  className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-blue-500 shadow transition-transform duration-150 group-hover:scale-110"
+                  style={{
+                    left: `${progressPercent}%`,
+                    width: "16px",
+                    height: "16px",
+                  }}
+                />
+                {progressHover.visible && duration > 0 && (
+                  <div
+                    className="pointer-events-none absolute -top-7 -translate-x-1/2 rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-medium text-white"
+                    style={{ left: `${progressHover.x}px` }}
+                  >
+                    {formatOverlayTime(Math.floor(progressHover.time))}
+                  </div>
+                )}
+              </div>
               <Volume2 size={16} className="text-slate-500 dark:text-slate-300" />
               <input
                 type="range"
@@ -961,9 +1110,13 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
                 step={0.01}
                 value={volume}
                 onChange={(e) => setVolume(Number(e.target.value))}
-                className="w-full h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
+                className="w-20 sm:w-24 h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
               />
             </div>
+          </div>
+          <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-300">
+            <span>{formatOverlayTime(Math.floor(currentTime))}</span>
+            <span>{formatOverlayTime(Math.floor(duration))}</span>
           </div>
 
           {isFloatingPlaylistOpen && (
@@ -1002,4 +1155,3 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
 };
 
 export default LocalMusicPlayer;
-
