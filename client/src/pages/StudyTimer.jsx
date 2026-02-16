@@ -72,7 +72,14 @@ const ModePill = ({ active, disabled, label, onClick }) => (
 );
 
 const StudyTimer = () => {
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user"));
+    } catch {
+      return null;
+    }
+  }, []);
+  const username = user?.username || "";
   const nextBreakReminderRef = useRef(25 * 60);
   const tasksListRef = useRef(null);
   const deadlinesListRef = useRef(null);
@@ -91,9 +98,11 @@ const StudyTimer = () => {
   const [noteId, setNoteId] = useState("");
   const [noteTitle, setNoteTitle] = useState("Ghi chú StudyTime");
   const [noteContent, setNoteContent] = useState("");
+  const [quickNotesAvailable, setQuickNotesAvailable] = useState(true);
 
   const [upcomingDeadlines, setUpcomingDeadlines] = useState([]);
   const [subjectReminders, setSubjectReminders] = useState([]);
+  const noteStorageKey = username ? `whalio_studytimer_note_${username}` : "whalio_studytimer_note_guest";
 
 
   const modeConfig = TIMER_MODES[mode];
@@ -176,36 +185,63 @@ const StudyTimer = () => {
 
   useEffect(() => {
     const loadStudyTimerNote = async () => {
-      if (!user?.username) return;
+      if (!username) return;
+
+      const loadFromLocal = () => {
+        try {
+          const raw = localStorage.getItem(noteStorageKey);
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          setNoteId("");
+          setNoteTitle(parsed?.title || "Ghi chú StudyTime");
+          setNoteContent(parsed?.content || "");
+        } catch (err) {
+          console.error("Load local StudyTimer note error:", err);
+        }
+      };
+
       try {
-        const res = await fetch(`/api/quick-notes?username=${user.username}`);
+        const res = await fetch(`/api/quick-notes?username=${username}`);
+        if (!res.ok) {
+          throw new Error(`QUICK_NOTES_${res.status}`);
+        }
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          throw new Error("QUICK_NOTES_INVALID_CONTENT");
+        }
         const data = await res.json();
         if (!data?.success || !Array.isArray(data.notes)) return;
+        setQuickNotesAvailable(true);
         const studyTimerNote = [...data.notes]
           .filter((item) => item?.source === "studytimer")
           .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0];
 
-        if (!studyTimerNote) return;
+        if (!studyTimerNote) {
+          loadFromLocal();
+          return;
+        }
         setNoteId(studyTimerNote._id || "");
         setNoteTitle(studyTimerNote.title || "Ghi chú StudyTime");
         setNoteContent(studyTimerNote.content || "");
       } catch (err) {
         console.error("Load StudyTimer note error:", err);
+        setQuickNotesAvailable(false);
+        loadFromLocal();
       }
     };
 
     loadStudyTimerNote();
-  }, [user]);
+  }, [username, noteStorageKey]);
 
   useEffect(() => {
     const loadAllData = async () => {
-      if (!user?.username) return;
+      if (!username) return;
 
       try {
         const [studyRes, eventsRes, timetableRes] = await Promise.all([
-          studyService.getStats(user.username),
-          fetch(`/api/events?username=${user.username}`).then((r) => r.json()),
-          fetch(`/api/timetable?username=${user.username}`).then((r) => r.json()),
+          studyService.getStats(username),
+          fetch(`/api/events?username=${username}`).then((r) => r.json()),
+          fetch(`/api/timetable?username=${username}`).then((r) => r.json()),
         ]);
 
         if (studyRes?.success && Array.isArray(studyRes.data) && studyRes.data.length > 0) {
@@ -254,7 +290,7 @@ const StudyTimer = () => {
     };
 
     loadAllData();
-  }, [user]);
+  }, [username]);
 
   const ring = useMemo(() => {
     const radius = 132;
@@ -300,7 +336,7 @@ const StudyTimer = () => {
   };
 
   const saveStudyTimerNote = async () => {
-    if (!user?.username) return;
+    if (!username) return;
     const title = noteTitle.trim();
     const content = noteContent.trim();
     if (!title || !content) {
@@ -308,16 +344,27 @@ const StudyTimer = () => {
       return;
     }
 
+    const saveToLocal = () => {
+      localStorage.setItem(noteStorageKey, JSON.stringify({ title, content, updatedAt: Date.now() }));
+      setNoteId("");
+      toast.success("Đã lưu ghi chú (cục bộ).");
+    };
+
+    if (!quickNotesAvailable) {
+      saveToLocal();
+      return;
+    }
+
     try {
       if (noteId) {
-        await fetch(`/api/quick-notes/${noteId}?username=${user.username}`, { method: "DELETE" });
+        await fetch(`/api/quick-notes/${noteId}?username=${username}`, { method: "DELETE" });
       }
 
       const res = await fetch("/api/quick-notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: user.username,
+          username,
           title,
           content,
           color: "bg-blue-100",
@@ -325,13 +372,18 @@ const StudyTimer = () => {
         }),
       });
 
+      if (!res.ok) {
+        throw new Error(`QUICK_NOTES_${res.status}`);
+      }
       const data = await res.json();
       if (!data?.success) {
-        toast.error("Không thể lưu ghi chú.");
-        return;
+        throw new Error("QUICK_NOTES_SAVE_FAILED");
       }
 
-      const listRes = await fetch(`/api/quick-notes?username=${user.username}`);
+      const listRes = await fetch(`/api/quick-notes?username=${username}`);
+      if (!listRes.ok) {
+        throw new Error(`QUICK_NOTES_${listRes.status}`);
+      }
       const listData = await listRes.json();
       const studyTimerNote = Array.isArray(listData?.notes)
         ? [...listData.notes]
@@ -340,33 +392,50 @@ const StudyTimer = () => {
         : null;
 
       setNoteId(studyTimerNote?._id || "");
+      localStorage.setItem(noteStorageKey, JSON.stringify({ title, content, updatedAt: Date.now() }));
       toast.success("Đã lưu ghi chú StudyTime.");
     } catch (err) {
       console.error("Save StudyTimer note error:", err);
-      toast.error("Lưu ghi chú thất bại.");
+      setQuickNotesAvailable(false);
+      saveToLocal();
     }
   };
 
   const deleteStudyTimerNote = async () => {
-    if (!user?.username || !noteId) {
+    if (!username) return;
+
+    const clearLocal = () => {
+      localStorage.removeItem(noteStorageKey);
+      setNoteId("");
+      setNoteTitle("Ghi chú StudyTime");
+      setNoteContent("");
+      toast.success("Đã xóa ghi chú.");
+    };
+
+    if (!quickNotesAvailable || !noteId) {
+      clearLocal();
+      return;
+    }
+
+    if (!noteId) {
       setNoteTitle("Ghi chú StudyTime");
       setNoteContent("");
       return;
     }
     try {
-      const res = await fetch(`/api/quick-notes/${noteId}?username=${user.username}`, { method: "DELETE" });
+      const res = await fetch(`/api/quick-notes/${noteId}?username=${username}`, { method: "DELETE" });
+      if (!res.ok) {
+        throw new Error(`QUICK_NOTES_${res.status}`);
+      }
       const data = await res.json();
       if (!data?.success) {
-        toast.error("Không thể xóa ghi chú.");
-        return;
+        throw new Error("QUICK_NOTES_DELETE_FAILED");
       }
-      setNoteId("");
-      setNoteTitle("Ghi chú StudyTime");
-      setNoteContent("");
-      toast.success("Đã xóa ghi chú.");
+      clearLocal();
     } catch (err) {
       console.error("Delete StudyTimer note error:", err);
-      toast.error("Xóa ghi chú thất bại.");
+      setQuickNotesAvailable(false);
+      clearLocal();
     }
   };
 
