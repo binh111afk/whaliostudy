@@ -111,6 +111,8 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   const currentIndexRef = useRef(-1);
 
   const currentTrack = currentIndex >= 0 ? tracks[currentIndex] : null;
+  const currentTrackNameLength = currentTrack?.name?.length || 0;
+  const isLongDesktopTrackName = currentTrackNameLength >= 32;
   const isStudyTimerRoute = location.pathname === "/timer";
   const showFullPlayer = !globalMode && isStudyTimerRoute;
   const isAudioActive = !globalMode || !isStudyTimerRoute;
@@ -1054,44 +1056,44 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
         >
           <X size={14} />
         </button>
-        <div className="flex items-start justify-between gap-2 sm:hidden">
-          <div className="min-w-0 flex-1">
-            <p className="whitespace-nowrap text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
-              StudyTime Live
-            </p>
-            <p className="mt-1 text-base font-bold leading-tight text-slate-800 dark:text-slate-100 break-words">
+        <div className="sm:hidden">
+          <p className="whitespace-nowrap text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
+            StudyTime Live
+          </p>
+          <div className="mt-1 flex items-start justify-between gap-2">
+            <p className="min-w-0 flex-1 text-base font-bold leading-tight text-slate-800 dark:text-slate-100 break-words">
               {currentTrack ? currentTrack.name : "Chưa phát nhạc"}
             </p>
-          </div>
 
-          <div className="flex shrink-0 items-center justify-end gap-2">
-            <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/90 px-2.5 py-1.5 text-sm font-semibold text-slate-600 dark:border-white/15 dark:bg-white/5 dark:text-slate-200">
-              <Timer size={14} />
-              <span>{overlayTimeLabel}</span>
+            <div className="flex shrink-0 items-center justify-end gap-2">
+              <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/90 px-2.5 py-1.5 text-sm font-semibold text-slate-600 dark:border-white/15 dark:bg-white/5 dark:text-slate-200">
+                <Timer size={14} />
+                <span>{overlayTimeLabel}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsFloatingCollapsed((prev) => !prev)}
+                className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/70 p-2 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                aria-label={isFloatingCollapsed ? "Hiện player" : "Ẩn player"}
+              >
+                {isFloatingCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsFloatingPlaylistOpen((prev) => !prev)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+              >
+                <ListMusic size={15} />
+                List
+              </button>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setIsFloatingCollapsed((prev) => !prev)}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/70 p-2 text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-              aria-label={isFloatingCollapsed ? "Hiện player" : "Ẩn player"}
-            >
-              {isFloatingCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsFloatingPlaylistOpen((prev) => !prev)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-            >
-              <ListMusic size={15} />
-              List
-            </button>
           </div>
         </div>
 
         <div className="hidden items-center justify-between gap-6 sm:flex">
-          <div className="min-w-0 flex flex-1 items-center gap-[55px]">
+          <div className={`min-w-0 flex flex-1 items-center ${isLongDesktopTrackName ? "gap-[55px]" : "gap-[6px]"}`}>
             <div className="min-w-0 sm:max-w-[48%]">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
                 StudyTime Live
@@ -1101,7 +1103,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
               </p>
             </div>
             <p
-              className="hidden min-w-0 flex-1 text-left text-lg leading-snug italic tracking-wide whitespace-normal break-words text-slate-900/90 drop-shadow-sm dark:text-white/90 sm:block"
+              className={`hidden min-w-0 flex-1 text-lg leading-snug italic tracking-wide whitespace-normal break-words text-slate-900/90 drop-shadow-sm dark:text-white/90 sm:block ${isLongDesktopTrackName ? "text-left" : "text-center"}`}
               style={{
                 animation: "breathe 5s ease-in-out infinite",
                 fontFamily: "'Playfair Display', serif",
@@ -1138,7 +1140,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
         </div>
 
         <div className={isFloatingCollapsed ? "hidden" : ""}>
-          <p className="mb-2.5 rounded-xl bg-slate-100/80 px-3 py-1.5 text-sm text-slate-600 truncate dark:bg-white/10 dark:text-slate-300 sm:hidden">
+          <p className="mt-2 mb-2.5 rounded-xl bg-slate-100/80 px-3 py-1.5 text-sm text-slate-600 truncate dark:bg-white/10 dark:text-slate-300 sm:hidden">
             {REMINDER_MESSAGES[reminderIndex]}
           </p>
           <div className="mt-2.5 flex flex-col gap-2.5">
