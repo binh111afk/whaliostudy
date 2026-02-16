@@ -35,7 +35,18 @@ const INITIAL_TASKS = [
 ];
 
 const pad = (num) => String(num).padStart(2, "0");
-const formatTime = (seconds) => `${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}`;
+const formatDisplayTime = (seconds, forceHours = false) => {
+  const safe = Math.max(0, seconds);
+  const h = Math.floor(safe / 3600);
+  const m = Math.floor((safe % 3600) / 60);
+  const s = safe % 60;
+
+  if (forceHours) {
+    return `${h}:${pad(m)}:${pad(s)}`;
+  }
+
+  return `${pad(Math.floor(safe / 60))}:${pad(safe % 60)}`;
+};
 
 const formatVNDate = (value) => {
   if (!value) return "Không có hạn";
@@ -85,6 +96,7 @@ const StudyTimer = () => {
   const modeConfig = TIMER_MODES[mode];
   const currentModeMinutes = mode === "focus" ? focusDurationMinutes : modeConfig.minutes;
   const totalSeconds = currentModeMinutes * 60;
+  const useHourFormat = currentModeMinutes > 60;
   const progress = ((totalSeconds - timeLeft) / totalSeconds) * 100;
   const activeTask = tasks.find((task) => !task.done) || tasks[0];
   const isZenMode = isManualFullscreen;
@@ -100,11 +112,11 @@ const StudyTimer = () => {
   }, [isRunning]);
 
   useEffect(() => {
-    document.title = isRunning ? `${formatTime(timeLeft)} | StudyTime` : "Whalio Study";
+    document.title = isRunning ? `${formatDisplayTime(timeLeft, useHourFormat)} | StudyTime` : "Whalio Study";
     return () => {
       document.title = "Whalio Study";
     };
-  }, [isRunning, timeLeft]);
+  }, [isRunning, timeLeft, useHourFormat]);
 
   useEffect(() => {
     if (timeLeft !== 0 || !isRunning) return;
@@ -341,6 +353,23 @@ const StudyTimer = () => {
                       cx="160"
                       cy="160"
                       r={ring.radius}
+                      className="hidden dark:block"
+                      stroke="#3b82f6"
+                      strokeWidth="14"
+                      strokeLinecap="round"
+                      fill="none"
+                      strokeDasharray={ring.circumference}
+                      animate={{ strokeDashoffset: ring.offset }}
+                      transition={{ duration: 0.45, ease: "easeOut" }}
+                      style={{
+                        filter:
+                          "drop-shadow(0 0 8px rgba(59,130,246,0.95)) drop-shadow(0 0 18px rgba(59,130,246,0.75)) drop-shadow(0 0 30px rgba(37,99,235,0.45))",
+                      }}
+                    />
+                    <FramerMotion.motion.circle
+                      cx="160"
+                      cy="160"
+                      r={ring.radius}
                       stroke="url(#timer-accent)"
                       strokeWidth="12"
                       strokeLinecap="round"
@@ -366,7 +395,7 @@ const StudyTimer = () => {
                       className="font-mono text-6xl md:text-7xl font-light tracking-tight text-slate-800 dark:text-white"
                       style={{ fontFamily: "JetBrains Mono, Inter, ui-monospace, SFMono-Regular, Menlo, monospace" }}
                     >
-                      {formatTime(timeLeft)}
+                      {formatDisplayTime(timeLeft, useHourFormat)}
                     </FramerMotion.motion.div>
                   </div>
                 </div>
@@ -606,7 +635,7 @@ const StudyTimer = () => {
                 className="font-mono text-7xl md:text-8xl font-light text-white"
                 style={{ fontFamily: "JetBrains Mono, Inter, ui-monospace, SFMono-Regular, Menlo, monospace" }}
               >
-                {formatTime(timeLeft)}
+                {formatDisplayTime(timeLeft, useHourFormat)}
               </FramerMotion.motion.div>
 
               {activeTask && (
