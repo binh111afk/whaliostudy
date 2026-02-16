@@ -410,7 +410,7 @@ const LocalMusicPlayer = () => {
       </div>
 
       <p className="mt-3 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-        Nhạc được lưu cục bộ tại trình duyệt này. Sao lưu/khôi phục playlist đã tích hợp trong mục Sao lưu & Khôi phục.
+        Nhạc được lưu cục bộ tại trình duyệt này. Khi bạn xóa cache của trình duyệt thì tương đương với việc mất toàn bộ danh sách nhạc và Whalio hoàn toàn không chịu trách nhiệm về vấn đề này.
       </p>
       {notice && <p className="mt-1 text-[11px] text-blue-600 dark:text-cyan-300/90">{notice}</p>}
 
