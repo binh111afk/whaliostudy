@@ -786,6 +786,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   return (
     <>
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital@1&display=swap');
         @keyframes whalio-wave {
           0%, 100% { transform: scaleY(0.35); opacity: 0.45; }
           50% { transform: scaleY(1); opacity: 1; }
@@ -1043,7 +1044,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     </div>
     )}
     {floatingVisible && (
-      <div className="fixed bottom-[5.35rem] left-1/2 z-40 w-[93vw] -translate-x-1/2 rounded-3xl border border-slate-200/85 bg-white/95 p-3 shadow-2xl shadow-slate-900/10 backdrop-blur-xl sm:w-[89vw] sm:p-4 md:w-[84vw] lg:bottom-6 lg:w-[80vw] lg:max-w-[1120px] dark:border-white/15 dark:bg-slate-900/85">
+      <div className="fixed bottom-[5.35rem] left-1/2 z-40 w-[93vw] -translate-x-1/2 rounded-3xl border border-slate-200/85 bg-white/95 p-3 shadow-2xl shadow-slate-900/10 backdrop-blur-2xl sm:w-[89vw] sm:p-4 md:w-[84vw] lg:bottom-6 lg:w-[80vw] lg:max-w-[1120px] dark:border-white/15 dark:bg-slate-900/85">
         <button
           type="button"
           onClick={dismissFloatingPlayer}
@@ -1053,23 +1054,28 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
         >
           <X size={14} />
         </button>
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] items-start gap-3">
-          <div className="min-w-0">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1" />
+
+          <div className="min-w-0 flex-1 text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
               StudyTime Live
             </p>
             <p className="mt-1 text-base font-bold leading-tight text-slate-800 dark:text-slate-100 sm:text-lg">
               {currentTrack ? currentTrack.name : "Chưa phát nhạc"}
             </p>
+            <p
+              className="mt-2 min-w-0 px-2 text-lg leading-snug italic tracking-wide text-white/90 truncate drop-shadow-sm"
+              style={{
+                animation: "breathe 5s ease-in-out infinite",
+                fontFamily: "'Playfair Display', serif",
+              }}
+            >
+              "{MOTIVATIONAL_QUOTES[motivationIndex]}"
+            </p>
           </div>
-          <p
-            className="min-w-0 self-center px-2 text-lg sm:text-xl leading-snug text-slate-600 italic text-center font-serif font-light tracking-[0.2em] truncate drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] dark:text-slate-200"
-            style={{ animation: "breathe 5s ease-in-out infinite" }}
-          >
-            "{MOTIVATIONAL_QUOTES[motivationIndex]}"
-          </p>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex flex-1 shrink-0 items-center justify-end gap-2">
             <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/90 px-2.5 py-1.5 text-sm font-semibold text-slate-600 dark:border-white/15 dark:bg-white/5 dark:text-slate-200">
               <Timer size={14} />
               <span>{overlayTimeLabel}</span>
