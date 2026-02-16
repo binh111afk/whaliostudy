@@ -343,6 +343,10 @@ const StudyTimer = () => {
       if (!res.ok) {
         throw new Error(`QUICK_NOTES_${res.status}`);
       }
+      const saveContentType = res.headers.get("content-type") || "";
+      if (!saveContentType.includes("application/json")) {
+        throw new Error("QUICK_NOTES_INVALID_CONTENT");
+      }
       const data = await res.json();
       if (!data?.success) {
         throw new Error("QUICK_NOTES_SAVE_FAILED");
@@ -351,6 +355,10 @@ const StudyTimer = () => {
       const listRes = await fetch(`/api/quick-notes?username=${username}`);
       if (!listRes.ok) {
         throw new Error(`QUICK_NOTES_${listRes.status}`);
+      }
+      const listContentType = listRes.headers.get("content-type") || "";
+      if (!listContentType.includes("application/json")) {
+        throw new Error("QUICK_NOTES_INVALID_CONTENT");
       }
       const listData = await listRes.json();
       const studyTimerNote = Array.isArray(listData?.notes)
@@ -379,6 +387,10 @@ const StudyTimer = () => {
       const res = await fetch(`/api/quick-notes/${noteId}?username=${username}`, { method: "DELETE" });
       if (!res.ok) {
         throw new Error(`QUICK_NOTES_${res.status}`);
+      }
+      const deleteContentType = res.headers.get("content-type") || "";
+      if (!deleteContentType.includes("application/json")) {
+        throw new Error("QUICK_NOTES_INVALID_CONTENT");
       }
       const data = await res.json();
       if (!data?.success) {

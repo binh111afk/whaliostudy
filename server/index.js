@@ -1050,6 +1050,15 @@ app.post('/api/upload-avatar', upload.single('avatar'), async (req, res) => {
     }
 });
 
+// Quick Notes health check (debug route)
+app.get('/api/quick-notes-health', (req, res) => {
+    return res.json({
+        success: true,
+        route: '/api/quick-notes',
+        serverTime: new Date().toISOString()
+    });
+});
+
 // 4.1 Quick Notes APIs (MongoDB)
 app.get('/api/quick-notes', async (req, res) => {
     try {

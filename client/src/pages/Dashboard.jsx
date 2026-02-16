@@ -250,10 +250,21 @@ const QuickNotesTab = ({ user }) => {
   const fetchMyNotes = async () => {
     try {
       const res = await fetch(`/api/quick-notes?username=${user.username}`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          console.warn("Quick notes API not found (404).");
+          return;
+        }
+        throw new Error(`QUICK_NOTES_${res.status}`);
+      }
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("QUICK_NOTES_INVALID_CONTENT");
+      }
       const data = await res.json();
-      if (data.success) setMyNotes(data.notes);
+      if (data.success && Array.isArray(data.notes)) setMyNotes(data.notes);
     } catch (e) {
-      console.error(e);
+      console.error("Fetch quick notes error:", e);
     }
   };
 
@@ -307,13 +318,19 @@ const QuickNotesTab = ({ user }) => {
           color: "bg-yellow-100",
         }),
       });
-      if ((await res.json()).success) {
+      if (!res.ok) throw new Error(`QUICK_NOTES_${res.status}`);
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("QUICK_NOTES_INVALID_CONTENT");
+      }
+      const data = await res.json();
+      if (data.success) {
         setNewTitle("");
         setNewContent("");
         fetchMyNotes();
       }
     } catch (e) {
-      console.error(e);
+      console.error("Add quick note error:", e);
     }
   };
 
@@ -348,6 +365,11 @@ const QuickNotesTab = ({ user }) => {
                     `/api/quick-notes/${id}?username=${user.username}`,
                     { method: "DELETE" }
                   );
+                  if (!res.ok) throw new Error(`QUICK_NOTES_${res.status}`);
+                  const contentType = res.headers.get("content-type") || "";
+                  if (!contentType.includes("application/json")) {
+                    throw new Error("QUICK_NOTES_INVALID_CONTENT");
+                  }
                   const data = await res.json();
 
                   if (data.success) {
