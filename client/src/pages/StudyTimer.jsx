@@ -262,7 +262,7 @@ const StudyTimer = () => {
   };
 
   return (
-    <div className="relative h-screen -m-6 overflow-hidden text-slate-800 dark:text-slate-100">
+    <div className="relative h-[calc(100dvh-4rem)] -m-6 overflow-hidden text-slate-800 dark:text-slate-100">
       <style>{`
         .whalio-zen-active .w-64.h-screen.fixed.left-0.top-0,
         .whalio-zen-active .h-16.sticky.top-0 {
@@ -286,7 +286,7 @@ const StudyTimer = () => {
       />
 
       <div className="relative z-10 flex h-full min-h-0">
-        <div className="flex min-h-0 flex-1 items-center justify-center px-4 py-6 md:px-8 md:py-8">
+        <div className="whalio-scrollbar flex min-h-0 flex-1 items-start justify-center overflow-y-auto px-4 py-5 md:items-center md:px-8 md:py-6">
           <div className="mx-auto flex w-full max-w-4xl flex-col justify-center">
             <div className="mb-4 flex items-center justify-between md:mb-6">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Focus Room</p>
