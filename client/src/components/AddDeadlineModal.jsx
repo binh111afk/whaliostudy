@@ -12,7 +12,14 @@ const buildDeadlineDate = (date, time) => {
   return parsed;
 };
 
-const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
+const AddDeadlineModal = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  username,
+  initialData = null,
+  mode = "create",
+}) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
@@ -42,6 +49,39 @@ const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
       setTagOptions(DEFAULT_DEADLINE_TAGS);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (mode === "edit" && initialData) {
+      const parsed = new Date(initialData.date);
+      const nextDate = Number.isNaN(parsed.getTime())
+        ? new Date()
+        : parsed;
+      const formattedDate = `${nextDate.getFullYear()}-${String(
+        nextDate.getMonth() + 1
+      ).padStart(2, "0")}-${String(nextDate.getDate()).padStart(2, "0")}`;
+      const formattedTime = `${String(nextDate.getHours()).padStart(
+        2,
+        "0"
+      )}:${String(nextDate.getMinutes()).padStart(2, "0")}`;
+
+      setTitle(String(initialData.title || ""));
+      setDescription(String(initialData.description || ""));
+      setDate(formattedDate);
+      setTime(formattedTime);
+      setDeadlineTag(String(initialData.deadlineTag || "Công việc"));
+      return;
+    }
+
+    if (mode === "create") {
+      setTitle("");
+      setDescription("");
+      setDate(new Date().toISOString().split("T")[0]);
+      setTime("23:59");
+      setDeadlineTag(DEFAULT_DEADLINE_TAGS[0]);
+      setCustomTag("");
+    }
+  }, [isOpen, initialData, mode]);
 
   useEffect(() => {
     try {
@@ -78,6 +118,26 @@ const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
     setCustomTag("");
   };
 
+  const handleRemoveTag = (tagToRemove) => {
+    const normalized = String(tagToRemove || "").trim();
+    if (!normalized) return;
+
+    const remaining = mergedTagOptions.filter(
+      (tagName) => tagName.toLowerCase() !== normalized.toLowerCase()
+    );
+
+    if (remaining.length === 0) {
+      setTagOptions(DEFAULT_DEADLINE_TAGS);
+      setDeadlineTag(DEFAULT_DEADLINE_TAGS[0]);
+      return;
+    }
+
+    setTagOptions(remaining);
+    if (deadlineTag.toLowerCase() === normalized.toLowerCase()) {
+      setDeadlineTag(remaining[0]);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!username) {
       toast.error("Không tìm thấy tài khoản đăng nhập.");
@@ -108,8 +168,9 @@ const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
 
     setLoading(true);
     try {
-      const response = await fetch("/api/events", {
-        method: "POST",
+      const isEdit = mode === "edit" && initialData?._id;
+      const response = await fetch(isEdit ? `/api/events/${initialData._id}` : "/api/events", {
+        method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username,
@@ -123,7 +184,7 @@ const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
 
       const data = await response.json().catch(() => ({}));
       if (data.success) {
-        toast.success("Thêm deadline thành công!");
+        toast.success(isEdit ? "Cập nhật deadline thành công!" : "Thêm deadline thành công!");
         resetForm();
         onSuccess?.();
         onClose?.();
@@ -143,7 +204,7 @@ const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
       <div className="w-full max-w-lg rounded-3xl bg-white p-5 shadow-2xl sm:p-6">
         <div className="mb-5 flex items-center justify-between border-b border-gray-200 pb-4">
           <h3 className="flex items-center gap-2 text-xl font-bold text-gray-800">
-            <Calendar className="text-blue-600" size={22} /> Thêm Deadline mới
+            <Calendar className="text-blue-600" size={22} /> {mode === "edit" ? "Sửa Deadline" : "Thêm Deadline mới"}
           </h3>
           <button
             onClick={onClose}
@@ -224,18 +285,27 @@ const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
             </label>
             <div className="mb-2 flex flex-wrap gap-2">
               {mergedTagOptions.map((tagName) => (
-                <button
-                  key={tagName}
-                  type="button"
-                  onClick={() => setDeadlineTag(tagName)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                    deadlineTag === tagName
-                      ? "border-blue-300 bg-blue-50 text-blue-700"
-                      : "border-gray-200 bg-white text-gray-600 hover:border-blue-200 hover:bg-blue-50/50"
-                  }`}
-                >
-                  {tagName}
-                </button>
+                <div key={tagName} className="group relative">
+                  <button
+                    type="button"
+                    onClick={() => setDeadlineTag(tagName)}
+                    className={`rounded-full border px-3 py-1.5 pr-6 text-xs font-semibold transition-colors ${
+                      deadlineTag === tagName
+                        ? "border-blue-300 bg-blue-50 text-blue-700"
+                        : "border-gray-200 bg-white text-gray-600 hover:border-blue-200 hover:bg-blue-50/50"
+                    }`}
+                  >
+                    {tagName}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTag(tagName)}
+                    className="absolute -right-1 -top-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-200 bg-white text-[10px] font-bold text-gray-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                    aria-label={`Xóa tag ${tagName}`}
+                  >
+                    ×
+                  </button>
+                </div>
               ))}
             </div>
             <div className="flex gap-2">
@@ -287,7 +357,7 @@ const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
               "Đang lưu..."
             ) : (
               <span className="inline-flex items-center gap-2">
-                <Save size={16} /> Lưu Deadline
+                <Save size={16} /> {mode === "edit" ? "Lưu thay đổi" : "Lưu Deadline"}
               </span>
             )}
           </button>

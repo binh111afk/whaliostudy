@@ -4,6 +4,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
+  Pencil,
   Plus,
   Tag,
   Trash2,
@@ -45,6 +46,7 @@ const DeadlineExpandedSection = ({
   onCreateClick,
   onDelete,
   onToggle,
+  onEdit,
 }) => {
   const sortedDeadlines = useMemo(() => {
     return [...deadlines].sort((a, b) => {
@@ -207,7 +209,7 @@ const DeadlineExpandedSection = ({
                 sortedDeadlines.map((task) => (
                   <div
                     key={task._id}
-                    className={`rounded-2xl border border-gray-200 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30 ${
+                    className={`group rounded-2xl border border-gray-200 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30 ${
                       task.isDone ? "opacity-60" : ""
                     }`}
                   >
@@ -247,13 +249,41 @@ const DeadlineExpandedSection = ({
                         </div>
                       </div>
 
+                      <div className="hidden items-center gap-1 sm:flex opacity-0 transition-opacity group-hover:opacity-100">
+                        <button
+                          type="button"
+                          onClick={() => onEdit?.(task)}
+                          className="rounded-lg p-2 text-blue-400 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20"
+                          aria-label="Sửa deadline"
+                        >
+                          <Pencil size={18} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDelete?.(task._id)}
+                          className="rounded-lg p-2 text-rose-400 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/20"
+                          aria-label="Xóa deadline"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2 border-t border-gray-200/70 pt-2 dark:border-gray-700 sm:hidden">
+                      <button
+                        type="button"
+                        onClick={() => onEdit?.(task)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700"
+                      >
+                        <Pencil size={12} />
+                        Sửa
+                      </button>
                       <button
                         type="button"
                         onClick={() => onDelete?.(task._id)}
-                        className="rounded-lg p-2 text-rose-400 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/20"
-                        aria-label="Xóa deadline"
+                        className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={12} />
+                        Xóa
                       </button>
                     </div>
                   </div>

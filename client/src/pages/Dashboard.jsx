@@ -11,6 +11,7 @@ import {
   FileText,
   Library,
   GraduationCap,
+  Pencil,
   TrendingUp,
   ArrowDown,
   Trash2,
@@ -1392,6 +1393,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   // State Deadline
   const [deadlines, setDeadlines] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingDeadline, setEditingDeadline] = useState(null);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [showAllDeadlinesMobile, setShowAllDeadlinesMobile] = useState(false);
   const [isDeadlineExpanded, setIsDeadlineExpanded] = useState(false);
@@ -1602,6 +1604,11 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
     } catch (error) {
       loadDeadlines();
     }
+  };
+
+  const handleEditDeadline = (task) => {
+    setEditingDeadline(task);
+    setIsModalOpen(true);
   };
 
   const isIncrease = parseFloat(gpaMetrics.diff) >= 0;
@@ -2069,16 +2076,28 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                             : "border-blue-100 bg-blue-50/40 dark:border-blue-700/40 dark:bg-blue-900/10"
                         } group`}
                       >
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteDeadline(primaryDeadline._id);
-                          }}
-                          className="absolute right-2 top-2 p-1.5 text-gray-300 dark:text-gray-600 hover:text-orange-500 dark:hover:text-orange-300 opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-all z-10"
-                          aria-label="Xóa deadline"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="absolute right-2 top-2 hidden items-center gap-1 sm:flex opacity-0 group-hover:opacity-100 transition-all z-10">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditDeadline(primaryDeadline);
+                            }}
+                            className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-300"
+                            aria-label="Sửa deadline"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteDeadline(primaryDeadline._id);
+                            }}
+                            className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-orange-500 dark:hover:text-orange-300"
+                            aria-label="Xóa deadline"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                         <div className="flex items-start gap-3">
                           <button
                             type="button"
@@ -2140,6 +2159,30 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                 {primaryDeadlineMeta?.dateLine}
                               </span>
                             </div>
+                            <div className="mt-2 flex items-center gap-2 border-t border-gray-200/70 pt-2 dark:border-gray-700 sm:hidden">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditDeadline(primaryDeadline);
+                                }}
+                                className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700"
+                              >
+                                <Pencil size={12} />
+                                Sửa
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteDeadline(primaryDeadline._id);
+                                }}
+                                className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700"
+                              >
+                                <Trash2 size={12} />
+                                Xóa
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -2156,16 +2199,28 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                 task.isDone ? "opacity-60" : ""
                               }`}
                             >
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteDeadline(task._id);
-                                }}
-                                className="absolute right-2 top-2 p-1.5 text-gray-300 dark:text-gray-600 hover:text-orange-500 dark:hover:text-orange-300 opacity-0 group-hover:opacity-100 transition-all"
-                                aria-label="Xóa deadline"
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                              <div className="absolute right-2 top-2 hidden items-center gap-1 sm:flex opacity-0 group-hover:opacity-100 transition-all">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditDeadline(task);
+                                  }}
+                                  className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-300"
+                                  aria-label="Sửa deadline"
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteDeadline(task._id);
+                                  }}
+                                  className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-orange-500 dark:hover:text-orange-300"
+                                  aria-label="Xóa deadline"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => handleToggleDeadline(task)}
@@ -2214,6 +2269,30 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                 >
                                   {meta.timeLeftLabel} • {meta.dateLine}
                                 </p>
+                                <div className="mt-2 flex items-center gap-2 border-t border-gray-200/70 pt-2 dark:border-gray-700 sm:hidden">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditDeadline(task);
+                                    }}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700"
+                                  >
+                                    <Pencil size={12} />
+                                    Sửa
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteDeadline(task._id);
+                                    }}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700"
+                                  >
+                                    <Trash2 size={12} />
+                                    Xóa
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           );
@@ -2230,16 +2309,6 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                 task.isDone ? "opacity-60" : ""
                               }`}
                             >
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteDeadline(task._id);
-                                }}
-                                className="absolute right-1.5 top-2 p-1.5 text-gray-300 dark:text-gray-600 hover:text-orange-500 dark:hover:text-orange-300"
-                                aria-label="Xóa deadline"
-                              >
-                                <Trash2 size={14} />
-                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleToggleDeadline(task)}
@@ -2286,6 +2355,30 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                 >
                                   {meta.timeLeftLabel} • {meta.dateLine}
                                 </p>
+                                <div className="mt-2 flex items-center gap-2 border-t border-gray-200/70 pt-2 dark:border-gray-700">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditDeadline(task);
+                                    }}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700"
+                                  >
+                                    <Pencil size={12} />
+                                    Sửa
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteDeadline(task._id);
+                                    }}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700"
+                                  >
+                                    <Trash2 size={12} />
+                                    Xóa
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           );
@@ -2329,9 +2422,14 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
 
       <AddDeadlineModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingDeadline(null);
+        }}
         onSuccess={loadDeadlines}
         username={user?.username}
+        mode={editingDeadline ? "edit" : "create"}
+        initialData={editingDeadline}
       />
 
       <DeadlineExpandedSection
@@ -2339,10 +2437,12 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
         onClose={() => setIsDeadlineExpanded(false)}
         deadlines={prioritizedDeadlines}
         onCreateClick={() => {
+          setEditingDeadline(null);
           setIsModalOpen(true);
         }}
         onDelete={handleDeleteDeadline}
         onToggle={handleToggleDeadline}
+        onEdit={handleEditDeadline}
       />
 
       <EditTargetModal

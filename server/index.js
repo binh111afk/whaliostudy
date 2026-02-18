@@ -2505,6 +2505,48 @@ app.delete('/api/events/:id', async (req, res) => {
     }
 });
 
+// PUT /api/events/:id - Update an event
+app.put('/api/events/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { username, title, date, type, description, deadlineTag } = req.body;
+
+        if (!username || !title || !date) {
+            return res.json({ success: false, message: 'Missing required fields' });
+        }
+
+        const event = await Event.findById(id);
+        if (!event) {
+            return res.json({ success: false, message: 'Event not found' });
+        }
+
+        if (event.username !== username) {
+            return res.json({ success: false, message: 'Unauthorized' });
+        }
+
+        const parsedDate = new Date(date);
+        if (Number.isNaN(parsedDate.getTime())) {
+            return res.json({ success: false, message: 'Ngày giờ deadline không hợp lệ' });
+        }
+
+        const normalizedType = ['exam', 'deadline', 'other'].includes(type)
+            ? type
+            : event.type || 'deadline';
+
+        event.title = String(title || '').trim();
+        event.date = parsedDate;
+        event.type = normalizedType;
+        event.description = String(description || '').trim().slice(0, 300);
+        event.deadlineTag = String(deadlineTag || '').trim().slice(0, 40) || 'Công việc';
+
+        await event.save();
+        return res.json({ success: true, event });
+    } catch (err) {
+        console.error('Error updating event:', err);
+        return res.json({ success: false, message: 'Server error' });
+    }
+});
+
 // PUT /api/events/toggle - Toggle completed status for an event
 app.put('/api/events/toggle', async (req, res) => {
     try {
