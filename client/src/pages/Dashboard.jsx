@@ -27,6 +27,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  ArrowUpRight,
   Check,
   Smile,
   Save,
@@ -2040,12 +2041,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                     className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-700/60 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40"
                     aria-label={isDeadlineExpanded ? "Thu gọn" : "Mở rộng"}
                   >
-                    <ChevronDown
-                      size={14}
-                      className={`transition-transform ${
-                        isDeadlineExpanded ? "rotate-180" : ""
-                      }`}
-                    />
+                    <ArrowUpRight size={14} />
                   </button>
                   </div>
                 </div>
