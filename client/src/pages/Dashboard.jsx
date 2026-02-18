@@ -2011,7 +2011,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
 
             {/* Cột phải: To-Do List */}
             <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col h-full transition-shadow duration-300 hover:shadow-md">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="flex items-center gap-2">
                     <Clock size={16} className="text-blue-600 dark:text-blue-400" />
@@ -2023,9 +2023,9 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                     {pendingDeadlineCount} công việc cần xử lý
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-nowrap items-center gap-2 self-start sm:self-auto">
                   <span
-                    className={`inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-xs font-bold ${
+                    className={`inline-flex min-w-[76px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-bold leading-none ${
                       primaryDeadlineMeta
                         ? primaryDeadlineMeta.urgency === "critical"
                           ? "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-700/60 dark:bg-orange-900/30 dark:text-orange-300"
@@ -2040,7 +2040,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                   <button
                     type="button"
                     onClick={() => setIsDeadlineExpanded((prev) => !prev)}
-                    className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-700/60 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40"
+                    className="inline-flex min-w-[88px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold leading-none text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-700/60 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40"
                   >
                     {isDeadlineExpanded ? "Thu gọn" : "Mở rộng"}
                   </button>
@@ -2119,7 +2119,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                   className="text-orange-500 dark:text-orange-300"
                                 />
                               )}
-                              <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                              <span className="inline-flex shrink-0 whitespace-nowrap rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
                                 {getDeadlineTagLabel(primaryDeadline)}
                               </span>
                             </div>
@@ -2196,7 +2196,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                   >
                                     {task.title}
                                   </p>
-                                  <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                                  <span className="inline-flex shrink-0 whitespace-nowrap rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
                                     {getDeadlineTagLabel(task)}
                                   </span>
                                 </div>
@@ -2269,7 +2269,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                 >
                                   {task.title}
                                 </p>
-                                <span className="mt-1 inline-flex rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                                <span className="mt-1 inline-flex shrink-0 whitespace-nowrap rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
                                   {getDeadlineTagLabel(task)}
                                 </span>
                                 <p
@@ -2311,14 +2311,6 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
               </div>
             </div>
 
-            {isDeadlineExpanded && (
-              <DeadlineExpandedSection
-                deadlines={prioritizedDeadlines}
-                onCreateClick={() => setIsModalOpen(true)}
-                onDelete={handleDeleteDeadline}
-                onToggle={handleToggleDeadline}
-              />
-            )}
           </div>
         </div>
       )}
@@ -2337,6 +2329,18 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
         onClose={() => setIsModalOpen(false)}
         onSuccess={loadDeadlines}
         username={user?.username}
+      />
+
+      <DeadlineExpandedSection
+        isOpen={isDeadlineExpanded}
+        onClose={() => setIsDeadlineExpanded(false)}
+        deadlines={prioritizedDeadlines}
+        onCreateClick={() => {
+          setIsDeadlineExpanded(false);
+          setIsModalOpen(true);
+        }}
+        onDelete={handleDeleteDeadline}
+        onToggle={handleToggleDeadline}
       />
 
       <EditTargetModal
