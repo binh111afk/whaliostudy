@@ -210,7 +210,7 @@ function App() {
 
   return (
     <Router>
-      <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-gray-50 dark:bg-gray-900">
+      <div className="flex h-screen w-full max-w-full overflow-hidden bg-gray-50 dark:bg-gray-900">
         <div className="hidden lg:block">
           <Sidebar />
         </div>
@@ -237,8 +237,8 @@ function App() {
           </div>
         )}
 
-        <div className="flex min-h-screen min-w-0 flex-1 flex-col lg:ml-64">
-          <div className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-gray-200 bg-white/95 px-3 backdrop-blur-md dark:border-gray-700 dark:bg-gray-900/95 lg:hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:ml-64">
+          <div className="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between border-b border-gray-200 bg-white/95 px-3 backdrop-blur-md dark:border-gray-700 dark:bg-gray-900/95 lg:hidden">
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
               className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
@@ -274,7 +274,7 @@ function App() {
           </div>
 
           {/* Main content */}
-          <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 md:p-5 lg:p-6 pb-24 lg:pb-6 scroll-smooth">
+          <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 pb-24 pt-16 scroll-smooth sm:p-4 sm:pt-16 md:p-5 md:pt-16 lg:p-6 lg:pb-6 lg:pt-20">
             <Routes>
             <Route path="/" element={<Dashboard user={user} darkMode={darkMode} setDarkMode={setDarkMode} />} />
               <Route path="/gpa" element={<GpaCalc />} />

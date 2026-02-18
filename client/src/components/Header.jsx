@@ -59,7 +59,7 @@ const Header = ({
 
   return (
     // Thêm z-50 vào Header để nó luôn nổi lên trên cùng
-    <div className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6 sticky top-0 z-50">
+    <div className="fixed left-64 right-0 top-0 z-50 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6 dark:border-gray-700 dark:bg-gray-800">
       {/* 1. TÌM KIẾM */}
       <div className="flex items-center bg-gray-50 dark:bg-gray-700 rounded-xl px-4 py-2 w-64 lg:w-80 border border-transparent focus-within:border-blue-500/30 focus-within:bg-white dark:focus-within:bg-gray-600 transition-all">
         <Search size={18} className="text-gray-400 dark:text-gray-500" />

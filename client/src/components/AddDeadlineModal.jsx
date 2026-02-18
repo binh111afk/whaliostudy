@@ -139,7 +139,7 @@ const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-sm animate-fade-in">
       <div className="w-full max-w-lg rounded-3xl bg-white p-5 shadow-2xl sm:p-6">
         <div className="mb-5 flex items-center justify-between border-b border-gray-200 pb-4">
           <h3 className="flex items-center gap-2 text-xl font-bold text-gray-800">

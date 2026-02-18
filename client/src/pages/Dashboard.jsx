@@ -2015,7 +2015,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                 <div>
                   <div className="flex items-center gap-2">
                     <Clock size={16} className="text-blue-600 dark:text-blue-400" />
-                    <h3 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-white">
+                    <h3 className="whitespace-nowrap text-lg font-extrabold text-gray-900 dark:text-white sm:text-xl">
                       Deadline sắp tới
                     </h3>
                   </div>
@@ -2336,7 +2336,6 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
         onClose={() => setIsDeadlineExpanded(false)}
         deadlines={prioritizedDeadlines}
         onCreateClick={() => {
-          setIsDeadlineExpanded(false);
           setIsModalOpen(true);
         }}
         onDelete={handleDeleteDeadline}
