@@ -2012,19 +2012,15 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
 
             {/* Cột phải: To-Do List */}
             <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col h-full transition-shadow duration-300 hover:shadow-md">
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
+              <div className="mb-4">
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Clock size={16} className="text-blue-600 dark:text-blue-400" />
                     <h3 className="whitespace-nowrap text-lg font-extrabold text-gray-900 dark:text-white sm:text-xl">
                       Deadline sắp tới
                     </h3>
                   </div>
-                  <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                    {pendingDeadlineCount} công việc cần xử lý
-                  </p>
-                </div>
-                <div className="flex flex-col items-start gap-2 self-start sm:items-end sm:self-auto">
+                  <div className="flex items-center gap-2">
                   <span
                     className={`inline-flex min-w-[76px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-bold leading-none ${
                       primaryDeadlineMeta
@@ -2041,11 +2037,21 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                   <button
                     type="button"
                     onClick={() => setIsDeadlineExpanded((prev) => !prev)}
-                    className="inline-flex min-w-[88px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold leading-none text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-700/60 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-700/60 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40"
+                    aria-label={isDeadlineExpanded ? "Thu gọn" : "Mở rộng"}
                   >
-                    {isDeadlineExpanded ? "Thu gọn" : "Mở rộng"}
+                    <ChevronDown
+                      size={14}
+                      className={`transition-transform ${
+                        isDeadlineExpanded ? "rotate-180" : ""
+                      }`}
+                    />
                   </button>
+                  </div>
                 </div>
+                <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                  {pendingDeadlineCount} công việc cần xử lý
+                </p>
               </div>
               <div className="space-y-3 flex-1 overflow-y-auto pr-1 sm:pr-2 max-h-[350px]">
                 {prioritizedDeadlines.length === 0 ? (
