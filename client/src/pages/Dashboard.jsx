@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { studyService } from "../services/studyService";
 import AddDeadlineModal from "../components/AddDeadlineModal";
+import DeadlineExpandedSection from "../components/DeadlineExpandedSection";
 import {
   BookOpen,
   Clock,
@@ -83,16 +84,21 @@ const getDeadlineDateLine = (dateString) => {
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return "--/-- • --:--";
 
-  const [day, month] = date
-    .toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })
-    .split("/");
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
   const time = date.toLocaleTimeString("vi-VN", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
 
-  return `${day}-${month} • ${time}`;
+  return `${day}-${month}-${year} • ${time}`;
+};
+
+const getDeadlineTagLabel = (task) => {
+  const raw = String(task?.deadlineTag || "").trim();
+  return raw || "Công việc";
 };
 
 const getDeadlineMeta = (task) => {
@@ -1034,6 +1040,7 @@ const FlashcardTab = () => {
                 <ChevronRight size={28} />
               </button>
             </div>
+
           </div>
         </div>
       )}
@@ -1386,6 +1393,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [showAllDeadlinesMobile, setShowAllDeadlinesMobile] = useState(false);
+  const [isDeadlineExpanded, setIsDeadlineExpanded] = useState(false);
 
   // State GPA & Credits
   const [gpaMetrics, setGpaMetrics] = useState({
@@ -2015,19 +2023,28 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                     {pendingDeadlineCount} công việc cần xử lý
                   </p>
                 </div>
-                <span
-                  className={`inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-xs font-bold ${
-                    primaryDeadlineMeta
-                      ? primaryDeadlineMeta.urgency === "critical"
-                        ? "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-700/60 dark:bg-orange-900/30 dark:text-orange-300"
-                        : primaryDeadlineMeta.urgency === "soon"
-                        ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700/60 dark:bg-blue-900/30 dark:text-blue-300"
-                        : "border-blue-100 bg-blue-600/10 text-blue-700 dark:border-blue-700/60 dark:bg-blue-900/30 dark:text-blue-300"
-                      : "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-gray-700/60 dark:text-gray-300"
-                  }`}
-                >
-                  {deadlines.length} task
-                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-xs font-bold ${
+                      primaryDeadlineMeta
+                        ? primaryDeadlineMeta.urgency === "critical"
+                          ? "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-700/60 dark:bg-orange-900/30 dark:text-orange-300"
+                          : primaryDeadlineMeta.urgency === "soon"
+                          ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700/60 dark:bg-blue-900/30 dark:text-blue-300"
+                          : "border-blue-100 bg-blue-600/10 text-blue-700 dark:border-blue-700/60 dark:bg-blue-900/30 dark:text-blue-300"
+                        : "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-gray-700/60 dark:text-gray-300"
+                    }`}
+                  >
+                    {deadlines.length} task
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsDeadlineExpanded((prev) => !prev)}
+                    className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-700/60 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40"
+                  >
+                    {isDeadlineExpanded ? "Thu gọn" : "Mở rộng"}
+                  </button>
+                </div>
               </div>
               <div className="space-y-3 flex-1 overflow-y-auto pr-1 sm:pr-2 max-h-[350px]">
                 {prioritizedDeadlines.length === 0 ? (
@@ -2102,11 +2119,9 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                   className="text-orange-500 dark:text-orange-300"
                                 />
                               )}
-                              {primaryDeadline.type === "exam" && (
-                                <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
-                                  THI
-                                </span>
-                              )}
+                              <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                                {getDeadlineTagLabel(primaryDeadline)}
+                              </span>
                             </div>
                             <div className="mt-1.5 flex items-center gap-2">
                               <span
@@ -2181,11 +2196,9 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                   >
                                     {task.title}
                                   </p>
-                                  {task.type === "exam" && (
-                                    <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                                      THI
-                                    </span>
-                                  )}
+                                  <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                                    {getDeadlineTagLabel(task)}
+                                  </span>
                                 </div>
                                 <p
                                   className={`mt-0.5 text-xs font-medium ${
@@ -2256,6 +2269,9 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                 >
                                   {task.title}
                                 </p>
+                                <span className="mt-1 inline-flex rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                                  {getDeadlineTagLabel(task)}
+                                </span>
                                 <p
                                   className={`mt-0.5 text-xs font-medium ${
                                     meta.urgency === "critical"
@@ -2294,6 +2310,15 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                 )}
               </div>
             </div>
+
+            {isDeadlineExpanded && (
+              <DeadlineExpandedSection
+                deadlines={prioritizedDeadlines}
+                onCreateClick={() => setIsModalOpen(true)}
+                onDelete={handleDeleteDeadline}
+                onToggle={handleToggleDeadline}
+              />
+            )}
           </div>
         </div>
       )}

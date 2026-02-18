@@ -1,60 +1,134 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { X, Calendar, Clock, Type, Save, AlertCircle } from "lucide-react";
+import { X, Calendar, Clock, Save, Tag, Plus } from "lucide-react";
+
+const DEFAULT_DEADLINE_TAGS = ["Công việc", "Dự án", "Học bài", "Hạn chót"];
+const DEADLINE_TAG_STORAGE_KEY = "whalio_deadline_tags_v1";
+
+const buildDeadlineDate = (date, time) => {
+  const composed = `${date}T${time}:00`;
+  const parsed = new Date(composed);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+};
 
 const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
   const [title, setTitle] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]); // Mặc định hôm nay
+  const [description, setDescription] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [time, setTime] = useState("23:59");
-  const [type, setType] = useState("deadline"); // exam, deadline, other
+  const [deadlineTag, setDeadlineTag] = useState(DEFAULT_DEADLINE_TAGS[0]);
+  const [customTag, setCustomTag] = useState("");
+  const [tagOptions, setTagOptions] = useState(DEFAULT_DEADLINE_TAGS);
   const [loading, setLoading] = useState(false);
+
+  const mergedTagOptions = useMemo(() => {
+    const safe = tagOptions
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
+    const unique = Array.from(new Set([...DEFAULT_DEADLINE_TAGS, ...safe]));
+    return unique.slice(0, 16);
+  }, [tagOptions]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      const raw = localStorage.getItem(DEADLINE_TAG_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      setTagOptions(parsed);
+    } catch {
+      setTagOptions(DEFAULT_DEADLINE_TAGS);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        DEADLINE_TAG_STORAGE_KEY,
+        JSON.stringify(mergedTagOptions)
+      );
+    } catch {
+      // ignore storage errors
+    }
+  }, [mergedTagOptions]);
 
   if (!isOpen) return null;
 
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setDate(new Date().toISOString().split("T")[0]);
+    setTime("23:59");
+    setDeadlineTag(DEFAULT_DEADLINE_TAGS[0]);
+    setCustomTag("");
+  };
+
+  const handleAddTag = () => {
+    const nextTag = customTag.trim();
+    if (!nextTag) return;
+    const exists = mergedTagOptions.some(
+      (item) => item.toLowerCase() === nextTag.toLowerCase()
+    );
+    if (!exists) {
+      setTagOptions((prev) => [...prev, nextTag]);
+    }
+    setDeadlineTag(nextTag);
+    setCustomTag("");
+  };
+
   const handleSubmit = async () => {
-    // 1. Kiểm tra Tên Deadline
-    if (!title.trim()) {
-      return toast.warning("Quên đặt tên rồi kìa bạn!", {
-        description: "Vui lòng đặt tên Deadline.",
-        icon: "✍️", // Icon giúp thông báo nhìn sinh động và mượt hơn
-      });
+    if (!username) {
+      toast.error("Không tìm thấy tài khoản đăng nhập.");
+      return;
     }
 
-    // 2. Kiểm tra Ngày tháng
-    if (!date) {
-      return toast.warning("Ngày thi/nộp bài đâu ông ơi?", {
-        description: "Phải có ngày thì Whalio mới nhắc lịch chuẩn được.",
-        icon: "📅",
+    if (!title.trim()) {
+      toast.warning("Quên đặt tên rồi kìa bạn!", {
+        description: "Vui lòng đặt tên Deadline.",
       });
+      return;
     }
+
+    if (!date || !time) {
+      toast.warning("Thiếu ngày hoặc giờ deadline.");
+      return;
+    }
+
+    const finalDate = buildDeadlineDate(date, time);
+    if (!finalDate) {
+      toast.warning("Ngày giờ chưa hợp lệ.", {
+        description: "Vui lòng chọn lại ngày/giờ deadline.",
+      });
+      return;
+    }
+
+    const normalizedTag = String(deadlineTag || "").trim() || "Công việc";
 
     setLoading(true);
     try {
-      // Kết hợp ngày và giờ
-      const finalDate = new Date(`${date}T${time}`);
-
       const response = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username,
-          title,
-          date: finalDate,
-          type,
+          title: title.trim(),
+          description: description.trim(),
+          date: finalDate.toISOString(),
+          type: "deadline",
+          deadlineTag: normalizedTag,
         }),
       });
 
-      const data = await response.json();
-
+      const data = await response.json().catch(() => ({}));
       if (data.success) {
         toast.success("Thêm deadline thành công!");
-        // Reset form
-        setTitle("");
-        setType("deadline");
-        onSuccess(); // Báo cho Dashboard biết để load lại list
-        onClose(); // Đóng modal
+        resetForm();
+        onSuccess?.();
+        onClose?.();
       } else {
-        toast.error(data.message || "Có lỗi xảy ra!");
+        toast.error(data.message || "Không thể thêm deadline.");
       }
     } catch (error) {
       console.error("Lỗi thêm deadline:", error);
@@ -65,39 +139,51 @@ const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl transform transition-all scale-100">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6 border-b pb-4">
-          <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Calendar className="text-blue-600" /> Thêm Deadline mới
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-sm animate-fade-in">
+      <div className="w-full max-w-lg rounded-3xl bg-white p-5 shadow-2xl sm:p-6">
+        <div className="mb-5 flex items-center justify-between border-b border-gray-200 pb-4">
+          <h3 className="flex items-center gap-2 text-xl font-bold text-gray-800">
+            <Calendar className="text-blue-600" size={22} /> Thêm Deadline mới
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+            className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            aria-label="Đóng modal"
           >
-            <X size={24} />
+            <X size={22} />
           </button>
         </div>
 
-        {/* Body */}
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tên công việc
+            <label className="mb-1 block text-sm font-semibold text-gray-700">
+              Tiêu đề
             </label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ví dụ: Nộp bài tập C++..."
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-medium"
+              placeholder="Ví dụ: Nộp báo cáo cuối kỳ"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-gray-800 outline-none transition-colors focus:border-blue-300 focus:ring-2 focus:ring-blue-200"
               autoFocus
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1 block text-sm font-semibold text-gray-700">
+              Mô tả
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Mô tả chi tiết deadline (không bắt buộc)"
+              rows={3}
+              className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-gray-800 outline-none transition-colors focus:border-blue-300 focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="mb-1 block text-sm font-semibold text-gray-700">
                 Ngày hết hạn
               </label>
               <div className="relative">
@@ -105,16 +191,16 @@ const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full p-3 pl-10 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-3 outline-none transition-colors focus:border-blue-300 focus:ring-2 focus:ring-blue-200"
                 />
                 <Calendar
-                  className="absolute left-3 top-3 text-gray-400"
-                  size={18}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={17}
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="mb-1 block text-sm font-semibold text-gray-700">
                 Giờ
               </label>
               <div className="relative">
@@ -122,74 +208,87 @@ const AddDeadlineModal = ({ isOpen, onClose, onSuccess, username }) => {
                   type="time"
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
-                  className="w-full p-3 pl-10 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-3 outline-none transition-colors focus:border-blue-300 focus:ring-2 focus:ring-blue-200"
                 />
                 <Clock
-                  className="absolute left-3 top-3 text-gray-400"
-                  size={18}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={17}
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Loại công việc
+            <label className="mb-1 block text-sm font-semibold text-gray-700">
+              Tag loại deadline
             </label>
+            <div className="mb-2 flex flex-wrap gap-2">
+              {mergedTagOptions.map((tagName) => (
+                <button
+                  key={tagName}
+                  type="button"
+                  onClick={() => setDeadlineTag(tagName)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    deadlineTag === tagName
+                      ? "border-blue-300 bg-blue-50 text-blue-700"
+                      : "border-gray-200 bg-white text-gray-600 hover:border-blue-200 hover:bg-blue-50/50"
+                  }`}
+                >
+                  {tagName}
+                </button>
+              ))}
+            </div>
             <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Tag
+                  size={16}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
+                <input
+                  value={customTag}
+                  onChange={(e) => setCustomTag(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddTag();
+                    }
+                  }}
+                  placeholder="Tạo tag mới..."
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-3 text-sm outline-none transition-colors focus:border-blue-300 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
               <button
-                onClick={() => setType("deadline")}
-                className={`flex-1 py-2 rounded-lg text-sm font-bold border cursor-pointer ${
-                  type === "deadline"
-                    ? "bg-red-50 border-red-200 text-red-600"
-                    : "bg-white border-gray-200 text-gray-500"
-                }`}
+                type="button"
+                onClick={handleAddTag}
+                className="inline-flex items-center gap-1 rounded-xl border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100"
               >
-                Deadline
-              </button>
-              <button
-                onClick={() => setType("exam")}
-                className={`flex-1 py-2 rounded-lg text-sm font-bold border cursor-pointer ${
-                  type === "exam"
-                    ? "bg-blue-50 border-blue-200 text-blue-600"
-                    : "bg-white border-gray-200 text-gray-500"
-                }`}
-              >
-                Lịch thi
-              </button>
-              <button
-                onClick={() => setType("other")}
-                className={`flex-1 py-2 rounded-lg text-sm font-bold border cursor-pointer ${
-                  type === "other"
-                    ? "bg-gray-100 border-gray-300 text-gray-600"
-                    : "bg-white border-gray-200 text-gray-500"
-                }`}
-              >
-                Khác
+                <Plus size={14} />
+                Thêm
               </button>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="mt-8 flex gap-3">
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row">
           <button
             onClick={onClose}
-            className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition-all cursor-pointer"
+            type="button"
+            className="w-full rounded-xl bg-gray-100 py-3 text-sm font-bold text-gray-600 transition-colors hover:bg-gray-200 sm:flex-1"
           >
             Hủy bỏ
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 flex items-center justify-center gap-2 transition-all disabled:opacity-70 cursor-pointer"
+            type="button"
+            className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70 sm:flex-1"
           >
             {loading ? (
               "Đang lưu..."
             ) : (
-              <>
-                <Save size={18} /> Lưu Deadline
-              </>
+              <span className="inline-flex items-center gap-2">
+                <Save size={16} /> Lưu Deadline
+              </span>
             )}
           </button>
         </div>

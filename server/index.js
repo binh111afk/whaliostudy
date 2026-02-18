@@ -476,6 +476,9 @@ const eventSchema = new mongoose.Schema({
     title: { type: String, required: true },
     date: { type: Date, required: true },
     type: { type: String, default: 'exam', enum: ['exam', 'deadline', 'other'] },
+    description: { type: String, default: '' },
+    deadlineTag: { type: String, default: 'Công việc' },
+    isDone: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -2437,17 +2440,31 @@ app.get('/api/events', async (req, res) => {
 // POST /api/events - Add a new event
 app.post('/api/events', async (req, res) => {
     try {
-        const { username, title, date, type } = req.body;
+        const { username, title, date, type, description, deadlineTag } = req.body;
 
         if (!username || !title || !date) {
             return res.json({ success: false, message: 'Missing required fields' });
         }
 
+        const parsedDate = new Date(date);
+        if (Number.isNaN(parsedDate.getTime())) {
+            return res.json({ success: false, message: 'Ngày giờ deadline không hợp lệ' });
+        }
+
+        const normalizedType = ['exam', 'deadline', 'other'].includes(type)
+            ? type
+            : 'exam';
+
+        const normalizedDescription = String(description || '').trim().slice(0, 300);
+        const normalizedTag = String(deadlineTag || '').trim().slice(0, 40) || 'Công việc';
+
         const event = new Event({
             username,
             title: title.trim(),
-            date: new Date(date),
-            type: type || 'exam'
+            date: parsedDate,
+            type: normalizedType,
+            description: normalizedDescription,
+            deadlineTag: normalizedTag,
         });
 
         await event.save();
@@ -2485,6 +2502,34 @@ app.delete('/api/events/:id', async (req, res) => {
     } catch (err) {
         console.error('Error deleting event:', err);
         res.json({ success: false, message: 'Server error' });
+    }
+});
+
+// PUT /api/events/toggle - Toggle completed status for an event
+app.put('/api/events/toggle', async (req, res) => {
+    try {
+        const { id, username } = req.body;
+
+        if (!id || !username) {
+            return res.json({ success: false, message: 'Missing required fields' });
+        }
+
+        const event = await Event.findById(id);
+        if (!event) {
+            return res.json({ success: false, message: 'Event not found' });
+        }
+
+        if (event.username !== username) {
+            return res.json({ success: false, message: 'Unauthorized' });
+        }
+
+        event.isDone = !Boolean(event.isDone);
+        await event.save();
+
+        return res.json({ success: true, event });
+    } catch (err) {
+        console.error('Error toggling event:', err);
+        return res.json({ success: false, message: 'Server error' });
     }
 });
 
