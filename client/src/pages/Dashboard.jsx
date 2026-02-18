@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { studyService } from "../services/studyService";
 import AddDeadlineModal from "../components/AddDeadlineModal";
@@ -25,6 +25,8 @@ import {
   RotateCw,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Check,
   Smile,
   Save,
   Moon,
@@ -77,29 +79,67 @@ const getVNDate = () => {
   return date.toLocaleDateString("vi-VN", options);
 };
 
-// --- HELPER: Format thời gian hiển thị cho deadline ---
-const formatDeadlineTime = (dateString) => {
+const getDeadlineDateLine = (dateString) => {
   const date = new Date(dateString);
-  const now = new Date();
-  const diffTime = date - now;
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  if (Number.isNaN(date.getTime())) return "--/-- • --:--";
 
-  if (diffDays < 0) return "Đã quá hạn";
-  if (diffDays === 0)
-    return `Hôm nay, ${date.getHours()}:${String(date.getMinutes()).padStart(
-      2,
-      "0"
-    )}`;
-  if (diffDays === 1)
-    return `Ngày mai, ${date.getHours()}:${String(date.getMinutes()).padStart(
-      2,
-      "0"
-    )}`;
+  const [day, month] = date
+    .toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })
+    .split("/");
+  const time = date.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 
-  return (
-    date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" }) +
-    ` lúc ${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}`
-  );
+  return `${day}-${month} • ${time}`;
+};
+
+const getDeadlineMeta = (task) => {
+  const deadlineDate = new Date(task?.date);
+
+  if (Number.isNaN(deadlineDate.getTime())) {
+    return {
+      urgency: "normal",
+      hoursLeft: Infinity,
+      isOverdue: false,
+      timeLeftLabel: "Chưa có thời hạn",
+      dateLine: "--/-- • --:--",
+      showWarning: false,
+    };
+  }
+
+  const now = Date.now();
+  const diffMs = deadlineDate.getTime() - now;
+  const hoursLeft = diffMs / (1000 * 60 * 60);
+  const isDone = Boolean(task?.isDone);
+  const isOverdue = !isDone && diffMs < 0;
+
+  let timeLeftLabel = "Còn nhiều ngày";
+  if (isDone) {
+    timeLeftLabel = "Đã hoàn thành";
+  } else if (isOverdue) {
+    timeLeftLabel = "Đã quá hạn";
+  } else if (hoursLeft <= 24) {
+    timeLeftLabel = `Còn ${Math.max(1, Math.ceil(hoursLeft))} giờ`;
+  } else {
+    timeLeftLabel = `Còn ${Math.ceil(hoursLeft / 24)} ngày`;
+  }
+
+  let urgency = "normal";
+  if (!isDone) {
+    if (isOverdue || hoursLeft <= 24) urgency = "critical";
+    else if (hoursLeft <= 72) urgency = "soon";
+  }
+
+  return {
+    urgency,
+    hoursLeft,
+    isOverdue,
+    timeLeftLabel,
+    dateLine: getDeadlineDateLine(task?.date),
+    showWarning: !isDone && hoursLeft <= 48 && hoursLeft >= 0,
+  };
 };
 
 const isMobileViewport = () =>
@@ -1345,6 +1385,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   const [deadlines, setDeadlines] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
+  const [showAllDeadlinesMobile, setShowAllDeadlinesMobile] = useState(false);
 
   // State GPA & Credits
   const [gpaMetrics, setGpaMetrics] = useState({
@@ -1555,6 +1596,30 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   };
 
   const isIncrease = parseFloat(gpaMetrics.diff) >= 0;
+
+  const prioritizedDeadlines = useMemo(() => {
+    return [...deadlines].sort((a, b) => {
+      if (Boolean(a.isDone) !== Boolean(b.isDone)) return a.isDone ? 1 : -1;
+      return new Date(a.date) - new Date(b.date);
+    });
+  }, [deadlines]);
+
+  const pendingDeadlineCount = useMemo(
+    () => prioritizedDeadlines.filter((task) => !task.isDone).length,
+    [prioritizedDeadlines]
+  );
+
+  const primaryDeadline = prioritizedDeadlines[0] || null;
+  const secondaryDeadlines = primaryDeadline
+    ? prioritizedDeadlines.slice(1)
+    : [];
+  const primaryDeadlineMeta = primaryDeadline
+    ? getDeadlineMeta(primaryDeadline)
+    : null;
+
+  const mobileSecondaryDeadlines = showAllDeadlinesMobile
+    ? secondaryDeadlines
+    : secondaryDeadlines.slice(0, 2);
 
   // Dữ liệu cho biểu đồ tròn tín chỉ
   const creditData = [
@@ -1937,81 +2002,295 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
             </div>
 
             {/* Cột phải: To-Do List */}
-            <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col h-full">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-gray-800 dark:text-white">
-                  Deadline sắp tới
-                </h3>
-                <span className="text-xs font-bold text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded-md">
+            <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col h-full transition-shadow duration-300 hover:shadow-md">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-blue-600 dark:text-blue-400" />
+                    <h3 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-white">
+                      Deadline sắp tới
+                    </h3>
+                  </div>
+                  <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                    {pendingDeadlineCount} công việc cần xử lý
+                  </p>
+                </div>
+                <span
+                  className={`inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-xs font-bold ${
+                    primaryDeadlineMeta
+                      ? primaryDeadlineMeta.urgency === "critical"
+                        ? "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-700/60 dark:bg-orange-900/30 dark:text-orange-300"
+                        : primaryDeadlineMeta.urgency === "soon"
+                        ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700/60 dark:bg-blue-900/30 dark:text-blue-300"
+                        : "border-blue-100 bg-blue-600/10 text-blue-700 dark:border-blue-700/60 dark:bg-blue-900/30 dark:text-blue-300"
+                      : "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-gray-700/60 dark:text-gray-300"
+                  }`}
+                >
                   {deadlines.length} task
                 </span>
               </div>
-              <div className="space-y-3 flex-1 overflow-y-auto pr-2 max-h-[300px]">
-                {deadlines.length === 0 ? (
+              <div className="space-y-3 flex-1 overflow-y-auto pr-1 sm:pr-2 max-h-[350px]">
+                {prioritizedDeadlines.length === 0 ? (
                   <div className="text-center py-8 text-gray-400 dark:text-gray-500">
                     <p>Không có deadline nào.</p>
                     <p className="text-xs">Thư giãn đi! 🎉</p>
                   </div>
                 ) : (
-                  deadlines.map((task) => (
-                    <div
-                      key={task._id}
-                      className={`flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl transition-colors cursor-pointer group relative ${
-                        task.isDone ? "opacity-60" : ""
-                      }`}
-                    >
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteDeadline(task._id);
-                        }}
-                        className="absolute right-2 top-2 p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all z-10"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                  <>
+                    {primaryDeadline && (
                       <div
-                        className="mt-1 flex-shrink-0"
-                        onClick={(e) => e.stopPropagation()}
+                        className={`relative rounded-2xl border p-4 transition-all duration-300 hover:shadow-md ${
+                          primaryDeadline.isDone
+                            ? "border-gray-200 bg-gray-50/80 dark:border-gray-700 dark:bg-gray-700/40 opacity-60"
+                            : primaryDeadlineMeta?.urgency === "critical"
+                            ? "border-orange-200 bg-orange-50/80 dark:border-orange-700/50 dark:bg-orange-900/20"
+                            : primaryDeadlineMeta?.urgency === "soon"
+                            ? "border-blue-200 bg-blue-50/80 dark:border-blue-700/60 dark:bg-blue-900/20"
+                            : "border-blue-100 bg-blue-50/40 dark:border-blue-700/40 dark:bg-blue-900/10"
+                        } group`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={task.isDone || false}
-                          onChange={() => handleToggleDeadline(task)}
-                          className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
-                        />
-                      </div>
-                      <div
-                        onClick={() => handleToggleDeadline(task)}
-                        className="flex-1"
-                      >
-                        <p
-                          className={`text-sm font-semibold transition-all ${
-                            task.isDone
-                              ? "text-gray-400 dark:text-gray-500 line-through decoration-gray-400"
-                              : "text-gray-700 dark:text-gray-200"
-                          }`}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteDeadline(primaryDeadline._id);
+                          }}
+                          className="absolute right-2 top-2 p-1.5 text-gray-300 dark:text-gray-600 hover:text-orange-500 dark:hover:text-orange-300 opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-all z-10"
+                          aria-label="Xóa deadline"
                         >
-                          {task.title}
-                        </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {task.type === "exam" && (
-                            <span className="text-[10px] font-bold bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded">
-                              THI
-                            </span>
-                          )}
-                          <p
-                            className={`text-xs font-medium ${
-                              task.type === "exam"
-                                ? "text-red-500 dark:text-red-400"
-                                : "text-gray-400 dark:text-gray-500"
+                          <Trash2 size={14} />
+                        </button>
+                        <div className="flex items-start gap-3">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleDeadline(primaryDeadline);
+                            }}
+                            className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition-all duration-300 ${
+                              primaryDeadline.isDone
+                                ? "border-blue-600 bg-blue-600 text-white"
+                                : "border-blue-300 bg-white text-white hover:-translate-y-0.5 hover:border-blue-500 dark:border-blue-600 dark:bg-gray-800"
                             }`}
+                            aria-label={`Đánh dấu hoàn thành ${primaryDeadline.title}`}
                           >
-                            {formatDeadlineTime(task.date)}
-                          </p>
+                            <Check
+                              size={13}
+                              className={`transition-all duration-300 ${
+                                primaryDeadline.isDone
+                                  ? "scale-100 opacity-100"
+                                  : "scale-75 opacity-0"
+                              }`}
+                            />
+                          </button>
+                          <div
+                            onClick={() => handleToggleDeadline(primaryDeadline)}
+                            className="flex-1 cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2">
+                              <p
+                                className={`text-sm sm:text-base font-bold transition-all ${
+                                  primaryDeadline.isDone
+                                    ? "line-through text-gray-400 dark:text-gray-500 decoration-gray-400"
+                                    : "text-gray-800 dark:text-gray-100"
+                                }`}
+                              >
+                                {primaryDeadline.title}
+                              </p>
+                              {primaryDeadlineMeta?.showWarning && (
+                                <AlertCircle
+                                  size={14}
+                                  className="text-orange-500 dark:text-orange-300"
+                                />
+                              )}
+                              {primaryDeadline.type === "exam" && (
+                                <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
+                                  THI
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-1.5 flex items-center gap-2">
+                              <span
+                                  className={`text-xs sm:text-sm font-semibold ${
+                                  primaryDeadlineMeta?.urgency === "critical"
+                                    ? "text-orange-700 dark:text-orange-300"
+                                    : "text-blue-700 dark:text-blue-300"
+                                }`}
+                              >
+                                ⏳ {primaryDeadlineMeta?.timeLeftLabel}
+                              </span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {primaryDeadlineMeta?.dateLine}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
+                    )}
+
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700/80">
+                      <div className="hidden sm:block">
+                        {secondaryDeadlines.map((task) => {
+                          const meta = getDeadlineMeta(task);
+                          return (
+                            <div
+                              key={task._id}
+                              className={`group relative flex items-start gap-3 py-3 px-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm hover:bg-blue-50/40 dark:hover:bg-blue-900/15 ${
+                                task.isDone ? "opacity-60" : ""
+                              }`}
+                            >
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteDeadline(task._id);
+                                }}
+                                className="absolute right-2 top-2 p-1.5 text-gray-300 dark:text-gray-600 hover:text-orange-500 dark:hover:text-orange-300 opacity-0 group-hover:opacity-100 transition-all"
+                                aria-label="Xóa deadline"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleDeadline(task)}
+                                className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition-all duration-300 ${
+                                  task.isDone
+                                    ? "border-blue-600 bg-blue-600 text-white"
+                                    : "border-blue-300 bg-white text-white hover:border-blue-500 dark:border-blue-600 dark:bg-gray-800"
+                                }`}
+                                aria-label={`Đánh dấu hoàn thành ${task.title}`}
+                              >
+                                <Check
+                                  size={13}
+                                  className={`transition-all duration-300 ${
+                                    task.isDone
+                                      ? "scale-100 opacity-100"
+                                      : "scale-75 opacity-0"
+                                  }`}
+                                />
+                              </button>
+                              <div
+                                onClick={() => handleToggleDeadline(task)}
+                                className="flex-1 cursor-pointer"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <p
+                                    className={`text-sm font-semibold ${
+                                      task.isDone
+                                        ? "line-through text-gray-400 dark:text-gray-500 decoration-gray-400"
+                                        : "text-gray-700 dark:text-gray-200"
+                                    }`}
+                                  >
+                                    {task.title}
+                                  </p>
+                                  {task.type === "exam" && (
+                                    <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                                      THI
+                                    </span>
+                                  )}
+                                </div>
+                                <p
+                                  className={`mt-0.5 text-xs font-medium ${
+                                    meta.urgency === "critical"
+                                      ? "text-orange-600 dark:text-orange-300"
+                                      : meta.urgency === "soon"
+                                      ? "text-blue-600 dark:text-blue-300"
+                                      : "text-gray-500 dark:text-gray-400"
+                                  }`}
+                                >
+                                  {meta.timeLeftLabel} • {meta.dateLine}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="sm:hidden">
+                        {mobileSecondaryDeadlines.map((task) => {
+                          const meta = getDeadlineMeta(task);
+                          return (
+                            <div
+                              key={task._id}
+                              className={`group relative flex items-start gap-3 py-3 px-1 rounded-xl transition-all duration-200 hover:bg-blue-50/40 dark:hover:bg-blue-900/15 ${
+                                task.isDone ? "opacity-60" : ""
+                              }`}
+                            >
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteDeadline(task._id);
+                                }}
+                                className="absolute right-1.5 top-2 p-1.5 text-gray-300 dark:text-gray-600 hover:text-orange-500 dark:hover:text-orange-300"
+                                aria-label="Xóa deadline"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleDeadline(task)}
+                                className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition-all duration-300 ${
+                                  task.isDone
+                                    ? "border-blue-600 bg-blue-600 text-white"
+                                    : "border-blue-300 bg-white text-white dark:border-blue-600 dark:bg-gray-800"
+                                }`}
+                                aria-label={`Đánh dấu hoàn thành ${task.title}`}
+                              >
+                                <Check
+                                  size={13}
+                                  className={`transition-all duration-300 ${
+                                    task.isDone
+                                      ? "scale-100 opacity-100"
+                                      : "scale-75 opacity-0"
+                                  }`}
+                                />
+                              </button>
+                              <div
+                                onClick={() => handleToggleDeadline(task)}
+                                className="flex-1 cursor-pointer"
+                              >
+                                <p
+                                  className={`text-sm font-semibold ${
+                                    task.isDone
+                                      ? "line-through text-gray-400 dark:text-gray-500 decoration-gray-400"
+                                      : "text-gray-700 dark:text-gray-200"
+                                  }`}
+                                >
+                                  {task.title}
+                                </p>
+                                <p
+                                  className={`mt-0.5 text-xs font-medium ${
+                                    meta.urgency === "critical"
+                                      ? "text-orange-600 dark:text-orange-300"
+                                      : meta.urgency === "soon"
+                                      ? "text-blue-600 dark:text-blue-300"
+                                      : "text-gray-500 dark:text-gray-400"
+                                  }`}
+                                >
+                                  {meta.timeLeftLabel} • {meta.dateLine}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {secondaryDeadlines.length > 2 && (
+                          <button
+                            onClick={() =>
+                              setShowAllDeadlinesMobile((prev) => !prev)
+                            }
+                            className="mt-2 inline-flex items-center gap-1 rounded-lg border border-blue-100 bg-blue-50/70 px-2.5 py-1.5 text-xs font-semibold text-blue-700 dark:border-blue-700/60 dark:bg-blue-900/25 dark:text-blue-300"
+                          >
+                            {showAllDeadlinesMobile ? "Thu gọn" : "Xem thêm"}
+                            <ChevronDown
+                              size={14}
+                              className={`transition-transform ${
+                                showAllDeadlinesMobile ? "rotate-180" : ""
+                              }`}
+                            />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  ))
+                  </>
                 )}
               </div>
             </div>
