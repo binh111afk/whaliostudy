@@ -24,12 +24,23 @@ const Sidebar = ({ isMobile = false, onNavigate }) => {
   const containerClasses = isMobile
     ? 'h-full w-full bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 p-4 flex flex-col'
     : 'w-64 h-screen bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 p-4 flex flex-col fixed left-0 top-0';
+  const brandLogoSize = isMobile ? "h-10 w-10" : "h-12 w-12";
+  const brandTitleClass = isMobile ? "text-[1.22rem]" : "text-[1.25rem]";
 
   return (
     <div className={containerClasses}> {/* Thêm fixed để Sidebar đứng im */}
-      <div className="flex items-center space-x-2 px-2 mb-10">
-        <div className="w-8 h-8 bg-primary dark:bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">W</div>
-        <span className="text-xl font-bold text-gray-800 dark:text-white tracking-tight">Whalio <span className="text-primary dark:text-blue-400">2.0</span></span>
+      <div className="mb-10 flex flex-col items-start px-2">
+        <img
+          src="/img/logo.png"
+          alt="Logo Whalio Study"
+          className={`${brandLogoSize} rounded-xl object-contain`}
+          loading="lazy"
+        />
+        <span
+          className={`${brandTitleClass} mt-2 font-semibold leading-none text-[#1f3f78] dark:text-blue-300 tracking-[0.01em] font-['Segoe_UI','Nunito','Quicksand',sans-serif] whitespace-nowrap`}
+        >
+          Whalio Study
+        </span>
       </div>
 
       <nav className="flex-1 space-y-2">
