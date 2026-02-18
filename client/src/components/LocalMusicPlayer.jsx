@@ -1040,7 +1040,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     </div>
     )}
     {floatingVisible && (
-      <div className="fixed bottom-[5.35rem] left-1/2 z-40 w-[93vw] -translate-x-1/2 rounded-3xl border border-slate-200/85 bg-white/95 p-3 shadow-2xl shadow-slate-900/10 backdrop-blur-2xl sm:w-[89vw] sm:p-4 md:w-[84vw] lg:bottom-6 lg:w-[65vw] lg:max-w-[1120px] dark:border-white/15 dark:bg-slate-900/85">
+      <div className="fixed bottom-[5.35rem] left-1/2 z-40 w-[93vw] -translate-x-1/2 rounded-3xl border border-slate-200/85 bg-white/95 p-3 shadow-2xl shadow-slate-900/10 backdrop-blur-2xl sm:w-[89vw] sm:p-4 md:w-[75vw] lg:bottom-6 lg:w-[75vw] dark:border-white/15 dark:bg-slate-900/85">
         <button
           type="button"
           onClick={dismissFloatingPlayer}

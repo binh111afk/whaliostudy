@@ -103,6 +103,8 @@ const StudyTimer = () => {
 
   const [upcomingDeadlines, setUpcomingDeadlines] = useState([]);
   const [subjectReminders, setSubjectReminders] = useState([]);
+  const [showDeadlines, setShowDeadlines] = useState(true);
+  const [showSubjectReminders, setShowSubjectReminders] = useState(true);
 
 
   const modeConfig = TIMER_MODES[mode];
@@ -690,7 +692,7 @@ const StudyTimer = () => {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "100%", opacity: 0 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="mt-0 flex h-full w-full flex-col border border-white/40 dark:border-white/10 bg-white/55 dark:bg-slate-900/45 p-4 backdrop-blur-xl md:p-5 xl:w-[390px] xl:shrink-0"
+              className="mt-0 flex h-full w-full flex-col rounded-3xl border border-white/40 dark:border-white/10 bg-white/55 dark:bg-slate-900/45 p-4 backdrop-blur-xl md:p-5 xl:w-[390px] xl:shrink-0"
             >
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-slate-600 dark:text-slate-200">Tiện ích</h3>
@@ -754,74 +756,100 @@ const StudyTimer = () => {
                 <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-slate-800 dark:text-white">Deadline sắp tới</h4>
-                    {upcomingDeadlines.length > 2 && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => scrollList(deadlinesListRef, "up")}
-                          className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 p-1 text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
-                        >
-                          <ChevronUp size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => scrollList(deadlinesListRef, "down")}
-                          className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 p-1 text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
-                        >
-                          <ChevronDown size={13} />
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowDeadlines((prev) => !prev)}
+                        className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 px-2 py-1 text-xs font-semibold text-slate-600 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
+                      >
+                        {showDeadlines ? "Ẩn" : "Hiện"}
+                      </button>
+                      {showDeadlines && upcomingDeadlines.length > 2 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => scrollList(deadlinesListRef, "up")}
+                            className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 p-1 text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
+                          >
+                            <ChevronUp size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => scrollList(deadlinesListRef, "down")}
+                            className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 p-1 text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
+                          >
+                            <ChevronDown size={13} />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div ref={deadlinesListRef} className="whalio-scrollbar max-h-36 space-y-2 overflow-y-auto pr-1">
-                    {upcomingDeadlines.length > 0 ? (
-                      upcomingDeadlines.map((item) => (
-                        <div key={item.id} className="rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2">
-                          <p className="text-sm font-medium text-slate-700 dark:text-slate-100">{item.title}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">{formatVNDate(item.date)}</p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Chưa có deadline nào.</p>
-                    )}
-                  </div>
+                  {showDeadlines ? (
+                    <div ref={deadlinesListRef} className="whalio-scrollbar max-h-36 space-y-2 overflow-y-auto pr-1">
+                      {upcomingDeadlines.length > 0 ? (
+                        upcomingDeadlines.map((item) => (
+                          <div key={item.id} className="rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2">
+                            <p className="text-sm font-medium text-slate-700 dark:text-slate-100">{item.title}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{formatVNDate(item.date)}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Chưa có deadline nào.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Danh sách deadline đang ẩn.</p>
+                  )}
                 </section>
 
                 <section className="rounded-2xl border border-slate-200/80 dark:border-white/15 bg-white/70 dark:bg-white/10 p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-slate-800 dark:text-white">Nhắc nhở môn học</h4>
-                    {subjectReminders.length > 2 && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => scrollList(remindersListRef, "up")}
-                          className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 p-1 text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
-                        >
-                          <ChevronUp size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => scrollList(remindersListRef, "down")}
-                          className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 p-1 text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
-                        >
-                          <ChevronDown size={13} />
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowSubjectReminders((prev) => !prev)}
+                        className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 px-2 py-1 text-xs font-semibold text-slate-600 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
+                      >
+                        {showSubjectReminders ? "Ẩn" : "Hiện"}
+                      </button>
+                      {showSubjectReminders && subjectReminders.length > 2 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => scrollList(remindersListRef, "up")}
+                            className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 p-1 text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
+                          >
+                            <ChevronUp size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => scrollList(remindersListRef, "down")}
+                            className="rounded-md border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-white/10 p-1 text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white"
+                          >
+                            <ChevronDown size={13} />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div ref={remindersListRef} className="whalio-scrollbar max-h-36 space-y-2 overflow-y-auto pr-1">
-                    {subjectReminders.length > 0 ? (
-                      subjectReminders.map((item) => (
-                        <div key={`${item.subject}-${item.id}`} className="rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2">
-                          <p className="text-sm font-medium text-slate-700 dark:text-slate-100">{item.subject}</p>
-                          <p className="text-xs text-slate-600 dark:text-slate-300">{item.content}</p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">{formatVNDate(item.deadline)}</p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Chưa có nhắc nhở môn học.</p>
-                    )}
-                  </div>
+                  {showSubjectReminders ? (
+                    <div ref={remindersListRef} className="whalio-scrollbar max-h-36 space-y-2 overflow-y-auto pr-1">
+                      {subjectReminders.length > 0 ? (
+                        subjectReminders.map((item) => (
+                          <div key={`${item.subject}-${item.id}`} className="rounded-xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2">
+                            <p className="text-sm font-medium text-slate-700 dark:text-slate-100">{item.subject}</p>
+                            <p className="text-xs text-slate-600 dark:text-slate-300">{item.content}</p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">{formatVNDate(item.deadline)}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Chưa có nhắc nhở môn học.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Danh sách nhắc nhở môn học đang ẩn.</p>
+                  )}
                 </section>
 
                 <StudyTimerMusicPanel />
@@ -901,4 +929,3 @@ const StudyTimer = () => {
 };
 
 export default StudyTimer;
-
