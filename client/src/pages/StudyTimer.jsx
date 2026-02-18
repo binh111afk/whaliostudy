@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { studyService } from "../services/studyService";
-import LocalMusicPlayer from "../components/LocalMusicPlayer";
+import StudyTimerMusicPanel from "../components/StudyTimerMusicPanel";
 
 const TIMER_MODES = {
   focus: { label: "Tập trung", minutes: 25, accent: "from-blue-500 to-indigo-500" },
@@ -824,7 +824,7 @@ const StudyTimer = () => {
                   </div>
                 </section>
 
-                <LocalMusicPlayer />
+                <StudyTimerMusicPanel />
 
               </div>
             </FramerMotion.motion.aside>

@@ -94,7 +94,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isFloatingPlaylistOpen, setIsFloatingPlaylistOpen] = useState(false);
   const [isFloatingCollapsed, setIsFloatingCollapsed] = useState(false);
-  const [isFloatingDismissed, setIsFloatingDismissed] = useState(false);
+  const [isFloatingDismissed, setIsFloatingDismissed] = useState(true);
   const [overlayState, setOverlayState] = useState(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -754,12 +754,6 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
   }, [currentTrack]);
 
   useEffect(() => {
-    if (globalMode && !isStudyTimerRoute && isPlaying && currentTrack && isFloatingDismissed) {
-      setIsFloatingDismissed(false);
-    }
-  }, [globalMode, isStudyTimerRoute, isPlaying, currentTrack, isFloatingDismissed]);
-
-  useEffect(() => {
     if (!floatingVisible) {
       setIsFloatingCollapsed(false);
     }
@@ -1046,7 +1040,7 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     </div>
     )}
     {floatingVisible && (
-      <div className="fixed bottom-[5.35rem] left-1/2 z-40 w-[93vw] -translate-x-1/2 rounded-3xl border border-slate-200/85 bg-white/95 p-3 shadow-2xl shadow-slate-900/10 backdrop-blur-2xl sm:w-[89vw] sm:p-4 md:w-[84vw] lg:bottom-6 lg:w-[80vw] lg:max-w-[1120px] dark:border-white/15 dark:bg-slate-900/85">
+      <div className="fixed bottom-[5.35rem] left-1/2 z-40 w-[93vw] -translate-x-1/2 rounded-3xl border border-slate-200/85 bg-white/95 p-3 shadow-2xl shadow-slate-900/10 backdrop-blur-2xl sm:w-[89vw] sm:p-4 md:w-[84vw] lg:bottom-6 lg:w-[65vw] lg:max-w-[1120px] dark:border-white/15 dark:bg-slate-900/85">
         <button
           type="button"
           onClick={dismissFloatingPlayer}
@@ -1082,7 +1076,10 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
 
               <button
                 type="button"
-                onClick={() => setIsFloatingPlaylistOpen((prev) => !prev)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsFloatingPlaylistOpen((prev) => !prev);
+                }}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
               >
                 <ListMusic size={15} />
@@ -1130,7 +1127,10 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
 
             <button
               type="button"
-              onClick={() => setIsFloatingPlaylistOpen((prev) => !prev)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsFloatingPlaylistOpen((prev) => !prev);
+              }}
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
             >
               <ListMusic size={15} />

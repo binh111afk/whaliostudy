@@ -6,6 +6,8 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header'; 
 import AuthModal from './components/AuthModal'; // Import Modal
 import BackupRestoreModal from './components/BackupRestoreModal';
+import { MusicProvider } from './context/MusicContext';
+import FloatingPlayer from './components/FloatingPlayer';
 
 // Import các trang
 import GpaCalc from './pages/GpaCalc';
@@ -14,7 +16,6 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Community from './pages/Community';
 import StudyTimer from './pages/StudyTimer';
-import LocalMusicPlayer from './components/LocalMusicPlayer';
 import Timetable from './pages/Timetable';
 import Documents from './pages/Documents';
 import Exams from './pages/Exams';
@@ -210,6 +211,7 @@ function App() {
 
   return (
     <Router>
+      <MusicProvider>
       <div className="flex h-screen w-full max-w-full overflow-hidden bg-gray-50 dark:bg-gray-900">
         <div className="hidden lg:block">
           <Sidebar />
@@ -299,8 +301,8 @@ function App() {
           />
         </div>
 
-        {/* MODAL: Đặt ở đây để nó phủ lên toàn bộ ứng dụng khi mở */}
-        <LocalMusicPlayer globalMode />
+        {/* Floating Music Player - controlled by MusicContext */}
+        <FloatingPlayer />
 
         <AuthModal 
           isOpen={isModalOpen} 
@@ -317,6 +319,7 @@ function App() {
           theme={darkMode ? 'dark' : 'light'}
         />
       </div>
+      </MusicProvider>
     </Router>
   );
 }
