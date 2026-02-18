@@ -482,6 +482,15 @@ const eventSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+const deadlineTagSchema = new mongoose.Schema({
+    username: { type: String, required: true, ref: 'User', index: true },
+    name: { type: String, required: true, trim: true, maxlength: 40 },
+    normalizedName: { type: String, required: true, index: true },
+    createdAt: { type: Date, default: Date.now },
+});
+
+deadlineTagSchema.index({ username: 1, normalizedName: 1 }, { unique: true });
+
 // ChatSession Schema - Lưu lịch sử trò chuyện với Whalio AI
 const chatSessionSchema = new mongoose.Schema({
     sessionId: {
@@ -521,6 +530,7 @@ const Activity = mongoose.model('Activity', activitySchema);
 const Timetable = mongoose.model('Timetable', timetableSchema);
 const QuickNote = mongoose.model('QuickNote', quickNoteSchema);
 const Event = mongoose.model('Event', eventSchema);
+const DeadlineTag = mongoose.model('DeadlineTag', deadlineTagSchema);
 const ChatSession = mongoose.model('ChatSession', chatSessionSchema);
 const GpaModel = mongoose.model('Gpa', gpaSchema);
 
@@ -2434,6 +2444,97 @@ app.get('/api/events', async (req, res) => {
     } catch (err) {
         console.error('Error fetching events:', err);
         res.json({ success: false, message: 'Server error' });
+    }
+});
+
+// GET /api/deadline-tags - Fetch custom deadline tags by user
+app.get('/api/deadline-tags', async (req, res) => {
+    try {
+        const { username } = req.query;
+        if (!username) {
+            return res.json({ success: false, message: 'Username is required' });
+        }
+
+        const tags = await DeadlineTag.find({ username })
+            .sort({ createdAt: -1 })
+            .select('name -_id');
+
+        return res.json({
+            success: true,
+            tags: tags.map((tag) => tag.name),
+        });
+    } catch (err) {
+        console.error('Error fetching deadline tags:', err);
+        return res.json({ success: false, message: 'Server error' });
+    }
+});
+
+// POST /api/deadline-tags - Add custom deadline tag for user
+app.post('/api/deadline-tags', async (req, res) => {
+    try {
+        const { username, name } = req.body;
+        if (!username || !name) {
+            return res.json({ success: false, message: 'Missing required fields' });
+        }
+
+        const cleanedName = String(name).trim().slice(0, 40);
+        if (!cleanedName) {
+            return res.json({ success: false, message: 'Tag không hợp lệ' });
+        }
+        const normalizedName = cleanedName.toLowerCase();
+
+        const existed = await DeadlineTag.findOne({ username, normalizedName });
+        if (!existed) {
+            await DeadlineTag.create({
+                username,
+                name: cleanedName,
+                normalizedName,
+            });
+        }
+
+        const tags = await DeadlineTag.find({ username })
+            .sort({ createdAt: -1 })
+            .select('name -_id');
+
+        return res.json({
+            success: true,
+            tags: tags.map((tag) => tag.name),
+        });
+    } catch (err) {
+        console.error('Error creating deadline tag:', err);
+        return res.json({ success: false, message: 'Server error' });
+    }
+});
+
+// DELETE /api/deadline-tags - Delete custom deadline tag for user
+app.delete('/api/deadline-tags', async (req, res) => {
+    try {
+        const { username, name } = req.body;
+        if (!username || !name) {
+            return res.json({ success: false, message: 'Missing required fields' });
+        }
+
+        const cleanedName = String(name).trim();
+        if (!cleanedName) {
+            return res.json({ success: false, message: 'Tag không hợp lệ' });
+        }
+
+        await DeadlineTag.deleteOne({
+            username,
+            normalizedName: cleanedName.toLowerCase(),
+        });
+
+        const tags = await DeadlineTag.find({ username })
+            .sort({ createdAt: -1 })
+            .select('name -_id');
+
+        return res.json({
+            success: true,
+            tags: tags.map((tag) => tag.name),
+        });
+    } catch (err) {
+        console.error('Error deleting deadline tag:', err);
+        return res.json({ success: false, message: 'Server error' });
     }
 });
 

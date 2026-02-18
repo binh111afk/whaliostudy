@@ -3,7 +3,6 @@ import { toast } from "sonner";
 import { X, Calendar, Clock, Save, Tag, Plus } from "lucide-react";
 
 const DEFAULT_DEADLINE_TAGS = ["Công việc", "Dự án", "Học bài", "Hạn chót"];
-const DEADLINE_TAG_STORAGE_KEY = "whalio_deadline_tags_v1";
 
 const buildDeadlineDate = (date, time) => {
   const composed = `${date}T${time}:00`;
@@ -26,29 +25,46 @@ const AddDeadlineModal = ({
   const [time, setTime] = useState("23:59");
   const [deadlineTag, setDeadlineTag] = useState(DEFAULT_DEADLINE_TAGS[0]);
   const [customTag, setCustomTag] = useState("");
-  const [tagOptions, setTagOptions] = useState(DEFAULT_DEADLINE_TAGS);
+  const [tagOptions, setTagOptions] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const mergedTagOptions = useMemo(() => {
     const safe = tagOptions
       .map((item) => String(item || "").trim())
       .filter(Boolean);
-    const unique = Array.from(new Set([...DEFAULT_DEADLINE_TAGS, ...safe]));
+    const selectedTag = String(deadlineTag || "").trim();
+    const unique = Array.from(
+      new Set([...DEFAULT_DEADLINE_TAGS, ...safe, selectedTag].filter(Boolean))
+    );
     return unique.slice(0, 16);
-  }, [tagOptions]);
+  }, [tagOptions, deadlineTag]);
 
   useEffect(() => {
-    if (!isOpen) return;
-    try {
-      const raw = localStorage.getItem(DEADLINE_TAG_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return;
-      setTagOptions(parsed);
-    } catch {
-      setTagOptions(DEFAULT_DEADLINE_TAGS);
-    }
-  }, [isOpen]);
+    if (!isOpen || !username) return;
+    let cancelled = false;
+
+    const fetchTags = async () => {
+      try {
+        const res = await fetch(
+          `/api/deadline-tags?username=${encodeURIComponent(username)}`
+        );
+        const data = await res.json();
+        if (!cancelled && data?.success && Array.isArray(data.tags)) {
+          setTagOptions(data.tags);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Lỗi tải tag deadline:", error);
+          setTagOptions([]);
+        }
+      }
+    };
+
+    fetchTags();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, username]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -83,17 +99,6 @@ const AddDeadlineModal = ({
     }
   }, [isOpen, initialData, mode]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        DEADLINE_TAG_STORAGE_KEY,
-        JSON.stringify(mergedTagOptions)
-      );
-    } catch {
-      // ignore storage errors
-    }
-  }, [mergedTagOptions]);
-
   if (!isOpen) return null;
 
   const resetForm = () => {
@@ -105,36 +110,68 @@ const AddDeadlineModal = ({
     setCustomTag("");
   };
 
-  const handleAddTag = () => {
+  const handleAddTag = async () => {
+    if (!username) return;
     const nextTag = customTag.trim();
     if (!nextTag) return;
-    const exists = mergedTagOptions.some(
+    const exists = tagOptions.some(
       (item) => item.toLowerCase() === nextTag.toLowerCase()
     );
-    if (!exists) {
-      setTagOptions((prev) => [...prev, nextTag]);
-    }
-    setDeadlineTag(nextTag);
-    setCustomTag("");
-  };
-
-  const handleRemoveTag = (tagToRemove) => {
-    const normalized = String(tagToRemove || "").trim();
-    if (!normalized) return;
-
-    const remaining = mergedTagOptions.filter(
-      (tagName) => tagName.toLowerCase() !== normalized.toLowerCase()
-    );
-
-    if (remaining.length === 0) {
-      setTagOptions(DEFAULT_DEADLINE_TAGS);
-      setDeadlineTag(DEFAULT_DEADLINE_TAGS[0]);
+    if (exists) {
+      setDeadlineTag(nextTag);
+      setCustomTag("");
       return;
     }
 
-    setTagOptions(remaining);
-    if (deadlineTag.toLowerCase() === normalized.toLowerCase()) {
-      setDeadlineTag(remaining[0]);
+    try {
+      const res = await fetch("/api/deadline-tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, name: nextTag }),
+      });
+      const data = await res.json();
+      if (!data?.success) {
+        toast.error(data?.message || "Không thể thêm tag.");
+        return;
+      }
+
+      if (Array.isArray(data.tags)) {
+        setTagOptions(data.tags);
+      }
+      setDeadlineTag(nextTag);
+      setCustomTag("");
+    } catch (error) {
+      console.error("Lỗi thêm tag deadline:", error);
+      toast.error("Không thể thêm tag.");
+    }
+  };
+
+  const handleRemoveTag = async (tagToRemove) => {
+    if (!username) return;
+    const normalized = String(tagToRemove || "").trim();
+    if (!normalized) return;
+    if (DEFAULT_DEADLINE_TAGS.includes(normalized)) return;
+
+    try {
+      const res = await fetch("/api/deadline-tags", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, name: normalized }),
+      });
+      const data = await res.json();
+      if (!data?.success) {
+        toast.error(data?.message || "Không thể xóa tag.");
+        return;
+      }
+
+      const nextTags = Array.isArray(data.tags) ? data.tags : [];
+      setTagOptions(nextTags);
+      if (deadlineTag.toLowerCase() === normalized.toLowerCase()) {
+        setDeadlineTag(DEFAULT_DEADLINE_TAGS[0]);
+      }
+    } catch (error) {
+      console.error("Lỗi xóa tag deadline:", error);
+      toast.error("Không thể xóa tag.");
     }
   };
 
@@ -297,14 +334,16 @@ const AddDeadlineModal = ({
                   >
                     {tagName}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTag(tagName)}
-                    className="absolute -right-1 -top-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-200 bg-white text-[10px] font-bold text-gray-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-                    aria-label={`Xóa tag ${tagName}`}
-                  >
-                    ×
-                  </button>
+                  {!DEFAULT_DEADLINE_TAGS.includes(tagName) && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tagName)}
+                      className="absolute -right-1 -top-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-200 bg-white text-[10px] font-bold text-gray-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                      aria-label={`Xóa tag ${tagName}`}
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
