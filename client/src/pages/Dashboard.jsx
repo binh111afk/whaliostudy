@@ -1617,9 +1617,10 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
     [prioritizedDeadlines]
   );
 
-  const primaryDeadline = prioritizedDeadlines[0] || null;
+  const dashboardDeadlines = prioritizedDeadlines.slice(0, 3);
+  const primaryDeadline = dashboardDeadlines[0] || null;
   const secondaryDeadlines = primaryDeadline
-    ? prioritizedDeadlines.slice(1)
+    ? dashboardDeadlines.slice(1)
     : [];
   const primaryDeadlineMeta = primaryDeadline
     ? getDeadlineMeta(primaryDeadline)
@@ -2023,7 +2024,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                     {pendingDeadlineCount} công việc cần xử lý
                   </p>
                 </div>
-                <div className="flex flex-nowrap items-center gap-2 self-start sm:self-auto">
+                <div className="flex flex-col items-start gap-2 self-start sm:items-end sm:self-auto">
                   <span
                     className={`inline-flex min-w-[76px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-bold leading-none ${
                       primaryDeadlineMeta
