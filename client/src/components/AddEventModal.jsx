@@ -7,6 +7,7 @@ const AddEventModal = ({ isOpen, onClose, onSuccess, username, defaultDate }) =>
   const [date, setDate] = useState(defaultDate || new Date().toISOString().split("T")[0]);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
+  const [room, setRoom] = useState("");
   const [location, setLocation] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -16,6 +17,7 @@ const AddEventModal = ({ isOpen, onClose, onSuccess, username, defaultDate }) =>
       setDate(defaultDate || new Date().toISOString().split("T")[0]);
       setStartTime("09:00");
       setEndTime("10:00");
+      setRoom("");
       setLocation("");
     }
   }, [isOpen, defaultDate]);
@@ -43,11 +45,15 @@ const AddEventModal = ({ isOpen, onClose, onSuccess, username, defaultDate }) =>
 
     setLoading(true);
 
-    // Tạo description từ thông tin thời gian và địa điểm
+    // Tạo description từ thông tin thời gian, phòng học và địa điểm
     const timeInfo = `${startTime} - ${endTime}`;
-    const description = location.trim() 
-      ? `📍 ${location.trim()}\n⏰ ${timeInfo}`
-      : `⏰ ${timeInfo}`;
+    let description = `⏰ ${timeInfo}`;
+    if (room.trim()) {
+      description += `\n🚪 ${room.trim()}`;
+    }
+    if (location.trim()) {
+      description += `\n📍 ${location.trim()}`;
+    }
 
     try {
       const res = await fetch("/api/events", {
@@ -128,18 +134,32 @@ const AddEventModal = ({ isOpen, onClose, onSuccess, username, defaultDate }) =>
             />
           </div>
 
-          {/* Ngày và Địa điểm */}
+          {/* Ngày */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1.5">
+              <Calendar size={14} className="text-gray-400" />
+              Ngày
+            </label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full p-2.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
+            />
+          </div>
+
+          {/* Phòng học và Địa điểm */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1.5">
-                <Calendar size={14} className="text-gray-400" />
-                Ngày
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                Phòng học
               </label>
               <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full p-2.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
+                type="text"
+                value={room}
+                onChange={(e) => setRoom(e.target.value)}
+                placeholder="A101..."
+                className="w-full p-2.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white placeholder-gray-400"
               />
             </div>
             <div>
@@ -151,7 +171,7 @@ const AddEventModal = ({ isOpen, onClose, onSuccess, username, defaultDate }) =>
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder="Phòng A101..."
+                placeholder="Cơ sở..."
                 className="w-full p-2.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white placeholder-gray-400"
               />
             </div>

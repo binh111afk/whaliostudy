@@ -1253,7 +1253,8 @@ const DailyScheduleTab = ({ user }) => {
               type: "class",
               id: cls._id,
               title: cls.subject,
-              location: `${cls.room} - ${cls.campus}`,
+              room: cls.room || "",
+              location: cls.campus || "",
               startTime: startDate,
               endTime: endTime,
               note: `Tiết ${cls.startPeriod} - ${
@@ -1269,7 +1270,8 @@ const DailyScheduleTab = ({ user }) => {
         eventData.events.forEach((ev) => {
           const evDate = new Date(ev.date);
           if (evDate.toISOString().split("T")[0] === todayDateStr) {
-            // Trích xuất location từ description nếu có
+            // Trích xuất thông tin từ description
+            const roomMatch = ev.description?.match(/🚪\s*(.+?)(?:\n|$)/);
             const locationMatch = ev.description?.match(/📍\s*(.+?)(?:\n|$)/);
             const timeMatch = ev.description?.match(/⏰\s*(.+?)(?:\n|$)/);
             
@@ -1290,6 +1292,7 @@ const DailyScheduleTab = ({ user }) => {
               type: "event",
               id: ev._id,
               title: ev.title,
+              room: roomMatch ? roomMatch[1].trim() : "",
               location: locationMatch ? locationMatch[1].trim() : (ev.deadlineTag || "Sự kiện cá nhân"),
               startTime: evDate,
               endTime: endTime,
@@ -1361,15 +1364,18 @@ const DailyScheduleTab = ({ user }) => {
     const elapsed = now.getTime() - item.startTime.getTime();
     const progressPercent = isOngoing ? Math.min(100, Math.max(0, (elapsed / totalDuration) * 100)) : 0;
 
-    // Phân biệt Online/Offline dựa vào location
-    const isOnline = item.location?.toLowerCase().includes('online') || 
+    // Phân biệt Online/Offline dựa vào room hoặc location
+    const isOnline = item.room?.toLowerCase().includes('online') || 
+                     item.room?.toLowerCase().includes('trực tuyến') ||
+                     item.room?.toLowerCase().includes('zoom') ||
+                     item.room?.toLowerCase().includes('meet') ||
+                     item.location?.toLowerCase().includes('online') || 
                      item.location?.toLowerCase().includes('trực tuyến') ||
                      item.location?.toLowerCase().includes('zoom') ||
                      item.location?.toLowerCase().includes('meet');
 
     // Icon cho online/offline
     const LocationBadge = () => {
-      if (item.type === 'event') return null;
       return (
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
           isOnline 
@@ -1485,6 +1491,16 @@ const DailyScheduleTab = ({ user }) => {
                 })}
               </span>
             </div>
+
+            {/* Phòng học */}
+            {item.room && (
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+                <svg className="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                </svg>
+                <span>{item.room}</span>
+              </div>
+            )}
 
             {/* Địa điểm */}
             <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
