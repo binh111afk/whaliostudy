@@ -1326,7 +1326,7 @@ const DailyScheduleTab = ({ user }) => {
       ? "Đã kết thúc"
       : isCritical
       ? `SẮP HẾT GIỜ (${remainingToEndMins}p)`
-      : formatScheduleRemaining(remainingToEndMins);
+      : "Đang diễn ra";
 
     const badgeClass = isUpcoming
       ? "bg-blue-800 text-white"
@@ -1345,14 +1345,13 @@ const DailyScheduleTab = ({ user }) => {
       >
         <div className="w-full">
           <h4
-            className={`text-[35px] leading-none font-bold text-slate-800 sm:text-[36px] ${
+            className={`text-3xl leading-tight font-bold text-slate-800 sm:text-[40px] ${
               isFinished ? "text-slate-500" : ""
             }`}
-            style={{ fontFamily: '"Bebas Neue", "Oswald", sans-serif' }}
           >
             {item.title}
           </h4>
-          <div className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
+          <div className="mt-1.5 flex items-center gap-1.5 text-sm text-slate-500">
             <ScheduleTimeIcon className="h-4 w-4 shrink-0" />
             {item.startTime.toLocaleTimeString("vi-VN", {
               hour: "2-digit",
@@ -1364,7 +1363,7 @@ const DailyScheduleTab = ({ user }) => {
                 minute: "2-digit",
               })}
           </div>
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
+          <div className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-400">
             <ScheduleLocationIcon className="h-4 w-4 shrink-0" />
             <span className="truncate">
               {item.location}
@@ -1374,12 +1373,12 @@ const DailyScheduleTab = ({ user }) => {
 
         <div className="w-full text-left sm:w-auto sm:text-right">
           <div
-            className={`inline-flex min-w-[152px] flex-col items-center rounded-2xl px-4 py-2.5 ${badgeClass}`}
+            className={`inline-flex min-w-[178px] flex-col items-center rounded-2xl px-5 py-3 ${badgeClass}`}
           >
-            <span className="text-[11px] font-medium tracking-wide uppercase opacity-90">
+            <span className="text-[12px] font-medium tracking-wide uppercase opacity-90">
               Trạng thái
             </span>
-            <span className="mt-0.5 whitespace-nowrap text-[31px] leading-none font-bold sm:text-[32px]" style={{ fontFamily: '"Bebas Neue", "Oswald", sans-serif' }}>
+            <span className="mt-1 whitespace-nowrap text-2xl leading-none font-bold sm:text-[40px]">
               {statusText}
             </span>
           </div>
