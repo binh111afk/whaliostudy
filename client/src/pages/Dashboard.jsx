@@ -129,9 +129,9 @@ const getDeadlineMeta = (task) => {
   } else if (isOverdue) {
     timeLeftLabel = "Đã quá hạn";
   } else if (hoursLeft <= 24) {
-    timeLeftLabel = `Còn ${Math.max(1, Math.ceil(hoursLeft))} giờ`;
+    timeLeftLabel = `${Math.max(1, Math.ceil(hoursLeft))} giờ`;
   } else {
-    timeLeftLabel = `Còn ${Math.ceil(hoursLeft / 24)} ngày`;
+    timeLeftLabel = `${Math.ceil(hoursLeft / 24)} ngày`;
   }
 
   let urgency = "normal";
