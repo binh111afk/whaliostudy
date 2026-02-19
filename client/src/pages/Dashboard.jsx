@@ -2076,28 +2076,6 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                             : "border-blue-100 bg-blue-50/40 dark:border-blue-700/40 dark:bg-blue-900/10"
                         } group`}
                       >
-                        <div className="absolute right-2 top-2 hidden items-center gap-1 sm:flex opacity-0 group-hover:opacity-100 transition-all z-10">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditDeadline(primaryDeadline);
-                            }}
-                            className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-300"
-                            aria-label="Sửa deadline"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteDeadline(primaryDeadline._id);
-                            }}
-                            className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-orange-500 dark:hover:text-orange-300"
-                            aria-label="Xóa deadline"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
                         <div className="flex items-start gap-3">
                           <button
                             type="button"
@@ -2145,19 +2123,43 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                 {getDeadlineTagLabel(primaryDeadline)}
                               </span>
                             </div>
-                            <div className="mt-1.5 flex items-center gap-2">
-                              <span
-                                  className={`text-xs sm:text-sm font-semibold ${
+                            <div className="mt-1.5 flex items-center justify-between gap-2">
+                              <div className="flex min-w-0 items-center gap-2">
+                                <span
+                                  className={`shrink-0 text-xs sm:text-sm font-semibold ${
                                   primaryDeadlineMeta?.urgency === "critical"
                                     ? "text-orange-700 dark:text-orange-300"
                                     : "text-blue-700 dark:text-blue-300"
                                 }`}
-                              >
-                                ⏳ {primaryDeadlineMeta?.timeLeftLabel}
-                              </span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {primaryDeadlineMeta?.dateLine}
-                              </span>
+                                >
+                                  ⏳ {primaryDeadlineMeta?.timeLeftLabel}
+                                </span>
+                                <span className="truncate text-xs text-gray-500 dark:text-gray-400">
+                                  {primaryDeadlineMeta?.dateLine}
+                                </span>
+                              </div>
+                              <div className="ml-auto hidden items-center gap-1 sm:flex">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditDeadline(primaryDeadline);
+                                  }}
+                                  className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-300"
+                                  aria-label="Sửa deadline"
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteDeadline(primaryDeadline._id);
+                                  }}
+                                  className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-orange-500 dark:hover:text-orange-300"
+                                  aria-label="Xóa deadline"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                             </div>
                             <div className="mt-2 flex items-center gap-2 border-t border-gray-200/70 pt-2 dark:border-gray-700 sm:hidden">
                               <button
@@ -2199,28 +2201,6 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                 task.isDone ? "opacity-60" : ""
                               }`}
                             >
-                              <div className="absolute right-2 top-2 hidden items-center gap-1 sm:flex opacity-0 group-hover:opacity-100 transition-all">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditDeadline(task);
-                                  }}
-                                  className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-300"
-                                  aria-label="Sửa deadline"
-                                >
-                                  <Pencil size={14} />
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteDeadline(task._id);
-                                  }}
-                                  className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-orange-500 dark:hover:text-orange-300"
-                                  aria-label="Xóa deadline"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
                               <button
                                 type="button"
                                 onClick={() => handleToggleDeadline(task)}
@@ -2258,17 +2238,41 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                     {getDeadlineTagLabel(task)}
                                   </span>
                                 </div>
-                                <p
-                                  className={`mt-0.5 text-xs font-medium ${
-                                    meta.urgency === "critical"
-                                      ? "text-orange-600 dark:text-orange-300"
-                                      : meta.urgency === "soon"
-                                      ? "text-blue-600 dark:text-blue-300"
-                                      : "text-gray-500 dark:text-gray-400"
-                                  }`}
-                                >
-                                  {meta.timeLeftLabel} • {meta.dateLine}
-                                </p>
+                                <div className="mt-0.5 flex items-center justify-between gap-2">
+                                  <p
+                                    className={`min-w-0 truncate text-xs font-medium ${
+                                      meta.urgency === "critical"
+                                        ? "text-orange-600 dark:text-orange-300"
+                                        : meta.urgency === "soon"
+                                        ? "text-blue-600 dark:text-blue-300"
+                                        : "text-gray-500 dark:text-gray-400"
+                                    }`}
+                                  >
+                                    {meta.timeLeftLabel} • {meta.dateLine}
+                                  </p>
+                                  <div className="ml-auto hidden items-center gap-1 sm:flex">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditDeadline(task);
+                                      }}
+                                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-300"
+                                      aria-label="Sửa deadline"
+                                    >
+                                      <Pencil size={14} />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteDeadline(task._id);
+                                      }}
+                                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-orange-500 dark:hover:text-orange-300"
+                                      aria-label="Xóa deadline"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                </div>
                                 <div className="mt-2 flex items-center gap-2 border-t border-gray-200/70 pt-2 dark:border-gray-700 sm:hidden">
                                   <button
                                     type="button"
