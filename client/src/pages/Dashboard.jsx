@@ -1281,8 +1281,39 @@ const DailyScheduleTab = ({ user }) => {
         });
       }
 
-      // 4. Sắp xếp theo giờ tăng dần
-      items.sort((a, b) => a.startTime - b.startTime);
+      // 4. Sắp xếp theo mức độ ưu tiên
+      items.sort((a, b) => {
+        const nowTime = Date.now();
+        
+        // Tính trạng thái cho a
+        const aIsOngoing = nowTime >= a.startTime && nowTime <= a.endTime;
+        const aIsFinished = nowTime > a.endTime;
+        const aIsUrgent = !aIsOngoing && !aIsFinished && 
+          (a.startTime.getTime() - nowTime) <= 15 * 60 * 1000;
+        
+        // Tính trạng thái cho b
+        const bIsOngoing = nowTime >= b.startTime && nowTime <= b.endTime;
+        const bIsFinished = nowTime > b.endTime;
+        const bIsUrgent = !bIsOngoing && !bIsFinished && 
+          (b.startTime.getTime() - nowTime) <= 15 * 60 * 1000;
+        
+        // Ưu tiên: Urgent (1) > Đang diễn ra (2) > Sắp tới (3) > Đã kết thúc (4)
+        const getPriority = (isUrgent, isOngoing, isFinished) => {
+          if (isUrgent) return 1;
+          if (isOngoing) return 2;
+          if (isFinished) return 4;
+          return 3; // sắp tới
+        };
+        
+        const aPriority = getPriority(aIsUrgent, aIsOngoing, aIsFinished);
+        const bPriority = getPriority(bIsUrgent, bIsOngoing, bIsFinished);
+        
+        // Nếu cùng mức ưu tiên, sắp xếp theo thời gian
+        if (aPriority !== bPriority) {
+          return aPriority - bPriority;
+        }
+        return a.startTime - b.startTime;
+      });
       setSchedule(items);
     } catch (e) {
       console.error("Lỗi tải lịch trình:", e);
@@ -1303,6 +1334,9 @@ const DailyScheduleTab = ({ user }) => {
       0,
       Math.ceil((item.startTime.getTime() - now.getTime()) / 60000)
     );
+    
+    // Kiểm tra urgent: sắp tới trong vòng 15p
+    const isUrgent = isUpcoming && remainingToStartMins <= 15;
 
     // Tính % tiến độ cho progress bar (chỉ áp dụng cho đang diễn ra)
     const totalDuration = item.endTime.getTime() - item.startTime.getTime();
@@ -1354,10 +1388,19 @@ const DailyScheduleTab = ({ user }) => {
         );
       }
       
+      if (isUrgent) {
+        return (
+          <span className="inline-flex items-center gap-1 text-xs font-bold text-red-600 dark:text-red-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+            🚨 KHẨN CẤP
+          </span>
+        );
+      }
+      
       if (isOngoing) {
         return (
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-teal-600 dark:text-teal-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-600 dark:text-green-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
             Đang diễn ra
           </span>
         );
@@ -1375,8 +1418,10 @@ const DailyScheduleTab = ({ user }) => {
       <div
         key={item.id}
         className={`mb-4 rounded-xl border transition-all duration-200 ${
-          isOngoing 
-            ? 'bg-gradient-to-br from-teal-50 to-blue-50 dark:from-teal-950/30 dark:to-blue-950/30 border-teal-200 dark:border-teal-800 shadow-md shadow-teal-100/50 dark:shadow-teal-900/20' 
+          isUrgent
+            ? 'bg-red-50/80 dark:bg-red-950/20 border-red-300 dark:border-red-800 shadow-lg shadow-red-200/50 dark:shadow-red-900/30 ring-2 ring-red-200 dark:ring-red-800'
+            : isOngoing 
+            ? 'bg-green-50/60 dark:bg-green-950/20 border-green-200 dark:border-green-800 shadow-md shadow-green-100/50 dark:shadow-green-900/20' 
             : isFinished
             ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 opacity-85'
             : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:shadow-md hover:border-blue-200 dark:hover:border-blue-700'
@@ -1389,7 +1434,11 @@ const DailyScheduleTab = ({ user }) => {
             <div className="flex-1 min-w-0">
               <h4 className={`text-lg sm:text-xl font-bold leading-tight mb-2 ${
                 isFinished 
-                  ? 'text-gray-600 dark:text-gray-400' 
+                  ? 'text-gray-600 dark:text-gray-400 line-through' 
+                  : isUrgent
+                  ? 'text-red-700 dark:text-red-400'
+                  : isOngoing
+                  ? 'text-green-700 dark:text-green-300'
                   : 'text-gray-900 dark:text-white'
               }`}>
                 {item.title}
@@ -1427,10 +1476,21 @@ const DailyScheduleTab = ({ user }) => {
           </div>
 
           {/* Footer: Trạng thái chi tiết */}
+          {isUrgent && (
+            <div className="mt-4 pt-4 border-t border-red-200 dark:border-red-800">
+              <div className="bg-red-100 dark:bg-red-900/30 rounded-lg p-3">
+                <p className="text-sm font-bold text-red-700 dark:text-red-300 flex items-center gap-2">
+                  <span className="text-lg animate-pulse">⚠️</span>
+                  <span>SẮP BẮT ĐẦU SAU {formatScheduleRemaining(remainingToStartMins)}</span>
+                </p>
+              </div>
+            </div>
+          )}
+          
           {isOngoing && (
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-700">
               <div className="flex items-center justify-between text-xs mb-2">
-                <span className="font-semibold text-teal-700 dark:text-teal-300">
+                <span className="font-semibold text-green-700 dark:text-green-300">
                   Còn {formatScheduleRemaining(remainingToEndMins)}
                 </span>
                 <span className="text-gray-500 dark:text-gray-400">
@@ -1440,14 +1500,14 @@ const DailyScheduleTab = ({ user }) => {
               {/* Progress bar */}
               <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-gradient-to-r from-teal-500 to-blue-500 transition-all duration-300 rounded-full"
+                  className="h-full bg-gradient-to-r from-green-500 to-emerald-500 transition-all duration-300 rounded-full"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
             </div>
           )}
 
-          {isUpcoming && (
+          {isUpcoming && !isUrgent && (
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
                 📅 Bắt đầu sau {formatScheduleRemaining(remainingToStartMins)}
