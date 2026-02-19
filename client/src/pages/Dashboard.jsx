@@ -1303,86 +1303,165 @@ const DailyScheduleTab = ({ user }) => {
       0,
       Math.ceil((item.startTime.getTime() - now.getTime()) / 60000)
     );
-    const isCritical = isOngoing && remainingToEndMins <= 15;
 
-    const leftBorderClass = isUpcoming
-      ? "border-l-blue-800"
-      : isFinished
-      ? "border-l-slate-300"
-      : isCritical
-      ? "border-l-red-600"
-      : "border-l-teal-500";
+    // Tính % tiến độ cho progress bar (chỉ áp dụng cho đang diễn ra)
+    const totalDuration = item.endTime.getTime() - item.startTime.getTime();
+    const elapsed = now.getTime() - item.startTime.getTime();
+    const progressPercent = isOngoing ? Math.min(100, Math.max(0, (elapsed / totalDuration) * 100)) : 0;
 
-    const cardToneClass = isCritical
-      ? "bg-red-50"
-      : isOngoing
-      ? "bg-teal-50/40"
-      : isFinished
-      ? "bg-slate-100/55"
-      : "bg-white";
-    const statusText = isUpcoming
-      ? formatScheduleRemaining(remainingToStartMins)
-      : isFinished
-      ? "Đã kết thúc"
-      : isCritical
-      ? `SẮP HẾT GIỜ (${remainingToEndMins}p)`
-      : "Đang diễn ra";
+    // Phân biệt Online/Offline dựa vào location
+    const isOnline = item.location?.toLowerCase().includes('online') || 
+                     item.location?.toLowerCase().includes('trực tuyến') ||
+                     item.location?.toLowerCase().includes('zoom') ||
+                     item.location?.toLowerCase().includes('meet');
 
-    const badgeClass = isUpcoming
-      ? "bg-blue-800 text-white"
-      : isFinished
-      ? "bg-slate-400/50 text-white"
-      : isCritical
-      ? "bg-red-600 text-white animate-pulse"
-      : "bg-teal-500 text-white";
+    // Icon cho online/offline
+    const LocationBadge = () => {
+      if (item.type === 'event') return null;
+      return (
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
+          isOnline 
+            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+        }`}>
+          {isOnline ? (
+            <>
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414zM11 12a1 1 0 100 2h3a1 1 0 100-2h-3z" />
+              </svg>
+              Trực tuyến
+            </>
+          ) : (
+            <>
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+              </svg>
+              Tại phòng
+            </>
+          )}
+        </span>
+      );
+    };
+
+    // Status badge nhỏ gọn
+    const StatusBadge = () => {
+      if (isFinished) {
+        return (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+            Đã kết thúc
+          </span>
+        );
+      }
+      
+      if (isOngoing) {
+        return (
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-teal-600 dark:text-teal-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
+            Đang diễn ra
+          </span>
+        );
+      }
+
+      return (
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+          Sắp tới
+        </span>
+      );
+    };
 
     return (
       <div
         key={item.id}
-        className={`mb-3 flex flex-col gap-2 rounded-xl border border-slate-200 border-l-[4px] ${leftBorderClass} ${cardToneClass} p-3 shadow-sm transition-all sm:flex-row sm:items-center sm:justify-between ${
-          isOngoing && !isCritical ? "ring-1 ring-teal-200" : ""
+        className={`mb-4 rounded-xl border transition-all duration-200 ${
+          isOngoing 
+            ? 'bg-gradient-to-br from-teal-50 to-blue-50 dark:from-teal-950/30 dark:to-blue-950/30 border-teal-200 dark:border-teal-800 shadow-md shadow-teal-100/50 dark:shadow-teal-900/20' 
+            : isFinished
+            ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 opacity-85'
+            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:shadow-md hover:border-blue-200 dark:hover:border-blue-700'
         }`}
+        style={{ opacity: isFinished ? 0.85 : 1 }}
       >
-        <div className="w-full">
-          <h4
-            className={`text-base leading-tight font-bold text-slate-800 sm:text-lg ${
-              isFinished ? "text-slate-500" : ""
-            }`}
-          >
-            {item.title}
-          </h4>
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
-            <ScheduleTimeIcon className="h-3.5 w-3.5 shrink-0" />
-            {item.startTime.toLocaleTimeString("vi-VN", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}{" "}
-            -{" "}
-            {item.endTime.toLocaleTimeString("vi-VN", {
-              hour: "2-digit",
-                minute: "2-digit",
-              })}
+        <div className="p-4 sm:p-5">
+          {/* Header: Tên môn học + Badge */}
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex-1 min-w-0">
+              <h4 className={`text-lg sm:text-xl font-bold leading-tight mb-2 ${
+                isFinished 
+                  ? 'text-gray-600 dark:text-gray-400' 
+                  : 'text-gray-900 dark:text-white'
+              }`}>
+                {item.title}
+              </h4>
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge />
+                <LocationBadge />
+              </div>
+            </div>
           </div>
-          <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-400">
-            <ScheduleLocationIcon className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">
-              {item.location}
-            </span>
-          </div>
-        </div>
 
-        <div className="w-full text-left sm:w-auto sm:text-right">
-          <div
-            className={`inline-flex min-w-[120px] flex-col items-center rounded-xl px-3 py-2 ${badgeClass}`}
-          >
-            <span className="text-[10px] font-medium tracking-wide uppercase opacity-90">
-              Trạng thái
-            </span>
-            <span className="mt-0.5 whitespace-nowrap text-sm leading-none font-bold sm:text-base">
-              {statusText}
-            </span>
+          {/* Body: Thông tin thời gian & địa điểm */}
+          <div className="space-y-2 mb-3">
+            {/* Thời gian */}
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <ScheduleTimeIcon className="h-4 w-4 shrink-0 text-gray-400" />
+              <span>
+                {item.startTime.toLocaleTimeString("vi-VN", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+                {" – "}
+                {item.endTime.toLocaleTimeString("vi-VN", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </div>
+
+            {/* Địa điểm */}
+            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+              <ScheduleLocationIcon className="h-4 w-4 shrink-0" />
+              <span className="truncate">{item.location}</span>
+            </div>
           </div>
-          <p className="mt-1.5 text-[10px] italic text-slate-400">{item.note}</p>
+
+          {/* Footer: Trạng thái chi tiết */}
+          {isOngoing && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span className="font-semibold text-teal-700 dark:text-teal-300">
+                  Còn {formatScheduleRemaining(remainingToEndMins)}
+                </span>
+                <span className="text-gray-500 dark:text-gray-400">
+                  {Math.round(progressPercent)}%
+                </span>
+              </div>
+              {/* Progress bar */}
+              <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-teal-500 to-blue-500 transition-all duration-300 rounded-full"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {isUpcoming && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                📅 Bắt đầu sau {formatScheduleRemaining(remainingToStartMins)}
+              </p>
+            </div>
+          )}
+
+          {isFinished && item.note && (
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs text-gray-400 dark:text-gray-500 italic">
+                {item.note}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1390,32 +1469,49 @@ const DailyScheduleTab = ({ user }) => {
 
   return (
     <div className="animate-fade-in-up overflow-x-hidden">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
-            <ScheduleCalendarIcon className="h-6 w-6" /> Lịch trình
-            hôm nay ({now.toLocaleDateString("vi-VN")})
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Hệ thống tự động cập nhật theo thời gian thực.
+      {/* Header Section */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-5 rounded-2xl border border-blue-100 dark:border-blue-900">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <ScheduleCalendarIcon className="h-7 w-7" />
+            <h3 className="font-bold text-gray-900 dark:text-white text-xl sm:text-2xl">
+              Lịch trình hôm nay
+            </h3>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">
+            {now.toLocaleDateString("vi-VN", { 
+              weekday: "long", 
+              day: "numeric", 
+              month: "long", 
+              year: "numeric" 
+            })}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Cập nhật tự động mỗi phút
           </p>
         </div>
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="w-full sm:w-auto bg-gray-900 dark:bg-gray-700 hover:bg-black dark:hover:bg-gray-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-2"
+          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-lg shadow-blue-200/50 dark:shadow-blue-900/30 flex items-center justify-center gap-2 transition-all hover:scale-105"
         >
-          + Thêm lịch
+          <span className="text-lg">+</span>
+          Thêm lịch
         </button>
       </div>
 
+      {/* Schedule List */}
       {schedule.length > 0 ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {schedule.map((item) => renderItem(item))}
         </div>
       ) : (
-        <div className="text-center py-16 bg-gray-50 dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
-          <p className="text-gray-400 dark:text-gray-500 font-medium">
-            Hôm nay bạn rảnh rỗi! Không có lịch trình nào. 🎉
+        <div className="text-center py-20 bg-gradient-to-br from-gray-50 to-blue-50/30 dark:from-gray-800 dark:to-blue-950/10 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700">
+          <div className="text-6xl mb-4">🎉</div>
+          <p className="text-gray-600 dark:text-gray-400 font-semibold text-lg mb-1">
+            Hôm nay bạn rảnh rỗi!
+          </p>
+          <p className="text-gray-500 dark:text-gray-500 text-sm">
+            Không có lịch trình nào được ghi nhận
           </p>
         </div>
       )}
