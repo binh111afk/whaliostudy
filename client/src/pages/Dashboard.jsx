@@ -1333,6 +1333,9 @@ const DailyScheduleTab = ({ user }) => {
       : isCritical
       ? "bg-red-600 text-white font-bold animate-pulse"
       : "bg-blue-50 text-blue-700";
+    const badgeTextClass = isFinished
+      ? "text-xs font-semibold"
+      : "text-sm sm:text-base font-extrabold";
 
     return (
       <div
@@ -1367,7 +1370,7 @@ const DailyScheduleTab = ({ user }) => {
 
         <div className="w-full text-left sm:w-auto sm:text-right">
           <span
-            className={`inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs ${badgeClass}`}
+            className={`inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 ${badgeTextClass} ${badgeClass}`}
           >
             {statusText}
           </span>
