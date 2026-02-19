@@ -1199,8 +1199,8 @@ const formatScheduleRemaining = (minsLeft) => {
   const hours = Math.floor(total / 60);
   const mins = total % 60;
 
-  if (hours <= 0) return `${mins} phút`;
-  if (mins === 0) return `${hours} giờ`;
+  if (hours <= 0) return `Còn ${mins} phút`;
+  if (mins === 0) return `Còn ${hours} giờ`;
   return `Còn ${hours} giờ ${mins} phút`;
 };
 
@@ -1499,7 +1499,7 @@ const DailyScheduleTab = ({ user }) => {
               <div className="bg-red-100 dark:bg-red-900/30 rounded-lg p-3">
                 <p className="text-sm font-bold text-red-700 dark:text-red-300 flex items-center gap-2">
                   <span className="text-lg animate-pulse">⚠️</span>
-                  <span>SẮP BẮT ĐẦU SAU {formatScheduleRemaining(remainingToStartMins)}</span>
+                  <span>SẮP BẮT ĐẦU SAU {formatScheduleRemaining(remainingToStartMins).replace('Còn ', '')}</span>
                 </p>
               </div>
             </div>
@@ -1528,7 +1528,7 @@ const DailyScheduleTab = ({ user }) => {
           {isUpcoming && !isUrgent && (
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                📅 Bắt đầu sau {formatScheduleRemaining(remainingToStartMins)}
+                📅 Bắt đầu sau {formatScheduleRemaining(remainingToStartMins).replace('Còn ', '')}
               </p>
             </div>
           )}
