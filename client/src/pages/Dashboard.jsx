@@ -22,7 +22,6 @@ import {
   Plus,
   StickyNote,
   Bell,
-  CheckSquare,
   X,
   RotateCw,
   ChevronLeft,
@@ -1162,6 +1161,48 @@ const FlashcardTab = () => {
 };
 
 // --- NEW COMPONENT: TAB LỊCH TRÌNH HÔM NAY ---
+const ScheduleCalendarIcon = ({ className = "h-6 w-6" }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+    <rect x="3" y="4.5" width="18" height="16" rx="3" fill="#EFF6FF" stroke="#1D4ED8" strokeWidth="1.5" />
+    <path d="M3 9h18" stroke="#3B82F6" strokeWidth="1.5" />
+    <rect x="7" y="2.5" width="2" height="4" rx="1" fill="#2563EB" />
+    <rect x="15" y="2.5" width="2" height="4" rx="1" fill="#2563EB" />
+    <circle cx="8.5" cy="13" r="1" fill="#60A5FA" />
+    <circle cx="12" cy="13" r="1" fill="#60A5FA" />
+    <circle cx="15.5" cy="13" r="1" fill="#60A5FA" />
+  </svg>
+);
+
+const ScheduleTimeIcon = ({ className = "h-4 w-4" }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+    <circle cx="12" cy="12" r="9" fill="#EEF2FF" stroke="#4F46E5" strokeWidth="1.5" />
+    <path d="M12 7.5V12l3 2" stroke="#2563EB" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="12" cy="12" r="1.2" fill="#60A5FA" />
+  </svg>
+);
+
+const ScheduleLocationIcon = ({ className = "h-4 w-4" }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+    <path
+      d="M12 21c3.2-3.3 6-6.7 6-10a6 6 0 1 0-12 0c0 3.3 2.8 6.7 6 10Z"
+      fill="#DBEAFE"
+      stroke="#2563EB"
+      strokeWidth="1.5"
+    />
+    <circle cx="12" cy="11" r="2.3" fill="#60A5FA" stroke="#1D4ED8" strokeWidth="1.2" />
+  </svg>
+);
+
+const formatScheduleRemaining = (minsLeft) => {
+  const total = Math.max(0, Math.ceil(minsLeft));
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+
+  if (hours <= 0) return `Còn ${mins} phút`;
+  if (mins === 0) return `Còn ${hours} giờ`;
+  return `Còn ${hours} giờ ${mins} phút`;
+};
+
 const DailyScheduleTab = ({ user }) => {
   const [schedule, setSchedule] = useState([]);
   const [now, setNow] = useState(new Date());
@@ -1250,45 +1291,44 @@ const DailyScheduleTab = ({ user }) => {
 
   // Hàm render thẻ lịch trình
   const renderItem = (item) => {
-    const diffMs = item.startTime - now;
-    const diffMins = Math.floor(diffMs / 60000);
-    const isHappening = now >= item.startTime && now <= item.endTime;
-    const isPassed = now > item.endTime;
+    const isOngoing = now >= item.startTime && now <= item.endTime;
+    const isFinished = now > item.endTime;
+    if (!isOngoing && !isFinished) return null;
 
-    // Logic trạng thái
-    let statusColor = "border-l-blue-500";
-    let statusText = "";
-    let bgColor = "bg-white";
+    const remainingMins = Math.max(
+      0,
+      Math.ceil((item.endTime.getTime() - now.getTime()) / 60000)
+    );
+    const isCritical = isOngoing && remainingMins <= 15;
 
-    if (isPassed) {
-      statusColor = "border-l-gray-300";
-      bgColor = "bg-gray-50 opacity-60";
-      statusText = "Đã kết thúc";
-    } else if (isHappening) {
-      statusColor = "border-l-green-500 animate-pulse"; // Nhấp nháy nhẹ
-      statusText = "Đang diễn ra";
-      bgColor = "bg-green-50";
-    } else if (diffMins <= 15) {
-      statusColor = "border-l-red-500 animate-bounce-short"; // Rung nhẹ báo động
-      statusText = `Sắp bắt đầu: Còn ${diffMins} phút!`;
-      bgColor = "bg-red-50";
-    } else {
-      const hours = Math.floor(diffMins / 60);
-      const mins = diffMins % 60;
-      statusText = `Còn ${hours > 0 ? hours + "h " : ""}${mins}p nữa`;
-    }
+    const leftBorderClass = isFinished
+      ? "border-l-slate-300"
+      : isCritical
+      ? "border-l-red-600"
+      : "border-l-blue-600";
+
+    const cardToneClass = isCritical ? "bg-red-50/70" : "bg-white";
+    const statusText = isFinished
+      ? "Đã kết thúc"
+      : isCritical
+      ? `SẮP HẾT GIỜ (${remainingMins}p)`
+      : formatScheduleRemaining(remainingMins);
+
+    const badgeClass = isFinished
+      ? "bg-slate-100 text-slate-500"
+      : isCritical
+      ? "bg-red-600 text-white font-bold animate-pulse"
+      : "bg-blue-50 text-blue-700";
 
     return (
       <div
         key={item.id}
-        className={`p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 border-l-4 ${statusColor} ${bgColor} dark:bg-opacity-10 mb-4 transition-all flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 group`}
+        className={`mb-4 flex flex-col gap-3 rounded-xl border border-slate-200 border-l-[6px] ${leftBorderClass} ${cardToneClass} p-4 shadow-sm transition-all sm:flex-row sm:items-center sm:justify-between`}
       >
         <div className="w-full">
-          <div className="mb-1 flex items-center gap-2 font-medium text-sm text-gray-600 dark:text-gray-300">
-            <Clock
-              size={14}
-              className={isHappening ? "text-green-600" : "text-gray-400"}
-            />
+          <h4 className="text-lg font-bold text-slate-800">{item.title}</h4>
+          <div className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
+            <ScheduleTimeIcon className="h-4 w-4 shrink-0" />
             {item.startTime.toLocaleTimeString("vi-VN", {
               hour: "2-digit",
               minute: "2-digit",
@@ -1296,59 +1336,39 @@ const DailyScheduleTab = ({ user }) => {
             -{" "}
             {item.endTime.toLocaleTimeString("vi-VN", {
               hour: "2-digit",
-              minute: "2-digit",
-            })}
+                minute: "2-digit",
+              })}
           </div>
-
-          <div className="flex items-center gap-2 mb-1">
-            <h4
-              className={`font-bold text-base sm:text-lg ${
-                isPassed
-                  ? "text-gray-500 dark:text-gray-400 line-through"
-                  : "text-gray-800 dark:text-white"
-              }`}
-            >
-              {item.title}
-            </h4>
-            {item.type === "event" && (
-              <span className="text-[10px] bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-full font-bold">
-                Thủ công
-              </span>
-            )}
-          </div>
-
-          <div className="text-sm text-gray-600 dark:text-gray-300 flex flex-col gap-1">
-            <span className="flex items-center gap-2">
-              <CheckSquare size={14} className="text-gray-400" />
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
+            <ScheduleLocationIcon className="h-4 w-4 shrink-0" />
+            <span className="truncate">
               {item.location}
             </span>
           </div>
         </div>
 
-        <div className="text-left sm:text-right w-full sm:w-auto">
+        <div className="w-full text-left sm:w-auto sm:text-right">
           <span
-            className={`inline-flex items-center whitespace-nowrap text-xs font-bold px-3 py-1 rounded-full ${
-              isHappening
-                ? "bg-green-100 text-green-700"
-                : diffMins <= 15 && !isPassed
-                ? "bg-red-100 text-red-600"
-                : "bg-blue-50 text-blue-600"
-            } ${isPassed ? "bg-gray-200 text-gray-500" : ""}`}
+            className={`inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs ${badgeClass}`}
           >
             {statusText}
           </span>
-          <p className="text-xs text-gray-400 mt-2 italic">{item.note}</p>
+          <p className="mt-2 text-xs italic text-slate-400">{item.note}</p>
         </div>
       </div>
     );
   };
+
+  const visibleSchedule = schedule.filter(
+    (item) => now >= item.startTime || now > item.endTime
+  );
 
   return (
     <div className="animate-fade-in-up overflow-x-hidden">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
-            <Calendar className="text-blue-600 dark:text-blue-400" /> Lịch trình
+            <ScheduleCalendarIcon className="h-6 w-6" /> Lịch trình
             hôm nay ({now.toLocaleDateString("vi-VN")})
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -1363,14 +1383,14 @@ const DailyScheduleTab = ({ user }) => {
         </button>
       </div>
 
-      {schedule.length > 0 ? (
+      {visibleSchedule.length > 0 ? (
         <div className="space-y-2">
-          {schedule.map((item) => renderItem(item))}
+          {visibleSchedule.map((item) => renderItem(item))}
         </div>
       ) : (
         <div className="text-center py-16 bg-gray-50 dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
           <p className="text-gray-400 dark:text-gray-500 font-medium">
-            Hôm nay bạn rảnh rỗi! Không có lịch trình nào. 🎉
+            Không có lịch đang diễn ra hoặc đã kết thúc.
           </p>
         </div>
       )}
