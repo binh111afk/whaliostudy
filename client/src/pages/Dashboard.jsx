@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { studyService } from "../services/studyService";
 import AddDeadlineModal from "../components/AddDeadlineModal";
+import AddEventModal from "../components/AddEventModal";
 import DeadlineExpandedSection from "../components/DeadlineExpandedSection";
 import {
   BookOpen,
@@ -1268,14 +1269,31 @@ const DailyScheduleTab = ({ user }) => {
         eventData.events.forEach((ev) => {
           const evDate = new Date(ev.date);
           if (evDate.toISOString().split("T")[0] === todayDateStr) {
+            // Trích xuất location từ description nếu có
+            const locationMatch = ev.description?.match(/📍\s*(.+?)(?:\n|$)/);
+            const timeMatch = ev.description?.match(/⏰\s*(.+?)(?:\n|$)/);
+            
+            // Tính endTime từ description hoặc mặc định 1 tiếng
+            let endTime = new Date(evDate.getTime() + 60 * 60000);
+            if (timeMatch && timeMatch[1].includes('-')) {
+              const endTimeStr = timeMatch[1].split('-')[1]?.trim();
+              if (endTimeStr) {
+                const [h, m] = endTimeStr.split(':').map(Number);
+                if (!isNaN(h) && !isNaN(m)) {
+                  endTime = new Date(evDate);
+                  endTime.setHours(h, m, 0, 0);
+                }
+              }
+            }
+            
             items.push({
               type: "event",
               id: ev._id,
               title: ev.title,
-              location: "Sự kiện cá nhân",
+              location: locationMatch ? locationMatch[1].trim() : (ev.deadlineTag || "Sự kiện cá nhân"),
               startTime: evDate,
-              endTime: new Date(evDate.getTime() + 60 * 60000), // Mặc định 1 tiếng
-              note: ev.type === "deadline" ? "Deadline" : "Cá nhân",
+              endTime: endTime,
+              note: ev.deadlineTag || (ev.type === "deadline" ? "Deadline" : "Cá nhân"),
             });
           }
         });
@@ -1576,11 +1594,10 @@ const DailyScheduleTab = ({ user }) => {
         </div>
       )}
 
-      {/* Tận dụng lại AddDeadlineModal để thêm sự kiện thủ công */}
-      <AddDeadlineModal
+      {/* Modal thêm sự kiện thủ công */}
+      <AddEventModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        // 👇 THÊM DÒNG NÀY ĐỂ KHÔNG BỊ LỖI KHI LƯU
         onSuccess={() => {
           setIsAddModalOpen(false);
           fetchData();
