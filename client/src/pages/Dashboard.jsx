@@ -129,9 +129,9 @@ const getDeadlineMeta = (task) => {
   } else if (isOverdue) {
     timeLeftLabel = "Đã quá hạn";
   } else if (hoursLeft <= 24) {
-    timeLeftLabel = `${Math.max(1, Math.ceil(hoursLeft))} giờ`;
+    timeLeftLabel = `Còn ${Math.max(1, Math.ceil(hoursLeft))} giờ`;
   } else {
-    timeLeftLabel = `${Math.ceil(hoursLeft / 24)} ngày`;
+    timeLeftLabel = `Còn ${Math.ceil(hoursLeft / 24)} ngày`;
   }
 
   let urgency = "normal";
@@ -1199,9 +1199,9 @@ const formatScheduleRemaining = (minsLeft) => {
   const hours = Math.floor(total / 60);
   const mins = total % 60;
 
-  if (hours <= 0) return `Còn ${mins} phút`;
-  if (mins === 0) return `Còn ${hours} giờ`;
-  return `Còn ${hours} giờ ${mins} phút`;
+  if (hours <= 0) return `${mins} phút`;
+  if (mins === 0) return `${hours} giờ`;
+  return `${hours} giờ ${mins} phút`;
 };
 
 const DailyScheduleTab = ({ user }) => {
