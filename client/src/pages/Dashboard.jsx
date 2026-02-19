@@ -150,6 +150,16 @@ const getDeadlineMeta = (task) => {
   };
 };
 
+const formatStudyDuration = (totalMinutes) => {
+  const safeMinutes = Math.max(0, Math.round(Number(totalMinutes) || 0));
+  const hours = Math.floor(safeMinutes / 60);
+  const mins = safeMinutes % 60;
+
+  if (hours === 0) return `${mins} phút`;
+  if (mins === 0) return `${hours} giờ`;
+  return `${hours} giờ ${mins} phút`;
+};
+
 const isMobileViewport = () =>
   typeof window !== "undefined" && window.innerWidth < 640;
 
@@ -1317,7 +1327,7 @@ const DailyScheduleTab = ({ user }) => {
 
         <div className="text-left sm:text-right w-full sm:w-auto">
           <span
-            className={`text-xs font-bold px-3 py-1 rounded-full ${
+            className={`inline-flex items-center whitespace-nowrap text-xs font-bold px-3 py-1 rounded-full ${
               isHappening
                 ? "bg-green-100 text-green-700"
                 : diffMins <= 15 && !isPassed
@@ -1385,7 +1395,7 @@ const DailyScheduleTab = ({ user }) => {
 const Dashboard = ({ user, darkMode, setDarkMode }) => {
   const [activeTab, setActiveTab] = useState("overview");
   const [chartData, setChartData] = useState([]);
-  const [totalStudyHours, setTotalStudyHours] = useState(0);
+  const [totalStudyMinutes, setTotalStudyMinutes] = useState(0);
 
   // State Chart Toggle
   const [chartMode, setChartMode] = useState("credit"); // 'credit' | 'study'
@@ -1434,7 +1444,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
           };
         });
         setChartData(formattedData);
-        setTotalStudyHours((totalMinutes / 60).toFixed(1));
+        setTotalStudyMinutes(totalMinutes);
       }
     });
   };
@@ -1781,7 +1791,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                   Tổng giờ học
                 </p>
                 <p className="text-gray-700 dark:text-gray-200 font-bold">
-                  {totalStudyHours} giờ
+                  {formatStudyDuration(totalStudyMinutes)}
                 </p>
               </div>
             </div>
