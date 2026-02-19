@@ -31,11 +31,9 @@ const SMART_TIPS = [
   "Học xong phiên này nhớ đứng dậy đi lại 1 phút.",
 ];
 
-const INITIAL_TASKS = [
-  { id: 1, title: "Hoàn thành 2 bài tập Triết học", done: false },
-  { id: 2, title: "Đọc chương 3 Cấu trúc dữ liệu", done: false },
-];
+const INITIAL_TASKS = [];
 const STUDY_OVERLAY_STORAGE_KEY = "whalio_study_overlay_state_v1";
+const TASK_AUTO_DELETE_MS = 10 * 60 * 1000;
 
 const pad = (num) => String(num).padStart(2, "0");
 const formatDisplayTime = (seconds, forceHours = false) => {
@@ -57,6 +55,14 @@ const formatVNDate = (value) => {
   if (Number.isNaN(d.getTime())) return "Không có hạn";
   return d.toLocaleString("vi-VN", { hour12: false, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 };
+
+const mapStudyTask = (task) => ({
+  id: String(task?._id || task?.id || Date.now()),
+  title: String(task?.title || "").trim(),
+  done: Boolean(task?.isDone ?? task?.done),
+  checkedAt: task?.checkedAt || null,
+  lastInteractedAt: task?.lastInteractedAt || task?.updatedAt || task?.createdAt || null,
+});
 
 const ModePill = ({ active, disabled, label, onClick }) => (
   <button
@@ -188,6 +194,12 @@ const StudyTimer = () => {
       if (typeof saved.focusDurationMinutes === "number" && saved.focusDurationMinutes >= 5) {
         setFocusDurationMinutes(saved.focusDurationMinutes);
       }
+      if (typeof saved.showDeadlines === "boolean") {
+        setShowDeadlines(saved.showDeadlines);
+      }
+      if (typeof saved.showSubjectReminders === "boolean") {
+        setShowSubjectReminders(saved.showSubjectReminders);
+      }
 
       const savedEndAt = Number(saved.endAtTs || 0);
       if (saved.isRunning && savedEndAt > Date.now()) {
@@ -209,13 +221,15 @@ const StudyTimer = () => {
       isRunning,
       endAtTs,
       focusDurationMinutes,
+      showDeadlines,
+      showSubjectReminders,
       tip: SMART_TIPS[tipIndex],
       useHourFormat,
       updatedAt: Date.now(),
     };
 
     localStorage.setItem(STUDY_OVERLAY_STORAGE_KEY, JSON.stringify(payload));
-  }, [mode, timeLeft, isRunning, endAtTs, focusDurationMinutes, tipIndex, useHourFormat]);
+  }, [mode, timeLeft, isRunning, endAtTs, focusDurationMinutes, showDeadlines, showSubjectReminders, tipIndex, useHourFormat]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -323,6 +337,24 @@ const StudyTimer = () => {
     loadAllData();
   }, [username]);
 
+  useEffect(() => {
+    const loadStudyTasks = async () => {
+      if (!username) {
+        setTasks([]);
+        return;
+      }
+      const res = await studyService.getTasks(username);
+      if (!res?.success || !Array.isArray(res.tasks)) {
+        return;
+      }
+      const normalized = res.tasks
+        .map(mapStudyTask)
+        .filter((task) => task.title);
+      setTasks(normalized);
+    };
+    loadStudyTasks();
+  }, [username]);
+
   const ring = useMemo(() => {
     const radius = 132;
     const circumference = 2 * Math.PI * radius;
@@ -363,13 +395,82 @@ const StudyTimer = () => {
   const addTask = () => {
     const value = newTask.trim();
     if (!value) return;
-    setTasks((prev) => [...prev, { id: Date.now(), title: value, done: false }]);
+    if (!username) {
+      toast.error("Vui lòng đăng nhập để lưu task phiên học.");
+      return;
+    }
+    const run = async () => {
+      const res = await studyService.createTask(username, value);
+      if (!res?.success || !res.task) {
+        toast.error("Không thể lưu task.");
+        return;
+      }
+      setTasks((prev) => [mapStudyTask(res.task), ...prev]);
+    };
+    run();
     setNewTask("");
   };
 
   const toggleTask = (id) => {
-    setTasks((prev) => prev.map((task) => (task.id === id ? { ...task, done: !task.done } : task)));
+    if (!username) return;
+    const nowIso = new Date().toISOString();
+    const prevTasks = tasks;
+    const target = prevTasks.find((task) => task.id === id);
+    if (!target) return;
+    const nextDone = !target.done;
+
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === id
+          ? {
+              ...task,
+              done: nextDone,
+              checkedAt: nextDone ? nowIso : null,
+              lastInteractedAt: nowIso,
+            }
+          : task
+      )
+    );
+
+    const run = async () => {
+      const res = await studyService.updateTask(id, {
+        username,
+        isDone: nextDone,
+        checkedAt: nextDone ? nowIso : null,
+        lastInteractedAt: nowIso,
+      });
+      if (!res?.success) {
+        setTasks(prevTasks);
+        toast.error("Cập nhật task thất bại.");
+      }
+    };
+    run();
   };
+
+  useEffect(() => {
+    if (!username || tasks.length === 0) return;
+
+    const intervalId = setInterval(() => {
+      const now = Date.now();
+      const expired = tasks.filter((task) => {
+        if (!task.done || !task.checkedAt) return false;
+        const checkedTs = new Date(task.checkedAt).getTime();
+        if (Number.isNaN(checkedTs)) return false;
+        return now - checkedTs >= TASK_AUTO_DELETE_MS;
+      });
+
+      if (expired.length === 0) return;
+
+      const expiredIds = new Set(expired.map((task) => task.id));
+      setTasks((prev) => prev.filter((task) => !expiredIds.has(task.id)));
+
+      expired.forEach((task) => {
+        studyService.deleteTask(username, task.id).catch(() => null);
+      });
+    }, 15000);
+
+    return () => clearInterval(intervalId);
+  }, [tasks, username]);
 
   const scrollList = (ref, direction) => {
     const list = ref.current;
@@ -727,7 +828,7 @@ const StudyTimer = () => {
                       </div>
                     )}
                   </div>
-                  <div ref={tasksListRef} className="whalio-scrollbar max-h-28 space-y-2 overflow-y-auto pr-1">
+                  <div ref={tasksListRef} className="whalio-scrollbar max-h-[5.5rem] space-y-2 overflow-y-auto pr-1">
                     {tasks.map((task) => (
                       <button
                         key={task.id}

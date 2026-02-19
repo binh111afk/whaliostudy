@@ -284,6 +284,19 @@ const studySessionSchema = new mongoose.Schema({
 
 const StudySession = mongoose.model('StudySession', studySessionSchema);
 
+const studyTaskSchema = new mongoose.Schema({
+    username: { type: String, required: true, index: true },
+    title: { type: String, required: true, trim: true, maxlength: 200 },
+    isDone: { type: Boolean, default: false },
+    checkedAt: { type: Date, default: null },
+    lastInteractedAt: { type: Date, default: Date.now },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+studyTaskSchema.index({ username: 1, createdAt: -1 });
+const StudyTask = mongoose.model('StudyTask', studyTaskSchema);
+
 // --- GPA Schema ---
 // --- GPA Schema (ĐÃ SỬA: KHỚP 100% VỚI FRONTEND) ---
 const gpaSchema = new mongoose.Schema({
@@ -2070,6 +2083,121 @@ app.get('/api/study/stats', async (req, res) => {
     } catch (err) {
         console.error('Get study stats error:', err);
         res.status(500).json({ success: false });
+    }
+});
+
+// 3. StudyTimer Task APIs
+app.get('/api/study/tasks', async (req, res) => {
+    try {
+        const { username } = req.query;
+        if (!username) {
+            return res.status(400).json({ success: false, message: 'Thiếu username' });
+        }
+
+        const tasks = await StudyTask.find({ username: String(username).trim() })
+            .sort({ createdAt: -1 })
+            .lean();
+        return res.json({ success: true, tasks });
+    } catch (err) {
+        console.error('Get study tasks error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+app.post('/api/study/tasks', async (req, res) => {
+    try {
+        const { username, title } = req.body;
+        const normalizedUsername = String(username || '').trim();
+        const normalizedTitle = String(title || '').trim();
+
+        if (!normalizedUsername || !normalizedTitle) {
+            return res.status(400).json({ success: false, message: 'Thiếu username hoặc title' });
+        }
+
+        const now = new Date();
+        const task = new StudyTask({
+            username: normalizedUsername,
+            title: normalizedTitle,
+            isDone: false,
+            checkedAt: null,
+            lastInteractedAt: now,
+            createdAt: now,
+            updatedAt: now
+        });
+        await task.save();
+        return res.json({ success: true, task });
+    } catch (err) {
+        console.error('Create study task error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+app.patch('/api/study/tasks/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { username, title, isDone, checkedAt, lastInteractedAt } = req.body || {};
+        const normalizedUsername = String(username || '').trim();
+        if (!normalizedUsername) {
+            return res.status(400).json({ success: false, message: 'Thiếu username' });
+        }
+
+        const update = { updatedAt: new Date() };
+        if (typeof title === 'string' && title.trim()) {
+            update.title = title.trim();
+        }
+        if (typeof isDone === 'boolean') {
+            update.isDone = isDone;
+        }
+        if (checkedAt === null || checkedAt === '') {
+            update.checkedAt = null;
+        } else if (checkedAt) {
+            const checkedDate = new Date(checkedAt);
+            if (!Number.isNaN(checkedDate.getTime())) {
+                update.checkedAt = checkedDate;
+            }
+        }
+        if (lastInteractedAt) {
+            const interactedDate = new Date(lastInteractedAt);
+            if (!Number.isNaN(interactedDate.getTime())) {
+                update.lastInteractedAt = interactedDate;
+            }
+        } else {
+            update.lastInteractedAt = new Date();
+        }
+
+        const task = await StudyTask.findOneAndUpdate(
+            { _id: id, username: normalizedUsername },
+            { $set: update },
+            { new: true }
+        );
+        if (!task) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy task' });
+        }
+
+        return res.json({ success: true, task });
+    } catch (err) {
+        console.error('Update study task error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+app.delete('/api/study/tasks/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const normalizedUsername = String(req.query.username || '').trim();
+        if (!normalizedUsername) {
+            return res.status(400).json({ success: false, message: 'Thiếu username' });
+        }
+
+        const deleted = await StudyTask.findOneAndDelete({ _id: id, username: normalizedUsername });
+        if (!deleted) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy task' });
+        }
+
+        return res.json({ success: true });
+    } catch (err) {
+        console.error('Delete study task error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
     }
 });
 
