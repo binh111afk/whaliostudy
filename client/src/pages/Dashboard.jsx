@@ -2040,7 +2040,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                         : "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-gray-700/60 dark:text-gray-300"
                     }`}
                   >
-                    {deadlines.length} task
+                    {pendingDeadlineCount} task
                   </span>
                   <button
                     type="button"

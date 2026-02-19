@@ -213,40 +213,54 @@ const StudyTimerMusicPanel = () => {
               ))}
             </div>
 
-            <div className="mb-3">
-              <div
-                ref={progressTrackRef}
-                onClick={handleProgressClick}
-                onPointerDown={handleProgressPointerDown}
-                onMouseMove={handleProgressMouseMove}
-                onMouseLeave={handleProgressMouseLeave}
-                className="group relative h-5 cursor-pointer"
-              >
-                <div className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-slate-200 dark:bg-slate-700" />
+            <div className="mb-3 flex items-start gap-3">
+              <div className="basis-3/4">
                 <div
-                  className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-blue-500"
-                  style={{ width: `${progressPercent}%` }}
-                />
-                <div
-                  className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-blue-500 shadow transition-transform duration-150 group-hover:scale-110"
-                  style={{
-                    left: `${progressPercent}%`,
-                    width: "16px",
-                    height: "16px",
-                  }}
-                />
-                {progressHover.visible && duration > 0 && (
+                  ref={progressTrackRef}
+                  onClick={handleProgressClick}
+                  onPointerDown={handleProgressPointerDown}
+                  onMouseMove={handleProgressMouseMove}
+                  onMouseLeave={handleProgressMouseLeave}
+                  className="group relative h-5 cursor-pointer"
+                >
+                  <div className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-slate-200 dark:bg-slate-700" />
                   <div
-                    className="pointer-events-none absolute -top-7 -translate-x-1/2 rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-medium text-white"
-                    style={{ left: `${progressHover.x}px` }}
-                  >
-                    {formatTime(Math.floor(progressHover.time))}
-                  </div>
-                )}
+                    className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-blue-500"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                  <div
+                    className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-blue-500 shadow transition-transform duration-150 group-hover:scale-110"
+                    style={{
+                      left: `${progressPercent}%`,
+                      width: "16px",
+                      height: "16px",
+                    }}
+                  />
+                  {progressHover.visible && duration > 0 && (
+                    <div
+                      className="pointer-events-none absolute -top-7 -translate-x-1/2 rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-medium text-white"
+                      style={{ left: `${progressHover.x}px` }}
+                    >
+                      {formatTime(Math.floor(progressHover.time))}
+                    </div>
+                  )}
+                </div>
+                <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-300">
+                  <span>{formatTime(Math.floor(currentTime))}</span>
+                  <span>{formatTime(Math.floor(duration))}</span>
+                </div>
               </div>
-              <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-300">
-                <span>{formatTime(Math.floor(currentTime))}</span>
-                <span>{formatTime(Math.floor(duration))}</span>
+              <div className="mt-1 flex basis-1/4 items-center gap-2">
+                <Volume2 size={15} className="shrink-0 text-slate-500 dark:text-slate-300" />
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={volume}
+                  onChange={(e) => setVolume(Number(e.target.value))}
+                  className="h-1.5 w-full rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
+                />
               </div>
             </div>
 
@@ -273,18 +287,6 @@ const StudyTimerMusicPanel = () => {
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Volume2 size={15} className="text-slate-500 dark:text-slate-300" />
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={volume}
-                onChange={(e) => setVolume(Number(e.target.value))}
-                className="w-24 sm:w-28 h-1.5 rounded-lg accent-blue-500 bg-slate-200 dark:bg-slate-700 cursor-pointer"
-              />
-            </div>
           </>
         ) : (
           <div className="py-8 text-center">
