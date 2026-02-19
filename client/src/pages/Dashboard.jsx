@@ -1306,17 +1306,19 @@ const DailyScheduleTab = ({ user }) => {
     const isCritical = isOngoing && remainingToEndMins <= 15;
 
     const leftBorderClass = isUpcoming
-      ? "border-l-blue-400"
+      ? "border-l-blue-800"
       : isFinished
       ? "border-l-slate-300"
       : isCritical
       ? "border-l-red-600"
-      : "border-l-blue-600";
+      : "border-l-teal-500";
 
     const cardToneClass = isCritical
-      ? "bg-red-50/70"
+      ? "bg-red-50"
       : isOngoing
-      ? "bg-blue-50/60"
+      ? "bg-teal-50/40"
+      : isFinished
+      ? "bg-slate-100/55"
       : "bg-white";
     const statusText = isUpcoming
       ? formatScheduleRemaining(remainingToStartMins)
@@ -1327,27 +1329,29 @@ const DailyScheduleTab = ({ user }) => {
       : formatScheduleRemaining(remainingToEndMins);
 
     const badgeClass = isUpcoming
-      ? "bg-blue-50 text-blue-700"
+      ? "bg-blue-800 text-white"
       : isFinished
-      ? "bg-slate-100 text-slate-500"
+      ? "bg-slate-400/50 text-white"
       : isCritical
-      ? "bg-red-600 text-white font-bold animate-pulse"
-      : "bg-blue-50 text-blue-700";
-    const badgeTextClass = isFinished
-      ? "text-xs font-semibold"
-      : "text-sm sm:text-base font-extrabold";
+      ? "bg-red-600 text-white animate-pulse"
+      : "bg-teal-500 text-white";
 
     return (
       <div
         key={item.id}
-        className={`mb-4 flex flex-col gap-3 rounded-xl border border-slate-200 border-l-[6px] ${leftBorderClass} ${cardToneClass} p-4 shadow-sm transition-all sm:flex-row sm:items-center sm:justify-between ${
-          isOngoing && !isCritical
-            ? "ring-2 ring-blue-200 shadow-md"
-            : ""
+        className={`mb-4 flex flex-col gap-3 rounded-2xl border border-slate-200 border-l-[5px] ${leftBorderClass} ${cardToneClass} p-5 shadow-sm transition-all sm:flex-row sm:items-center sm:justify-between ${
+          isOngoing && !isCritical ? "ring-1 ring-teal-200" : ""
         }`}
       >
         <div className="w-full">
-          <h4 className="text-lg font-bold text-slate-800">{item.title}</h4>
+          <h4
+            className={`text-[35px] leading-none font-bold text-slate-800 sm:text-[36px] ${
+              isFinished ? "text-slate-500" : ""
+            }`}
+            style={{ fontFamily: '"Bebas Neue", "Oswald", sans-serif' }}
+          >
+            {item.title}
+          </h4>
           <div className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
             <ScheduleTimeIcon className="h-4 w-4 shrink-0" />
             {item.startTime.toLocaleTimeString("vi-VN", {
@@ -1369,11 +1373,16 @@ const DailyScheduleTab = ({ user }) => {
         </div>
 
         <div className="w-full text-left sm:w-auto sm:text-right">
-          <span
-            className={`inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 ${badgeTextClass} ${badgeClass}`}
+          <div
+            className={`inline-flex min-w-[152px] flex-col items-center rounded-2xl px-4 py-2.5 ${badgeClass}`}
           >
-            {statusText}
-          </span>
+            <span className="text-[11px] font-medium tracking-wide uppercase opacity-90">
+              Trạng thái
+            </span>
+            <span className="mt-0.5 whitespace-nowrap text-[31px] leading-none font-bold sm:text-[32px]" style={{ fontFamily: '"Bebas Neue", "Oswald", sans-serif' }}>
+              {statusText}
+            </span>
+          </div>
           <p className="mt-2 text-xs italic text-slate-400">{item.note}</p>
         </div>
       </div>
