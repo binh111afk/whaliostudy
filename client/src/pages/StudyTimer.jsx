@@ -111,6 +111,7 @@ const StudyTimer = () => {
   const [subjectReminders, setSubjectReminders] = useState([]);
   const [showDeadlines, setShowDeadlines] = useState(true);
   const [showSubjectReminders, setShowSubjectReminders] = useState(true);
+  const [isOverlayStateHydrated, setIsOverlayStateHydrated] = useState(false);
 
 
   const modeConfig = TIMER_MODES[mode];
@@ -211,10 +212,13 @@ const StudyTimer = () => {
       }
     } catch (err) {
       console.error("Load study overlay state error:", err);
+    } finally {
+      setIsOverlayStateHydrated(true);
     }
   }, []);
 
   useEffect(() => {
+    if (!isOverlayStateHydrated) return;
     const payload = {
       mode,
       timeLeft,
@@ -229,7 +233,7 @@ const StudyTimer = () => {
     };
 
     localStorage.setItem(STUDY_OVERLAY_STORAGE_KEY, JSON.stringify(payload));
-  }, [mode, timeLeft, isRunning, endAtTs, focusDurationMinutes, showDeadlines, showSubjectReminders, tipIndex, useHourFormat]);
+  }, [mode, timeLeft, isRunning, endAtTs, focusDurationMinutes, showDeadlines, showSubjectReminders, tipIndex, useHourFormat, isOverlayStateHydrated]);
 
   useEffect(() => {
     const id = setInterval(() => {
