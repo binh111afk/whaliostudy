@@ -1509,7 +1509,7 @@ const DailyScheduleTab = ({ user }) => {
             <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-700">
               <div className="flex items-center justify-between text-xs mb-2">
                 <span className="font-semibold text-green-700 dark:text-green-300">
-                  Còn {formatScheduleRemaining(remainingToEndMins)}
+                  {formatScheduleRemaining(remainingToEndMins)}
                 </span>
                 <span className="text-gray-500 dark:text-gray-400">
                   {Math.round(progressPercent)}%
