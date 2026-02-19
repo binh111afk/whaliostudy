@@ -1293,28 +1293,42 @@ const DailyScheduleTab = ({ user }) => {
   const renderItem = (item) => {
     const isOngoing = now >= item.startTime && now <= item.endTime;
     const isFinished = now > item.endTime;
-    if (!isOngoing && !isFinished) return null;
+    const isUpcoming = now < item.startTime;
 
-    const remainingMins = Math.max(
+    const remainingToEndMins = Math.max(
       0,
       Math.ceil((item.endTime.getTime() - now.getTime()) / 60000)
     );
-    const isCritical = isOngoing && remainingMins <= 15;
+    const remainingToStartMins = Math.max(
+      0,
+      Math.ceil((item.startTime.getTime() - now.getTime()) / 60000)
+    );
+    const isCritical = isOngoing && remainingToEndMins <= 15;
 
-    const leftBorderClass = isFinished
+    const leftBorderClass = isUpcoming
+      ? "border-l-blue-400"
+      : isFinished
       ? "border-l-slate-300"
       : isCritical
       ? "border-l-red-600"
       : "border-l-blue-600";
 
-    const cardToneClass = isCritical ? "bg-red-50/70" : "bg-white";
-    const statusText = isFinished
+    const cardToneClass = isCritical
+      ? "bg-red-50/70"
+      : isOngoing
+      ? "bg-blue-50/60"
+      : "bg-white";
+    const statusText = isUpcoming
+      ? formatScheduleRemaining(remainingToStartMins)
+      : isFinished
       ? "Đã kết thúc"
       : isCritical
-      ? `SẮP HẾT GIỜ (${remainingMins}p)`
-      : formatScheduleRemaining(remainingMins);
+      ? `SẮP HẾT GIỜ (${remainingToEndMins}p)`
+      : formatScheduleRemaining(remainingToEndMins);
 
-    const badgeClass = isFinished
+    const badgeClass = isUpcoming
+      ? "bg-blue-50 text-blue-700"
+      : isFinished
       ? "bg-slate-100 text-slate-500"
       : isCritical
       ? "bg-red-600 text-white font-bold animate-pulse"
@@ -1323,7 +1337,11 @@ const DailyScheduleTab = ({ user }) => {
     return (
       <div
         key={item.id}
-        className={`mb-4 flex flex-col gap-3 rounded-xl border border-slate-200 border-l-[6px] ${leftBorderClass} ${cardToneClass} p-4 shadow-sm transition-all sm:flex-row sm:items-center sm:justify-between`}
+        className={`mb-4 flex flex-col gap-3 rounded-xl border border-slate-200 border-l-[6px] ${leftBorderClass} ${cardToneClass} p-4 shadow-sm transition-all sm:flex-row sm:items-center sm:justify-between ${
+          isOngoing && !isCritical
+            ? "ring-2 ring-blue-200 shadow-md"
+            : ""
+        }`}
       >
         <div className="w-full">
           <h4 className="text-lg font-bold text-slate-800">{item.title}</h4>
@@ -1359,10 +1377,6 @@ const DailyScheduleTab = ({ user }) => {
     );
   };
 
-  const visibleSchedule = schedule.filter(
-    (item) => now >= item.startTime || now > item.endTime
-  );
-
   return (
     <div className="animate-fade-in-up overflow-x-hidden">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1383,14 +1397,14 @@ const DailyScheduleTab = ({ user }) => {
         </button>
       </div>
 
-      {visibleSchedule.length > 0 ? (
+      {schedule.length > 0 ? (
         <div className="space-y-2">
-          {visibleSchedule.map((item) => renderItem(item))}
+          {schedule.map((item) => renderItem(item))}
         </div>
       ) : (
         <div className="text-center py-16 bg-gray-50 dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
           <p className="text-gray-400 dark:text-gray-500 font-medium">
-            Không có lịch đang diễn ra hoặc đã kết thúc.
+            Hôm nay bạn rảnh rỗi! Không có lịch trình nào. 🎉
           </p>
         </div>
       )}
