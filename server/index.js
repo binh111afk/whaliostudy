@@ -2947,7 +2947,7 @@ app.put('/api/events/:id', async (req, res) => {
 // PUT /api/events/toggle - Toggle completed status for an event
 app.put('/api/events/toggle', async (req, res) => {
     try {
-        const { id, username } = req.body;
+        const { id, username, isDone } = req.body;
 
         if (!id || !username) {
             return res.json({ success: false, message: 'Missing required fields' });
@@ -2962,7 +2962,11 @@ app.put('/api/events/toggle', async (req, res) => {
             return res.json({ success: false, message: 'Unauthorized' });
         }
 
-        event.isDone = !Boolean(event.isDone);
+        if (typeof isDone === 'boolean') {
+            event.isDone = isDone;
+        } else {
+            event.isDone = !Boolean(event.isDone);
+        }
         await event.save();
 
         return res.json({ success: true, event });

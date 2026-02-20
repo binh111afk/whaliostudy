@@ -1910,16 +1910,25 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   };
 
   const handleToggleDeadline = async (task) => {
+    const nextIsDone = !Boolean(task.isDone);
     const newDeadlines = deadlines.map((d) =>
-      d._id === task._id ? { ...d, isDone: !d.isDone } : d
+      d._id === task._id ? { ...d, isDone: nextIsDone } : d
     );
     setDeadlines(newDeadlines);
     try {
-      await fetch("/api/events/toggle", {
+      const res = await fetch("/api/events/toggle", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: task._id, username: user.username }),
+        body: JSON.stringify({
+          id: task._id,
+          username: user.username,
+          isDone: nextIsDone,
+        }),
       });
+      const data = await res.json();
+      if (!data?.success) {
+        loadDeadlines();
+      }
     } catch (error) {
       loadDeadlines();
     }
@@ -2522,7 +2531,10 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                             >
                               <button
                                 type="button"
-                                onClick={() => handleToggleDeadline(task)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleDeadline(task);
+                                }}
                                 className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition-all duration-300 ${
                                   task.isDone
                                     ? "border-blue-600 bg-blue-600 text-white"
@@ -2634,7 +2646,10 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                             >
                               <button
                                 type="button"
-                                onClick={() => handleToggleDeadline(task)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleDeadline(task);
+                                }}
                                 className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition-all duration-300 ${
                                   task.isDone
                                     ? "border-blue-600 bg-blue-600 text-white"
