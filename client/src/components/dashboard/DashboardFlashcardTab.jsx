@@ -563,27 +563,27 @@ const DashboardFlashcardTab = () => {
                   >
                     <div className="pointer-events-none absolute -bottom-4 left-6 right-6 h-6 rounded-full bg-blue-950/25 blur-xl" />
 
-                    <div className="absolute inset-0 rounded-[30px] border border-blue-200 bg-white p-6 shadow-[0_24px_48px_-24px_rgba(37,99,235,0.6)] [backface-visibility:hidden] sm:p-10">
+                    <div className="absolute inset-0 rounded-[30px] border border-blue-200 bg-white p-6 shadow-[0_24px_48px_-24px_rgba(37,99,235,0.6)] [backface-visibility:hidden] sm:p-10 dark:border-blue-800/70 dark:bg-slate-900">
                       <div className="flex h-full flex-col items-center justify-center text-center">
-                        <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-blue-700">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-blue-700 dark:border-blue-700 dark:bg-blue-900/40 dark:text-blue-200">
                           Mặt trước
                         </span>
-                        <h2 className="mt-6 text-2xl font-black leading-tight text-blue-900 sm:text-4xl">
+                        <h2 className="mt-6 text-2xl font-black leading-tight text-blue-900 dark:text-blue-100 sm:text-4xl">
                           {currentDeck.cards[cardIndex].term}
                         </h2>
-                        <p className="mt-8 flex items-center gap-1 text-xs font-semibold text-slate-500">
+                        <p className="mt-8 flex items-center gap-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
                           <RotateCw size={13} />
                           Chạm vào thẻ để lật
                         </p>
                       </div>
                     </div>
 
-                    <div className="absolute inset-0 rounded-[30px] border border-slate-200 bg-slate-50 p-6 shadow-[0_24px_48px_-24px_rgba(15,23,42,0.35)] [backface-visibility:hidden] [transform:rotateY(180deg)] sm:p-10">
+                    <div className="absolute inset-0 rounded-[30px] border border-slate-200 bg-slate-50 p-6 shadow-[0_24px_48px_-24px_rgba(15,23,42,0.35)] [backface-visibility:hidden] [transform:rotateY(180deg)] sm:p-10 dark:border-slate-700 dark:bg-slate-800">
                       <div className="flex h-full flex-col items-center justify-center text-center">
-                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">
                           Mặt sau
                         </span>
-                        <h2 className="mt-6 text-xl font-semibold leading-relaxed text-slate-700 sm:text-3xl">
+                        <h2 className="mt-6 text-xl font-semibold leading-relaxed text-slate-700 dark:text-slate-100 sm:text-3xl">
                           {currentDeck.cards[cardIndex].def}
                         </h2>
                       </div>

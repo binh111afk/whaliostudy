@@ -54,7 +54,9 @@ const Header = ({
 
   const navLinkClass = ({ isActive }) =>
     `text-sm font-bold transition-colors ${
-      isActive ? "text-blue-600" : "text-gray-500 hover:text-blue-600"
+      isActive
+        ? "text-blue-600 dark:text-blue-400"
+        : "text-gray-500 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
     }`;
 
   return (
