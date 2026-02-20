@@ -753,7 +753,9 @@ const QuickNotesTab = ({ user }) => {
 // --- NEW COMPONENT: TAB FLASHCARD (HỌC TỪ VỰNG) ---
 const FlashcardTab = () => {
   const STORAGE_KEY = "whalio_flashcard_decks";
+  const PROGRESS_KEY = "whalio_flashcard_progress";
   const [decks, setDecks] = useState([]);
+  const [deckProgress, setDeckProgress] = useState({});
   const [view, setView] = useState("list"); // 'list' | 'study' | 'create'
 
   // State cho chế độ học
@@ -772,35 +774,48 @@ const FlashcardTab = () => {
 
   // Load dữ liệu khi vào Tab
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      setDecks(JSON.parse(stored));
-    } else {
-      // Dữ liệu mẫu (Lấy từ flashcard.js cũ)
-      const defaultDecks = [
-        {
-          id: 1,
-          title: "Tiếng Anh Cơ Bản",
-          icon: "🇬🇧",
-          color: "blue",
-          cards: [
-            { term: "Hello", def: "Xin chào" },
-            { term: "Goodbye", def: "Tạm biệt" },
-          ],
-        },
-        {
-          id: 2,
-          title: "Công Thức Toán",
-          icon: "🔢",
-          color: "green",
-          cards: [
-            { term: "Pythagore", def: "a² + b² = c²" },
-            { term: "Hình tròn", def: "S = πr²" },
-          ],
-        },
-      ];
-      setDecks(defaultDecks);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultDecks));
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setDecks(JSON.parse(stored));
+      } else {
+        // Dữ liệu mẫu (Lấy từ flashcard.js cũ)
+        const defaultDecks = [
+          {
+            id: 1,
+            title: "Tiếng Anh Cơ Bản",
+            icon: "🇬🇧",
+            color: "blue",
+            cards: [
+              { term: "Hello", def: "Xin chào" },
+              { term: "Goodbye", def: "Tạm biệt" },
+            ],
+          },
+          {
+            id: 2,
+            title: "Công Thức Toán",
+            icon: "🔢",
+            color: "green",
+            cards: [
+              { term: "Pythagore", def: "a² + b² = c²" },
+              { term: "Hình tròn", def: "S = πr²" },
+            ],
+          },
+        ];
+        setDecks(defaultDecks);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultDecks));
+      }
+    } catch (error) {
+      console.error("Lỗi đọc dữ liệu flashcard:", error);
+    }
+
+    try {
+      const storedProgress = localStorage.getItem(PROGRESS_KEY);
+      if (storedProgress) {
+        setDeckProgress(JSON.parse(storedProgress));
+      }
+    } catch (error) {
+      console.error("Lỗi đọc tiến độ flashcard:", error);
     }
   }, []);
 
@@ -921,261 +936,505 @@ const FlashcardTab = () => {
     orange: "bg-orange-50 text-orange-600 border-orange-200",
   };
 
+  const deckThemeMap = {
+    blue: {
+      header: "from-blue-900 via-blue-700 to-cyan-500",
+      progress: "from-blue-500 to-cyan-400",
+      surface:
+        "border-blue-200/80 bg-white shadow-[0_14px_32px_-20px_rgba(30,64,175,0.45)]",
+      tag: "bg-blue-50 text-blue-700 border-blue-200",
+      iconBg: "bg-white/20",
+    },
+    green: {
+      header: "from-emerald-900 via-emerald-700 to-cyan-500",
+      progress: "from-emerald-500 to-cyan-400",
+      surface:
+        "border-emerald-200/80 bg-white shadow-[0_14px_32px_-20px_rgba(6,95,70,0.45)]",
+      tag: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      iconBg: "bg-white/20",
+    },
+    purple: {
+      header: "from-indigo-900 via-indigo-700 to-blue-500",
+      progress: "from-indigo-500 to-blue-400",
+      surface:
+        "border-indigo-200/80 bg-white shadow-[0_14px_32px_-20px_rgba(49,46,129,0.45)]",
+      tag: "bg-indigo-50 text-indigo-700 border-indigo-200",
+      iconBg: "bg-white/20",
+    },
+    red: {
+      header: "from-rose-900 via-rose-700 to-orange-500",
+      progress: "from-rose-500 to-orange-400",
+      surface:
+        "border-rose-200/80 bg-white shadow-[0_14px_32px_-20px_rgba(159,18,57,0.45)]",
+      tag: "bg-rose-50 text-rose-700 border-rose-200",
+      iconBg: "bg-white/20",
+    },
+    orange: {
+      header: "from-orange-900 via-orange-700 to-amber-500",
+      progress: "from-orange-500 to-amber-400",
+      surface:
+        "border-orange-200/80 bg-white shadow-[0_14px_32px_-20px_rgba(154,52,18,0.45)]",
+      tag: "bg-orange-50 text-orange-700 border-orange-200",
+      iconBg: "bg-white/20",
+    },
+  };
+
+  const getCardKey = (card = {}) => {
+    const term = String(card?.term || "").trim().toLowerCase();
+    const def = String(card?.def || "").trim().toLowerCase();
+    return `${term}::${def}`;
+  };
+
+  const getDeckStats = (deck = {}) => {
+    const totalCards = deck.cards?.length || 0;
+    const ratings = deckProgress?.[deck.id]?.ratings || {};
+
+    if (totalCards === 0) {
+      return {
+        percent: 0,
+        seen: 0,
+        mastered: 0,
+        reviewing: 0,
+      };
+    }
+
+    let seen = 0;
+    let score = 0;
+    let mastered = 0;
+    let reviewing = 0;
+
+    (deck.cards || []).forEach((card) => {
+      const rating = ratings[getCardKey(card)];
+      if (!rating) return;
+      seen += 1;
+      if (rating === "mastered") {
+        score += 1;
+        mastered += 1;
+      } else if (rating === "reviewing") {
+        score += 0.5;
+        reviewing += 1;
+      }
+    });
+
+    return {
+      percent: Math.round((score / totalCards) * 100),
+      seen,
+      mastered,
+      reviewing,
+    };
+  };
+
+  const updateDeckProgress = (updater) => {
+    setDeckProgress((prev) => {
+      const next = updater(prev);
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleRateCard = (level) => {
+    if (!currentDeck?.cards?.[cardIndex]) return;
+    const cardKey = getCardKey(currentDeck.cards[cardIndex]);
+
+    updateDeckProgress((prev) => {
+      const current = prev[currentDeck.id] || { ratings: {} };
+      return {
+        ...prev,
+        [currentDeck.id]: {
+          ...current,
+          ratings: {
+            ...(current.ratings || {}),
+            [cardKey]: level,
+          },
+          updatedAt: Date.now(),
+        },
+      };
+    });
+
+    if (cardIndex < currentDeck.cards.length - 1) {
+      nextCard();
+    }
+  };
+
+  const currentDeckTheme = deckThemeMap[currentDeck?.color] || deckThemeMap.blue;
+  const currentDeckStats = getDeckStats(currentDeck || {});
+  const totalCards = currentDeck?.cards?.length || 0;
+  const studyProgress = totalCards > 0 ? Math.round(((cardIndex + 1) / totalCards) * 100) : 0;
+  const currentRating = currentDeck?.cards?.[cardIndex]
+    ? deckProgress?.[currentDeck.id]?.ratings?.[getCardKey(currentDeck.cards[cardIndex])]
+    : null;
+
   return (
     <div className="animate-fade-in-up">
-      {/* VIEW 1: DANH SÁCH DECK */}
       {view === "list" && (
-        <>
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="font-bold text-gray-800 dark:text-white text-xl flex items-center gap-2">
-                <Layers className="text-blue-600 dark:text-blue-400" />{" "}
-                Flashcard của tôi
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Luyện tập trí nhớ với phương pháp lặp lại.
-              </p>
-            </div>
-            <button
-              onClick={() => setView("create")}
-              className="w-full sm:w-auto bg-gray-900 dark:bg-gray-700 hover:bg-black dark:hover:bg-gray-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-2"
-            >
-              <Plus size={16} /> Tạo bộ mới
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {decks.map((deck) => (
-              <div
-                key={deck.id}
-                onClick={() => startStudy(deck)}
-                className={`relative p-6 rounded-2xl border cursor-pointer hover:shadow-md transition-all hover:-translate-y-1 group bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700`}
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
-                      colorMap[deck.color] || colorMap.blue
-                    }`}
-                  >
-                    {deck.icon || "📝"}
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteDeck(deck.id);
-                    }}
-                    className="p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all opacity-0 group-hover:opacity-100"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+        <div className="space-y-6">
+          <div className="relative overflow-hidden rounded-3xl border border-blue-200/70 bg-gradient-to-br from-blue-950 via-blue-800 to-sky-600 p-5 text-white shadow-[0_24px_64px_-28px_rgba(29,78,216,0.65)] sm:p-7">
+            <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/20 blur-2xl" />
+            <div className="pointer-events-none absolute -bottom-20 left-12 h-40 w-40 rounded-full bg-cyan-300/30 blur-2xl" />
+            <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-blue-100">
+                  <Layers size={14} />
+                  Flashcard Studio
                 </div>
-                <h4 className="font-bold text-gray-800 dark:text-white text-lg mb-1">
-                  {deck.title}
-                </h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-                  {deck.cards?.length || 0} thẻ thuật ngữ
+                <h3 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">
+                  Học nhanh, nhớ lâu hơn
+                </h3>
+                <p className="mt-2 max-w-xl text-sm text-blue-100/95 sm:text-base">
+                  Quản lý bộ thẻ trực quan, theo dõi tiến độ và luyện tập theo nhịp học cá nhân của bạn.
                 </p>
               </div>
-            ))}
+              <button
+                onClick={() => setView("create")}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-extrabold text-blue-800 shadow-lg transition-all hover:-translate-y-0.5 hover:bg-blue-50 sm:text-base"
+              >
+                <Plus size={18} />
+                Tạo bộ mới
+              </button>
+            </div>
           </div>
-        </>
+
+          {decks.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-blue-200 bg-blue-50/60 p-10 text-center text-blue-700">
+              <p className="text-lg font-bold">Bạn chưa có bộ thẻ nào.</p>
+              <p className="mt-2 text-sm text-blue-600">
+                Hãy tạo bộ flashcard đầu tiên để bắt đầu luyện tập.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
+              {decks.map((deck) => {
+                const theme = deckThemeMap[deck.color] || deckThemeMap.blue;
+                const stats = getDeckStats(deck);
+                const total = deck.cards?.length || 0;
+
+                return (
+                  <article
+                    key={deck.id}
+                    onClick={() => startStudy(deck)}
+                    className={`group cursor-pointer overflow-hidden rounded-3xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl ${theme.surface}`}
+                  >
+                    <div className={`relative overflow-hidden bg-gradient-to-r ${theme.header} p-4 text-white`}>
+                      <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-white/20 blur-xl" />
+                      <div className="pointer-events-none absolute bottom-0 left-0 h-10 w-full bg-gradient-to-t from-black/15 to-transparent" />
+                      <div className="relative flex items-start justify-between gap-2">
+                        <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl text-3xl backdrop-blur ${theme.iconBg}`}>
+                          {deck.icon || "📝"}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteDeck(deck.id);
+                          }}
+                          className="rounded-full bg-white/20 p-2 text-white/80 transition-colors hover:bg-white/30 hover:text-white"
+                          aria-label={`Xóa bộ ${deck.title}`}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 p-4">
+                      <div>
+                        <h4 className="line-clamp-2 text-lg font-black text-gray-900 dark:text-white">
+                          {deck.title}
+                        </h4>
+                        <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
+                          {total} thẻ thuật ngữ
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs font-bold text-gray-600">
+                          <span>Đã học: {stats.percent}%</span>
+                          <span>
+                            {stats.seen}/{total} thẻ
+                          </span>
+                        </div>
+                        <div className="h-2.5 overflow-hidden rounded-full bg-gray-100">
+                          <div
+                            className={`h-full rounded-full bg-gradient-to-r ${theme.progress} transition-all duration-500`}
+                            style={{ width: `${stats.percent}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 ${theme.tag}`}>
+                          {stats.mastered} đã thuộc
+                        </span>
+                        <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-700">
+                          {stats.reviewing} đang ôn
+                        </span>
+                        <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-gray-600">
+                          Tập để học
+                        </span>
+                      </div>
+
+                      <div className="pt-1">
+                        <div className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-900 px-4 py-2.5 text-sm font-bold text-white transition-colors group-hover:bg-blue-800">
+                          Bắt đầu học ngay
+                          <ChevronRight size={16} />
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
-      {/* VIEW 2: CHẾ ĐỘ HỌC (STUDY MODAL) */}
       {view === "study" && currentDeck && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4">
-          <div className="bg-white w-[95vw] h-[92vh] sm:h-[88vh] lg:w-full lg:max-w-2xl rounded-2xl lg:rounded-3xl p-4 sm:p-5 lg:p-6 shadow-2xl relative flex flex-col lg:h-[500px]">
-            {/* Header */}
-            <div className="flex justify-between items-center gap-3 mb-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 p-2 backdrop-blur-md sm:p-4">
+          <div className="relative mx-auto flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-[30px] border border-blue-100/70 bg-gradient-to-b from-blue-50 via-white to-sky-50 shadow-[0_30px_90px_-35px_rgba(30,64,175,0.75)] dark:border-blue-800/60 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
+            <div className="pointer-events-none absolute -left-20 top-1/3 h-52 w-52 rounded-full bg-cyan-200/50 blur-3xl dark:bg-cyan-700/20" />
+            <div className="pointer-events-none absolute -right-20 top-14 h-56 w-56 rounded-full bg-blue-300/40 blur-3xl dark:bg-blue-700/20" />
+
+            <div className="relative flex items-center justify-between border-b border-blue-100/80 px-4 py-4 sm:px-6">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setView("list")}
-                  className="p-2.5 sm:p-2 hover:bg-gray-100 rounded-full text-gray-500"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-blue-200 bg-white text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-700 dark:bg-slate-900 dark:text-blue-200 dark:hover:bg-slate-800"
+                  aria-label="Đóng chế độ học"
                 >
-                  <X size={22} />
+                  <X size={20} />
                 </button>
                 <div>
-                  <h3 className="font-bold text-gray-800 text-sm sm:text-base">
+                  <h3 className="text-base font-black text-slate-900 dark:text-white sm:text-lg">
                     {currentDeck.title}
                   </h3>
-                  <p className="text-xs text-gray-500">
-                    {cardIndex + 1} / {currentDeck.cards.length}
+                  <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                    Thẻ {cardIndex + 1}/{totalCards} • Đã học {currentDeckStats.percent}%
                   </p>
                 </div>
               </div>
-              <div className="w-24 sm:w-1/3 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold ${currentDeckTheme.tag}`}>
+                  Focus Mode
+                </span>
+            </div>
+
+            <div className="relative px-4 pt-4 sm:px-6">
+              <div className="mb-2 flex items-center justify-between text-xs font-bold text-blue-700 dark:text-blue-300">
+                <span>Tiến độ học tập</span>
+                <span>{studyProgress}%</span>
+              </div>
+              <div className="h-2.5 overflow-hidden rounded-full bg-blue-100 dark:bg-blue-950/60">
                 <div
-                  className="h-full bg-blue-500 transition-all duration-300"
-                  style={{
-                    width: `${
-                      ((cardIndex + 1) / currentDeck.cards.length) * 100
-                    }%`,
-                  }}
-                ></div>
+                  className={`h-full rounded-full bg-gradient-to-r ${currentDeckTheme.progress} transition-all duration-500`}
+                  style={{ width: `${studyProgress}%` }}
+                />
               </div>
             </div>
 
-            {/* Card Area */}
-            <div
-              className="flex-1 [perspective:1000px] relative group cursor-pointer"
-              onClick={() => setIsFlipped(!isFlipped)}
-            >
-              {/* Container lật 3D */}
-              <div
-                className={`w-full h-full absolute inset-0 transition-all duration-500 [transform-style:preserve-3d] ${
-                  isFlipped ? "[transform:rotateY(180deg)]" : ""
-                }`}
-              >
-                {/* --- MẶT TRƯỚC (Front) --- */}
-                <div className="absolute inset-0 bg-blue-50 rounded-2xl border-2 border-blue-100 flex flex-col items-center justify-center p-5 sm:p-8 [backface-visibility:hidden] shadow-inner">
-                  <span className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-4">
-                    Thuật ngữ
-                  </span>
-                  <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 text-center select-none">
-                    {currentDeck.cards[cardIndex].term}
-                  </h2>
-                  <p className="absolute bottom-6 text-gray-400 text-xs flex items-center gap-1 animate-pulse">
-                    <RotateCw size={12} /> Chạm để lật
-                  </p>
-                </div>
+            <div className="relative flex-1 px-3 pb-2 pt-4 sm:px-8">
+              <div className="mx-auto h-full max-w-3xl [perspective:1400px]">
+                <div
+                  className="relative h-full min-h-[300px] cursor-pointer sm:min-h-[340px]"
+                  onClick={() => setIsFlipped(!isFlipped)}
+                >
+                  <div
+                    className={`absolute inset-0 transition-all duration-500 [transform-style:preserve-3d] ${
+                      isFlipped ? "[transform:rotateY(180deg)]" : ""
+                    }`}
+                  >
+                    <div className="pointer-events-none absolute -bottom-4 left-6 right-6 h-6 rounded-full bg-blue-950/25 blur-xl" />
 
-                {/* --- MẶT SAU (Back) --- */}
-                <div className="absolute inset-0 bg-white rounded-2xl border-2 border-gray-100 flex flex-col items-center justify-center p-5 sm:p-8 [backface-visibility:hidden] [transform:rotateY(180deg)] shadow-inner">
-                  <span className="text-xs font-bold text-green-500 uppercase tracking-widest mb-4">
-                    Định nghĩa
-                  </span>
-                  <h2 className="text-xl sm:text-2xl font-medium text-gray-700 text-center leading-relaxed select-none">
-                    {currentDeck.cards[cardIndex].def}
-                  </h2>
+                    <div className="absolute inset-0 rounded-[30px] border border-blue-200 bg-white p-6 shadow-[0_24px_48px_-24px_rgba(37,99,235,0.6)] [backface-visibility:hidden] sm:p-10">
+                      <div className="flex h-full flex-col items-center justify-center text-center">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-blue-700">
+                          Mặt trước
+                        </span>
+                        <h2 className="mt-6 text-2xl font-black leading-tight text-blue-900 sm:text-4xl">
+                          {currentDeck.cards[cardIndex].term}
+                        </h2>
+                        <p className="mt-8 flex items-center gap-1 text-xs font-semibold text-slate-500">
+                          <RotateCw size={13} />
+                          Chạm vào thẻ để lật
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="absolute inset-0 rounded-[30px] border border-slate-200 bg-slate-50 p-6 shadow-[0_24px_48px_-24px_rgba(15,23,42,0.35)] [backface-visibility:hidden] [transform:rotateY(180deg)] sm:p-10">
+                      <div className="flex h-full flex-col items-center justify-center text-center">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                          Mặt sau
+                        </span>
+                        <h2 className="mt-6 text-xl font-semibold leading-relaxed text-slate-700 sm:text-3xl">
+                          {currentDeck.cards[cardIndex].def}
+                        </h2>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Controls */}
-            <div className="flex justify-between items-center mt-6 px-1 sm:px-10">
-              <button
-                onClick={prevCard}
-                disabled={cardIndex === 0}
-                className="p-4 sm:p-4 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-30 transition-all"
-              >
-                <ChevronLeft size={28} />
-              </button>
-              <button
-                onClick={() => setIsFlipped(!isFlipped)}
-                className="p-5 sm:p-4 rounded-full bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all transform active:scale-90"
-              >
-                <RotateCw size={28} />
-              </button>
-              <button
-                onClick={nextCard}
-                disabled={cardIndex === currentDeck.cards.length - 1}
-                className="p-4 sm:p-4 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-30 transition-all"
-              >
-                <ChevronRight size={28} />
-              </button>
-            </div>
+            <div className="relative space-y-4 border-t border-blue-100/80 bg-white/85 px-4 py-4 backdrop-blur sm:px-8 sm:py-5 dark:border-blue-900/60 dark:bg-slate-900/85">
+              <div className="flex items-center justify-center gap-3 sm:gap-6">
+                <button
+                  onClick={prevCard}
+                  disabled={cardIndex === 0}
+                  className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-700 transition-all hover:-translate-y-0.5 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-35 dark:border-blue-700 dark:bg-slate-800 dark:text-blue-200"
+                >
+                  <ChevronLeft size={24} />
+                </button>
+                <button
+                  onClick={() => setIsFlipped(!isFlipped)}
+                  className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-blue-700 text-white shadow-lg shadow-blue-300/40 transition-transform hover:scale-105 hover:bg-blue-800 dark:shadow-blue-900/40"
+                >
+                  <RotateCw size={24} />
+                </button>
+                <button
+                  onClick={nextCard}
+                  disabled={cardIndex === totalCards - 1}
+                  className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-700 transition-all hover:-translate-y-0.5 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-35 dark:border-blue-700 dark:bg-slate-800 dark:text-blue-200"
+                >
+                  <ChevronRight size={24} />
+                </button>
+              </div>
 
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+                <button
+                  onClick={() => handleRateCard("forgot")}
+                  disabled={!isFlipped}
+                  className={`rounded-xl border px-3 py-2 text-sm font-bold transition-all ${
+                    currentRating === "forgot"
+                      ? "border-rose-400 bg-rose-100 text-rose-700"
+                      : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                  } ${!isFlipped ? "cursor-not-allowed opacity-50" : ""}`}
+                >
+                  Chưa nhớ
+                </button>
+                <button
+                  onClick={() => handleRateCard("reviewing")}
+                  disabled={!isFlipped}
+                  className={`rounded-xl border px-3 py-2 text-sm font-bold transition-all ${
+                    currentRating === "reviewing"
+                      ? "border-amber-400 bg-amber-100 text-amber-700"
+                      : "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                  } ${!isFlipped ? "cursor-not-allowed opacity-50" : ""}`}
+                >
+                  Hơi nhớ
+                </button>
+                <button
+                  onClick={() => handleRateCard("mastered")}
+                  disabled={!isFlipped}
+                  className={`rounded-xl border px-3 py-2 text-sm font-bold transition-all ${
+                    currentRating === "mastered"
+                      ? "border-emerald-400 bg-emerald-100 text-emerald-700"
+                      : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                  } ${!isFlipped ? "cursor-not-allowed opacity-50" : ""}`}
+                >
+                  Đã thuộc
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* VIEW 3: TẠO BỘ THẺ MỚI */}
       {view === "create" && (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
-            <h3 className="font-bold text-lg text-gray-800 dark:text-white">
-              Tạo bộ Flashcard mới
-            </h3>
-            <button
-              onClick={() => setView("list")}
-              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium"
-            >
-              Hủy bỏ
-            </button>
-          </div>
-
-          <div className="space-y-4 mb-8">
-            <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">
-                Tên bộ thẻ
-              </label>
-              <input
-                className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold"
-                placeholder="VD: Từ vựng Tiếng Anh Unit 1"
-                value={newDeckTitle}
-                onChange={(e) => setNewDeckTitle(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">
-                Màu chủ đạo
-              </label>
-              <div className="flex gap-3">
-                {["blue", "green", "purple", "red", "orange"].map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setNewDeckColor(c)}
-                    className={`w-8 h-8 rounded-full border-2 ${
-                      newDeckColor === c
-                        ? "border-gray-800 scale-110"
-                        : "border-transparent"
-                    } ${colorMap[c].split(" ")[0]}`}
-                  />
-                ))}
+        <div className="overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-[0_20px_50px_-28px_rgba(30,64,175,0.45)] dark:border-blue-800 dark:bg-slate-900">
+          <div className="border-b border-blue-100 bg-gradient-to-r from-blue-900 via-blue-800 to-cyan-600 px-5 py-4 text-white sm:px-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-black sm:text-xl">Tạo bộ Flashcard mới</h3>
+                <p className="mt-1 text-xs text-blue-100 sm:text-sm">
+                  Điền thuật ngữ và định nghĩa để bắt đầu một bộ thẻ mới.
+                </p>
               </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {newCards.map((card, idx) => (
-              <div
-                key={idx}
-                className="flex gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 group"
+              <button
+                onClick={() => setView("list")}
+                className="rounded-xl border border-white/35 bg-white/10 px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-white/20"
               >
-                <div className="w-8 flex items-center justify-center font-bold text-gray-300">
-                  {idx + 1}
-                </div>
-                <div className="flex-1 grid grid-cols-2 gap-3">
-                  <input
-                    className="bg-white p-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-400"
-                    placeholder="Thuật ngữ"
-                    value={card.term}
-                    onChange={(e) =>
-                      handleCardChange(idx, "term", e.target.value)
-                    }
-                  />
-                  <input
-                    className="bg-white p-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-400"
-                    placeholder="Định nghĩa"
-                    value={card.def}
-                    onChange={(e) =>
-                      handleCardChange(idx, "def", e.target.value)
-                    }
-                  />
-                </div>
-                <button
-                  onClick={() => handleRemoveCardRow(idx)}
-                  className="p-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
+                Quay lại
+              </button>
+            </div>
           </div>
 
-          <div className="mt-6 flex gap-4">
-            <button
-              onClick={handleAddCardRow}
-              className="flex-1 py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-500 font-bold hover:bg-gray-50 hover:border-gray-300 transition-all"
-            >
-              + Thêm thẻ
-            </button>
-            <button
-              onClick={saveDeck}
-              className="flex-1 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-black shadow-lg transition-all flex items-center justify-center gap-2"
-            >
-              <Save size={18} /> Lưu bộ thẻ
-            </button>
+          <div className="space-y-5 p-5 sm:p-6">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-[0.16em] text-blue-700 dark:text-blue-300">
+                  Tên bộ thẻ
+                </label>
+                <input
+                  className="mt-2 w-full rounded-2xl border border-blue-200 bg-blue-50/50 px-4 py-3 text-sm font-bold text-slate-800 outline-none transition-all focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-blue-700 dark:bg-slate-800 dark:text-white"
+                  placeholder="VD: Từ vựng Tiếng Anh Unit 1"
+                  value={newDeckTitle}
+                  onChange={(e) => setNewDeckTitle(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-[0.16em] text-blue-700 dark:text-blue-300">
+                  Màu chủ đạo
+                </label>
+                <div className="mt-2 flex gap-2">
+                  {["blue", "green", "purple", "red", "orange"].map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setNewDeckColor(c)}
+                      className={`h-9 w-9 rounded-full border-2 transition-transform ${
+                        newDeckColor === c
+                          ? "scale-110 border-slate-900 dark:border-white"
+                          : "border-transparent"
+                      } ${colorMap[c].split(" ")[0]}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {newCards.map((card, idx) => (
+                <div
+                  key={idx}
+                  className="group grid grid-cols-[34px_1fr_auto] items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50/45 p-3 dark:border-blue-800 dark:bg-slate-800/60"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-black text-blue-700 dark:bg-slate-700 dark:text-blue-200">
+                    {idx + 1}
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <input
+                      className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-blue-700 dark:bg-slate-900 dark:text-white"
+                      placeholder="Thuật ngữ"
+                      value={card.term}
+                      onChange={(e) => handleCardChange(idx, "term", e.target.value)}
+                    />
+                    <input
+                      className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-blue-700 dark:bg-slate-900 dark:text-white"
+                      placeholder="Định nghĩa"
+                      value={card.def}
+                      onChange={(e) => handleCardChange(idx, "def", e.target.value)}
+                    />
+                  </div>
+                  <button
+                    onClick={() => handleRemoveCardRow(idx)}
+                    className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/20"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                onClick={handleAddCardRow}
+                className="rounded-2xl border-2 border-dashed border-blue-200 px-4 py-3 text-sm font-bold text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-700 dark:text-blue-200 dark:hover:bg-slate-800"
+              >
+                + Thêm thẻ
+              </button>
+              <button
+                onClick={saveDeck}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-800 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-blue-300/40 transition-colors hover:bg-blue-900 dark:shadow-blue-900/40"
+              >
+                <Save size={18} />
+                Lưu bộ thẻ
+              </button>
+            </div>
           </div>
         </div>
       )}
