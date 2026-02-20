@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import EditProfileModal from "../components/EditProfileModal";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import { UploadModal } from "../components/DocumentModals";
@@ -871,6 +872,36 @@ const Profile = ({ user, onUpdateUser }) => {
   const [activeTab, setActiveTab] = useState("info");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPassModalOpen, setIsPassModalOpen] = useState(false);
+  const profileTabs = [
+    {
+      id: "info",
+      label: "Thông tin cá nhân",
+      icon: User,
+      iconClass:
+        "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
+    },
+    {
+      id: "docs",
+      label: "Tài liệu của tôi",
+      icon: FileText,
+      iconClass:
+        "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400",
+    },
+    {
+      id: "stats",
+      label: "Thống kê học tập",
+      icon: BarChart3,
+      iconClass:
+        "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400",
+    },
+    {
+      id: "settings",
+      label: "Cấu hình học tập",
+      icon: Settings,
+      iconClass:
+        "bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400",
+    },
+  ];
 
   if (!user)
     return (
@@ -923,85 +954,42 @@ const Profile = ({ user, onUpdateUser }) => {
           {/* Menu Navigation */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
             <nav className="flex flex-col">
-              <button
-                onClick={() => setActiveTab("info")}
-                className={`flex items-center gap-3 px-5 py-4 text-sm font-medium transition-colors ${
-                  activeTab === "info"
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-                }`}
-              >
-                <div
-                  className={`p-1.5 rounded-lg ${
-                    activeTab === "info"
-                      ? "bg-white/20"
-                      : "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                  }`}
-                >
-                  <User size={18} />
-                </div>
-                Thông tin cá nhân
-              </button>
-
-              <button
-                onClick={() => setActiveTab("docs")}
-                className={`flex items-center gap-3 px-5 py-4 text-sm font-medium transition-colors ${
-                  activeTab === "docs"
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-                }`}
-              >
-                <div
-                  className={`p-1.5 rounded-lg ${
-                    activeTab === "docs"
-                      ? "bg-white/20"
-                      : "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                  }`}
-                >
-                  <FileText size={18} />
-                </div>
-                Tài liệu của tôi
-              </button>
-
-              <button
-                onClick={() => setActiveTab("stats")}
-                className={`flex items-center gap-3 px-5 py-4 text-sm font-medium transition-colors ${
-                  activeTab === "stats"
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-                }`}
-              >
-                <div
-                  className={`p-1.5 rounded-lg ${
-                    activeTab === "stats"
-                      ? "bg-white/20"
-                      : "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
-                  }`}
-                >
-                  <BarChart3 size={18} />
-                </div>
-                Thống kê học tập
-              </button>
-
-              <button
-                onClick={() => setActiveTab("settings")}
-                className={`flex items-center gap-3 px-5 py-4 text-sm font-medium transition-colors ${
-                  activeTab === "settings"
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-                }`}
-              >
-                <div
-                  className={`p-1.5 rounded-lg ${
-                    activeTab === "settings"
-                      ? "bg-white/20"
-                      : "bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
-                  }`}
-                >
-                  <Settings size={18} />
-                </div>
-                Cấu hình học tập
-              </button>
+              {profileTabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`relative flex items-center gap-3 overflow-hidden px-5 py-4 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "text-white"
+                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId="profile-liquid-tab"
+                        className="absolute inset-0 bg-blue-600"
+                        transition={{
+                          type: "spring",
+                          stiffness: 360,
+                          damping: 30,
+                          mass: 0.7,
+                        }}
+                      />
+                    )}
+                    <div
+                      className={`relative z-10 rounded-lg p-1.5 ${
+                        isActive ? "bg-white/20" : tab.iconClass
+                      }`}
+                    >
+                      <Icon size={18} />
+                    </div>
+                    <span className="relative z-10">{tab.label}</span>
+                  </button>
+                );
+              })}
             </nav>
           </div>
         </div>
