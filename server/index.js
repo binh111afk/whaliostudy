@@ -2903,9 +2903,13 @@ app.delete('/api/events/:id', async (req, res) => {
 });
 
 // PUT /api/events/:id - Update an event
-app.put('/api/events/:id', async (req, res) => {
+app.put('/api/events/:id', async (req, res, next) => {
     try {
         const { id } = req.params;
+        if (id === 'toggle') {
+            console.log('[Events/:id] Forwarding to /api/events/toggle');
+            return next();
+        }
         const { username, title, date, type, description, deadlineTag } = req.body;
 
         if (!username || !title || !date) {

@@ -1724,11 +1724,11 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   }, [user]);
 
   const resolveActiveUsername = (task = null) => {
-    const fromUserProp = String(user?.username || "").trim();
-    if (fromUserProp) return fromUserProp;
-
     const fromTask = String(task?.username || "").trim();
     if (fromTask) return fromTask;
+
+    const fromUserProp = String(user?.username || "").trim();
+    if (fromUserProp) return fromUserProp;
 
     if (typeof window !== "undefined") {
       try {
@@ -1964,11 +1964,18 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
     );
     
     try {
-      console.log("Sending toggle request:", {
-        id: task._id,
-        username: activeUsername,
-        isDone: nextIsDone,
-      });
+      console.log(
+        "Sending toggle request payload:",
+        JSON.stringify(
+          {
+            id: task._id,
+            username: activeUsername,
+            isDone: nextIsDone,
+          },
+          null,
+          2
+        )
+      );
       
       const res = await fetch("/api/events/toggle", {
         method: "PUT",
