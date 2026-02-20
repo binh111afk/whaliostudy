@@ -251,29 +251,29 @@ const DashboardFlashcardTab = () => {
 
   const deckSoftThemeMap = {
     blue: {
-      iconWrap: "bg-blue-100 text-blue-600",
-      ghostMastered: "bg-blue-50 text-blue-700",
-      ghostReviewing: "bg-sky-50 text-sky-700",
+      iconWrap: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300",
+      ghostMastered: "bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200",
+      ghostReviewing: "bg-sky-50 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200",
     },
     green: {
-      iconWrap: "bg-emerald-100 text-emerald-600",
-      ghostMastered: "bg-emerald-50 text-emerald-700",
-      ghostReviewing: "bg-teal-50 text-teal-700",
+      iconWrap: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300",
+      ghostMastered: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200",
+      ghostReviewing: "bg-teal-50 text-teal-700 dark:bg-teal-900/40 dark:text-teal-200",
     },
     purple: {
-      iconWrap: "bg-violet-100 text-violet-600",
-      ghostMastered: "bg-violet-50 text-violet-700",
-      ghostReviewing: "bg-indigo-50 text-indigo-700",
+      iconWrap: "bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-300",
+      ghostMastered: "bg-violet-50 text-violet-700 dark:bg-violet-900/40 dark:text-violet-200",
+      ghostReviewing: "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200",
     },
     red: {
-      iconWrap: "bg-rose-100 text-rose-600",
-      ghostMastered: "bg-rose-50 text-rose-700",
-      ghostReviewing: "bg-orange-50 text-orange-700",
+      iconWrap: "bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-300",
+      ghostMastered: "bg-rose-50 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200",
+      ghostReviewing: "bg-orange-50 text-orange-700 dark:bg-orange-900/40 dark:text-orange-200",
     },
     orange: {
-      iconWrap: "bg-amber-100 text-amber-600",
-      ghostMastered: "bg-amber-50 text-amber-700",
-      ghostReviewing: "bg-yellow-50 text-yellow-700",
+      iconWrap: "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300",
+      ghostMastered: "bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200",
+      ghostReviewing: "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-200",
     },
   };
 
@@ -373,23 +373,23 @@ const DashboardFlashcardTab = () => {
   return (
     <div className="animate-fade-in-up">
       {view === "list" && (
-        <div className="space-y-6 rounded-2xl bg-slate-50 p-4 sm:p-6">
-          <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="space-y-6 rounded-2xl bg-slate-50 p-4 sm:p-6 dark:bg-slate-900/40">
+          <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5 dark:border-slate-700 dark:bg-slate-900">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+              <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 <Layers size={14} />
                 Flashcard Studio
               </div>
-              <h3 className="mt-2 text-xl font-semibold text-slate-800 sm:text-2xl">
+              <h3 className="mt-2 text-xl font-semibold text-slate-800 dark:text-slate-100 sm:text-2xl">
                 Bộ thẻ của bạn
               </h3>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 Quản lý bộ thẻ theo phong cách gọn nhẹ, dễ theo dõi tiến độ học.
               </p>
             </div>
             <button
               onClick={() => setView("create")}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
             >
               <Plus size={16} />
               Tạo bộ mới
@@ -397,9 +397,9 @@ const DashboardFlashcardTab = () => {
           </div>
 
           {decks.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-700 shadow-sm">
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
               <p className="text-lg font-semibold">Bạn chưa có bộ thẻ nào.</p>
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 Hãy tạo bộ flashcard đầu tiên để bắt đầu luyện tập.
               </p>
             </div>
@@ -415,14 +415,14 @@ const DashboardFlashcardTab = () => {
                   <article
                     key={deck.id}
                     onClick={() => startStudy(deck)}
-                    className="group relative flex min-h-[140px] lg:min-h-[124px] cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                    className="group relative flex min-h-[140px] lg:min-h-[124px] cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-slate-900"
                   >
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteDeck(deck.id);
                       }}
-                      className="absolute right-2.5 top-2.5 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-red-500"
+                      className="absolute right-2.5 top-2.5 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-red-500 dark:text-slate-500 dark:hover:bg-slate-800"
                       aria-label={`Xóa bộ ${deck.title}`}
                     >
                       <Trash2 size={15} />
@@ -438,10 +438,10 @@ const DashboardFlashcardTab = () => {
                           </div>
                         </div>
                         <div>
-                          <h4 className="line-clamp-2 text-base font-semibold text-slate-800">
+                          <h4 className="line-clamp-2 text-base font-semibold text-slate-800 dark:text-slate-100">
                             {deck.title}
                           </h4>
-                          <p className="mt-0.5 text-xs text-slate-500">
+                          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                             {total} thẻ thuật ngữ
                           </p>
                         </div>
@@ -457,7 +457,7 @@ const DashboardFlashcardTab = () => {
                           >
                             {stats.reviewing} Đang học
                           </span>
-                          <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">
+                          <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                             {stats.seen}/{total} thẻ
                           </span>
                         </div>
@@ -470,12 +470,12 @@ const DashboardFlashcardTab = () => {
                           >
                             <DeckIcon size={20} strokeWidth={1.75} />
                           </div>
-                          <h4 className="line-clamp-1 text-lg font-semibold text-slate-800">
+                          <h4 className="line-clamp-1 text-lg font-semibold text-slate-800 dark:text-slate-100">
                             {deck.title}
                           </h4>
                         </div>
                         <div className="flex items-center justify-between gap-4">
-                          <p className="text-sm text-slate-500">{total} thẻ thuật ngữ</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">{total} thẻ thuật ngữ</p>
                           <div className="flex flex-wrap items-center justify-end gap-2 text-[11px] font-medium">
                             <span
                               className={`inline-flex items-center rounded-full px-2 py-0.5 ${softTheme.ghostMastered}`}
@@ -487,14 +487,14 @@ const DashboardFlashcardTab = () => {
                             >
                               {stats.reviewing} Đang học
                             </span>
-                            <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">
+                            <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                               {stats.seen}/{total} thẻ
                             </span>
                           </div>
                         </div>
                       </div>
                     </div>
-                    <div className="h-1 w-full bg-slate-100">
+                    <div className="h-1 w-full bg-slate-100 dark:bg-slate-800">
                       <div
                         className="h-1 bg-blue-600 transition-all duration-500"
                         style={{ width: `${stats.percent}%` }}
@@ -658,21 +658,21 @@ const DashboardFlashcardTab = () => {
       )}
 
       {view === "create" && (
-        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-6">
-          <div className="mb-5 rounded-2xl bg-white px-4 py-4 shadow-sm sm:px-5">
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-6 dark:border-slate-700 dark:bg-slate-900/40">
+          <div className="mb-5 rounded-2xl bg-white px-4 py-4 shadow-sm sm:px-5 dark:bg-slate-900">
             <div className="flex items-start gap-3">
               <button
                 onClick={() => setView("list")}
-                className="mt-0.5 text-slate-500 transition-colors hover:text-blue-800"
+                className="mt-0.5 text-slate-500 transition-colors hover:text-blue-800 dark:text-slate-400 dark:hover:text-blue-300"
                 aria-label="Quay lại"
               >
                 <ChevronLeft size={20} />
               </button>
               <div>
-                <h3 className="text-xl font-black text-blue-900 sm:text-2xl">
+                <h3 className="text-xl font-black text-blue-900 dark:text-blue-300 sm:text-2xl">
                   Tạo bộ Flashcard mới
                 </h3>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   Điền thuật ngữ và định nghĩa để bắt đầu một bộ thẻ mới.
                 </p>
               </div>
@@ -680,21 +680,21 @@ const DashboardFlashcardTab = () => {
           </div>
 
           <div className="space-y-4">
-            <div className="rounded-2xl bg-white p-4 shadow-sm sm:p-5">
+            <div className="rounded-2xl bg-white p-4 shadow-sm sm:p-5 dark:bg-slate-900">
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-[0.16em] text-slate-600">
+                  <label className="block text-xs font-black uppercase tracking-[0.16em] text-slate-600 dark:text-slate-400">
                     Tên bộ thẻ
                   </label>
                   <input
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-900/40"
                     placeholder="VD: Từ vựng Tiếng Anh Unit 1"
                     value={newDeckTitle}
                     onChange={(e) => setNewDeckTitle(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-[0.16em] text-slate-600">
+                  <label className="block text-xs font-black uppercase tracking-[0.16em] text-slate-600 dark:text-slate-400">
                     Màu chủ đạo
                   </label>
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -704,7 +704,7 @@ const DashboardFlashcardTab = () => {
                         onClick={() => setNewDeckColor(c)}
                         className={`relative h-9 w-9 rounded-full border transition-transform ${
                           newDeckColor === c
-                            ? "scale-110 border-blue-600 ring-2 ring-blue-200"
+                            ? "scale-110 border-blue-600 ring-2 ring-blue-200 dark:ring-blue-900/50"
                             : "border-transparent"
                         } ${colorMap[c].split(" ")[0]}`}
                       />
@@ -718,15 +718,15 @@ const DashboardFlashcardTab = () => {
               {newCards.map((card, idx) => (
                 <div
                   key={idx}
-                  className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+                  className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900"
                 >
                   <div className="mb-2 flex items-start justify-between gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-black text-blue-700">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-black text-blue-700 dark:bg-blue-900/40 dark:text-blue-200">
                       {idx + 1}
                     </div>
                     <button
                       onClick={() => handleRemoveCardRow(idx)}
-                      className="rounded-lg p-1.5 text-rose-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
+                      className="rounded-lg p-1.5 text-rose-300 transition-colors hover:bg-rose-50 hover:text-rose-500 dark:text-rose-400 dark:hover:bg-rose-900/20"
                       aria-label={`Xóa thẻ ${idx + 1}`}
                     >
                       <Trash2 size={16} />
@@ -734,13 +734,13 @@ const DashboardFlashcardTab = () => {
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <input
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-900/40"
                       placeholder="Thuật ngữ"
                       value={card.term}
                       onChange={(e) => handleCardChange(idx, "term", e.target.value)}
                     />
                     <input
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-900/40"
                       placeholder="Định nghĩa"
                       value={card.def}
                       onChange={(e) => handleCardChange(idx, "def", e.target.value)}
