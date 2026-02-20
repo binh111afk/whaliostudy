@@ -151,6 +151,9 @@ const DashboardOverviewTab = ({
 }) => {
   const [chartMode, setChartMode] = useState("credit");
   const [showAllDeadlinesMobile, setShowAllDeadlinesMobile] = useState(false);
+  const isDarkMode =
+    typeof document !== "undefined" &&
+    document.documentElement.classList.contains("dark");
 
   // Computed values
   const prioritizedDeadlines = useMemo(() => {
@@ -390,17 +393,34 @@ const DashboardOverviewTab = ({
                       />
                       <RadialBar
                         minAngle={15}
-                        background={{ fill: "#f3f4f6" }}
+                        background={{ fill: isDarkMode ? "rgba(71,85,105,0.55)" : "#E5E7EB" }}
                         clockWise={true}
                         dataKey="value"
                         cornerRadius={12}
                       />
-                      <Tooltip cursor={false} />
+                      <Tooltip
+                        cursor={false}
+                        formatter={(value) => [`${value} tín chỉ`, "Đã tích lũy"]}
+                        contentStyle={{
+                          borderRadius: "10px",
+                          border: isDarkMode
+                            ? "1px solid rgba(71,85,105,0.9)"
+                            : "1px solid #E5E7EB",
+                          backgroundColor: isDarkMode ? "#0F172A" : "#FFFFFF",
+                          color: isDarkMode ? "#E2E8F0" : "#0F172A",
+                          boxShadow: isDarkMode
+                            ? "0 12px 24px rgba(2,6,23,0.5)"
+                            : "0 8px 20px rgba(15,23,42,0.12)",
+                        }}
+                        itemStyle={{ color: isDarkMode ? "#E2E8F0" : "#0F172A" }}
+                        labelStyle={{ color: isDarkMode ? "#94A3B8" : "#64748B" }}
+                        wrapperStyle={{ zIndex: 40, pointerEvents: "none" }}
+                      />
                     </RadialBarChart>
                   </ResponsiveContainer>
 
                   {/* Text ở giữa biểu đồ */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pt-8 pointer-events-none">
+                  <div className="pointer-events-none absolute inset-0 z-[1] flex flex-col items-center justify-center pt-8">
                     <span className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 drop-shadow-sm">
                       {creditPercent}%
                     </span>
@@ -507,7 +527,7 @@ const DashboardOverviewTab = ({
                   <CartesianGrid
                     strokeDasharray="3 3"
                     vertical={false}
-                    stroke="#f3f4f6"
+                    stroke={isDarkMode ? "#334155" : "#f3f4f6"}
                   />
                   <XAxis
                     dataKey="name"
@@ -518,9 +538,18 @@ const DashboardOverviewTab = ({
                   <Tooltip
                     contentStyle={{
                       borderRadius: "8px",
-                      border: "none",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                      border: isDarkMode
+                        ? "1px solid rgba(71,85,105,0.9)"
+                        : "1px solid #E5E7EB",
+                      backgroundColor: isDarkMode ? "#0F172A" : "#FFFFFF",
+                      color: isDarkMode ? "#E2E8F0" : "#0F172A",
+                      boxShadow: isDarkMode
+                        ? "0 12px 24px rgba(2,6,23,0.5)"
+                        : "0 4px 12px rgba(0,0,0,0.1)",
                     }}
+                    itemStyle={{ color: isDarkMode ? "#E2E8F0" : "#0F172A" }}
+                    labelStyle={{ color: isDarkMode ? "#94A3B8" : "#64748B" }}
+                    wrapperStyle={{ zIndex: 40, pointerEvents: "none" }}
                   />
                   <Area
                     type="monotone"
