@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import EditProfileModal from "../components/EditProfileModal";
 import ChangePasswordModal from "../components/ChangePasswordModal";
@@ -872,6 +872,9 @@ const Profile = ({ user, onUpdateUser }) => {
   const [activeTab, setActiveTab] = useState("info");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPassModalOpen, setIsPassModalOpen] = useState(false);
+  const profileNavRef = useRef(null);
+  const profileTabRefs = useRef({});
+  const [liquidHighlight, setLiquidHighlight] = useState(null);
   const profileTabs = [
     {
       id: "info",
@@ -902,6 +905,17 @@ const Profile = ({ user, onUpdateUser }) => {
         "bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400",
     },
   ];
+
+  useLayoutEffect(() => {
+    const navEl = profileNavRef.current;
+    const activeEl = profileTabRefs.current[activeTab];
+    if (!navEl || !activeEl) return;
+    setLiquidHighlight({
+      y: activeEl.offsetTop,
+      height: activeEl.offsetHeight,
+      width: activeEl.offsetWidth,
+    });
+  }, [activeTab]);
 
   if (!user)
     return (
@@ -953,7 +967,20 @@ const Profile = ({ user, onUpdateUser }) => {
 
           {/* Menu Navigation */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-            <nav className="flex flex-col">
+            <nav ref={profileNavRef} className="relative flex flex-col">
+              {liquidHighlight && (
+                <motion.div
+                  layoutId="profile-liquid-tab"
+                  className="pointer-events-none absolute left-0 bg-primary dark:bg-blue-600"
+                  initial={false}
+                  animate={{
+                    y: liquidHighlight.y,
+                    height: liquidHighlight.height,
+                    width: liquidHighlight.width,
+                  }}
+                  transition={{ type: "spring", stiffness: 360, damping: 30, mass: 0.7 }}
+                />
+              )}
               {profileTabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -961,32 +988,23 @@ const Profile = ({ user, onUpdateUser }) => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`relative flex items-center gap-3 overflow-hidden px-5 py-4 text-sm font-medium transition-colors ${
+                    ref={(el) => {
+                      profileTabRefs.current[tab.id] = el;
+                    }}
+                    className={`relative z-10 flex items-center gap-3 overflow-hidden px-5 py-4 text-sm font-medium transition-colors ${
                       isActive
                         ? "text-white"
                         : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                     }`}
                   >
-                    {isActive && (
-                      <motion.span
-                        layoutId="profile-liquid-tab"
-                        className="absolute inset-0 bg-blue-600"
-                        transition={{
-                          type: "spring",
-                          stiffness: 360,
-                          damping: 30,
-                          mass: 0.7,
-                        }}
-                      />
-                    )}
                     <div
-                      className={`relative z-10 rounded-lg p-1.5 ${
+                      className={`rounded-lg p-1.5 ${
                         isActive ? "bg-white/20" : tab.iconClass
                       }`}
                     >
                       <Icon size={18} />
                     </div>
-                    <span className="relative z-10">{tab.label}</span>
+                    <span>{tab.label}</span>
                   </button>
                 );
               })}
