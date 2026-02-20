@@ -69,6 +69,22 @@ const getCurrentDayString = () => {
   return days[new Date().getDay()];
 };
 
+const getLocalDateKey = (dateInput = new Date()) => {
+  const date = new Date(dateInput);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const isScheduleOnlyEvent = (event) => {
+  const eventType = String(event?.type || "").trim().toLowerCase();
+  const eventTag = String(event?.deadlineTag || "").trim().toLowerCase();
+  if (eventType) return eventType === "other";
+  return eventTag === "lịch trình";
+};
+
 // ... (GIỮ NGUYÊN CÁC HELPER CŨ: getVNDate, formatDeadlineTime, convertToGPA4, EditTargetModal, ResourceCard, ChartStatBox) ...
 // --- HELPER: Lấy ngày giờ Việt Nam chuẩn ---
 const getVNDate = () => {
@@ -131,7 +147,22 @@ const getDeadlineMeta = (task) => {
   } else if (hoursLeft <= 24) {
     timeLeftLabel = `Còn ${Math.max(1, Math.ceil(hoursLeft))} giờ`;
   } else {
-    timeLeftLabel = `Còn ${Math.ceil(hoursLeft / 24)} ngày`;
+    const today = new Date();
+    const startOfToday = Date.UTC(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const startOfDeadline = Date.UTC(
+      deadlineDate.getFullYear(),
+      deadlineDate.getMonth(),
+      deadlineDate.getDate()
+    );
+    const daysLeft = Math.max(
+      1,
+      Math.round((startOfDeadline - startOfToday) / (1000 * 60 * 60 * 24))
+    );
+    timeLeftLabel = `Còn ${daysLeft} ngày`;
   }
 
   let urgency = "normal";
@@ -171,12 +202,13 @@ const getConfirmToastOptions = () => ({
 // --- HELPER: Tính điểm hệ 4 từ hệ 10 ---
 const convertToGPA4 = (score10) => {
   if (score10 >= 8.5) return 4.0;
-  if (score10 >= 8.0) return 3.5;
+  if (score10 >= 7.8) return 3.5;
   if (score10 >= 7.0) return 3.0;
-  if (score10 >= 6.5) return 2.5;
+  if (score10 >= 6.3) return 2.5;
   if (score10 >= 5.5) return 2.0;
-  if (score10 >= 5.0) return 1.5;
+  if (score10 >= 4.8) return 1.5;
   if (score10 >= 4.0) return 1.0;
+  if (score10 >= 3.0) return 0.5;
   return 0;
 };
 
@@ -1230,7 +1262,7 @@ const DailyScheduleTab = ({ user }) => {
       const tkbData = await tkbRes.json();
       const eventData = await eventRes.json();
       const todayStr = getCurrentDayString();
-      const todayDateStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+      const todayDateStr = getLocalDateKey(new Date());
 
       let items = [];
 
@@ -1268,8 +1300,9 @@ const DailyScheduleTab = ({ user }) => {
       // 3. Xử lý Sự kiện thủ công (Lọc theo ngày hôm nay)
       if (eventData.success) {
         eventData.events.forEach((ev) => {
+          if (!isScheduleOnlyEvent(ev)) return;
           const evDate = new Date(ev.date);
-          if (evDate.toISOString().split("T")[0] === todayDateStr) {
+          if (getLocalDateKey(evDate) === todayDateStr) {
             // Trích xuất thông tin từ description
             const roomMatch = ev.description?.match(/🚪\s*(.+?)(?:\n|$)/);
             const locationMatch = ev.description?.match(/📍\s*(.+?)(?:\n|$)/);
@@ -1688,9 +1721,11 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
       const res = await fetch(`/api/events?username=${user.username}`);
       const data = await res.json();
       if (data.success) {
-        const sorted = data.events.sort(
+        const sorted = data.events
+          .filter((event) => !isScheduleOnlyEvent(event))
+          .sort(
           (a, b) => new Date(a.date) - new Date(b.date)
-        );
+          );
         setDeadlines(sorted);
       }
     } catch (error) {
@@ -1713,62 +1748,79 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   const calculateGpaMetrics = (semesters) => {
     let totalCreditsAccumulated = 0;
     let totalSubjectsPassed = 0;
-    let totalPointCredit = 0; // Tổng (điểm hệ 4 * tín chỉ) tích lũy
-    let semesterGPAs = [];
+    const roundScore10 = (score) =>
+      Math.round((score + Number.EPSILON) * 10) / 10;
+    const semesterGPAs = [];
 
     semesters.forEach((sem) => {
       let semTotalScore = 0;
       let semTotalCredits = 0;
       if (sem.subjects) {
         sem.subjects.forEach((sub) => {
-          let subScore10 = 0;
+          let weightedScore10 = 0;
           let totalWeight = 0;
           if (sub.components && sub.components.length > 0) {
             sub.components.forEach((comp) => {
+              if (
+                comp.score === "" ||
+                comp.score === null ||
+                comp.score === undefined
+              ) {
+                return;
+              }
+
               const score = parseFloat(comp.score);
               const weight = parseFloat(comp.weight);
               if (!isNaN(score) && !isNaN(weight)) {
-                subScore10 += score * (weight / 100);
+                weightedScore10 += score * (weight / 100);
                 totalWeight += weight;
               }
             });
           }
           // Chỉ tính môn có đủ trọng số (>= 99.9%)
-          if (totalWeight >= 99.9 && subScore10 > 0) {
-            const subScore4 = convertToGPA4(subScore10);
+          if (totalWeight >= 99.9) {
+            const finalScore10 = roundScore10(weightedScore10);
+            const subScore4 = convertToGPA4(finalScore10);
             const credits = parseFloat(sub.credits) || 0;
-            
+
             // Tính cho học kỳ hiện tại
             semTotalScore += subScore4 * credits;
             semTotalCredits += credits;
-            
-            // Tích lũy cho GPA tổng
-            totalPointCredit += subScore4 * credits;
+
             totalCreditsAccumulated += credits;
-            
-            if (subScore4 >= 1.0) {
+
+            const isPassed =
+              sub.type === "major" ? finalScore10 >= 5.5 : finalScore10 >= 4.0;
+            if (isPassed) {
               totalSubjectsPassed += 1;
             }
           }
         });
       }
       const semGpa = semTotalCredits > 0 ? semTotalScore / semTotalCredits : 0;
-      semesterGPAs.push(semGpa);
+      semesterGPAs.push({ gpa: semGpa, credits: semTotalCredits });
     });
 
-    // GPA tích lũy (cumulative) = tổng (điểm * tín chỉ) / tổng tín chỉ
-    const cumulativeGpa = totalCreditsAccumulated > 0 ? totalPointCredit / totalCreditsAccumulated : 0;
-    
-    // GPA học kỳ gần nhất
-    const lastSemesterGpa = semesterGPAs.length > 0 ? semesterGPAs[semesterGPAs.length - 1] : 0;
-    
+    const gradedSemesterGPAs = semesterGPAs
+      .filter((semester) => semester.credits > 0)
+      .map((semester) => semester.gpa);
+
+    // GPA học kỳ gần nhất (đồng bộ với tab GPA theo dữ liệu học kỳ)
+    const currentSemesterGpa =
+      gradedSemesterGPAs.length > 0
+        ? gradedSemesterGPAs[gradedSemesterGPAs.length - 1]
+        : 0;
+
     // GPA học kỳ trước đó
-    const previousSemesterGpa = semesterGPAs.length > 1 ? semesterGPAs[semesterGPAs.length - 2] : 0;
-    
-    const diff = cumulativeGpa - previousSemesterGpa;
+    const previousSemesterGpa =
+      gradedSemesterGPAs.length > 1
+        ? gradedSemesterGPAs[gradedSemesterGPAs.length - 2]
+        : 0;
+
+    const diff = currentSemesterGpa - previousSemesterGpa;
 
     setGpaMetrics({
-      current: cumulativeGpa.toFixed(2), // Hiển thị GPA tích lũy
+      current: currentSemesterGpa.toFixed(2),
       last: previousSemesterGpa.toFixed(2),
       diff: diff.toFixed(2),
       totalCredits: totalCreditsAccumulated,
@@ -1961,7 +2013,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
               </div>
               <div className="z-10">
                 <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">
-                  GPA Kỳ này
+                  GPA kỳ gần nhất
                 </p>
                 <div
                   className={`flex items-center text-sm font-bold ${

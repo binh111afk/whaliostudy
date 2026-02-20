@@ -20,8 +20,14 @@ const formatDate = (dateInput) => {
 const getDaysLeft = (dateInput) => {
   const date = new Date(dateInput);
   if (Number.isNaN(date.getTime())) return Number.POSITIVE_INFINITY;
-  const diffMs = date.getTime() - Date.now();
-  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const now = new Date();
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const deadlineUtc = Date.UTC(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  );
+  return Math.round((deadlineUtc - todayUtc) / (1000 * 60 * 60 * 24));
 };
 
 const getTagLabel = (task) => {
