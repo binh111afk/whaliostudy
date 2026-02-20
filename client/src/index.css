@@ -1,7 +1,6 @@
-@import "tailwindcss";
-
-/* Tailwind v4: Dùng class-based dark mode thay vì prefers-color-scheme */
-@custom-variant dark (&:where(.dark, .dark *));
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 *,
 *::before,
@@ -17,11 +16,6 @@ body,
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-}
-
-@theme {
-  /* Khai báo lại màu xanh thương hiệu của Whalio */
-  --color-primary: #134691;
 }
 
 /* Reset nhẹ để nền web không bị đen */
