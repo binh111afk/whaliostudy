@@ -1,6 +1,6 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import Marquee from "react-fast-marquee";
-import { Music2, Play, Pause, SkipBack, SkipForward, Plus, X, Volume2, Disc3, ChevronUp, ChevronDown } from "lucide-react";
+import { Music2, Play, Pause, SkipBack, SkipForward, Plus, X, Volume2, Disc3, ChevronUp, ChevronDown, Search } from "lucide-react";
 import { useMusic } from "../context/MusicContext";
 
 const pad = (num) => String(num).padStart(2, "0");
@@ -29,7 +29,6 @@ const StudyTimerMusicPanel = () => {
     setVolume,
     saveFilesToLibrary,
     seekTo,
-    setNotice,
   } = useMusic();
 
   const fileInputRef = useRef(null);
@@ -40,9 +39,16 @@ const StudyTimerMusicPanel = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isSeekingProgress, setIsSeekingProgress] = useState(false);
   const [progressHover, setProgressHover] = useState({ visible: false, x: 0, time: 0 });
+  const [playlistQuery, setPlaylistQuery] = useState("");
 
   const waveBars = Array.from({ length: 18 }, (_, i) => i);
   const progressPercent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+  const filteredTracks = useMemo(() => {
+    const keyword = playlistQuery.trim().toLowerCase();
+    const enriched = tracks.map((track, index) => ({ ...track, _index: index }));
+    if (!keyword) return enriched;
+    return enriched.filter((track) => String(track.name || "").toLowerCase().includes(keyword));
+  }, [tracks, playlistQuery]);
 
   const handleFileUpload = useCallback(
     async (event) => {
@@ -305,9 +311,9 @@ const StudyTimerMusicPanel = () => {
       <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-950/40">
         <div className="sticky top-0 z-[1] flex items-center justify-between gap-2 border-b border-slate-200/70 dark:border-white/10 bg-white/85 dark:bg-slate-900/75 px-3 py-2 backdrop-blur-sm">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
-            Playlist ({tracks.length})
+            Playlist ({filteredTracks.length}/{tracks.length})
           </p>
-          {tracks.length > 3 && (
+          {filteredTracks.length > 3 && (
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -328,15 +334,29 @@ const StudyTimerMusicPanel = () => {
             </div>
           )}
         </div>
+        <div className="border-b border-slate-200/70 dark:border-white/10 px-3 py-2">
+          <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-500 dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-300">
+            <Search size={13} />
+            <input
+              type="text"
+              value={playlistQuery}
+              onChange={(e) => setPlaylistQuery(e.target.value)}
+              placeholder="Tìm bài nhạc..."
+              className="w-full bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100"
+            />
+          </label>
+        </div>
         <div ref={playlistRef} className="whalio-scrollbar max-h-36 overflow-y-auto">
           {isLoading ? (
             <p className="p-3 text-xs text-slate-500 dark:text-slate-400">Đang tải thư viện...</p>
           ) : tracks.length === 0 ? (
             <p className="p-3 text-xs text-slate-500 dark:text-slate-400">Playlist trống.</p>
+          ) : filteredTracks.length === 0 ? (
+            <p className="p-3 text-xs text-slate-500 dark:text-slate-400">Không tìm thấy bài phù hợp.</p>
           ) : (
             <ul className="divide-y divide-slate-200 dark:divide-white/5">
-              {tracks.map((track, idx) => {
-                const active = idx === currentIndex;
+              {filteredTracks.map((track) => {
+                const active = track._index === currentIndex;
                 return (
                   <li
                     key={track.id}
@@ -347,7 +367,7 @@ const StudyTimerMusicPanel = () => {
                     }`}
                   >
                     <button
-                      onClick={() => playSong(idx)}
+                      onClick={() => playSong(track._index)}
                       className="text-left min-w-0 flex-1"
                     >
                       <p className="text-sm truncate">{track.name}</p>

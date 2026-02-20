@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Marquee from "react-fast-marquee";
-import { Music2, Play, Pause, SkipBack, SkipForward, Plus, X, Volume2, Disc3, ChevronUp, ChevronDown, ListMusic, Timer } from "lucide-react";
+import { Music2, Play, Pause, SkipBack, SkipForward, Plus, X, Volume2, Disc3, ChevronUp, ChevronDown, ListMusic, Timer, Search } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useMusic } from "../context/MusicContext";
 
@@ -56,7 +56,6 @@ const FloatingPlayer = () => {
     setVolume,
     hidePlayer,
     seekTo,
-    audioRef,
   } = useMusic();
 
   const progressTrackRef = useRef(null);
@@ -69,6 +68,8 @@ const FloatingPlayer = () => {
   const [progressHover, setProgressHover] = useState({ visible: false, x: 0, time: 0 });
   const [motivationIndex, setMotivationIndex] = useState(0);
   const [reminderIndex, setReminderIndex] = useState(0);
+  const [playlistQuery, setPlaylistQuery] = useState("");
+  const [nowTs, setNowTs] = useState(() => Date.now());
 
   const currentTrackNameLength = currentTrack?.name?.length || 0;
   const isLongDesktopTrackName = currentTrackNameLength >= 32;
@@ -82,8 +83,10 @@ const FloatingPlayer = () => {
       try {
         const raw = localStorage.getItem(STUDY_OVERLAY_STORAGE_KEY);
         setOverlayState(raw ? JSON.parse(raw) : null);
+        setNowTs(Date.now());
       } catch {
         setOverlayState(null);
+        setNowTs(Date.now());
       }
     };
 
@@ -94,10 +97,16 @@ const FloatingPlayer = () => {
 
   const overlayIsRunning = Boolean(overlayState?.isRunning);
   const overlayTimeLeft = overlayIsRunning && Number(overlayState?.endAtTs) > 0
-    ? Math.max(0, Math.ceil((Number(overlayState?.endAtTs) - Date.now()) / 1000))
+    ? Math.max(0, Math.ceil((Number(overlayState?.endAtTs) - nowTs) / 1000))
     : Math.max(0, Number(overlayState?.timeLeft) || 0);
   const overlayTimeLabel = formatOverlayTime(overlayTimeLeft, Boolean(overlayState?.useHourFormat));
   const progressPercent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+  const filteredTracks = useMemo(() => {
+    const keyword = playlistQuery.trim().toLowerCase();
+    const enriched = tracks.map((track, index) => ({ ...track, _index: index }));
+    if (!keyword) return enriched;
+    return enriched.filter((track) => String(track.name || "").toLowerCase().includes(keyword));
+  }, [tracks, playlistQuery]);
 
   const seekToFromClientX = useCallback((clientX) => {
     const track = progressTrackRef.current;
@@ -390,16 +399,30 @@ const FloatingPlayer = () => {
           {/* Playlist Popup */}
           {isFloatingPlaylistOpen && (
             <div className="mt-2.5 max-h-40 overflow-y-auto rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/80 dark:bg-slate-950/50">
+              <div className="border-b border-slate-200/70 px-3 py-2 dark:border-white/10">
+                <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-500 dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-300">
+                  <Search size={13} />
+                  <input
+                    type="text"
+                    value={playlistQuery}
+                    onChange={(e) => setPlaylistQuery(e.target.value)}
+                    placeholder="Tìm bài nhạc..."
+                    className="w-full bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100"
+                  />
+                </label>
+              </div>
               {tracks.length === 0 ? (
                 <p className="p-4 text-sm text-slate-500 dark:text-slate-400">Playlist trống.</p>
+              ) : filteredTracks.length === 0 ? (
+                <p className="p-4 text-sm text-slate-500 dark:text-slate-400">Không tìm thấy bài phù hợp.</p>
               ) : (
                 <ul className="divide-y divide-slate-200 dark:divide-white/5">
-                  {tracks.map((track, idx) => {
-                    const active = idx === currentIndex;
+                  {filteredTracks.map((track) => {
+                    const active = track._index === currentIndex;
                     return (
                       <li key={track.id} className={`${active ? "bg-blue-50 dark:bg-cyan-500/15" : ""}`}>
                         <button
-                          onClick={() => playSong(idx)}
+                          onClick={() => playSong(track._index)}
                           className="w-full px-4 py-2.5 text-left text-base text-slate-700 dark:text-slate-200 truncate"
                         >
                           {track.name}

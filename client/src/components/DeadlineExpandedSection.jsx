@@ -171,7 +171,7 @@ const DeadlineExpandedSection = ({
                     return (
                       <div
                         key={task._id}
-                        className={`flex items-start justify-between gap-3 rounded-2xl border p-4 ${getCardTone(
+                        className={`flex items-stretch justify-between gap-3 rounded-2xl border p-4 ${getCardTone(
                           daysLeft
                         )}`}
                       >
@@ -192,7 +192,7 @@ const DeadlineExpandedSection = ({
                             {formatDate(task.date)}
                           </p>
                         </div>
-                        <div className="shrink-0 text-right">
+                        <div className="shrink-0 self-stretch text-right flex flex-col justify-center">
                           {daysLeft === 0 ? (
                             <>
                               <p className="text-base font-black leading-none uppercase">
