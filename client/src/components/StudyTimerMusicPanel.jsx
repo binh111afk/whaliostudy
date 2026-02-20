@@ -334,15 +334,15 @@ const StudyTimerMusicPanel = () => {
             </div>
           )}
         </div>
-        <div className="border-b border-slate-200/70 dark:border-white/10 px-3 py-2">
-          <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-500 dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-300">
-            <Search size={13} />
+        <div className="border-b border-slate-200/70 dark:border-white/10">
+          <label className="flex items-center gap-2 px-3 py-2 text-sm text-slate-500 dark:text-slate-300">
+            <Search size={16} />
             <input
               type="text"
               value={playlistQuery}
               onChange={(e) => setPlaylistQuery(e.target.value)}
               placeholder="Tìm bài nhạc..."
-              className="w-full bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100"
+              className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100"
             />
           </label>
         </div>

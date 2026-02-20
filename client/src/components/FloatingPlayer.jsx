@@ -399,15 +399,15 @@ const FloatingPlayer = () => {
           {/* Playlist Popup */}
           {isFloatingPlaylistOpen && (
             <div className="mt-2.5 max-h-40 overflow-y-auto rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/80 dark:bg-slate-950/50">
-              <div className="border-b border-slate-200/70 px-3 py-2 dark:border-white/10">
-                <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-500 dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-300">
-                  <Search size={13} />
+              <div className="border-b border-slate-200/70 dark:border-white/10">
+                <label className="flex items-center gap-2 px-4 py-2.5 text-base text-slate-500 dark:text-slate-300">
+                  <Search size={16} />
                   <input
                     type="text"
                     value={playlistQuery}
                     onChange={(e) => setPlaylistQuery(e.target.value)}
                     placeholder="Tìm bài nhạc..."
-                    className="w-full bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100"
+                    className="w-full bg-transparent text-base text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100"
                   />
                 </label>
               </div>
@@ -422,7 +422,10 @@ const FloatingPlayer = () => {
                     return (
                       <li key={track.id} className={`${active ? "bg-blue-50 dark:bg-cyan-500/15" : ""}`}>
                         <button
-                          onClick={() => playSong(track._index)}
+                          onClick={() => {
+                            playSong(track._index);
+                            setIsFloatingPlaylistOpen(false);
+                          }}
                           className="w-full px-4 py-2.5 text-left text-base text-slate-700 dark:text-slate-200 truncate"
                         >
                           {track.name}
