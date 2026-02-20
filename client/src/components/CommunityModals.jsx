@@ -164,7 +164,7 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
 
     // Helper: Component Avatar nhỏ gọn để tái sử dụng
     const SmartAvatar = ({ src, name, size = "w-8 h-8", fontSize = "text-xs" }) => (
-        <div className={`${size} rounded-full border border-gray-200 overflow-hidden relative bg-gray-100 shrink-0`}>
+        <div className={`${size} relative shrink-0 overflow-hidden rounded-full border border-gray-200 bg-gray-100 dark:border-gray-600 dark:bg-gray-700`}>
             {src && src.includes('/') && (
                 <img 
                     src={src} alt="Avt" 
@@ -173,7 +173,7 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
                 />
             )}
             <div 
-                className={`w-full h-full flex items-center justify-center font-bold text-gray-500 ${fontSize}`} 
+                className={`flex h-full w-full items-center justify-center font-bold text-gray-500 dark:text-gray-300 ${fontSize}`} 
                 style={{display: (src && src.includes('/')) ? 'none' : 'flex'}}
             >
                 {name?.charAt(0).toUpperCase()}
@@ -186,39 +186,39 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-        <div className="bg-white rounded-2xl w-full max-w-3xl h-[85vh] flex flex-col shadow-2xl animate-fade-in-up overflow-hidden">
+        <div className="flex h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-fade-in-up dark:bg-gray-900">
             {/* Header */}
-            <div className="p-4 border-b border-gray-100 flex justify-between items-center shrink-0 bg-white z-10">
-                <h3 className="font-bold text-lg text-gray-800">Bình luận</h3>
-                <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X className="text-gray-500"/></button>
+            <div className="z-10 flex shrink-0 items-center justify-between border-b border-gray-100 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+                <h3 className="text-lg font-bold text-gray-800 dark:text-white">Bình luận</h3>
+                <button onClick={onClose} className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"><X className="text-gray-500 dark:text-gray-300"/></button>
             </div>
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto p-0 bg-gray-50 scroll-smooth">
+            <div className="flex-1 scroll-smooth overflow-y-auto bg-gray-50 p-0 dark:bg-gray-950/50">
                 {/* 1. Preview Bài viết gốc */}
-                <div className="bg-white p-5 border-b border-gray-100 mb-2">
+                <div className="mb-2 border-b border-gray-100 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
                     <div className="flex gap-3 mb-3">
                         {/* Avatar Post */}
                         <SmartAvatar src={postAvatar} name={post.author} size="w-10 h-10" fontSize="text-sm"/>
                         
                         <div>
-                            <p className="font-bold text-gray-900 text-sm">{post.authorFullName || post.author}</p>
-                            <p className="text-xs text-gray-500">Tác giả</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">{post.authorFullName || post.author}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Tác giả</p>
                         </div>
                     </div>
-                    <p className="text-gray-800 text-sm whitespace-pre-wrap mb-3">{post.content}</p>
+                    <p className="mb-3 whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">{post.content}</p>
                     
                     {/* Ảnh bài gốc */}
                     {post.images && post.images.length > 0 && (
                         <div className="grid grid-cols-2 gap-2 mb-3">
-                            {post.images.map((img, i) => <img key={i} src={img} className="w-full h-32 object-cover rounded-lg border border-gray-200"/>)}
+                            {post.images.map((img, i) => <img key={i} src={img} className="h-32 w-full rounded-lg border border-gray-200 object-cover dark:border-gray-700"/>)}
                         </div>
                     )}
                     {/* File bài gốc */}
                     {post.files && post.files.length > 0 && (
                         <div className="space-y-1">
                             {post.files.map((f, i) => (
-                                <div key={i} className="flex items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-blue-600">
+                                <div key={i} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-blue-300">
                                     <FileText size={14}/> {f.originalName || f.name}
                                 </div>
                             ))}
@@ -228,7 +228,7 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
 
                 {/* 2. Danh sách Comment */}
                 <div className="p-4 space-y-5">
-                    {post.comments?.length === 0 && <p className="text-center text-gray-400 text-sm py-10">Chưa có bình luận nào. Hãy là người đầu tiên!</p>}
+                    {post.comments?.length === 0 && <p className="py-10 text-center text-sm text-gray-400 dark:text-gray-500">Chưa có bình luận nào. Hãy là người đầu tiên!</p>}
                     
                     {post.comments?.map(cmt => {
                         const cmtAvatar = getDisplayAvatar(cmt.author, cmt.authorAvatar);
@@ -241,14 +241,14 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
                                 <SmartAvatar src={cmtAvatar} name={cmt.author} />
                                 
                                 <div className="flex-1">
-                                    <div className="bg-white rounded-2xl rounded-tl-none p-3 shadow-sm border border-gray-100 inline-block min-w-[200px]">
-                                        <span className="font-bold text-sm block text-gray-900">{cmt.author}</span>
-                                        <span className="text-sm text-gray-700 whitespace-pre-wrap">{cmt.content}</span>
+                                    <div className="inline-block min-w-[200px] rounded-2xl rounded-tl-none border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                                        <span className="block text-sm font-bold text-gray-900 dark:text-white">{cmt.author}</span>
+                                        <span className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200">{cmt.content}</span>
                                     </div>
-                                    <div className="flex gap-4 mt-1.5 ml-2 text-xs text-gray-500 font-medium">
-                                        <button onClick={() => setReplyingTo(replyingTo === cmt.id ? null : cmt.id)} className="hover:text-blue-600 transition-colors">Trả lời</button>
+                                    <div className="ml-2 mt-1.5 flex gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                        <button onClick={() => setReplyingTo(replyingTo === cmt.id ? null : cmt.id)} className="transition-colors hover:text-blue-600 dark:hover:text-blue-400">Trả lời</button>
                                         {(currentUser?.username === cmt.author || currentUser?.role === 'admin') && (
-                                            <button onClick={() => onDeleteComment(post._id || post.id, cmt.id)} className="text-red-400 hover:text-red-600 transition-colors">Xóa</button>
+                                            <button onClick={() => onDeleteComment(post._id || post.id, cmt.id)} className="text-red-400 transition-colors hover:text-red-600 dark:text-red-500 dark:hover:text-red-400">Xóa</button>
                                         )}
                                         <span>• Vừa xong</span>
                                     </div>
@@ -256,17 +256,17 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
                                     {/* Form Trả lời */}
                                     {replyingTo === cmt.id && (
                                         <div className="mt-3 flex gap-2 animate-fade-in-up">
-                                            <div className="border-l-2 border-gray-200 ml-4 pl-3 flex-1">
+                                            <div className="ml-4 flex-1 border-l-2 border-gray-200 pl-3 dark:border-gray-700">
                                                 <input 
                                                     value={replyText}
                                                     onChange={(e) => setReplyText(e.target.value)}
-                                                    className="w-full bg-white border border-gray-300 rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-blue-200 outline-none"
+                                                    className="w-full rounded-full border border-gray-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:focus:ring-blue-900/40"
                                                     placeholder={`Trả lời ${cmt.author}...`}
                                                     autoFocus
                                                     onKeyDown={(e) => e.key === 'Enter' && handleReplySubmit(cmt.id)}
                                                 />
                                                 <div className="flex justify-end gap-2 mt-2">
-                                                    <button onClick={() => setReplyingTo(null)} className="text-xs text-gray-500 px-3 py-1 hover:bg-gray-200 rounded-full">Hủy</button>
+                                                    <button onClick={() => setReplyingTo(null)} className="rounded-full px-3 py-1 text-xs text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700">Hủy</button>
                                                     <button onClick={() => handleReplySubmit(cmt.id)} className="text-xs bg-blue-600 text-white px-3 py-1 rounded-full hover:bg-blue-700">Gửi</button>
                                                 </div>
                                             </div>
@@ -277,7 +277,7 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
 
                             {/* Danh sách Reply (Comment con) */}
                             {cmt.replies && cmt.replies.length > 0 && (
-                                <div className="ml-11 mt-3 space-y-3 border-l-2 border-gray-100 pl-3">
+                                <div className="ml-11 mt-3 space-y-3 border-l-2 border-gray-100 pl-3 dark:border-gray-700">
                                     {cmt.replies.map(reply => {
                                         const replyAvatar = getDisplayAvatar(reply.author, reply.authorAvatar);
                                         
@@ -287,9 +287,9 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
                                             <SmartAvatar src={replyAvatar} name={reply.author} size="w-6 h-6" fontSize="text-[10px]"/>
                                             
                                             <div>
-                                                <div className="bg-gray-100 rounded-xl rounded-tl-none px-3 py-2">
-                                                    <span className="font-bold text-xs block text-gray-900">{reply.author}</span>
-                                                    <span className="text-xs text-gray-700">{reply.content}</span>
+                                                <div className="rounded-xl rounded-tl-none bg-gray-100 px-3 py-2 dark:bg-gray-800">
+                                                    <span className="block text-xs font-bold text-gray-900 dark:text-gray-100">{reply.author}</span>
+                                                    <span className="text-xs text-gray-700 dark:text-gray-300">{reply.content}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -302,7 +302,7 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
             </div>
 
             {/* Input Footer (Bình luận cấp 1) */}
-            <div className="p-4 border-t border-gray-100 bg-white shrink-0">
+            <div className="shrink-0 border-t border-gray-100 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
                 <div className="flex gap-2 items-center">
                     {/* Avatar Input của User hiện tại */}
                     <SmartAvatar src={currentUser?.avatar} name={currentUser?.fullName || currentUser?.username} />
@@ -311,7 +311,7 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
                         <input 
                             value={text} onChange={e => setText(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (onSubmitComment(post._id || post.id, text), setText(''))}
-                            className="w-full bg-gray-100 rounded-full px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-100 focus:bg-white border border-transparent focus:border-blue-200 transition-all text-sm"
+                            className="w-full rounded-full border border-transparent bg-gray-100 px-4 py-2.5 text-sm outline-none transition-all focus:border-blue-200 focus:bg-white focus:ring-2 focus:ring-blue-100 dark:bg-gray-800 dark:text-gray-100 dark:focus:border-blue-700 dark:focus:bg-gray-800 dark:focus:ring-blue-900/40"
                             placeholder="Viết bình luận công khai..."
                         />
                         <button 

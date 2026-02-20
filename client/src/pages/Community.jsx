@@ -313,6 +313,15 @@ const Community = () => {
     activeTab === "feed"
       ? posts.filter((p) => !p.deleted)
       : posts.filter((p) => p.savedBy?.includes(user?.username) && !p.deleted);
+  const totalDiscussionCount = posts.reduce(
+    (acc, post) =>
+      acc +
+      (post.comments || []).reduce(
+        (commentAcc, cmt) => commentAcc + 1 + (cmt.replies?.length || 0),
+        0
+      ),
+    0
+  );
 
   return (
     // 👇 SỬA LAYOUT: max-w-7xl và px-4 để có lề an toàn
@@ -429,7 +438,7 @@ const Community = () => {
               </div>
               <div>
                 <div className="font-black text-gray-800 dark:text-white text-lg">
-                  {posts.reduce((acc, p) => acc + (p.comments?.length || 0), 0)}
+                  {totalDiscussionCount}
                 </div>
                 <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">
                   Thảo luận
