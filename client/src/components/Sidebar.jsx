@@ -82,7 +82,7 @@ const Sidebar = ({ isMobile = false, onNavigate }) => {
                 className={`relative z-10 flex w-full items-center space-x-3 overflow-hidden rounded-xl p-3 transition-colors duration-200 ${
                   isActive
                     ? "text-white"
-                    : "text-gray-400 hover:bg-blue-50 hover:text-primary dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-blue-400"
+                    : "text-gray-400 hover:bg-blue-50 hover:text-primary dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-blue-400"
                 }`}
               >
                 <Icon size={20} />
