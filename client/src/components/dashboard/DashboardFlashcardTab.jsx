@@ -415,7 +415,7 @@ const DashboardFlashcardTab = () => {
                   <article
                     key={deck.id}
                     onClick={() => startStudy(deck)}
-                    className="group relative flex min-h-[140px] cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                    className="group relative flex min-h-[140px] lg:min-h-[124px] cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <button
                       onClick={(e) => {
@@ -429,31 +429,69 @@ const DashboardFlashcardTab = () => {
                     </button>
 
                     <div className="flex flex-1 flex-col p-4">
-                      <div className="mb-2">
-                        <div className={`inline-flex h-12 w-12 items-center justify-center rounded-full ${softTheme.iconWrap}`}>
-                          <DeckIcon size={24} strokeWidth={1.75} />
+                      <div className="lg:hidden">
+                        <div className="mb-2">
+                          <div
+                            className={`inline-flex h-12 w-12 items-center justify-center rounded-full ${softTheme.iconWrap}`}
+                          >
+                            <DeckIcon size={24} strokeWidth={1.75} />
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="line-clamp-2 text-base font-semibold text-slate-800">
+                            {deck.title}
+                          </h4>
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            {total} thẻ thuật ngữ
+                          </p>
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 ${softTheme.ghostMastered}`}
+                          >
+                            {stats.mastered} Đã thuộc
+                          </span>
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 ${softTheme.ghostReviewing}`}
+                          >
+                            {stats.reviewing} Đang học
+                          </span>
+                          <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">
+                            {stats.seen}/{total} thẻ
+                          </span>
                         </div>
                       </div>
 
-                      <div>
-                        <h4 className="line-clamp-2 text-base font-semibold text-slate-800">
-                          {deck.title}
-                        </h4>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          {total} thẻ thuật ngữ
-                        </p>
-                      </div>
-
-                      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 ${softTheme.ghostMastered}`}>
-                          {stats.mastered} Đã thuộc
-                        </span>
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 ${softTheme.ghostReviewing}`}>
-                          {stats.reviewing} Đang học
-                        </span>
-                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">
-                          {stats.seen}/{total} thẻ
-                        </span>
+                      <div className="hidden lg:flex lg:flex-col lg:gap-2">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${softTheme.iconWrap}`}
+                          >
+                            <DeckIcon size={20} strokeWidth={1.75} />
+                          </div>
+                          <h4 className="line-clamp-1 text-lg font-semibold text-slate-800">
+                            {deck.title}
+                          </h4>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <p className="text-sm text-slate-500">{total} thẻ thuật ngữ</p>
+                          <div className="flex flex-wrap items-center justify-end gap-2 text-[11px] font-medium">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 ${softTheme.ghostMastered}`}
+                            >
+                              {stats.mastered} Đã thuộc
+                            </span>
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 ${softTheme.ghostReviewing}`}
+                            >
+                              {stats.reviewing} Đang học
+                            </span>
+                            <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">
+                              {stats.seen}/{total} thẻ
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                     <div className="h-1 w-full bg-slate-100">
