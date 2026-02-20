@@ -31,6 +31,7 @@ const corsOptions = {
         'http://localhost:3000',      // Express server
         'http://127.0.0.1:5173',
         'http://127.0.0.1:5174',
+        'https://whaliostudying.onrender.com',  // Frontend trên Render
         /\.vercel\.app$/,             // Vercel deployments
         /\.netlify\.app$/             // Netlify deployments
     ],
