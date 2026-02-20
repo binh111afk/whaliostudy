@@ -404,7 +404,7 @@ const DashboardFlashcardTab = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
               {decks.map((deck) => {
                 const softTheme = deckSoftThemeMap[deck.color] || deckSoftThemeMap.blue;
                 const DeckIcon = deckOutlineIconMap[deck.color] || BookOpen;
@@ -415,43 +415,43 @@ const DashboardFlashcardTab = () => {
                   <article
                     key={deck.id}
                     onClick={() => startStudy(deck)}
-                    className="group relative flex min-h-[250px] cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                    className="group relative flex min-h-[140px] cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteDeck(deck.id);
                       }}
-                      className="absolute right-3 top-3 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-red-500"
+                      className="absolute right-2.5 top-2.5 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-red-500"
                       aria-label={`Xóa bộ ${deck.title}`}
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={15} />
                     </button>
 
-                    <div className="flex flex-1 flex-col p-5">
-                      <div className="flex flex-1 items-center justify-center">
-                        <div className={`inline-flex h-20 w-20 items-center justify-center rounded-full ${softTheme.iconWrap}`}>
-                          <DeckIcon size={38} strokeWidth={1.75} />
+                    <div className="flex flex-1 flex-col p-4">
+                      <div className="mb-2">
+                        <div className={`inline-flex h-12 w-12 items-center justify-center rounded-full ${softTheme.iconWrap}`}>
+                          <DeckIcon size={24} strokeWidth={1.75} />
                         </div>
                       </div>
 
                       <div>
-                        <h4 className="line-clamp-2 text-lg font-semibold text-slate-800">
+                        <h4 className="line-clamp-2 text-base font-semibold text-slate-800">
                           {deck.title}
                         </h4>
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="mt-0.5 text-xs text-slate-500">
                           {total} thẻ thuật ngữ
                         </p>
                       </div>
 
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-medium">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 ${softTheme.ghostMastered}`}>
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 ${softTheme.ghostMastered}`}>
                           {stats.mastered} Đã thuộc
                         </span>
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 ${softTheme.ghostReviewing}`}>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 ${softTheme.ghostReviewing}`}>
                           {stats.reviewing} Đang học
                         </span>
-                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">
                           {stats.seen}/{total} thẻ
                         </span>
                       </div>
