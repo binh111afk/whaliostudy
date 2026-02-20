@@ -811,18 +811,18 @@ const GpaCalc = () => {
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
       {/* TẦNG 1: HERO OVERVIEW (Redesigned for Density & Wow Factor) */}
       <div className="mb-8">
-        <div className="relative bg-white rounded-2xl border border-gray-200/60 dark:border-gray-700 p-6 md:p-8 shadow-sm overflow-hidden group">
+        <div className="group relative overflow-hidden rounded-2xl border border-gray-200/60 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6 md:p-8">
           {/* Subtle Background Decoration */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50/50 to-purple-50/50 rounded-bl-[100px] -z-0 opacity-60"></div>
+          <div className="absolute -z-0 right-0 top-0 h-64 w-64 rounded-bl-[100px] bg-gradient-to-br from-blue-50/50 to-purple-50/50 opacity-60 dark:from-blue-900/30 dark:to-purple-900/20"></div>
 
           <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
 
             {/* 1. VISUAL GPA INDICATOR (Left - 4 Cols) */}
-            <div className="md:col-span-4 flex flex-col items-center justify-center relative">
-              <div className="relative w-48 h-48 md:w-56 md:h-56 flex items-center justify-center">
+            <div className="relative flex flex-col items-center justify-center md:col-span-4">
+              <div className="relative flex h-44 w-44 items-center justify-center sm:h-48 sm:w-48 md:h-56 md:w-56">
                 <svg className="absolute inset-0 w-full h-full rotate-[-90deg]" viewBox="0 0 100 100">
                   {/* Track */}
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="#F1F5F9" strokeWidth="6" />
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" className="text-slate-100 dark:text-slate-700" strokeWidth="6" />
                   {/* Indicator */}
                   <circle
                     cx="50"
@@ -840,11 +840,11 @@ const GpaCalc = () => {
 
                 {/* Inner Content */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">GPA Tích lũy</span>
-                  <h1 className="text-6xl md:text-7xl font-black text-[#134691] tracking-tighter drop-shadow-sm">
+                  <span className="mb-1 text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">GPA Tích lũy</span>
+                  <h1 className="text-5xl font-black tracking-tighter text-[#134691] drop-shadow-sm dark:text-blue-400 sm:text-6xl md:text-7xl">
                     {result.gpa4}
                   </h1>
-                  <div className="mt-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">
+                  <div className="mt-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                     {classification.label}
                   </div>
                 </div>
@@ -852,12 +852,12 @@ const GpaCalc = () => {
             </div>
 
             {/* 2. METRICS & GROWTH (Middle - 4 Cols) */}
-            <div className="md:col-span-4 flex flex-col justify-center space-y-6 pl-4 md:border-l border-gray-100">
+            <div className="flex flex-col justify-center space-y-6 pl-0 md:col-span-4 md:border-l md:border-gray-100 md:pl-4 dark:md:border-gray-700">
 
               {/* Growth / Momentum Card */}
-              <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-4 flex items-center justify-between shadow-sm">
+              <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-4 shadow-sm dark:border-gray-700 dark:from-gray-800 dark:to-gray-700/60">
                 <div>
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase">So với kỳ trước</h4>
+                  <h4 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">So với kỳ trước</h4>
                   <div className={`text-lg font-bold flex items-center gap-2 ${result.momentum?.trend === 'up' ? 'text-green-600' :
                     result.momentum?.trend === 'down' ? 'text-orange-600' : 'text-gray-600'
                     }`}>
@@ -868,11 +868,11 @@ const GpaCalc = () => {
                         <span>{result.momentum.delta > 0 ? '+' : ''}{result.momentum.delta}</span>
                       </>
                     ) : (
-                      <span className="text-gray-400 text-sm font-medium">Chưa có dữ liệu</span>
-                    )}
+                        <span className="text-sm font-medium text-gray-400 dark:text-gray-500">Chưa có dữ liệu</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="h-10 w-10 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-100 bg-white text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500">
                   <BarChart3 size={20} />
                 </div>
               </div>
@@ -880,10 +880,10 @@ const GpaCalc = () => {
               {/* Credits Detail */}
               <div>
                 <div className="flex justify-between items-end mb-2">
-                  <span className="text-xs font-semibold text-gray-500 uppercase">Tín chỉ tích lũy</span>
-                  <span className="text-xl font-bold text-gray-900">{result.totalCredits}<span className="text-sm text-gray-400 font-medium">/{targetCredits}</span></span>
+                  <span className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Tín chỉ tích lũy</span>
+                  <span className="text-xl font-bold text-gray-900 dark:text-white">{result.totalCredits}<span className="text-sm font-medium text-gray-400 dark:text-gray-500">/{targetCredits}</span></span>
                 </div>
-                <div className="h-2.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
                   <div
                     className="h-full bg-gradient-to-r from-[#134691] to-blue-500 rounded-full shadow-sm"
                     style={{ width: `${Math.min(100, (result.totalCredits / targetCredits) * 100)}%` }}
@@ -894,11 +894,11 @@ const GpaCalc = () => {
             </div>
 
             {/* 3. TARGET & ACTIONS (Right - 4 Cols) */}
-            <div className="md:col-span-4 flex flex-col justify-between h-full space-y-6 md:pl-4">
+            <div className="flex h-full flex-col justify-between space-y-6 md:col-span-4 md:pl-4">
 
               {/* Target Input Block */}
-              <div className="bg-blue-50/50 rounded-xl p-5 border border-blue-100">
-                <label className="text-xs font-semibold text-blue-800 uppercase block mb-3">Mục tiêu GPA ra trường</label>
+              <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-800 dark:bg-blue-900/20 sm:p-5">
+                <label className="mb-3 block text-xs font-semibold uppercase text-blue-800 dark:text-blue-300">Mục tiêu GPA ra trường</label>
                 <div className="flex items-center gap-3">
                   <div className="relative flex-1">
                     <input
@@ -907,11 +907,11 @@ const GpaCalc = () => {
                       onChange={(e) => setTargetGpa(e.target.value)}
                       onBlur={handleSaveGPA} // 🔥 Auto-save on blur
                       placeholder="3.6"
-                      className="w-full bg-white border border-blue-200 text-blue-900 font-bold text-lg rounded-lg py-2 px-3 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none transition-all"
+                      className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-lg font-bold text-blue-900 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-blue-400 dark:border-blue-700 dark:bg-gray-800 dark:text-blue-200"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-blue-300">/ 4.0</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-blue-300 dark:text-blue-500">/ 4.0</span>
                   </div>
-                  <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-white border border-blue-200 text-blue-600 shadow-sm">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-blue-200 bg-white text-blue-600 shadow-sm dark:border-blue-700 dark:bg-gray-800 dark:text-blue-300">
                     <Target size={24} />
                   </div>
                 </div>
@@ -923,7 +923,7 @@ const GpaCalc = () => {
                       <span>Tiến độ</span>
                       <span>{Math.round((parseFloat(result.gpa4) / parseFloat(targetGpa)) * 100)}%</span>
                     </div>
-                    <div className="h-1.5 w-full bg-blue-200 rounded-full overflow-hidden">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-blue-200 dark:bg-blue-900/60">
                       <div
                         className="h-full bg-blue-600 rounded-full"
                         style={{ width: `${Math.min(100, (parseFloat(result.gpa4) / parseFloat(targetGpa)) * 100)}%` }}
@@ -938,7 +938,7 @@ const GpaCalc = () => {
                 onClick={handleSaveGPA}
                 disabled={isSaving}
                 className={`w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-900/10 hover:shadow-blue-900/20 hover:-translate-y-0.5 ${isSaving
-                  ? "bg-gray-100 cursor-not-allowed text-gray-400"
+                  ? "cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500"
                   : "bg-[#134691] text-white hover:bg-[#0f3570]"
                   }`}
               >
@@ -954,19 +954,19 @@ const GpaCalc = () => {
 
       {/* TẦNG 2: SMART PRIORITY ALERT - Subtle */}
       {priorityAlert && (
-        <div className={`mb-6 p-4 rounded-xl border flex items-start gap-3 transition-all ${priorityAlert.severity === 'danger'
-          ? 'bg-red-50/40 border-red-100 text-red-900'
-          : 'bg-blue-50/40 border-blue-100 text-blue-900'
+        <div className={`mb-6 flex items-start gap-3 rounded-xl border p-4 transition-all ${priorityAlert.severity === 'danger'
+          ? 'border-red-100 bg-red-50/40 text-red-900 dark:border-red-800/40 dark:bg-red-900/20 dark:text-red-200'
+          : 'border-blue-100 bg-blue-50/40 text-blue-900 dark:border-blue-800/40 dark:bg-blue-900/20 dark:text-blue-200'
           }`}>
           <div className={`p-2 rounded-lg shrink-0 ${priorityAlert.severity === 'danger'
-            ? 'bg-red-100 text-red-600'
-            : 'bg-blue-100 text-blue-600'
+            ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300'
+            : 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300'
             }`}>
             {priorityAlert.icon ? <span className="text-base">{priorityAlert.icon}</span> : <AlertTriangle size={16} />}
           </div>
           <div className="flex-1 py-0.5">
             <p className="font-semibold text-sm leading-relaxed">{priorityAlert.message}</p>
-            {priorityAlert.action && <p className="text-xs mt-1.5 text-gray-600 font-medium">{priorityAlert.action}</p>}
+            {priorityAlert.action && <p className="mt-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">{priorityAlert.action}</p>}
           </div>
         </div>
       )}
@@ -988,7 +988,7 @@ const GpaCalc = () => {
                     <ChevronRight size={18} />
                   </div>
                   <input
-                    className="font-bold text-gray-800 dark:text-white bg-transparent outline-none text-lg hover:text-blue-600 transition-colors placeholder-gray-400 flex-1 max-w-[300px]"
+                    className="max-w-[220px] flex-1 bg-transparent text-lg font-bold text-gray-800 outline-none transition-colors placeholder-gray-400 hover:text-blue-600 dark:text-white sm:max-w-[300px]"
                     value={sem.name}
                     placeholder="Tên học kỳ..."
                     onClick={(e) => e.stopPropagation()}
@@ -1086,9 +1086,9 @@ const GpaCalc = () => {
                           <div
                             className={`group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-gray-200 hover:shadow-md dark:hover:border-gray-600 transition-all duration-200 p-5 ${statusBorderClass}`}
                           >
-                            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                            <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:gap-6">
                               {/* 1. SUBJECT NAME & TYPE (Anchor) */}
-                              <div className="flex-1 min-w-[30%]">
+                              <div className="w-full flex-1 min-w-0 md:min-w-[30%]">
                                 <div className="flex items-start gap-3">
                                   {isCriticalSubject && (
                                     <div className="mt-1.5 text-amber-500 animate-pulse" title="Môn trọng điểm">
@@ -1157,7 +1157,7 @@ const GpaCalc = () => {
                               </div>
 
                               {/* 3. GRADE COMPONENTS (Clean Rows) */}
-                              <div className="flex-[2] flex flex-col gap-2 min-w-[200px]">
+                              <div className="flex w-full flex-[2] flex-col gap-2 md:min-w-[200px]">
                                 {sub.components.map((comp) => (
                                   <div
                                     key={comp.id}
@@ -1243,7 +1243,7 @@ const GpaCalc = () => {
                               </div>
 
                               {/* 4. RESULT AREA (Capsule) */}
-                              <div className="min-w-[140px] flex justify-end">
+                              <div className="flex w-full justify-start md:min-w-[140px] md:w-auto md:justify-end">
                                 {isFull && gradeInfo ? (
                                   <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all duration-200 hover:scale-105 ${isPassed
                                     ? `${gradeInfo.bg} border-gray-100 ${gradeInfo.char === 'A' ? 'shadow-md shadow-green-100' : ''}`
@@ -1308,7 +1308,7 @@ const GpaCalc = () => {
                               </div>
 
                               {/* 5. ACTIONS (Always visible but subtle, no overlap) */}
-                              <div className="flex flex-col items-center justify-center gap-1 ml-4 border-l border-gray-100 dark:border-gray-700 pl-4">
+                              <div className="flex flex-row items-center justify-end gap-1 self-end border-t border-gray-100 pt-3 md:ml-4 md:flex-col md:self-auto md:border-l md:border-t-0 md:pl-4 md:pt-0 dark:border-gray-700">
                                 {isFull && (
                                   <button
                                     onClick={() => handleOpenSurvivalMode(sub.id, parseFloat(finalScore10))}

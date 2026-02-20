@@ -400,6 +400,7 @@ const DashboardOverviewTab = ({
                       />
                       <Tooltip
                         cursor={false}
+                        labelFormatter={() => ""}
                         formatter={(value) => [`${value} tín chỉ`, "Đã tích lũy"]}
                         contentStyle={{
                           borderRadius: "10px",
