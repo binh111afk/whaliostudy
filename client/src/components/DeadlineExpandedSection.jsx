@@ -30,6 +30,13 @@ const getDaysLeft = (dateInput) => {
   return Math.round((deadlineUtc - todayUtc) / (1000 * 60 * 60 * 24));
 };
 
+const getHoursLeft = (dateInput) => {
+  const date = new Date(dateInput);
+  if (Number.isNaN(date.getTime())) return Number.POSITIVE_INFINITY;
+  const diffMs = date.getTime() - Date.now();
+  return Math.ceil(diffMs / (1000 * 60 * 60));
+};
+
 const getTagLabel = (task) => {
   const value = String(task?.deadlineTag || "").trim();
   return value || "Công việc";
@@ -160,6 +167,7 @@ const DeadlineExpandedSection = ({
                 ) : (
                   notificationItems.map((task) => {
                     const daysLeft = getDaysLeft(task.date);
+                    const hoursLeft = getHoursLeft(task.date);
                     return (
                       <div
                         key={task._id}
@@ -185,10 +193,23 @@ const DeadlineExpandedSection = ({
                           </p>
                         </div>
                         <div className="shrink-0 text-right">
-                          <p className="text-4xl font-black leading-none">
-                            {Number.isFinite(daysLeft) ? Math.max(0, daysLeft) : "-"}
-                          </p>
-                          <p className="text-sm font-medium">ngày</p>
+                          {daysLeft === 0 ? (
+                            <>
+                              <p className="text-base font-black leading-none uppercase">
+                                Trong ngày
+                              </p>
+                              <p className="mt-1 text-sm font-medium">
+                                {hoursLeft > 0 ? `${hoursLeft} giờ còn lại` : "Đã quá hạn"}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-4xl font-black leading-none">
+                                {Number.isFinite(daysLeft) ? Math.max(0, daysLeft) : "-"}
+                              </p>
+                              <p className="text-sm font-medium">ngày</p>
+                            </>
+                          )}
                         </div>
                       </div>
                     );
