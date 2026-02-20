@@ -246,8 +246,12 @@ const DeadlineExpandedSection = ({
                           <input
                             type="checkbox"
                             checked={task.isDone || false}
-                            onChange={() => onToggle?.(task)}
-                            className="h-5 w-5 rounded border-gray-300 accent-blue-600"
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              onToggle?.(task);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-5 w-5 rounded border-gray-300 accent-blue-600 cursor-pointer"
                           />
                           <p
                             className={`truncate text-lg font-bold text-gray-900 dark:text-white sm:text-xl ${

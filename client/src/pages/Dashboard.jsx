@@ -1913,14 +1913,21 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   const handleToggleDeadline = async (task) => {
     const taskId = String(task?._id || "");
     if (!taskId) return;
+    
+    // Prevent multiple simultaneous toggles on the same task
     if (deadlineToggleLocksRef.current.has(taskId)) return;
+    
     deadlineToggleLocksRef.current.add(taskId);
 
-    const nextIsDone = !Boolean(task.isDone);
+    const previousIsDone = Boolean(task.isDone);
+    const nextIsDone = !previousIsDone;
+    
+    // Optimistic update
     const newDeadlines = deadlines.map((d) =>
       d._id === task._id ? { ...d, isDone: nextIsDone } : d
     );
     setDeadlines(newDeadlines);
+    
     try {
       const res = await fetch("/api/events/toggle", {
         method: "PUT",
@@ -1932,15 +1939,32 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
         }),
       });
       const data = await res.json();
+      
+      // Rollback if API failed
       if (!data?.success) {
-        loadDeadlines();
+        const rollbackDeadlines = deadlines.map((d) =>
+          d._id === task._id ? { ...d, isDone: previousIsDone } : d
+        );
+        setDeadlines(rollbackDeadlines);
+        toast.error("Không thể cập nhật trạng thái", {
+          position: isMobileViewport() ? "bottom-center" : "top-center",
+        });
       }
     } catch (error) {
-      loadDeadlines();
+      console.error("Error toggling deadline:", error);
+      // Rollback on error
+      const rollbackDeadlines = deadlines.map((d) =>
+        d._id === task._id ? { ...d, isDone: previousIsDone } : d
+      );
+      setDeadlines(rollbackDeadlines);
+      toast.error("Lỗi kết nối", {
+        position: isMobileViewport() ? "bottom-center" : "top-center",
+      });
     } finally {
+      // Release lock after a short delay to prevent rapid re-clicks
       setTimeout(() => {
         deadlineToggleLocksRef.current.delete(taskId);
-      }, 350);
+      }, 200);
     }
   };
 
@@ -1961,6 +1985,11 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   const pendingDeadlineCount = useMemo(
     () => prioritizedDeadlines.filter((task) => !task.isDone).length,
     [prioritizedDeadlines]
+  );
+
+  const completedTasksCount = useMemo(
+    () => deadlines.filter((task) => Boolean(task.isDone)).length,
+    [deadlines]
   );
 
   const dashboardDeadlines = prioritizedDeadlines.slice(0, 3);
@@ -2094,17 +2123,17 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
               </div>
             </div>
 
-            {/* CARD 3: Đề thi */}
+            {/* CARD 3: Nhiệm vụ đã hoàn thành */}
             <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
               <div className="w-12 h-12 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full flex items-center justify-center font-bold">
-                12
+                {completedTasksCount}
               </div>
               <div>
                 <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">
-                  Đề thi
+                  Nhiệm vụ
                 </p>
                 <p className="text-gray-700 dark:text-gray-200 font-bold">
-                  Đã luyện tập
+                  Đã hoàn thành
                 </p>
               </div>
             </div>
