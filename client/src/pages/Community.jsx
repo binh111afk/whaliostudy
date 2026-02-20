@@ -332,7 +332,7 @@ const Community = () => {
         {/* Chiếm full màn hình nhỏ, chiếm 3/4 khi màn hình lớn */}
         <div className="xl:col-span-3 w-full max-w-3xl mx-auto xl:max-w-none space-y-6">
           {/* Header Tabs */}
-          <div className="flex items-center justify-between top-[5px] bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur z-20 py-2 rounded-xl">
+          <div className="flex items-center justify-between top-[5px] z-20 py-2">
             <div className="flex bg-white dark:bg-gray-700 p-1 rounded-xl shadow-sm border border-gray-200 dark:border-gray-600">
               <button
                 onClick={() => setActiveTab("feed")}

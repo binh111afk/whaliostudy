@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import EditProfileModal from "../components/EditProfileModal";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import { UploadModal } from "../components/DocumentModals";
 import { documentService } from "../services/documentService";
 import { userService } from "../services/userService";
+import { studyService } from "../services/studyService";
 import {
   User,
   FileText,
@@ -460,12 +461,149 @@ const StatisticsTab = ({ currentUser }) => {
   const COLORS = ["#3B82F6", "#10B981", "#F59E0B"];
 
   useEffect(() => {
+    const calculateFallbackFromSemesters = (semesters = []) => {
+      const roundScore10 = (score) =>
+        Math.round((score + Number.EPSILON) * 10) / 10;
+      const convertToGPA4 = (score10) => {
+        if (score10 >= 8.5) return 4.0;
+        if (score10 >= 7.8) return 3.5;
+        if (score10 >= 7.0) return 3.0;
+        if (score10 >= 6.3) return 2.5;
+        if (score10 >= 5.5) return 2.0;
+        if (score10 >= 4.8) return 1.5;
+        if (score10 >= 4.0) return 1.0;
+        if (score10 >= 3.0) return 0.5;
+        return 0;
+      };
+
+      let registeredCredits = 0;
+      let passedCredits = 0;
+      const gpaSummary = [];
+
+      semesters.forEach((sem, semIndex) => {
+        let semTotalScore = 0;
+        let semTotalCredits = 0;
+        (sem.subjects || []).forEach((sub) => {
+          const credits = parseFloat(sub.credits) || 0;
+          registeredCredits += credits;
+          let weightedScore10 = 0;
+          let totalWeight = 0;
+
+          (sub.components || []).forEach((comp) => {
+            if (
+              comp.score === "" ||
+              comp.score === null ||
+              comp.score === undefined
+            ) {
+              return;
+            }
+            const score = parseFloat(comp.score);
+            const weight = parseFloat(comp.weight);
+            if (!Number.isNaN(score) && !Number.isNaN(weight)) {
+              weightedScore10 += score * (weight / 100);
+              totalWeight += weight;
+            }
+          });
+
+          if (totalWeight >= 99.9) {
+            const finalScore10 = roundScore10(weightedScore10);
+            const subScore4 = convertToGPA4(finalScore10);
+            semTotalScore += subScore4 * credits;
+            semTotalCredits += credits;
+
+            const isPassed =
+              sub.type === "major" ? finalScore10 >= 5.5 : finalScore10 >= 4.0;
+            if (isPassed) passedCredits += credits;
+          }
+        });
+
+        if (semTotalCredits > 0) {
+          gpaSummary.push({
+            semester: sem.name || `Kỳ ${semIndex + 1}`,
+            gpa: Number((semTotalScore / semTotalCredits).toFixed(2)),
+          });
+        }
+      });
+
+      return {
+        gpaSummary,
+        registeredCredits,
+        passedCredits,
+      };
+    };
+
     const fetchStats = async () => {
       try {
-        const result = await userService.getProfileStats(currentUser?.username);
-        if (result.success) {
-          setStats(result.data);
-        }
+        const [profileRes, studyRes, gpaResRaw] = await Promise.all([
+          userService.getProfileStats(currentUser?.username),
+          studyService.getStats(currentUser?.username),
+          fetch(`/api/gpa?username=${currentUser?.username}`).then((r) =>
+            r.json()
+          ),
+        ]);
+
+        const profileStats = profileRes?.success ? profileRes.data || {} : {};
+        const totalStudyMinutes = (studyRes?.success ? studyRes.data || [] : []).reduce(
+          (acc, item) => acc + (Number(item.minutes) || 0),
+          0
+        );
+        const fallbackHours = Number((totalStudyMinutes / 60).toFixed(1));
+
+        const semesterSource =
+          gpaResRaw?.success && Array.isArray(gpaResRaw.semesters)
+            ? gpaResRaw.semesters
+            : [];
+        const gpaFallback = calculateFallbackFromSemesters(semesterSource);
+
+        const targetCredits = Number(currentUser?.totalTargetCredits) || 150;
+        const totalCredits =
+          Number(profileStats.totalCredits) ||
+          Math.max(targetCredits, gpaFallback.registeredCredits);
+        const completedCredits =
+          Number(profileStats.completedCredits) || gpaFallback.passedCredits;
+        const inProgressCredits = Math.max(
+          0,
+          gpaFallback.registeredCredits - gpaFallback.passedCredits
+        );
+        const remainingCredits = Math.max(
+          0,
+          totalCredits - completedCredits - inProgressCredits
+        );
+
+        const mergedStats = {
+          ...profileStats,
+          totalHours: Number(profileStats.totalHours) || fallbackHours,
+          thisWeekHours: Number(profileStats.thisWeekHours) || fallbackHours,
+          totalCredits,
+          completedCredits,
+          gpaSummary:
+            Array.isArray(profileStats.gpaSummary) && profileStats.gpaSummary.length > 0
+              ? profileStats.gpaSummary
+              : gpaFallback.gpaSummary,
+          creditDistribution:
+            Array.isArray(profileStats.creditDistribution) &&
+            profileStats.creditDistribution.length > 0
+              ? profileStats.creditDistribution
+              : [
+                  {
+                    name: "Đã hoàn thành",
+                    value: completedCredits,
+                    color: "#10B981",
+                  },
+                  {
+                    name: "Đang học",
+                    value: inProgressCredits,
+                    color: "#3B82F6",
+                  },
+                  {
+                    name: "Còn lại",
+                    value: remainingCredits,
+                    color: "#F59E0B",
+                  },
+                ],
+        };
+
+        setStats(mergedStats);
       } catch (error) {
         console.error("Error fetching stats:", error);
       } finally {
