@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom'; // 1. Import cái này
-import { LayoutDashboard, BookOpen, Calculator, Calendar, MessageSquare, Settings, Hourglass } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Calculator, Calendar, MessageSquare, Settings, Hourglass, Bell } from 'lucide-react';
 import WhalioBrand from './WhalioBrand';
 
 // 2. Sửa Component con: Dùng NavLink thay cho div
@@ -42,6 +42,7 @@ const Sidebar = ({ isMobile = false, onNavigate }) => {
         <SidebarItem icon={BookOpen} label="Thư viện đề" to="/exams" onNavigate={onNavigate} />
         <SidebarItem icon={Hourglass} label="StudyTime" to="/timer" onNavigate={onNavigate} />
         <SidebarItem icon={Calendar} label="Thời khóa biểu" to="/timetable" onNavigate={onNavigate} />
+        <SidebarItem icon={Bell} label="Thông báo" to="/announcements" onNavigate={onNavigate} />
       </nav>
 
       <div className="pt-4 border-t border-gray-100 dark:border-gray-700">

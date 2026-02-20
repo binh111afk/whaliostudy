@@ -483,6 +483,24 @@ const quickNoteSchema = new mongoose.Schema({
 
 quickNoteSchema.index({ username: 1, createdAt: -1 });
 
+// Announcement Schema (Admin notifications)
+const announcementSchema = new mongoose.Schema({
+    title: { type: String, required: true, trim: true, maxlength: 200 },
+    content: { type: String, required: true, trim: true, maxlength: 10000 },
+    type: {
+        type: String,
+        enum: ['new-feature', 'update', 'maintenance', 'other'],
+        default: 'other'
+    },
+    image: { type: String, default: '' },
+    authorUsername: { type: String, required: true, index: true },
+    authorFullName: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+announcementSchema.index({ createdAt: -1 });
+
 // Event Schema
 const eventSchema = new mongoose.Schema({
     username: { type: String, required: true, ref: 'User', index: true },
@@ -542,6 +560,7 @@ const Post = mongoose.model('Post', postSchema);
 const Activity = mongoose.model('Activity', activitySchema);
 const Timetable = mongoose.model('Timetable', timetableSchema);
 const QuickNote = mongoose.model('QuickNote', quickNoteSchema);
+const Announcement = mongoose.model('Announcement', announcementSchema);
 const Event = mongoose.model('Event', eventSchema);
 const DeadlineTag = mongoose.model('DeadlineTag', deadlineTagSchema);
 const ChatSession = mongoose.model('ChatSession', chatSessionSchema);
@@ -1140,6 +1159,155 @@ app.delete('/api/quick-notes/:id', async (req, res) => {
         return res.json({ success: true });
     } catch (err) {
         console.error('Delete quick note error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+// 4.2 Announcement APIs (MongoDB)
+app.get('/api/announcements', async (req, res) => {
+    try {
+        const announcements = await Announcement.find({})
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const formattedAnnouncements = announcements.map((item) => ({
+            ...item,
+            id: item._id.toString()
+        }));
+
+        return res.json({ success: true, announcements: formattedAnnouncements });
+    } catch (err) {
+        console.error('Get announcements error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server', announcements: [] });
+    }
+});
+
+app.post('/api/announcements', upload.single('image'), async (req, res) => {
+    try {
+        const { username, title, content, type } = req.body;
+        const normalizedUsername = String(username || '').trim();
+
+        if (!normalizedUsername) {
+            return res.status(400).json({ success: false, message: 'Thiếu username' });
+        }
+
+        const user = await User.findOne({ username: normalizedUsername });
+        if (!user || user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Chỉ admin mới được thêm thông báo' });
+        }
+
+        const normalizedTitle = String(title || '').trim();
+        const normalizedContent = String(content || '').trim();
+        if (!normalizedTitle || !normalizedContent) {
+            return res.status(400).json({ success: false, message: 'Thiếu tiêu đề hoặc nội dung thông báo' });
+        }
+
+        const allowedTypes = ['new-feature', 'update', 'maintenance', 'other'];
+        const normalizedType = allowedTypes.includes(type) ? type : 'other';
+
+        const announcement = new Announcement({
+            title: normalizedTitle,
+            content: normalizedContent,
+            type: normalizedType,
+            image: req.file?.path || '',
+            authorUsername: user.username,
+            authorFullName: user.fullName || user.username,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        });
+
+        await announcement.save();
+        return res.json({
+            success: true,
+            announcement: {
+                ...announcement.toObject(),
+                id: announcement._id.toString()
+            }
+        });
+    } catch (err) {
+        console.error('Create announcement error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+app.put('/api/announcements/:id', upload.single('image'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { username, title, content, type, keepImage } = req.body;
+        const normalizedUsername = String(username || '').trim();
+
+        if (!normalizedUsername) {
+            return res.status(400).json({ success: false, message: 'Thiếu username' });
+        }
+
+        const user = await User.findOne({ username: normalizedUsername });
+        if (!user || user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Chỉ admin mới được sửa thông báo' });
+        }
+
+        const announcement = await Announcement.findById(id);
+        if (!announcement) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy thông báo' });
+        }
+
+        const normalizedTitle = String(title || '').trim();
+        const normalizedContent = String(content || '').trim();
+        if (!normalizedTitle || !normalizedContent) {
+            return res.status(400).json({ success: false, message: 'Thiếu tiêu đề hoặc nội dung thông báo' });
+        }
+
+        const allowedTypes = ['new-feature', 'update', 'maintenance', 'other'];
+        const normalizedType = allowedTypes.includes(type) ? type : 'other';
+
+        announcement.title = normalizedTitle;
+        announcement.content = normalizedContent;
+        announcement.type = normalizedType;
+
+        if (req.file?.path) {
+            announcement.image = req.file.path;
+        } else if (String(keepImage) !== 'true') {
+            announcement.image = '';
+        }
+
+        announcement.updatedAt = new Date();
+        await announcement.save();
+
+        return res.json({
+            success: true,
+            announcement: {
+                ...announcement.toObject(),
+                id: announcement._id.toString()
+            }
+        });
+    } catch (err) {
+        console.error('Update announcement error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+app.delete('/api/announcements/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { username } = req.body || {};
+        const normalizedUsername = String(username || '').trim();
+
+        if (!normalizedUsername) {
+            return res.status(400).json({ success: false, message: 'Thiếu username' });
+        }
+
+        const user = await User.findOne({ username: normalizedUsername });
+        if (!user || user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Chỉ admin mới được xóa thông báo' });
+        }
+
+        const deleted = await Announcement.findByIdAndDelete(id);
+        if (!deleted) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy thông báo' });
+        }
+
+        return res.json({ success: true });
+    } catch (err) {
+        console.error('Delete announcement error:', err);
         return res.status(500).json({ success: false, message: 'Lỗi server' });
     }
 });

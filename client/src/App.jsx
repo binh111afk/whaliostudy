@@ -21,6 +21,7 @@ import Documents from './pages/Documents';
 import Exams from './pages/Exams';
 import DocumentViewer from './pages/DocumentViewer';
 import Portal from './pages/Portal';
+import Announcements from './pages/Announcements';
 
 const MOBILE_NAV_ITEMS = [
   { to: '/', label: 'Trang chủ', icon: Home },
@@ -291,6 +292,7 @@ function App() {
               <Route path="/exams" element={<Exams />} />
               <Route path="/documents/:id" element={<DocumentViewer />} />
               <Route path="/portal" element={<Portal user={user} />} />
+              <Route path="/announcements" element={<Announcements user={user} />} />
             </Routes>
           </main>
 
