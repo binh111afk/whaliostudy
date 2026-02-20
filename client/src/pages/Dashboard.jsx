@@ -1936,6 +1936,12 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
     );
     
     try {
+      console.log("Sending toggle request:", {
+        id: task._id,
+        username: user.username,
+        isDone: nextIsDone,
+      });
+      
       const res = await fetch("/api/events/toggle", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -1945,19 +1951,21 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
           isDone: nextIsDone,
         }),
       });
+      
+      console.log("Response status:", res.status, res.statusText);
       const data = await res.json();
       
-      console.log("Toggle API response:", data);
+      console.log("Toggle API response:", JSON.stringify(data, null, 2));
       
       if (!data?.success) {
         // Rollback on failure
-        console.log("API failed, rolling back");
+        console.log("API failed, rolling back. Message:", data?.message);
         setDeadlines(prevDeadlines => 
           prevDeadlines.map((d) =>
             d._id === task._id ? { ...d, isDone: previousIsDone } : d
           )
         );
-        toast.error("Không thể cập nhật trạng thái", {
+        toast.error(data?.message || "Không thể cập nhật trạng thái", {
           position: isMobileViewport() ? "bottom-center" : "top-center",
         });
       } else {
