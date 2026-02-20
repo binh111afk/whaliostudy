@@ -306,6 +306,8 @@ const GpaCalc = () => {
 
   // Track unsaved changes
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showUnsavedReminderDetails, setShowUnsavedReminderDetails] =
+    useState(true);
 
   // Load dữ liệu từ Server khi vào trang
   useEffect(() => {
@@ -330,6 +332,10 @@ const GpaCalc = () => {
   useEffect(() => {
     setHasUnsavedChanges(true);
   }, [semesters, targetGpa]);
+
+  useEffect(() => {
+    if (hasUnsavedChanges) setShowUnsavedReminderDetails(true);
+  }, [hasUnsavedChanges]);
 
   // Hàm Lưu dữ liệu lên Server
   const handleSaveGPA = async () => {
@@ -813,7 +819,7 @@ const GpaCalc = () => {
       <div className="mb-8">
         <div className="group relative overflow-hidden rounded-2xl border border-gray-200/60 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6 md:p-8">
           {/* Subtle Background Decoration */}
-          <div className="absolute -z-0 right-0 top-0 h-64 w-64 rounded-bl-[100px] bg-gradient-to-br from-blue-50/50 to-purple-50/50 opacity-60 dark:from-blue-900/30 dark:to-purple-900/20"></div>
+          <div className="absolute -z-0 right-0 top-0 h-64 w-64 rounded-bl-[100px] bg-gradient-to-br from-blue-50/50 to-cyan-50/40 opacity-60 dark:from-blue-900/30 dark:to-cyan-900/20"></div>
 
           <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
 
@@ -1805,18 +1811,32 @@ const GpaCalc = () => {
       {/* Sticky Save Reminder - Floating Box */}
       {hasUnsavedChanges && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 duration-300">
-          <div className="bg-white dark:bg-gray-800 border border-orange-200 dark:border-orange-800/50 shadow-2xl rounded-2xl p-4 flex items-center gap-3 max-w-[300px]">
+          <div className="flex items-center gap-3 rounded-2xl border border-orange-200 bg-white p-4 shadow-2xl dark:border-orange-800/50 dark:bg-gray-800">
             <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center shrink-0">
               <AlertTriangle size={16} className="text-orange-600 dark:text-orange-400" />
             </div>
-            <div>
-              <p className="text-sm font-bold text-gray-800 dark:text-white">
-                Chưa lưu thay đổi
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Đừng quên lưu lại bạn nhé
-              </p>
-            </div>
+            {showUnsavedReminderDetails && (
+              <div>
+                <p className="text-sm font-bold text-gray-800 dark:text-white">
+                  Chưa lưu thay đổi
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  Đừng quên lưu lại bạn nhé
+                </p>
+              </div>
+            )}
+            <button
+              onClick={() => setShowUnsavedReminderDetails((prev) => !prev)}
+              className="ml-1 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+              aria-label={showUnsavedReminderDetails ? "Thu gọn cảnh báo" : "Mở rộng cảnh báo"}
+            >
+              <ChevronDown
+                size={16}
+                className={`transition-transform duration-200 ${
+                  showUnsavedReminderDetails ? "rotate-180" : ""
+                }`}
+              />
+            </button>
           </div>
         </div>
       )}
