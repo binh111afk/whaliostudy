@@ -979,6 +979,42 @@ const FlashcardTab = () => {
     },
   };
 
+  const deckSoftThemeMap = {
+    blue: {
+      iconWrap: "bg-blue-100 text-blue-600",
+      ghostMastered: "bg-blue-50 text-blue-700",
+      ghostReviewing: "bg-sky-50 text-sky-700",
+    },
+    green: {
+      iconWrap: "bg-emerald-100 text-emerald-600",
+      ghostMastered: "bg-emerald-50 text-emerald-700",
+      ghostReviewing: "bg-teal-50 text-teal-700",
+    },
+    purple: {
+      iconWrap: "bg-violet-100 text-violet-600",
+      ghostMastered: "bg-violet-50 text-violet-700",
+      ghostReviewing: "bg-indigo-50 text-indigo-700",
+    },
+    red: {
+      iconWrap: "bg-rose-100 text-rose-600",
+      ghostMastered: "bg-rose-50 text-rose-700",
+      ghostReviewing: "bg-orange-50 text-orange-700",
+    },
+    orange: {
+      iconWrap: "bg-amber-100 text-amber-600",
+      ghostMastered: "bg-amber-50 text-amber-700",
+      ghostReviewing: "bg-yellow-50 text-yellow-700",
+    },
+  };
+
+  const deckOutlineIconMap = {
+    blue: BookOpen,
+    green: GraduationCap,
+    purple: Library,
+    red: FileText,
+    orange: Pencil,
+  };
+
   const getCardKey = (card = {}) => {
     const term = String(card?.term || "").trim().toLowerCase();
     const def = String(card?.def || "").trim().toLowerCase();
@@ -1067,44 +1103,41 @@ const FlashcardTab = () => {
   return (
     <div className="animate-fade-in-up">
       {view === "list" && (
-        <div className="space-y-6">
-          <div className="relative overflow-hidden rounded-3xl border border-blue-200/70 bg-gradient-to-br from-blue-950 via-blue-800 to-sky-600 p-5 text-white shadow-[0_24px_64px_-28px_rgba(29,78,216,0.65)] sm:p-7">
-            <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/20 blur-2xl" />
-            <div className="pointer-events-none absolute -bottom-20 left-12 h-40 w-40 rounded-full bg-cyan-300/30 blur-2xl" />
-            <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-blue-100">
-                  <Layers size={14} />
-                  Flashcard Studio
-                </div>
-                <h3 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">
-                  Học nhanh, nhớ lâu hơn
-                </h3>
-                <p className="mt-2 max-w-xl text-sm text-blue-100/95 sm:text-base">
-                  Quản lý bộ thẻ trực quan, theo dõi tiến độ và luyện tập theo nhịp học cá nhân của bạn.
-                </p>
+        <div className="space-y-6 rounded-2xl bg-slate-50 p-4 sm:p-6">
+          <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                <Layers size={14} />
+                Flashcard Studio
               </div>
-              <button
-                onClick={() => setView("create")}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-extrabold text-blue-800 shadow-lg transition-all hover:-translate-y-0.5 hover:bg-blue-50 sm:text-base"
-              >
-                <Plus size={18} />
-                Tạo bộ mới
-              </button>
+              <h3 className="mt-2 text-xl font-semibold text-slate-800 sm:text-2xl">
+                Bộ thẻ của bạn
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Quản lý bộ thẻ theo phong cách gọn nhẹ, dễ theo dõi tiến độ học.
+              </p>
             </div>
+            <button
+              onClick={() => setView("create")}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+            >
+              <Plus size={16} />
+              Tạo bộ mới
+            </button>
           </div>
 
           {decks.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-blue-200 bg-blue-50/60 p-10 text-center text-blue-700">
-              <p className="text-lg font-bold">Bạn chưa có bộ thẻ nào.</p>
-              <p className="mt-2 text-sm text-blue-600">
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-700 shadow-sm">
+              <p className="text-lg font-semibold">Bạn chưa có bộ thẻ nào.</p>
+              <p className="mt-2 text-sm text-slate-500">
                 Hãy tạo bộ flashcard đầu tiên để bắt đầu luyện tập.
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
               {decks.map((deck) => {
-                const theme = deckThemeMap[deck.color] || deckThemeMap.blue;
+                const softTheme = deckSoftThemeMap[deck.color] || deckSoftThemeMap.blue;
+                const DeckIcon = deckOutlineIconMap[deck.color] || BookOpen;
                 const stats = getDeckStats(deck);
                 const total = deck.cards?.length || 0;
 
@@ -1112,71 +1145,52 @@ const FlashcardTab = () => {
                   <article
                     key={deck.id}
                     onClick={() => startStudy(deck)}
-                    className={`group cursor-pointer overflow-hidden rounded-3xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl ${theme.surface}`}
+                    className="group relative flex min-h-[250px] cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   >
-                    <div className={`relative overflow-hidden bg-gradient-to-r ${theme.header} p-4 text-white`}>
-                      <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-white/20 blur-xl" />
-                      <div className="pointer-events-none absolute bottom-0 left-0 h-10 w-full bg-gradient-to-t from-black/15 to-transparent" />
-                      <div className="relative flex items-start justify-between gap-2">
-                        <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl text-3xl backdrop-blur ${theme.iconBg}`}>
-                          {deck.icon || "📝"}
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteDeck(deck.id);
-                          }}
-                          className="rounded-full bg-white/20 p-2 text-white/80 transition-colors hover:bg-white/30 hover:text-white"
-                          aria-label={`Xóa bộ ${deck.title}`}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteDeck(deck.id);
+                      }}
+                      className="absolute right-3 top-3 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-red-500"
+                      aria-label={`Xóa bộ ${deck.title}`}
+                    >
+                      <Trash2 size={16} />
+                    </button>
 
-                    <div className="space-y-4 p-4">
+                    <div className="flex flex-1 flex-col p-5">
+                      <div className="flex flex-1 items-center justify-center">
+                        <div className={`inline-flex h-20 w-20 items-center justify-center rounded-full ${softTheme.iconWrap}`}>
+                          <DeckIcon size={38} strokeWidth={1.75} />
+                        </div>
+                      </div>
+
                       <div>
-                        <h4 className="line-clamp-2 text-lg font-black text-gray-900 dark:text-white">
+                        <h4 className="line-clamp-2 text-lg font-semibold text-slate-800">
                           {deck.title}
                         </h4>
-                        <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
+                        <p className="mt-1 text-sm text-slate-500">
                           {total} thẻ thuật ngữ
                         </p>
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs font-bold text-gray-600">
-                          <span>Đã học: {stats.percent}%</span>
-                          <span>
-                            {stats.seen}/{total} thẻ
-                          </span>
-                        </div>
-                        <div className="h-2.5 overflow-hidden rounded-full bg-gray-100">
-                          <div
-                            className={`h-full rounded-full bg-gradient-to-r ${theme.progress} transition-all duration-500`}
-                            style={{ width: `${stats.percent}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 ${theme.tag}`}>
-                          {stats.mastered} đã thuộc
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-medium">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 ${softTheme.ghostMastered}`}>
+                          {stats.mastered} Đã thuộc
                         </span>
-                        <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-700">
-                          {stats.reviewing} đang ôn
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 ${softTheme.ghostReviewing}`}>
+                          {stats.reviewing} Đang học
                         </span>
-                        <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-gray-600">
-                          Tập để học
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">
+                          {stats.seen}/{total} thẻ
                         </span>
                       </div>
-
-                      <div className="pt-1">
-                        <div className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-900 px-4 py-2.5 text-sm font-bold text-white transition-colors group-hover:bg-blue-800">
-                          Bắt đầu học ngay
-                          <ChevronRight size={16} />
-                        </div>
-                      </div>
+                    </div>
+                    <div className="h-1 w-full bg-slate-100">
+                      <div
+                        className="h-1 bg-blue-600 transition-all duration-500"
+                        style={{ width: `${stats.percent}%` }}
+                      />
                     </div>
                   </article>
                 );
