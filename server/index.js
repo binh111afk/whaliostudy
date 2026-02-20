@@ -2948,30 +2948,43 @@ app.put('/api/events/:id', async (req, res) => {
 app.put('/api/events/toggle', async (req, res) => {
     try {
         const { id, username, isDone } = req.body;
+        
+        console.log('[Toggle] Request received:', { id, username, isDone });
 
         if (!id || !username) {
+            console.log('[Toggle] Missing required fields');
             return res.json({ success: false, message: 'Missing required fields' });
         }
 
         const event = await Event.findById(id);
         if (!event) {
+            console.log('[Toggle] Event not found:', id);
             return res.json({ success: false, message: 'Event not found' });
         }
 
         if (event.username !== username) {
+            console.log('[Toggle] Unauthorized access attempt by:', username);
             return res.json({ success: false, message: 'Unauthorized' });
         }
 
+        const previousIsDone = event.isDone;
         if (typeof isDone === 'boolean') {
             event.isDone = isDone;
         } else {
             event.isDone = !Boolean(event.isDone);
         }
+        
         await event.save();
+        
+        console.log('[Toggle] Success:', { 
+            id, 
+            previousIsDone, 
+            newIsDone: event.isDone 
+        });
 
         return res.json({ success: true, event });
     } catch (err) {
-        console.error('Error toggling event:', err);
+        console.error('[Toggle] Error toggling event:', err);
         return res.json({ success: false, message: 'Server error' });
     }
 });

@@ -1698,6 +1698,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   const [showAllDeadlinesMobile, setShowAllDeadlinesMobile] = useState(false);
   const [isDeadlineExpanded, setIsDeadlineExpanded] = useState(false);
   const deadlineToggleLocksRef = useRef(new Set());
+  const [togglingTasks, setTogglingTasks] = useState(new Set());
 
   // State GPA & Credits
   const [gpaMetrics, setGpaMetrics] = useState({
@@ -1915,18 +1916,24 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
     if (!taskId) return;
     
     // Prevent multiple simultaneous toggles on the same task
-    if (deadlineToggleLocksRef.current.has(taskId)) return;
+    if (deadlineToggleLocksRef.current.has(taskId)) {
+      console.log("Toggle locked for task:", taskId);
+      return;
+    }
     
     deadlineToggleLocksRef.current.add(taskId);
+    setTogglingTasks(prev => new Set([...prev, taskId]));
+    console.log("Toggling task:", taskId, "Current isDone:", task.isDone);
 
     const previousIsDone = Boolean(task.isDone);
     const nextIsDone = !previousIsDone;
     
-    // Optimistic update
-    const newDeadlines = deadlines.map((d) =>
-      d._id === task._id ? { ...d, isDone: nextIsDone } : d
+    // Optimistic update with immediate UI feedback
+    setDeadlines(prevDeadlines => 
+      prevDeadlines.map((d) =>
+        d._id === task._id ? { ...d, isDone: nextIsDone } : d
+      )
     );
-    setDeadlines(newDeadlines);
     
     try {
       const res = await fetch("/api/events/toggle", {
@@ -1940,31 +1947,44 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
       });
       const data = await res.json();
       
-      // Rollback if API failed
+      console.log("Toggle API response:", data);
+      
       if (!data?.success) {
-        const rollbackDeadlines = deadlines.map((d) =>
-          d._id === task._id ? { ...d, isDone: previousIsDone } : d
+        // Rollback on failure
+        console.log("API failed, rolling back");
+        setDeadlines(prevDeadlines => 
+          prevDeadlines.map((d) =>
+            d._id === task._id ? { ...d, isDone: previousIsDone } : d
+          )
         );
-        setDeadlines(rollbackDeadlines);
         toast.error("Không thể cập nhật trạng thái", {
           position: isMobileViewport() ? "bottom-center" : "top-center",
         });
+      } else {
+        console.log("Toggle successful");
       }
     } catch (error) {
       console.error("Error toggling deadline:", error);
       // Rollback on error
-      const rollbackDeadlines = deadlines.map((d) =>
-        d._id === task._id ? { ...d, isDone: previousIsDone } : d
+      setDeadlines(prevDeadlines => 
+        prevDeadlines.map((d) =>
+          d._id === task._id ? { ...d, isDone: previousIsDone } : d
+        )
       );
-      setDeadlines(rollbackDeadlines);
       toast.error("Lỗi kết nối", {
         position: isMobileViewport() ? "bottom-center" : "top-center",
       });
     } finally {
-      // Release lock after a short delay to prevent rapid re-clicks
+      // Release lock after a delay
       setTimeout(() => {
         deadlineToggleLocksRef.current.delete(taskId);
-      }, 200);
+        setTogglingTasks(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(taskId);
+          return newSet;
+        });
+        console.log("Lock released for task:", taskId);
+      }, 500);
     }
   };
 
@@ -2447,14 +2467,16 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                           <button
                             type="button"
                             onClick={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
                               handleToggleDeadline(primaryDeadline);
                             }}
+                            disabled={togglingTasks.has(primaryDeadline._id)}
                             className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition-all duration-300 ${
                               primaryDeadline.isDone
                                 ? "border-blue-600 bg-blue-600 text-white"
                                 : "border-blue-300 bg-white text-white hover:-translate-y-0.5 hover:border-blue-500 dark:border-blue-600 dark:bg-gray-800"
-                            }`}
+                            } ${togglingTasks.has(primaryDeadline._id) ? "opacity-50 cursor-wait" : ""}`}
                             aria-label={`Đánh dấu hoàn thành ${primaryDeadline.title}`}
                           >
                             <Check
@@ -2570,14 +2592,16 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                               <button
                                 type="button"
                                 onClick={(e) => {
+                                  e.preventDefault();
                                   e.stopPropagation();
                                   handleToggleDeadline(task);
                                 }}
+                                disabled={togglingTasks.has(task._id)}
                                 className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition-all duration-300 ${
                                   task.isDone
                                     ? "border-blue-600 bg-blue-600 text-white"
                                     : "border-blue-300 bg-white text-white hover:border-blue-500 dark:border-blue-600 dark:bg-gray-800"
-                                }`}
+                                } ${togglingTasks.has(task._id) ? "opacity-50 cursor-wait" : ""}`}
                                 aria-label={`Đánh dấu hoàn thành ${task.title}`}
                               >
                                 <Check
@@ -2684,14 +2708,16 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                               <button
                                 type="button"
                                 onClick={(e) => {
+                                  e.preventDefault();
                                   e.stopPropagation();
                                   handleToggleDeadline(task);
                                 }}
+                                disabled={togglingTasks.has(task._id)}
                                 className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition-all duration-300 ${
                                   task.isDone
                                     ? "border-blue-600 bg-blue-600 text-white"
                                     : "border-blue-300 bg-white text-white dark:border-blue-600 dark:bg-gray-800"
-                                }`}
+                                } ${togglingTasks.has(task._id) ? "opacity-50 cursor-wait" : ""}`}
                                 aria-label={`Đánh dấu hoàn thành ${task.title}`}
                               >
                                 <Check
