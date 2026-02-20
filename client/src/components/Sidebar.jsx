@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { motion } from "framer-motion";
+import { LayoutGroup, motion } from "framer-motion";
 import {
   LayoutDashboard,
   BookOpen,
@@ -17,19 +17,20 @@ const SidebarItem = ({ icon: Icon, label, to, onNavigate }) => (
   <NavLink to={to} onClick={onNavigate} className="block w-full">
     {({ isActive }) => (
       <div
-        className={`relative isolate flex w-full items-center space-x-3 overflow-hidden rounded-xl p-3 transition-all ${
+        className={`relative isolate flex w-full items-center space-x-3 overflow-hidden rounded-xl p-3 transition-colors duration-200 ${
           isActive
             ? "text-white"
             : "text-gray-400 hover:bg-blue-50 hover:text-primary dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-blue-400"
         }`}
       >
         {isActive && (
-            <motion.span
-              layoutId="sidebar-liquid-active"
-              className="absolute inset-0 rounded-xl bg-primary dark:bg-blue-600"
-              transition={{ type: "spring", stiffness: 360, damping: 30, mass: 0.7 }}
-            />
-          )}
+          <motion.div
+            layoutId="sidebar-liquid-active"
+            layout="position"
+            className="absolute inset-0 rounded-xl bg-primary dark:bg-blue-600"
+            transition={{ type: "spring", stiffness: 360, damping: 30, mass: 0.7 }}
+          />
+        )}
         <span className="relative z-10">
           <Icon size={20} />
         </span>
@@ -50,15 +51,17 @@ const Sidebar = ({ isMobile = false, onNavigate }) => {
         <WhalioBrand compact={isMobile} />
       </div>
 
-      <nav className="flex-1 space-y-2">
-        <SidebarItem icon={LayoutDashboard} label="Dashboard" to="/" onNavigate={onNavigate} />
-        <SidebarItem icon={Calculator} label="Tính điểm GPA" to="/gpa" onNavigate={onNavigate} />
-        <SidebarItem icon={MessageSquare} label="AI Assistant" to="/ai-assistant" onNavigate={onNavigate} />
-        <SidebarItem icon={BookOpen} label="Thư viện đề" to="/exams" onNavigate={onNavigate} />
-        <SidebarItem icon={Hourglass} label="StudyTime" to="/timer" onNavigate={onNavigate} />
-        <SidebarItem icon={Calendar} label="Thời khóa biểu" to="/timetable" onNavigate={onNavigate} />
-        <SidebarItem icon={Bell} label="Thông báo" to="/announcements" onNavigate={onNavigate} />
-      </nav>
+      <LayoutGroup id="sidebar-liquid-nav">
+        <nav className="flex-1 space-y-2">
+          <SidebarItem icon={LayoutDashboard} label="Dashboard" to="/" onNavigate={onNavigate} />
+          <SidebarItem icon={Calculator} label="Tính điểm GPA" to="/gpa" onNavigate={onNavigate} />
+          <SidebarItem icon={MessageSquare} label="AI Assistant" to="/ai-assistant" onNavigate={onNavigate} />
+          <SidebarItem icon={BookOpen} label="Thư viện đề" to="/exams" onNavigate={onNavigate} />
+          <SidebarItem icon={Hourglass} label="StudyTime" to="/timer" onNavigate={onNavigate} />
+          <SidebarItem icon={Calendar} label="Thời khóa biểu" to="/timetable" onNavigate={onNavigate} />
+          <SidebarItem icon={Bell} label="Thông báo" to="/announcements" onNavigate={onNavigate} />
+        </nav>
+      </LayoutGroup>
 
       <div className="border-t border-gray-100 pt-4 dark:border-gray-700">
         <div className="flex items-center space-x-3 p-3 rounded-xl cursor-pointer text-gray-400 dark:text-gray-500 hover:bg-blue-50 dark:hover:bg-gray-800 hover:text-primary dark:hover:text-blue-400 transition-all">
