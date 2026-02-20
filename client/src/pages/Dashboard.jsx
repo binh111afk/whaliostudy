@@ -8,6 +8,7 @@ import DashboardOverviewTab from "../components/dashboard/DashboardOverviewTab";
 import DashboardScheduleTab from "../components/dashboard/DashboardScheduleTab";
 import DashboardNotesTab from "../components/dashboard/DashboardNotesTab";
 import DashboardFlashcardTab from "../components/dashboard/DashboardFlashcardTab";
+import { getFullApiUrl } from '../config/apiConfig';
 import {
   Calendar,
   Layers,
@@ -75,7 +76,7 @@ const EditTargetModal = ({
   }, [currentTarget]);
   const handleSave = async () => {
     try {
-      const res = await fetch("/api/update-profile", {
+      const res = await fetch(getFullApiUrl("/api/update-profile"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, totalTargetCredits: val }),
@@ -217,7 +218,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
 
   const loadDeadlines = async () => {
     try {
-      const res = await fetch(`/api/events?username=${user.username}`);
+      const res = await fetch(getFullApiUrl(`/api/events?username=${user.username}`));
       const data = await res.json();
       if (data.success) {
         const sorted = data.events
@@ -232,7 +233,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
 
   const loadGpaData = async () => {
     try {
-      const res = await fetch(`/api/gpa?username=${user.username}`);
+      const res = await fetch(getFullApiUrl(`/api/gpa?username=${user.username}`));
       const data = await res.json();
       if (data.success && data.semesters && data.semesters.length > 0) {
         calculateGpaMetrics(data.semesters);
@@ -388,7 +389,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
         )
       );
 
-      const res = await fetch("/api/events/toggle", {
+      const res = await fetch(getFullApiUrl("/api/events/toggle"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

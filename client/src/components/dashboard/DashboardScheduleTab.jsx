@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import AddEventModal from "../AddEventModal";
 import { PERIOD_TIMES, getMonday, isClassInWeek } from "../../utils/timetableHelpers";
+import { getFullApiUrl } from '../../config/apiConfig';
 
 // --- HELPER: Lấy tên thứ hiện tại ---
 const getCurrentDayString = () => {
@@ -99,8 +100,8 @@ const DashboardScheduleTab = ({ user }) => {
   const fetchData = async () => {
     try {
       const [tkbRes, eventRes] = await Promise.all([
-        fetch(`/api/timetable?username=${user.username}`),
-        fetch(`/api/events?username=${user.username}`),
+        fetch(getFullApiUrl(`/api/timetable?username=${user.username}`)),
+        fetch(getFullApiUrl(`/api/events?username=${user.username}`)),
       ]);
 
       const tkbData = await tkbRes.json();

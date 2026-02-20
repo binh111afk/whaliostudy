@@ -1,8 +1,10 @@
 // client/src/services/userService.js
+import { getFullApiUrl } from '../config/apiConfig';
+
 export const userService = {
     // Cập nhật thông tin text
     async updateProfile(userData) {
-      const response = await fetch('/api/update-profile', {
+      const response = await fetch(getFullApiUrl('/api/update-profile'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData)
@@ -16,7 +18,7 @@ export const userService = {
       formData.append('username', username);
       formData.append('avatar', file);
   
-      const response = await fetch('/api/upload-avatar', {
+      const response = await fetch(getFullApiUrl('/api/upload-avatar'), {
         method: 'POST',
         body: formData // Không cần set Content-Type, trình duyệt tự làm
       });
@@ -25,7 +27,7 @@ export const userService = {
   
     // Đổi mật khẩu
     async changePassword(username, oldPass, newPass) {
-      const response = await fetch('/api/change-password', {
+      const response = await fetch(getFullApiUrl('/api/change-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, oldPass, newPass })
@@ -35,7 +37,7 @@ export const userService = {
 
     // Cập nhật cấu hình học tập
     async updateSettings(username, settings) {
-      const response = await fetch('/api/update-settings', {
+      const response = await fetch(getFullApiUrl('/api/update-settings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, ...settings })
@@ -46,7 +48,7 @@ export const userService = {
     // Lấy thống kê tổng hợp cho Profile
     async getProfileStats(username) {
       try {
-        const response = await fetch(`/api/profile/stats?username=${username}`);
+        const response = await fetch(getFullApiUrl(`/api/profile/stats?username=${username}`));
         return await response.json();
       } catch (error) {
         console.error('Error getting profile stats:', error);

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { X, Calendar, Clock, Save, Tag, Plus } from "lucide-react";
+import { getFullApiUrl } from '../config/apiConfig';
 
 const DEFAULT_DEADLINE_TAGS = ["Công việc", "Dự án", "Học bài", "Hạn chót"];
 
@@ -46,7 +47,7 @@ const AddDeadlineModal = ({
     const fetchTags = async () => {
       try {
         const res = await fetch(
-          `/api/deadline-tags?username=${encodeURIComponent(username)}`
+          getFullApiUrl(`/api/deadline-tags?username=${encodeURIComponent(username)}`)
         );
         const data = await res.json();
         if (!cancelled && data?.success && Array.isArray(data.tags)) {
@@ -124,7 +125,7 @@ const AddDeadlineModal = ({
     }
 
     try {
-      const res = await fetch("/api/deadline-tags", {
+      const res = await fetch(getFullApiUrl("/api/deadline-tags"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, name: nextTag }),
@@ -153,7 +154,7 @@ const AddDeadlineModal = ({
     if (DEFAULT_DEADLINE_TAGS.includes(normalized)) return;
 
     try {
-      const res = await fetch("/api/deadline-tags", {
+      const res = await fetch(getFullApiUrl("/api/deadline-tags"), {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, name: normalized }),
@@ -206,7 +207,7 @@ const AddDeadlineModal = ({
     setLoading(true);
     try {
       const isEdit = mode === "edit" && initialData?._id;
-      const response = await fetch(isEdit ? `/api/events/${initialData._id}` : "/api/events", {
+      const response = await fetch(isEdit ? getFullApiUrl(`/api/events/${initialData._id}`) : getFullApiUrl("/api/events"), {
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,7 +1,9 @@
+import { getFullApiUrl } from '../config/apiConfig';
+
 export const announcementService = {
   async getAnnouncements() {
     try {
-      const res = await fetch("/api/announcements");
+      const res = await fetch(getFullApiUrl("/api/announcements"));
       return await res.json();
     } catch (error) {
       console.error("Get announcements error:", error);
@@ -11,7 +13,7 @@ export const announcementService = {
 
   async createAnnouncement(formData) {
     try {
-      const res = await fetch("/api/announcements", {
+      const res = await fetch(getFullApiUrl("/api/announcements"), {
         method: "POST",
         body: formData,
       });
@@ -24,7 +26,7 @@ export const announcementService = {
 
   async updateAnnouncement(id, formData) {
     try {
-      const res = await fetch(`/api/announcements/${id}`, {
+      const res = await fetch(getFullApiUrl(`/api/announcements/${id}`), {
         method: "PUT",
         body: formData,
       });
@@ -37,7 +39,7 @@ export const announcementService = {
 
   async deleteAnnouncement(id, username) {
     try {
-      const res = await fetch(`/api/announcements/${id}`, {
+      const res = await fetch(getFullApiUrl(`/api/announcements/${id}`), {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username }),

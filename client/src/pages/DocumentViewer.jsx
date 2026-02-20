@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { getFullApiUrl } from '../config/apiConfig';
 import {
   ArrowLeft,
   Download,
@@ -357,7 +358,7 @@ const DocumentViewer = () => {
         if (!hasCountedView.current) {
           hasCountedView.current = true;
           try {
-            const viewRes = await fetch(`/api/documents/view/${id}`, { method: 'POST' });
+            const viewRes = await fetch(getFullApiUrl(`/api/documents/view/${id}`), { method: 'POST' });
             if (!viewRes.ok) {
               console.warn(`View API returned ${viewRes.status}`);
             }
@@ -367,7 +368,7 @@ const DocumentViewer = () => {
         }
 
         // Lấy dữ liệu tài liệu
-        const res = await fetch("/api/documents");
+        const res = await fetch(getFullApiUrl("/api/documents"));
         if (!res.ok) throw new Error(`API error: ${res.status}`);
         const allDocs = await res.json();
 
@@ -407,7 +408,7 @@ const DocumentViewer = () => {
     const newSavedState = !isSaved;
     setIsSaved(newSavedState);
     try {
-      await fetch("/api/toggle-save-doc", {
+      await fetch(getFullApiUrl("/api/toggle-save-doc"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

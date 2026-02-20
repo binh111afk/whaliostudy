@@ -1,9 +1,11 @@
 // Service để gọi API Portal
+import { getFullApiUrl } from '../config/apiConfig';
+
 export const portalService = {
     // Lấy dữ liệu portal từ MongoDB
     async getPortalData() {
         try {
-            const response = await fetch('/api/portal');
+            const response = await fetch(getFullApiUrl('/api/portal'));
             const result = await response.json();
             return result;
         } catch (error) {
@@ -15,7 +17,7 @@ export const portalService = {
     // Cập nhật dữ liệu portal (chỉ admin)
     async updatePortalData(categories) {
         try {
-            const response = await fetch('/api/portal/update', {
+            const response = await fetch(getFullApiUrl('/api/portal/update'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ categories })

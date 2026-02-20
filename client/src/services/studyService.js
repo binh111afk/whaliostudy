@@ -1,8 +1,10 @@
+import { getFullApiUrl } from '../config/apiConfig';
+
 export const studyService = {
     // Lưu thời gian học
     async saveSession(username, durationMinutes) {
         try {
-            const res = await fetch('/api/study/save', {
+            const res = await fetch(getFullApiUrl('/api/study/save'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, duration: durationMinutes })
@@ -17,7 +19,7 @@ export const studyService = {
     // Lấy dữ liệu biểu đồ
     async getStats(username) {
         try {
-            const res = await fetch(`/api/study/stats?username=${username}`);
+            const res = await fetch(getFullApiUrl(`/api/study/stats?username=${username}`));
             return await res.json();
         } catch (error) {
             console.error("Lỗi lấy thống kê:", error);
@@ -27,7 +29,7 @@ export const studyService = {
 
     async getTasks(username) {
         try {
-            const res = await fetch(`/api/study/tasks?username=${encodeURIComponent(username)}`);
+            const res = await fetch(getFullApiUrl(`/api/study/tasks?username=${encodeURIComponent(username)}`));
             return await res.json();
         } catch (error) {
             console.error("Lỗi lấy task phiên học:", error);
@@ -37,7 +39,7 @@ export const studyService = {
 
     async createTask(username, title) {
         try {
-            const res = await fetch("/api/study/tasks", {
+            const res = await fetch(getFullApiUrl("/api/study/tasks"), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ username, title }),
@@ -51,7 +53,7 @@ export const studyService = {
 
     async updateTask(id, payload) {
         try {
-            const res = await fetch(`/api/study/tasks/${id}`, {
+            const res = await fetch(getFullApiUrl(`/api/study/tasks/${id}`), {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
@@ -65,7 +67,7 @@ export const studyService = {
 
     async deleteTask(username, id) {
         try {
-            const res = await fetch(`/api/study/tasks/${id}?username=${encodeURIComponent(username)}`, {
+            const res = await fetch(getFullApiUrl(`/api/study/tasks/${id}?username=${encodeURIComponent(username)}`), {
                 method: "DELETE",
             });
             return await res.json();

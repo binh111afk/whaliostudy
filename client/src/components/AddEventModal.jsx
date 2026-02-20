@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Calendar, Clock, MapPin, Save } from "lucide-react";
 import { toast } from "sonner";
+import { getFullApiUrl } from '../config/apiConfig';
 
 const AddEventModal = ({ isOpen, onClose, onSuccess, username, defaultDate }) => {
   const [title, setTitle] = useState("");
@@ -56,7 +57,7 @@ const AddEventModal = ({ isOpen, onClose, onSuccess, username, defaultDate }) =>
     }
 
     try {
-      const res = await fetch("/api/events", {
+      const res = await fetch(getFullApiUrl("/api/events"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

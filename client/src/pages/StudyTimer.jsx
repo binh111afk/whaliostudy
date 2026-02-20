@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { studyService } from "../services/studyService";
 import StudyTimerMusicPanel from "../components/StudyTimerMusicPanel";
+import { getFullApiUrl } from '../config/apiConfig';
 
 const TIMER_MODES = {
   focus: { label: "Tập trung", minutes: 25, accent: "from-blue-500 to-indigo-500" },
@@ -256,7 +257,7 @@ const StudyTimer = () => {
       if (!username) return;
 
       try {
-        const res = await fetch(`/api/quick-notes?username=${username}`);
+        const res = await fetch(getFullApiUrl(`/api/quick-notes?username=${username}`));
         if (!res.ok) {
           throw new Error(`QUICK_NOTES_${res.status}`);
         }
@@ -289,8 +290,8 @@ const StudyTimer = () => {
       try {
         const [studyRes, eventsRes, timetableRes] = await Promise.all([
           studyService.getStats(username),
-          fetch(`/api/events?username=${username}`).then((r) => r.json()),
-          fetch(`/api/timetable?username=${username}`).then((r) => r.json()),
+          fetch(getFullApiUrl(`/api/events?username=${username}`)).then((r) => r.json()),
+          fetch(getFullApiUrl(`/api/timetable?username=${username}`)).then((r) => r.json()),
         ]);
 
         if (studyRes?.success && Array.isArray(studyRes.data) && studyRes.data.length > 0) {
@@ -521,7 +522,7 @@ const StudyTimer = () => {
         throw new Error("QUICK_NOTES_SAVE_FAILED");
       }
 
-      const listRes = await fetch(`/api/quick-notes?username=${username}`);
+      const listRes = await fetch(getFullApiUrl(`/api/quick-notes?username=${username}`));
       if (!listRes.ok) {
         throw new Error(`QUICK_NOTES_${listRes.status}`);
       }
@@ -553,7 +554,7 @@ const StudyTimer = () => {
       return;
     }
     try {
-      const res = await fetch(`/api/quick-notes/${noteId}?username=${username}`, { method: "DELETE" });
+      const res = await fetch(getFullApiUrl(`/api/quick-notes/${noteId}?username=${username}`), { method: "DELETE" });
       if (!res.ok) {
         throw new Error(`QUICK_NOTES_${res.status}`);
       }

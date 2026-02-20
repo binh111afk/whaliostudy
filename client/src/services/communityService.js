@@ -1,14 +1,16 @@
 // client/src/services/communityService.js
+import { getFullApiUrl } from '../config/apiConfig';
+
 export const communityService = {
     // Lấy tất cả bài viết
     async getPosts() {
-      const res = await fetch('/api/posts');
+      const res = await fetch(getFullApiUrl('/api/posts'));
       return await res.json();
     },
   
     // Tạo bài viết mới (hoặc Sửa)
     async createPost(formData) {
-      const res = await fetch('/api/posts', {
+      const res = await fetch(getFullApiUrl('/api/posts'), {
         method: 'POST',
         body: formData // Tự động set Content-Type multipart/form-data
       });
@@ -16,7 +18,7 @@ export const communityService = {
     },
   
     async editPost(data) {
-      const res = await fetch('/api/posts/edit', {
+      const res = await fetch(getFullApiUrl('/api/posts/edit'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -25,7 +27,7 @@ export const communityService = {
     },
   
     async deletePost(postId, username) {
-      const res = await fetch('/api/posts/delete', {
+      const res = await fetch(getFullApiUrl('/api/posts/delete'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId, username })
@@ -35,7 +37,7 @@ export const communityService = {
   
     // Tương tác
     async likePost(postId, username) {
-      const res = await fetch('/api/posts/like', {
+      const res = await fetch(getFullApiUrl('/api/posts/like'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId, username })
@@ -44,7 +46,7 @@ export const communityService = {
     },
   
     async savePost(postId, username) {
-      const res = await fetch('/api/posts/save', {
+      const res = await fetch(getFullApiUrl('/api/posts/save'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId, username })
@@ -54,7 +56,7 @@ export const communityService = {
   
     // Bình luận
     async addComment(formData) {
-      const res = await fetch('/api/comments', {
+      const res = await fetch(getFullApiUrl('/api/comments'), {
         method: 'POST',
         body: formData
       });
@@ -62,7 +64,7 @@ export const communityService = {
     },
   
     async deleteComment(postId, commentId, username) {
-      const res = await fetch('/api/comments/delete', {
+      const res = await fetch(getFullApiUrl('/api/comments/delete'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId, commentId, username })
@@ -71,7 +73,7 @@ export const communityService = {
     },
   
     async replyComment(formData) {
-      const res = await fetch('/api/reply-comment', {
+      const res = await fetch(getFullApiUrl('/api/reply-comment'), {
           method: 'POST',
           body: formData
       });

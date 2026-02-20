@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { getFullApiUrl } from '../../config/apiConfig';
 import {
   StickyNote,
   Bell,
@@ -34,7 +35,7 @@ const DashboardNotesTab = ({ user }) => {
   // 1. Fetch Note Cá Nhân
   const fetchMyNotes = async () => {
     try {
-      const res = await fetch(`/api/quick-notes?username=${user.username}`);
+      const res = await fetch(getFullApiUrl(`/api/quick-notes?username=${user.username}`));
       if (!res.ok) {
         if (res.status === 404) {
           console.warn("Quick notes API not found (404).");
@@ -56,7 +57,7 @@ const DashboardNotesTab = ({ user }) => {
   // 2. Fetch Note Từ Thời Khóa Biểu
   const fetchTimetableNotes = async () => {
     try {
-      const res = await fetch(`/api/timetable?username=${user.username}`);
+      const res = await fetch(getFullApiUrl(`/api/timetable?username=${user.username}`));
       const data = await res.json();
       if (data.success) {
         const notes = [];
@@ -93,7 +94,7 @@ const DashboardNotesTab = ({ user }) => {
   const handleAddNote = async () => {
     if (!newTitle.trim() || !newContent.trim()) return;
     try {
-      const res = await fetch("/api/quick-notes", {
+      const res = await fetch(getFullApiUrl("/api/quick-notes"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -143,7 +144,7 @@ const DashboardNotesTab = ({ user }) => {
                 toast.dismiss(t);
                 try {
                   const res = await fetch(
-                    `/api/quick-notes/${id}?username=${user.username}`,
+                    getFullApiUrl(`/api/quick-notes/${id}?username=${user.username}`),
                     { method: "DELETE" }
                   );
                   if (!res.ok) throw new Error(`QUICK_NOTES_${res.status}`);
@@ -188,7 +189,7 @@ const DashboardNotesTab = ({ user }) => {
     setTimetableNotes(newNotes);
 
     try {
-      await fetch("/api/timetable/update-note", {
+      await fetch(getFullApiUrl("/api/timetable/update-note"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -237,7 +238,7 @@ const DashboardNotesTab = ({ user }) => {
                 );
 
                 try {
-                  await fetch("/api/timetable/update-note", {
+                  await fetch(getFullApiUrl("/api/timetable/update-note"), {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({

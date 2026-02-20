@@ -6,6 +6,7 @@ import { UploadModal } from "../components/DocumentModals";
 import { documentService } from "../services/documentService";
 import { userService } from "../services/userService";
 import { studyService } from "../services/studyService";
+import { getFullApiUrl } from '../config/apiConfig';
 import {
   User,
   FileText,
@@ -538,7 +539,7 @@ const StatisticsTab = ({ currentUser }) => {
         const [profileRes, studyRes, gpaResRaw] = await Promise.all([
           userService.getProfileStats(currentUser?.username),
           studyService.getStats(currentUser?.username),
-          fetch(`/api/gpa?username=${currentUser?.username}`).then((r) =>
+          fetch(getFullApiUrl(`/api/gpa?username=${currentUser?.username}`)).then((r) =>
             r.json()
           ),
         ]);

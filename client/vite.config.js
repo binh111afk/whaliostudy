@@ -14,12 +14,15 @@ export default defineConfig({
     },
   },
   server: {
-    // Thêm đoạn proxy này vào
+    // Proxy configuration cho local development
+    // Khi chạy dev server, các request bắt đầu bằng /api sẽ được forward đến backend
     proxy: {
       '/api': {
-        target: 'http://localhost:3000', // Trỏ thẳng về backend
+        target: 'http://localhost:3000', // URL của backend local
         changeOrigin: true,
         secure: false,
+        // Nếu backend của bạn chạy ở port khác, thay đổi target ở đây
+        // Ví dụ: target: 'http://localhost:5000'
       },
     },
   },

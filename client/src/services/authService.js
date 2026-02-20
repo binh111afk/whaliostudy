@@ -1,9 +1,11 @@
 // Đây là nơi chứa logic gọi API (tách biệt hoàn toàn với giao diện)
+import { getFullApiUrl } from '../config/apiConfig';
+
 export const authService = {
     async login(username, password) {
         try {
-            // Gọi qua Proxy (đã cấu hình trong vite.config.js) nên chỉ cần /api/login
-            const response = await fetch('/api/login', {
+            // Sử dụng getFullApiUrl để hỗ trợ cả development (proxy) và production (full URL)
+            const response = await fetch(getFullApiUrl('/api/login'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
@@ -17,7 +19,7 @@ export const authService = {
 
     async register(payload) {
         try {
-            const response = await fetch('/api/register', {
+            const response = await fetch(getFullApiUrl('/api/register'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

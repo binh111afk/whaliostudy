@@ -1,14 +1,16 @@
+import { getFullApiUrl } from '../config/apiConfig';
+
 export const documentService = {
     // Lấy danh sách tài liệu
     async getDocuments() {
-      const res = await fetch('/api/documents');
+      const res = await fetch(getFullApiUrl('/api/documents'));
       return await res.json();
     },
   
     // Tải lên tài liệu (FormData)
     async uploadDocument(formData) {
       try {
-          const res = await fetch('/api/upload-document', {
+          const res = await fetch(getFullApiUrl('/api/upload-document'), {
               method: 'POST',
               body: formData // Tự động set Content-Type
           });
@@ -21,7 +23,7 @@ export const documentService = {
   
     // Cập nhật thông tin
     async updateDocument(data) {
-      const res = await fetch('/api/update-document', {
+      const res = await fetch(getFullApiUrl('/api/update-document'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -31,7 +33,7 @@ export const documentService = {
   
     // Xóa tài liệu
     async deleteDocument(docId, username) {
-      const res = await fetch('/api/delete-document', {
+      const res = await fetch(getFullApiUrl('/api/delete-document'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ docId, username })
@@ -41,7 +43,7 @@ export const documentService = {
   
     // Lưu / Bỏ lưu
     async toggleSave(docId, username) {
-      const res = await fetch('/api/toggle-save-doc', {
+      const res = await fetch(getFullApiUrl('/api/toggle-save-doc'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ docId, username })
@@ -51,7 +53,7 @@ export const documentService = {
 
     async viewDocument(docId) {
       try {
-        const res = await fetch(`/api/documents/view/${docId}`, {
+        const res = await fetch(getFullApiUrl(`/api/documents/view/${docId}`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

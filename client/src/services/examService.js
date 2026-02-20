@@ -1,3 +1,5 @@
+import { getFullApiUrl } from '../config/apiConfig';
+
 export const examService = {
     // 1. Lấy danh sách đề (Trộn JSON Client + MongoDB)
     async getExams() {
@@ -16,7 +18,7 @@ export const examService = {
 
         // Lấy đề user tạo (vẫn gọi API như bình thường)
         try {
-            const resDb = await fetch('/api/exams');
+            const resDb = await fetch(getFullApiUrl('/api/exams'));
             if (resDb.ok) dbExams = await resDb.json();
         } catch (e) { console.error("Lỗi API exams", e); }
 
@@ -42,7 +44,7 @@ export const examService = {
         
         // Logic cũ cho đề tự tạo (giữ nguyên)
         try {
-            const res = await fetch('/api/exams');
+            const res = await fetch(getFullApiUrl('/api/exams'));
             const exams = await res.json();
             const foundExam = exams.find(e => String(e.id) === String(examId));
             return foundExam ? (foundExam.questions || foundExam.questionBank || []) : [];
@@ -53,7 +55,7 @@ export const examService = {
 
     // ... (Các hàm create/delete giữ nguyên)
     async createExam(examData) {
-        const res = await fetch('/api/create-exam', {
+        const res = await fetch(getFullApiUrl('/api/create-exam'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(examData)
@@ -62,7 +64,7 @@ export const examService = {
     },
 
     async deleteExam(examId, username) {
-        const res = await fetch('/api/delete-exam', {
+        const res = await fetch(getFullApiUrl('/api/delete-exam'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ examId, username })

@@ -1,14 +1,16 @@
+import { getFullApiUrl } from '../config/apiConfig';
+
 export const timetableService = {
     // Lấy TKB
     async getTimetable(username) {
-      const res = await fetch(`/api/timetable?username=${username}`);
+      const res = await fetch(getFullApiUrl(`/api/timetable?username=${username}`));
       return await res.json();
     },
   
     // Tạo mới (hoặc Sửa nếu có classId)
     async saveClass(classData, isEdit = false) {
       const url = isEdit ? '/api/timetable/update' : '/api/timetable';
-      const res = await fetch(url, {
+      const res = await fetch(getFullApiUrl(url), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(classData)
@@ -18,7 +20,7 @@ export const timetableService = {
   
     // Xóa 1 lớp
     async deleteClass(classId, username) {
-      const res = await fetch('/api/timetable/delete', {
+      const res = await fetch(getFullApiUrl('/api/timetable/delete'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ classId, username })
@@ -28,7 +30,7 @@ export const timetableService = {
   
     // Xóa tất cả
     async clearTimetable(username) {
-      const res = await fetch('/api/timetable/clear', {
+      const res = await fetch(getFullApiUrl('/api/timetable/clear'), {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username })
@@ -38,7 +40,7 @@ export const timetableService = {
   
     // Quản lý Ghi chú (Thêm/Sửa/Xóa/Toggle)
     async updateNote(classId, username, action, note) {
-      const res = await fetch('/api/timetable/update-note', {
+      const res = await fetch(getFullApiUrl('/api/timetable/update-note'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ classId, username, action, note })

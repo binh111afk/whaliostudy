@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from 'sonner';
+import { getFullApiUrl } from '../config/apiConfig';
 import {
   Calculator,
   Plus,
@@ -312,7 +313,7 @@ const GpaCalc = () => {
   // Load dữ liệu từ Server khi vào trang
   useEffect(() => {
     if (user) {
-      fetch(`/api/gpa?username=${user.username}`)
+      fetch(getFullApiUrl(`/api/gpa?username=${user.username}`))
         .then((res) => res.json())
         .then((data) => {
           if (data.success) {
@@ -359,7 +360,7 @@ const GpaCalc = () => {
 
     setIsSaving(true);
     try {
-      const res = await fetch("/api/gpa", {
+      const res = await fetch(getFullApiUrl("/api/gpa"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

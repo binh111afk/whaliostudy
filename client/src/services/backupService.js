@@ -1,4 +1,5 @@
 import localforage from 'localforage';
+import { getFullApiUrl } from '../config/apiConfig';
 
 const musicDB = localforage.createInstance({
     name: 'whalio_local_db',
@@ -115,7 +116,7 @@ export const backupService = {
      */
     async exportData(username) {
         try {
-            const response = await fetch('/api/backup', {
+            const response = await fetch(getFullApiUrl('/api/backup'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username })
@@ -185,7 +186,7 @@ export const backupService = {
             }
 
             // Gửi lên server để restore
-            const response = await fetch('/api/restore', {
+            const response = await fetch(getFullApiUrl('/api/restore'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, backupData })

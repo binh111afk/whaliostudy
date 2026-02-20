@@ -4,6 +4,7 @@ import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from 'rehype-raw'; // 👈 Thêm dòng này
 import "highlight.js/styles/atom-one-dark.css";
+import { getFullApiUrl } from '../config/apiConfig';
 import {
   Send,
   Paperclip,
@@ -95,7 +96,7 @@ const AiChat = () => {
   // --- API FUNCTIONS ---
   const loadSessions = async () => {
     try {
-      const res = await fetch(`/api/sessions?username=${user.username}`);
+      const res = await fetch(getFullApiUrl(`/api/sessions?username=${user.username}`));
       const data = await res.json();
       if (data.success) {
         setSessions(data.sessions);
@@ -115,7 +116,7 @@ const AiChat = () => {
     try {
       const currentUsername = user ? user.username : "guest";
       const res = await fetch(
-        `/api/session/${sessionId}?username=${currentUsername}`
+        getFullApiUrl(`/api/session/${sessionId}?username=${currentUsername}`)
       );
       const data = await res.json();
 
@@ -174,7 +175,7 @@ const AiChat = () => {
 
     try {
       const res = await fetch(
-        `/api/session/${sessionId}?username=${user.username}`,
+        getFullApiUrl(`/api/session/${sessionId}?username=${user.username}`),
         { method: "DELETE" }
       );
       const data = await res.json();
@@ -250,7 +251,7 @@ const AiChat = () => {
         formData.append("image", fileToSend);
       }
 
-      const res = await fetch("/api/chat", {
+      const res = await fetch(getFullApiUrl("/api/chat"), {
         method: "POST",
         body: formData,
       });
