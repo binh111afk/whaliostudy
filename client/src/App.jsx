@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { Menu, X, Home, FileText, Users, LayoutGrid, Moon, Sun, Settings, LogOut, Save } from 'lucide-react';
 import Sidebar from './components/Sidebar';
@@ -29,6 +29,36 @@ const MOBILE_NAV_ITEMS = [
   { to: '/documents', label: 'Tài liệu', icon: FileText },
   { to: '/community', label: 'Cộng đồng', icon: Users },
 ];
+
+const ROUTE_TITLES = {
+  '/': 'Trang chủ',
+  '/gpa': 'Tính GPA',
+  '/ai-assistant': 'Trợ lý AI',
+  '/profile': 'Hồ sơ',
+  '/community': 'Cộng đồng',
+  '/timer': 'Study Timer',
+  '/timetable': 'Thời khóa biểu',
+  '/documents': 'Tài liệu',
+  '/exams': 'Đề thi',
+  '/portal': 'Tiện ích',
+  '/announcements': 'Thông báo',
+};
+
+const RouteTitleManager = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    let pageTitle = ROUTE_TITLES[location.pathname];
+
+    if (!pageTitle && location.pathname.startsWith('/documents/')) {
+      pageTitle = 'Chi tiết tài liệu';
+    }
+
+    document.title = pageTitle ? `${pageTitle} | Whalio 2.0` : 'Whalio 2.0';
+  }, [location.pathname]);
+
+  return null;
+};
 
 const MobileBottomNav = ({ user, onLoginClick, onLogoutClick }) => {
   const navigate = useNavigate();
@@ -212,6 +242,7 @@ function App() {
 
   return (
     <Router>
+      <RouteTitleManager />
       <MusicProvider>
       <div className="flex h-screen w-full max-w-full overflow-hidden bg-gray-50 dark:bg-gray-900">
         <div className="hidden lg:block">
