@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 import { studyService } from "../services/studyService";
 import AddDeadlineModal from "../components/AddDeadlineModal";
 import DeadlineExpandedSection from "../components/DeadlineExpandedSection";
@@ -482,7 +483,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
 
       {/* 2. NAVIGATION TABS */}
       <div className="border-b border-gray-200 dark:border-gray-700">
-        <div className="flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 sm:gap-3">
           {[
             { id: "overview", label: "Tổng quan", icon: GraduationCap },
             { id: "exams", label: "Lịch trình hôm nay", icon: FileText },
@@ -492,14 +493,23 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 pb-3 px-1 text-sm font-bold transition-all border-b-2 whitespace-nowrap ${
+              className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-bold transition-all ${
                 activeTab === tab.id
-                  ? "border-primary text-primary dark:border-blue-400 dark:text-blue-400"
-                  : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  ? "text-blue-700 dark:text-blue-100"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               }`}
             >
-              <tab.icon size={18} />
-              {tab.label}
+              {activeTab === tab.id && (
+                <motion.span
+                  layoutId="dashboard-liquid-tab"
+                  className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-100 via-blue-50 to-cyan-100 dark:from-blue-800/80 dark:via-blue-700/70 dark:to-cyan-700/70"
+                  transition={{ type: "spring", stiffness: 360, damping: 30, mass: 0.75 }}
+                />
+              )}
+              <span className="relative z-10">
+                <tab.icon size={18} />
+              </span>
+              <span className="relative z-10">{tab.label}</span>
             </button>
           ))}
         </div>
