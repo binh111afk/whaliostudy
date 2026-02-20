@@ -18,9 +18,27 @@ const pdfParse = require('pdf-parse'); // Đọc file PDF
 // ==================== AI SERVICE ====================
 const { generateAIResponse } = require('./aiService'); // Bỏ cái /js/ đi là xong
 
+// ==================== ADMIN ROUTER ====================
+const adminRouter = require('./routes/admin');
+
 const app = express();
-// 1. CHỈ CẦN MỘT DÒNG NÀY LÀ ĐỦ CÂN CẢ THẾ GIỚI CORS
-app.use(cors());
+
+// 1. CORS Configuration - Cho phép cả Main App và Admin Panel
+const corsOptions = {
+    origin: [
+        'http://localhost:5173',      // Vite dev server (Main App)
+        'http://localhost:5174',      // Vite dev server (Admin Panel)
+        'http://localhost:3000',      // Express server
+        'http://127.0.0.1:5173',
+        'http://127.0.0.1:5174',
+        /\.vercel\.app$/,             // Vercel deployments
+        /\.netlify\.app$/             // Netlify deployments
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+app.use(cors(corsOptions));
 
 // 2. Middleware xử lý JSON (để nhận tin nhắn và ảnh)
 app.use(express.json({ limit: '10mb' }));
@@ -3719,6 +3737,10 @@ async function checkAvailableModels() {
 
 // Gọi hàm này khi server chạy
 checkAvailableModels();
+
+// ==================== ADMIN API ROUTES ====================
+app.use('/api/admin', adminRouter);
+console.log('👑 Admin API routes mounted at /api/admin');
 
 // ==================== SERVER START ====================
 // Thêm cái '0.0.0.0' vào vị trí thứ 2
