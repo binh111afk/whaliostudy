@@ -620,53 +620,58 @@ const DashboardFlashcardTab = () => {
       )}
 
       {view === "create" && (
-        <div className="overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-[0_20px_50px_-28px_rgba(30,64,175,0.45)] dark:border-blue-800 dark:bg-slate-900">
-          <div className="border-b border-blue-100 bg-gradient-to-r from-blue-900 via-blue-800 to-cyan-600 px-5 py-4 text-white sm:px-6">
-            <div className="flex items-center justify-between gap-3">
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-6">
+          <div className="mb-5 rounded-2xl bg-white px-4 py-4 shadow-sm sm:px-5">
+            <div className="flex items-start gap-3">
+              <button
+                onClick={() => setView("list")}
+                className="mt-0.5 text-slate-500 transition-colors hover:text-blue-800"
+                aria-label="Quay lại"
+              >
+                <ChevronLeft size={20} />
+              </button>
               <div>
-                <h3 className="text-lg font-black sm:text-xl">Tạo bộ Flashcard mới</h3>
-                <p className="mt-1 text-xs text-blue-100 sm:text-sm">
+                <h3 className="text-xl font-black text-blue-900 sm:text-2xl">
+                  Tạo bộ Flashcard mới
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
                   Điền thuật ngữ và định nghĩa để bắt đầu một bộ thẻ mới.
                 </p>
               </div>
-              <button
-                onClick={() => setView("list")}
-                className="rounded-xl border border-white/35 bg-white/10 px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-white/20"
-              >
-                Quay lại
-              </button>
             </div>
           </div>
 
-          <div className="space-y-5 p-5 sm:p-6">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
-              <div>
-                <label className="block text-xs font-black uppercase tracking-[0.16em] text-blue-700 dark:text-blue-300">
-                  Tên bộ thẻ
-                </label>
-                <input
-                  className="mt-2 w-full rounded-2xl border border-blue-200 bg-blue-50/50 px-4 py-3 text-sm font-bold text-slate-800 outline-none transition-all focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-blue-700 dark:bg-slate-800 dark:text-white"
-                  placeholder="VD: Từ vựng Tiếng Anh Unit 1"
-                  value={newDeckTitle}
-                  onChange={(e) => setNewDeckTitle(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-black uppercase tracking-[0.16em] text-blue-700 dark:text-blue-300">
-                  Màu chủ đạo
-                </label>
-                <div className="mt-2 flex gap-2">
-                  {["blue", "green", "purple", "red", "orange"].map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => setNewDeckColor(c)}
-                      className={`h-9 w-9 rounded-full border-2 transition-transform ${
-                        newDeckColor === c
-                          ? "scale-110 border-slate-900 dark:border-white"
-                          : "border-transparent"
-                      } ${colorMap[c].split(" ")[0]}`}
-                    />
-                  ))}
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-white p-4 shadow-sm sm:p-5">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-[0.16em] text-slate-600">
+                    Tên bộ thẻ
+                  </label>
+                  <input
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    placeholder="VD: Từ vựng Tiếng Anh Unit 1"
+                    value={newDeckTitle}
+                    onChange={(e) => setNewDeckTitle(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-[0.16em] text-slate-600">
+                    Màu chủ đạo
+                  </label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {["blue", "green", "purple", "red", "orange"].map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setNewDeckColor(c)}
+                        className={`relative h-9 w-9 rounded-full border transition-transform ${
+                          newDeckColor === c
+                            ? "scale-110 border-blue-600 ring-2 ring-blue-200"
+                            : "border-transparent"
+                        } ${colorMap[c].split(" ")[0]}`}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -675,49 +680,54 @@ const DashboardFlashcardTab = () => {
               {newCards.map((card, idx) => (
                 <div
                   key={idx}
-                  className="group grid grid-cols-[34px_1fr_auto] items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50/45 p-3 dark:border-blue-800 dark:bg-slate-800/60"
+                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
                 >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-black text-blue-700 dark:bg-slate-700 dark:text-blue-200">
-                    {idx + 1}
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-black text-blue-700">
+                      {idx + 1}
+                    </div>
+                    <button
+                      onClick={() => handleRemoveCardRow(idx)}
+                      className="rounded-lg p-2 text-rose-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
+                      aria-label={`Xóa thẻ ${idx + 1}`}
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <input
-                      className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-blue-700 dark:bg-slate-900 dark:text-white"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                       placeholder="Thuật ngữ"
                       value={card.term}
                       onChange={(e) => handleCardChange(idx, "term", e.target.value)}
                     />
                     <input
-                      className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-blue-700 dark:bg-slate-900 dark:text-white"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                       placeholder="Định nghĩa"
                       value={card.def}
                       onChange={(e) => handleCardChange(idx, "def", e.target.value)}
                     />
                   </div>
-                  <button
-                    onClick={() => handleRemoveCardRow(idx)}
-                    className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/20"
-                  >
-                    <Trash2 size={16} />
-                  </button>
                 </div>
               ))}
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <button
-                onClick={handleAddCardRow}
-                className="rounded-2xl border-2 border-dashed border-blue-200 px-4 py-3 text-sm font-bold text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-700 dark:text-blue-200 dark:hover:bg-slate-800"
-              >
-                + Thêm thẻ
-              </button>
-              <button
-                onClick={saveDeck}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-800 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-blue-300/40 transition-colors hover:bg-blue-900 dark:shadow-blue-900/40"
-              >
-                <Save size={18} />
-                Lưu bộ thẻ
-              </button>
+            <div className="pt-1">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  onClick={handleAddCardRow}
+                  className="rounded-2xl border-2 border-dashed border-blue-200 px-4 py-3 text-sm font-bold text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-700 dark:text-blue-200 dark:hover:bg-slate-800"
+                >
+                  + Thêm thẻ
+                </button>
+                <button
+                  onClick={saveDeck}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-800 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-blue-300/40 transition-colors hover:bg-blue-900 dark:shadow-blue-900/40"
+                >
+                  <Save size={18} />
+                  Lưu bộ thẻ
+                </button>
+              </div>
             </div>
           </div>
         </div>
