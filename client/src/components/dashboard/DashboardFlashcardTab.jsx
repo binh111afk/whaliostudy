@@ -617,11 +617,11 @@ const DashboardFlashcardTab = () => {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <button
                   onClick={() => handleRateCard("forgot")}
                   disabled={!isFlipped}
-                  className={`rounded-xl border px-3 py-2 text-sm font-bold transition-all ${
+                  className={`rounded-xl border px-2 py-2 text-xs font-bold transition-all sm:px-3 sm:text-sm ${
                     currentRating === "forgot"
                       ? "border-rose-400 bg-rose-100 text-rose-700"
                       : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
@@ -632,7 +632,7 @@ const DashboardFlashcardTab = () => {
                 <button
                   onClick={() => handleRateCard("reviewing")}
                   disabled={!isFlipped}
-                  className={`rounded-xl border px-3 py-2 text-sm font-bold transition-all ${
+                  className={`rounded-xl border px-2 py-2 text-xs font-bold transition-all sm:px-3 sm:text-sm ${
                     currentRating === "reviewing"
                       ? "border-amber-400 bg-amber-100 text-amber-700"
                       : "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
@@ -643,7 +643,7 @@ const DashboardFlashcardTab = () => {
                 <button
                   onClick={() => handleRateCard("mastered")}
                   disabled={!isFlipped}
-                  className={`rounded-xl border px-3 py-2 text-sm font-bold transition-all ${
+                  className={`rounded-xl border px-2 py-2 text-xs font-bold transition-all sm:px-3 sm:text-sm ${
                     currentRating === "mastered"
                       ? "border-emerald-400 bg-emerald-100 text-emerald-700"
                       : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
