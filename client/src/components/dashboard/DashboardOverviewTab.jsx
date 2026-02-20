@@ -131,6 +131,7 @@ const formatStudyDuration = (totalMinutes) => {
 
 // --- COMPONENT: TAB TỔNG QUAN ---
 const DashboardOverviewTab = ({
+  darkMode = false,
   // GPA Data
   gpaMetrics,
   targetCredits,
@@ -151,9 +152,7 @@ const DashboardOverviewTab = ({
 }) => {
   const [chartMode, setChartMode] = useState("credit");
   const [showAllDeadlinesMobile, setShowAllDeadlinesMobile] = useState(false);
-  const isDarkMode =
-    typeof document !== "undefined" &&
-    document.documentElement.classList.contains("dark");
+  const isDarkMode = Boolean(darkMode);
 
   // Computed values
   const prioritizedDeadlines = useMemo(() => {
@@ -393,7 +392,9 @@ const DashboardOverviewTab = ({
                       />
                       <RadialBar
                         minAngle={15}
-                        background={{ fill: isDarkMode ? "rgba(71,85,105,0.55)" : "#E5E7EB" }}
+                        background={{
+                          fill: isDarkMode ? "rgba(51,65,85,0.85)" : "#E5E7EB",
+                        }}
                         clockWise={true}
                         dataKey="value"
                         cornerRadius={12}

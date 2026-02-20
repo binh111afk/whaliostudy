@@ -518,6 +518,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
       {/* 3. CONTENT AREA */}
       {activeTab === "overview" && (
         <DashboardOverviewTab
+          darkMode={darkMode}
           gpaMetrics={gpaMetrics}
           targetCredits={targetCredits}
           isIncrease={isIncrease}
