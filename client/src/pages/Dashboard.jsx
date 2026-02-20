@@ -46,22 +46,7 @@ import {
   RadialBar,
   PolarAngleAxis,
 } from "recharts";
-
-// --- CẤU HÌNH GIỜ HỌC (Mapping Tiết -> Giờ bắt đầu) ---
-const PERIOD_START_TIMES = {
-  1: "07:00",
-  2: "07:50",
-  3: "09:00",
-  4: "09:50",
-  5: "10:40",
-  6: "13:00",
-  7: "13:50",
-  8: "15:00",
-  9: "15:50",
-  10: "16:40",
-  11: "17:30",
-  12: "18:20", // Thêm tiết tối nếu cần
-};
+import { PERIOD_TIMES, getMonday, isClassInWeek } from "../utils/timetableHelpers";
 
 // Hàm lấy tên thứ hiện tại (Khớp với format trong Database: "2", "3"... hoặc "CN")
 const getCurrentDayString = () => {
@@ -81,8 +66,13 @@ const getLocalDateKey = (dateInput = new Date()) => {
 const isScheduleOnlyEvent = (event) => {
   const eventType = String(event?.type || "").trim().toLowerCase();
   const eventTag = String(event?.deadlineTag || "").trim().toLowerCase();
-  if (eventType) return eventType === "other";
-  return eventTag === "lịch trình";
+  const description = String(event?.description || "");
+
+  // Chỉ coi là "lịch trình hôm nay" khi đủ dấu hiệu là lịch thủ công.
+  // Tránh loại nhầm dữ liệu deadline cũ dùng type="other".
+  if (eventTag === "lịch trình") return true;
+  if (eventType === "other" && /⏰/.test(description)) return true;
+  return false;
 };
 
 // ... (GIỮ NGUYÊN CÁC HELPER CŨ: getVNDate, formatDeadlineTime, convertToGPA4, EditTargetModal, ResourceCard, ChartStatBox) ...
@@ -1236,6 +1226,16 @@ const formatScheduleRemaining = (minsLeft) => {
   return `Còn ${hours} giờ ${mins} phút`;
 };
 
+const parseTimeToParts = (timeText) => {
+  const raw = String(timeText || "").trim();
+  const match = raw.match(/(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+  return { hours, minutes };
+};
+
 const DailyScheduleTab = ({ user }) => {
   const [schedule, setSchedule] = useState([]);
   const [now, setNow] = useState(new Date());
@@ -1263,23 +1263,48 @@ const DailyScheduleTab = ({ user }) => {
       const eventData = await eventRes.json();
       const todayStr = getCurrentDayString();
       const todayDateStr = getLocalDateKey(new Date());
+      const currentWeekStart = getMonday(new Date());
 
       let items = [];
 
       // 2. Xử lý TKB (Lọc theo thứ hôm nay)
       if (tkbData.success) {
         tkbData.timetable.forEach((cls) => {
-          if (cls.day === todayStr) {
-            // Tính giờ bắt đầu từ Tiết
-            const startTimeStr = PERIOD_START_TIMES[cls.startPeriod] || "00:00";
-            const [h, m] = startTimeStr.split(":").map(Number);
-            const startDate = new Date();
-            startDate.setHours(h, m, 0, 0);
+          if (String(cls.day) === todayStr && isClassInWeek(cls, currentWeekStart)) {
+            const startPeriod = Number(cls.startPeriod) || 1;
+            const numPeriods = Number(cls.numPeriods) || 1;
+            const endPeriod = startPeriod + numPeriods - 1;
 
-            // Tính giờ kết thúc (Giả sử mỗi tiết 50p)
-            const endTime = new Date(
-              startDate.getTime() + cls.numPeriods * 50 * 60000
-            );
+            const periodStart = PERIOD_TIMES[startPeriod]?.start;
+            const periodEnd = PERIOD_TIMES[endPeriod]?.end;
+
+            let startParts = parseTimeToParts(periodStart);
+            let endParts = parseTimeToParts(periodEnd);
+
+            if ((!startParts || !endParts) && cls.timeRange) {
+              const [rawStart, rawEnd] = String(cls.timeRange).split("-");
+              startParts = startParts || parseTimeToParts(rawStart);
+              endParts = endParts || parseTimeToParts(rawEnd);
+            }
+
+            const startDate = new Date();
+            const endTime = new Date();
+
+            if (startParts) {
+              startDate.setHours(startParts.hours, startParts.minutes, 0, 0);
+            } else {
+              startDate.setHours(0, 0, 0, 0);
+            }
+
+            if (endParts) {
+              endTime.setHours(endParts.hours, endParts.minutes, 0, 0);
+            } else {
+              endTime.setTime(startDate.getTime() + numPeriods * 50 * 60000);
+            }
+
+            if (endTime <= startDate) {
+              endTime.setTime(startDate.getTime() + numPeriods * 50 * 60000);
+            }
 
             items.push({
               type: "class",
@@ -1289,9 +1314,7 @@ const DailyScheduleTab = ({ user }) => {
               location: cls.campus || "",
               startTime: startDate,
               endTime: endTime,
-              note: `Tiết ${cls.startPeriod} - ${
-                cls.startPeriod + cls.numPeriods - 1
-              }`,
+              note: `Tiết ${startPeriod} - ${endPeriod}`,
             });
           }
         });
