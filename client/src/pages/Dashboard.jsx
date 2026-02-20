@@ -1723,6 +1723,26 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
     }
   }, [user]);
 
+  const resolveActiveUsername = (task = null) => {
+    const fromUserProp = String(user?.username || "").trim();
+    if (fromUserProp) return fromUserProp;
+
+    const fromTask = String(task?.username || "").trim();
+    if (fromTask) return fromTask;
+
+    if (typeof window !== "undefined") {
+      try {
+        const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+        const fromStorage = String(storedUser?.username || "").trim();
+        if (fromStorage) return fromStorage;
+      } catch (error) {
+        console.warn("Không thể đọc username từ localStorage:", error);
+      }
+    }
+
+    return "";
+  };
+
   // ... (GIỮ NGUYÊN CÁC HÀM: loadStats, loadDeadlines, loadGpaData, calculateGpaMetrics, handleDeleteDeadline, handleToggleDeadline) ...
   const loadStats = () => {
     studyService.getStats(user.username).then((res) => {
@@ -1914,6 +1934,14 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   const handleToggleDeadline = async (task) => {
     const taskId = String(task?._id || "");
     if (!taskId) return;
+
+    const activeUsername = resolveActiveUsername(task);
+    if (!activeUsername) {
+      toast.error("Thiếu thông tin đăng nhập. Vui lòng đăng nhập lại.", {
+        position: isMobileViewport() ? "bottom-center" : "top-center",
+      });
+      return;
+    }
     
     // Prevent multiple simultaneous toggles on the same task
     if (deadlineToggleLocksRef.current.has(taskId)) {
@@ -1938,7 +1966,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
     try {
       console.log("Sending toggle request:", {
         id: task._id,
-        username: user.username,
+        username: activeUsername,
         isDone: nextIsDone,
       });
       
@@ -1947,7 +1975,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: task._id,
-          username: user.username,
+          username: activeUsername,
           isDone: nextIsDone,
         }),
       });
