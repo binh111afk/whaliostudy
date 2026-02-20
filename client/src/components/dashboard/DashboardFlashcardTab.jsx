@@ -680,29 +680,29 @@ const DashboardFlashcardTab = () => {
               {newCards.map((card, idx) => (
                 <div
                   key={idx}
-                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                  className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
                 >
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-black text-blue-700">
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-black text-blue-700">
                       {idx + 1}
                     </div>
                     <button
                       onClick={() => handleRemoveCardRow(idx)}
-                      className="rounded-lg p-2 text-rose-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
+                      className="rounded-lg p-1.5 text-rose-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
                       aria-label={`Xóa thẻ ${idx + 1}`}
                     >
                       <Trash2 size={16} />
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <input
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                       placeholder="Thuật ngữ"
                       value={card.term}
                       onChange={(e) => handleCardChange(idx, "term", e.target.value)}
                     />
                     <input
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                       placeholder="Định nghĩa"
                       value={card.def}
                       onChange={(e) => handleCardChange(idx, "def", e.target.value)}
