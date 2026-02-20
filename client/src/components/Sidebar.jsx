@@ -17,16 +17,16 @@ const SidebarItem = ({ icon: Icon, label, to, onNavigate }) => (
   <NavLink to={to} onClick={onNavigate} className="block">
     {({ isActive }) => (
       <div
-        className={`relative flex items-center space-x-3 overflow-hidden rounded-xl p-3 transition-all ${
+        className={`relative isolate flex w-full items-center space-x-3 overflow-hidden rounded-xl p-3 transition-all ${
           isActive
-            ? "text-white shadow-md"
+            ? "text-white"
             : "text-gray-400 hover:bg-blue-50 hover:text-primary dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-blue-400"
         }`}
       >
         {isActive && (
           <motion.span
             layoutId="sidebar-liquid-active"
-            className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500"
+            className="absolute inset-0 rounded-xl bg-primary dark:bg-blue-600"
             transition={{ type: "spring", stiffness: 360, damping: 30, mass: 0.7 }}
           />
         )}
