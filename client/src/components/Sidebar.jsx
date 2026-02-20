@@ -14,7 +14,7 @@ import {
 import WhalioBrand from "./WhalioBrand";
 
 const SidebarItem = ({ icon: Icon, label, to, onNavigate }) => (
-  <NavLink to={to} onClick={onNavigate} className="block">
+  <NavLink to={to} onClick={onNavigate} className="block w-full">
     {({ isActive }) => (
       <div
         className={`relative isolate flex w-full items-center space-x-3 overflow-hidden rounded-xl p-3 transition-all ${
@@ -24,12 +24,12 @@ const SidebarItem = ({ icon: Icon, label, to, onNavigate }) => (
         }`}
       >
         {isActive && (
-          <motion.span
-            layoutId="sidebar-liquid-active"
-            className="absolute inset-0 rounded-xl bg-primary dark:bg-blue-600"
-            transition={{ type: "spring", stiffness: 360, damping: 30, mass: 0.7 }}
-          />
-        )}
+            <motion.span
+              layoutId="sidebar-liquid-active"
+              className="absolute inset-0 rounded-xl bg-primary dark:bg-blue-600"
+              transition={{ type: "spring", stiffness: 360, damping: 30, mass: 0.7 }}
+            />
+          )}
         <span className="relative z-10">
           <Icon size={20} />
         </span>

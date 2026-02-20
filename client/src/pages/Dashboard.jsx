@@ -495,15 +495,15 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
               onClick={() => setActiveTab(tab.id)}
               className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-bold transition-all ${
                 activeTab === tab.id
-                  ? "text-blue-700 dark:text-blue-100"
+                  ? "text-white"
                   : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               }`}
             >
               {activeTab === tab.id && (
                 <motion.span
                   layoutId="dashboard-liquid-tab"
-                  className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-100 via-blue-50 to-cyan-100 dark:from-blue-800/80 dark:via-blue-700/70 dark:to-cyan-700/70"
-                  transition={{ type: "spring", stiffness: 360, damping: 30, mass: 0.75 }}
+                  className="absolute inset-0 rounded-xl bg-primary dark:bg-blue-600"
+                  transition={{ type: "spring", stiffness: 360, damping: 30, mass: 0.7 }}
                 />
               )}
               <span className="relative z-10">
