@@ -19,7 +19,7 @@ const pdfParse = require('pdf-parse'); // Đọc file PDF
 const { generateAIResponse } = require('./aiService'); // Bỏ cái /js/ đi là xong
 
 // ==================== ADMIN ROUTER ====================
-const adminRouter = require('./routes/admin');
+const adminRouter = require('./routes/admin-refactored');
 
 const app = express();
 
@@ -288,9 +288,21 @@ const userSchema = new mongoose.Schema({
     avatar: { type: String, default: null },
     role: { type: String, default: 'member', enum: ['member', 'admin'] },
     savedDocs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Document' }],
+    
+    // Admin Management Fields
+    isLocked: { type: Boolean, default: false },
+    status: { type: String, default: 'active', enum: ['active', 'locked', 'pending'] },
+    lastIP: { type: String, default: '' },
+    lastDevice: { type: String, default: '' },
+    lastLogin: { type: Date, default: null },
+    totalStudyMinutes: { type: Number, default: 0 },
+    
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
+
+userSchema.index({ isLocked: 1, status: 1 });
+userSchema.index({ lastLogin: -1 });
 
 // --- Study Session Schema (Lưu lịch sử học tập) ---
 const studySessionSchema = new mongoose.Schema({
@@ -570,6 +582,78 @@ const chatSessionSchema = new mongoose.Schema({
 chatSessionSchema.index({ createdAt: -1 });
 chatSessionSchema.index({ username: 1, createdAt: -1 });
 
+// ==================== ADMIN PANEL SCHEMAS ====================
+
+// Blacklist IP Schema - Lưu danh sách IP bị chặn
+const blacklistIPSchema = new mongoose.Schema({
+    ip: { type: String, required: true, unique: true, index: true },
+    attackType: { type: String, enum: ['Brute Force', 'DDOS', 'SQL Injection', 'XSS', 'Other'], default: 'Other' },
+    attempts: { type: Number, default: 1 },
+    firstSeen: { type: Date, default: Date.now },
+    lastSeen: { type: Date, default: Date.now },
+    targetEndpoint: { type: String, default: '' },
+    status: { type: String, enum: ['active', 'blocked'], default: 'active' },
+    country: { type: String, default: 'Unknown' },
+    isp: { type: String, default: 'Unknown' },
+    blockedAt: { type: Date },
+    blockedBy: { type: String },
+    reason: { type: String, default: '' }
+});
+
+// System Settings Schema - Lưu cấu hình hệ thống (maintenance, backup settings, etc.)
+const systemSettingsSchema = new mongoose.Schema({
+    key: { type: String, required: true, unique: true, index: true },
+    value: { type: mongoose.Schema.Types.Mixed, required: true },
+    description: { type: String, default: '' },
+    updatedAt: { type: Date, default: Date.now },
+    updatedBy: { type: String, default: 'System' }
+});
+
+// System Event Schema - Log các sự kiện hệ thống
+const systemEventSchema = new mongoose.Schema({
+    type: { type: String, enum: ['deploy', 'backup', 'security', 'warning', 'system', 'rollback', 'maintenance'], required: true },
+    severity: { type: String, enum: ['success', 'warning', 'danger', 'info'], default: 'info' },
+    title: { type: String, required: true },
+    description: { type: String, default: '' },
+    details: { type: mongoose.Schema.Types.Mixed, default: {} },
+    performedBy: { type: String, default: 'System' },
+    createdAt: { type: Date, default: Date.now, index: true }
+});
+
+systemEventSchema.index({ type: 1, createdAt: -1 });
+
+// User Activity Log Schema - Lịch sử hoạt động của user
+const userActivityLogSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    username: { type: String, required: true, index: true },
+    action: { type: String, required: true }, // login, logout, study, exam, document, flashcard, etc.
+    description: { type: String, required: true },
+    ip: { type: String, default: '' },
+    device: { type: String, default: '' },
+    userAgent: { type: String, default: '' },
+    metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
+    createdAt: { type: Date, default: Date.now, index: true }
+});
+
+userActivityLogSchema.index({ userId: 1, createdAt: -1 });
+userActivityLogSchema.index({ username: 1, action: 1 });
+
+// Backup Record Schema - Lưu thông tin các bản backup
+const backupRecordSchema = new mongoose.Schema({
+    filename: { type: String, required: true, unique: true },
+    filepath: { type: String, required: true },
+    size: { type: Number, required: true },
+    type: { type: String, enum: ['Tự động', 'Thủ công'], default: 'Thủ công' },
+    status: { type: String, enum: ['Đang chạy', 'Hoàn tất', 'Lỗi'], default: 'Đang chạy' },
+    tables: { type: Number, default: 0 },
+    records: { type: Number, default: 0 },
+    compression: { type: String, default: 'gzip' },
+    duration: { type: String, default: '' },
+    createdBy: { type: String, default: 'System' },
+    description: { type: String, default: '' },
+    createdAt: { type: Date, default: Date.now, index: true }
+});
+
 // Create Models
 const User = mongoose.model('User', userSchema);
 const Document = mongoose.model('Document', documentSchema);
@@ -583,6 +667,13 @@ const Event = mongoose.model('Event', eventSchema);
 const DeadlineTag = mongoose.model('DeadlineTag', deadlineTagSchema);
 const ChatSession = mongoose.model('ChatSession', chatSessionSchema);
 const GpaModel = mongoose.model('Gpa', gpaSchema);
+
+// Admin Models
+const BlacklistIP = mongoose.model('BlacklistIP', blacklistIPSchema);
+const SystemSettings = mongoose.model('SystemSettings', systemSettingsSchema);
+const SystemEvent = mongoose.model('SystemEvent', systemEventSchema);
+const UserActivityLog = mongoose.model('UserActivityLog', userActivityLogSchema);
+const BackupRecord = mongoose.model('BackupRecord', backupRecordSchema);
 
 // Auto-seed on startup
 async function seedInitialData() {
@@ -982,6 +1073,12 @@ function getWeeksBetween(startDateStr, endDateStr) {
     return result;
 }
 
+// ==================== MAINTENANCE MODE MIDDLEWARE ====================
+// Kiểm tra chế độ bảo trì - Chặn user khi isEnabled = true
+// Admin vẫn truy cập được qua /api/admin/*
+app.use(adminRouter.maintenanceCheck);
+console.log('🔧 Maintenance mode middleware activated');
+
 // ==================== API ROUTES ====================
 
 // Keep-alive route for Render server
@@ -993,9 +1090,40 @@ app.get('/ping', (req, res) => {
 app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-        const user = await User.findOne({ username, password }).lean();
+        const user = await User.findOne({ username, password });
+        
         if (user) {
-            const { password: _, ...safeUser } = user;
+            // Kiểm tra tài khoản bị khóa
+            if (user.isLocked) {
+                return res.status(403).json({ 
+                    success: false, 
+                    message: "Tài khoản đã bị khóa. Vui lòng liên hệ Admin." 
+                });
+            }
+
+            // Cập nhật thông tin đăng nhập
+            const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip;
+            const userAgent = req.headers['user-agent'] || '';
+            const device = parseDeviceFromUA(userAgent);
+            
+            user.lastIP = clientIP;
+            user.lastDevice = device;
+            user.lastLogin = new Date();
+            await user.save();
+
+            // Log activity
+            await UserActivityLog.create({
+                userId: user._id,
+                username: user.username,
+                action: 'login',
+                description: 'Đăng nhập thành công',
+                ip: clientIP,
+                device: device,
+                userAgent: userAgent
+            });
+
+            const safeUser = user.toObject();
+            delete safeUser.password;
             res.json({ success: true, user: safeUser });
         } else {
             res.status(401).json({ success: false, message: "Tên đăng nhập hoặc mật khẩu không đúng!" });
@@ -1005,6 +1133,23 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({ success: false, message: "Lỗi server" });
     }
 });
+
+// Helper: Parse device name from User Agent
+function parseDeviceFromUA(ua) {
+    if (!ua) return 'Unknown';
+    if (ua.includes('iPhone')) return 'iPhone';
+    if (ua.includes('iPad')) return 'iPad';
+    if (ua.includes('Android')) return 'Android Device';
+    if (ua.includes('Windows')) {
+        if (ua.includes('Windows NT 10')) return 'Windows 10/11';
+        if (ua.includes('Windows NT 6.3')) return 'Windows 8.1';
+        if (ua.includes('Windows NT 6.1')) return 'Windows 7';
+        return 'Windows PC';
+    }
+    if (ua.includes('Macintosh') || ua.includes('Mac OS')) return 'MacBook/iMac';
+    if (ua.includes('Linux')) return 'Linux PC';
+    return 'Unknown Device';
+}
 
 app.post('/api/register', async (req, res) => {
     try {
