@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { studyService } from "../services/studyService";
 import AddDeadlineModal from "../components/AddDeadlineModal";
@@ -1697,6 +1697,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [showAllDeadlinesMobile, setShowAllDeadlinesMobile] = useState(false);
   const [isDeadlineExpanded, setIsDeadlineExpanded] = useState(false);
+  const deadlineToggleLocksRef = useRef(new Set());
 
   // State GPA & Credits
   const [gpaMetrics, setGpaMetrics] = useState({
@@ -1910,6 +1911,11 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   };
 
   const handleToggleDeadline = async (task) => {
+    const taskId = String(task?._id || "");
+    if (!taskId) return;
+    if (deadlineToggleLocksRef.current.has(taskId)) return;
+    deadlineToggleLocksRef.current.add(taskId);
+
     const nextIsDone = !Boolean(task.isDone);
     const newDeadlines = deadlines.map((d) =>
       d._id === task._id ? { ...d, isDone: nextIsDone } : d
@@ -1931,6 +1937,10 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
       }
     } catch (error) {
       loadDeadlines();
+    } finally {
+      setTimeout(() => {
+        deadlineToggleLocksRef.current.delete(taskId);
+      }, 350);
     }
   };
 
@@ -2428,8 +2438,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                             />
                           </button>
                           <div
-                            onClick={() => handleToggleDeadline(primaryDeadline)}
-                            className="flex-1 cursor-pointer"
+                            className="flex-1"
                           >
                             <div className="flex items-center gap-2">
                               <p
@@ -2552,8 +2561,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                 />
                               </button>
                               <div
-                                onClick={() => handleToggleDeadline(task)}
-                                className="flex-1 cursor-pointer"
+                                className="flex-1"
                               >
                                 <div className="flex items-center gap-2">
                                   <p
@@ -2667,8 +2675,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
                                 />
                               </button>
                               <div
-                                onClick={() => handleToggleDeadline(task)}
-                                className="flex-1 cursor-pointer"
+                                className="flex-1"
                               >
                                 <p
                                   className={`text-sm font-semibold ${
