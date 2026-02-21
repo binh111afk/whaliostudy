@@ -232,7 +232,7 @@ const DashboardOverviewTab = ({
   return (
     <div className="space-y-6">
       {/* Quick Stats Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 min-[1025px]:grid-cols-4 gap-3 sm:gap-4">
         {/* CARD 1: GPA */}
         <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4 relative overflow-hidden">
           <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center font-bold z-10">
@@ -311,9 +311,9 @@ const DashboardOverviewTab = ({
       </div>
 
       {/* Main Grid: Chart & Schedule */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 min-[1025px]:grid-cols-3 gap-6">
         {/* CỘT TRÁI: BIỂU ĐỒ ĐA NĂNG */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden">
+        <div className="min-[1025px]:col-span-2 bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-6">
             <h3 className="font-bold text-gray-800 dark:text-white flex items-center gap-2">
               {chartMode === "credit" ? (
@@ -354,9 +354,9 @@ const DashboardOverviewTab = ({
           <div className={chartMode === "credit" ? "w-full" : "h-64 w-full"}>
             {chartMode === "credit" ? (
               // --- BIỂU ĐỒ TIẾN ĐỘ ---
-              <div className="flex flex-col items-center justify-center lg:flex-row gap-5 sm:gap-6 lg:gap-10 p-2">
+              <div className="flex flex-col items-center justify-center min-[1025px]:flex-row gap-5 sm:gap-6 min-[1025px]:gap-10 p-2">
                 {/* PHẦN 1: BIỂU ĐỒ TRÒN */}
-                <div className="relative w-44 h-44 sm:w-52 sm:h-52 lg:w-56 lg:h-56 flex-shrink-0 group">
+                <div className="relative h-44 w-44 sm:h-52 sm:w-52 min-[1025px]:h-56 min-[1025px]:w-56 flex-shrink-0 group">
                   <ResponsiveContainer width="100%" height="100%">
                     <RadialBarChart
                       innerRadius="75%"
@@ -433,10 +433,10 @@ const DashboardOverviewTab = ({
                 </div>
 
                 {/* PHẦN 2: CÁC THÔNG SỐ CHI TIẾT */}
-                <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 w-full max-w-sm">
+                <div className="flex-1 grid grid-cols-1 min-[1025px]:grid-cols-2 gap-4 w-full max-w-sm">
                   {/* Box 1: Mục tiêu */}
                   <div
-                    className="flex flex-col p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 transition-transform lg:hover:scale-105 cursor-pointer"
+                    className="flex flex-col p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 transition-transform min-[1025px]:hover:scale-105 cursor-pointer"
                     onClick={onOpenTargetModal}
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -454,7 +454,7 @@ const DashboardOverviewTab = ({
                   </div>
 
                   {/* Box 2: Đã tích lũy */}
-                  <div className="flex flex-col p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 transition-transform lg:hover:scale-105">
+                  <div className="flex flex-col p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 transition-transform min-[1025px]:hover:scale-105">
                     <div className="flex items-center gap-2 mb-1">
                       <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                       <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-300 uppercase">
@@ -470,7 +470,7 @@ const DashboardOverviewTab = ({
                   </div>
 
                   {/* Box 3: Còn lại */}
-                  <div className="flex flex-col p-4 rounded-2xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 transition-transform lg:hover:scale-105">
+                  <div className="flex flex-col p-4 rounded-2xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 transition-transform min-[1025px]:hover:scale-105">
                     <div className="flex items-center gap-2 mb-1">
                       <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                       <span className="text-xs font-semibold text-orange-600 dark:text-orange-300 uppercase">
@@ -486,7 +486,7 @@ const DashboardOverviewTab = ({
                   </div>
 
                   {/* Box 4: Môn đã qua */}
-                  <div className="flex flex-col p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 transition-transform lg:hover:scale-105">
+                  <div className="flex flex-col p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 transition-transform min-[1025px]:hover:scale-105">
                     <div className="flex items-center gap-2 mb-1">
                       <BookOpen className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                       <span className="text-xs font-semibold text-purple-600 dark:text-purple-300 uppercase">

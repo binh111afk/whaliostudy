@@ -404,7 +404,7 @@ const DashboardFlashcardTab = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 min-[1025px]:grid-cols-2 2xl:grid-cols-3">
               {decks.map((deck) => {
                 const softTheme = deckSoftThemeMap[deck.color] || deckSoftThemeMap.blue;
                 const DeckIcon = deckOutlineIconMap[deck.color] || BookOpen;
@@ -415,7 +415,7 @@ const DashboardFlashcardTab = () => {
                   <article
                     key={deck.id}
                     onClick={() => startStudy(deck)}
-                    className="group relative flex min-h-[140px] lg:min-h-[124px] cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-slate-900"
+                    className="group relative flex min-h-[140px] min-[1025px]:min-h-[124px] cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-slate-900"
                   >
                     <button
                       onClick={(e) => {
@@ -429,7 +429,7 @@ const DashboardFlashcardTab = () => {
                     </button>
 
                     <div className="flex flex-1 flex-col p-4">
-                      <div className="lg:hidden">
+                      <div className="min-[1025px]:hidden">
                         <div className="mb-2">
                           <div
                             className={`inline-flex h-12 w-12 items-center justify-center rounded-full ${softTheme.iconWrap}`}
@@ -463,7 +463,7 @@ const DashboardFlashcardTab = () => {
                         </div>
                       </div>
 
-                      <div className="hidden lg:flex lg:flex-col lg:gap-2">
+                      <div className="hidden min-[1025px]:flex min-[1025px]:flex-col min-[1025px]:gap-2">
                         <div className="flex items-center gap-3">
                           <div
                             className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${softTheme.iconWrap}`}
@@ -681,7 +681,7 @@ const DashboardFlashcardTab = () => {
 
           <div className="space-y-4">
             <div className="rounded-2xl bg-white p-4 shadow-sm sm:p-5 dark:bg-slate-900">
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
+              <div className="grid grid-cols-1 gap-4 min-[1025px]:grid-cols-[2fr_1fr]">
                 <div>
                   <label className="block text-xs font-black uppercase tracking-[0.16em] text-slate-600 dark:text-slate-400">
                     Tên bộ thẻ

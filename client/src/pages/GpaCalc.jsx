@@ -1420,7 +1420,7 @@ const GpaCalc = () => {
             </div>
 
             {/* CONTROL BAR: Display Mode & Semester Selection */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white dark:bg-gray-800 p-2 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="flex flex-col min-[1025px]:flex-row min-[1025px]:items-center justify-between gap-3 bg-white dark:bg-gray-800 p-2 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
               <div className="flex min-w-0 items-center gap-2 px-2">
                 <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400">
                   <Layers size={18} />
@@ -1433,7 +1433,7 @@ const GpaCalc = () => {
                 </div>
               </div>
 
-              <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center lg:w-auto lg:justify-end">
+              <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center min-[1025px]:w-auto min-[1025px]:justify-end">
                 {/* Semester Dropdown (Only in Semester Mode) */}
                 {gpaDisplayMode === 'semester' && (
                   <div ref={semesterDropdownRef} className="relative w-full min-w-0 sm:min-w-[220px]">
@@ -1512,7 +1512,7 @@ const GpaCalc = () => {
             </div>
 
             {/* MAIN ADVANCED GRID */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 min-[1025px]:grid-cols-3 gap-4">
               {/* COL 1: WHERE I AM (Current Status) */}
               <div className="flex flex-col h-full bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gray-200 to-gray-100 dark:from-gray-700 dark:to-gray-800"></div>
@@ -1552,10 +1552,10 @@ const GpaCalc = () => {
               </div>
 
               {/* COL 2: THE GAP (Target & Gap) - Highlighted */}
-              <div className="flex flex-col h-full space-y-4 lg:-mt-4 lg:mb-4">
+              <div className="flex flex-col h-full space-y-4 min-[1025px]:-mt-4 min-[1025px]:mb-4">
                 {/* Visual Connector (Desktop only) */}
-                <div className="hidden lg:flex justify-center items-center h-8 text-gray-300">
-                  <ArrowRight size={20} className="rotate-90 lg:rotate-0 text-gray-300 dark:text-gray-600" />
+                <div className="hidden min-[1025px]:flex justify-center items-center h-8 text-gray-300">
+                  <ArrowRight size={20} className="rotate-90 min-[1025px]:rotate-0 text-gray-300 dark:text-gray-600" />
                 </div>
 
                 {!isScholarshipMode && (

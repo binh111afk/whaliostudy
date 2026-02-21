@@ -271,7 +271,7 @@ const DashboardNotesTab = ({ user }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 animate-fade-in-up overflow-x-hidden">
+    <div className="grid grid-cols-1 min-[1025px]:grid-cols-2 gap-6 min-[1025px]:gap-8 animate-fade-in-up overflow-x-hidden">
       {/* CỘT TRÁI: GHI CHÚ CÁ NHÂN (MÀU VÀNG) */}
       <div>
         <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
