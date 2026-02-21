@@ -78,7 +78,7 @@ const MobileBottomNav = ({ user, onLoginClick, onLogoutClick }) => {
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-2 py-2 backdrop-blur-lg dark:border-gray-700 dark:bg-gray-900/95 md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-2 py-2 backdrop-blur-lg dark:border-gray-700 dark:bg-gray-900/95 lg:hidden">
         <div className="mx-auto grid max-w-xl grid-cols-5 gap-1">
           {MOBILE_NAV_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -242,7 +242,7 @@ function App() {
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 768) {
+      if (window.innerWidth >= 1024) {
         setIsMobileSidebarOpen(false);
       }
     };
@@ -256,12 +256,12 @@ function App() {
       <RouteTitleManager />
       <MusicProvider>
       <div className="flex h-screen w-full max-w-full overflow-hidden bg-gray-50 dark:bg-gray-900">
-        <div className="hidden md:block">
+        <div className="hidden lg:block">
           <Sidebar />
         </div>
 
         {isMobileSidebarOpen && (
-          <div className="fixed inset-0 z-[90] flex md:hidden">
+          <div className="fixed inset-0 z-[90] flex lg:hidden">
             <div
               className="flex-1 bg-black/45 backdrop-blur-[1px]"
               onClick={() => setIsMobileSidebarOpen(false)}
@@ -282,8 +282,8 @@ function App() {
           </div>
         )}
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col md:ml-64">
-          <div className="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between border-b border-gray-200 bg-white/95 px-3 backdrop-blur-md dark:border-gray-700 dark:bg-gray-900/95 md:hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:ml-64">
+          <div className="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between border-b border-gray-200 bg-white/95 px-3 backdrop-blur-md dark:border-gray-700 dark:bg-gray-900/95 lg:hidden">
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
               className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
@@ -303,7 +303,7 @@ function App() {
             </button>
           </div>
 
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
           {/* HEADER: Truyền props xuống để Header biết:
              - user: Có ai đang đăng nhập không?
              - onLoginClick: Khi bấm nút "Đăng nhập" thì làm gì? (Mở modal)
@@ -319,7 +319,7 @@ function App() {
           </div>
 
           {/* Main content */}
-          <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 pb-24 pt-16 scroll-smooth sm:p-4 sm:pt-16 md:p-6 md:pb-6 md:pt-20">
+          <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 pb-24 pt-16 scroll-smooth sm:p-4 sm:pt-16 md:p-5 md:pt-16 lg:p-6 lg:pb-6 lg:pt-20">
             <Routes>
             <Route path="/" element={<Dashboard user={user} darkMode={darkMode} setDarkMode={setDarkMode} />} />
               <Route path="/gpa" element={<GpaCalc />} />
