@@ -28,11 +28,6 @@ const BCRYPT_SALT_ROUNDS = 12;
 const JWT_SECRET = process.env.JWT_SECRET || 'whalio_super_secret_key_change_in_production_2024';
 const JWT_EXPIRES_IN = '7d'; // Token hết hạn sau 7 ngày
 
-// ==================== FILE PARSING LIBRARIES ====================
-const mammoth = require('mammoth');  // Đọc file Word (.docx)
-const XLSX = require('xlsx');         // Đọc file Excel (.xlsx, .xls)
-const pdfParse = require('pdf-parse'); // Đọc file PDF
-
 // ==================== AI SERVICE ====================
 const { generateAIResponse } = require('./aiService'); // Bỏ cái /js/ đi là xong
 
@@ -4910,15 +4905,18 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                 else if (mimetype === 'application/pdf' || fileExt === '.pdf') {
                     fileTypeIcon = '📄';
                     console.log(`   📄 Đang đọc nội dung PDF...`);
-                    const pdfBuffer = await fsp.readFile(filePath);
+                    const pdfParse = require('pdf-parse');
+                    let pdfBuffer = await fsp.readFile(filePath);
                     const pdfData = await pdfParse(pdfBuffer);
                     extractedContent = pdfData.text;
+                    pdfBuffer = null;
                     console.log(`   ✅ Đã trích xuất ${extractedContent.length} ký tự từ PDF`);
                 }
                 // ==================== XỬ LÝ WORD (.docx) ====================
                 else if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || fileExt === '.docx') {
                     fileTypeIcon = '📝';
                     console.log(`   📝 Đang đọc nội dung Word (.docx)...`);
+                    const mammoth = require('mammoth');
                     const result = await mammoth.extractRawText({ path: filePath });
                     extractedContent = result.value;
                     console.log(`   ✅ Đã trích xuất ${extractedContent.length} ký tự từ Word`);
@@ -4929,6 +4927,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                     console.log(`   📝 File Word cũ (.doc) - thử đọc như text...`);
                     // .doc cũ khó đọc hơn, thử extract text cơ bản
                     try {
+                        const mammoth = require('mammoth');
                         const result = await mammoth.extractRawText({ path: filePath });
                         extractedContent = result.value;
                     } catch {
@@ -4939,7 +4938,8 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                 else if (mimetype.includes('spreadsheet') || mimetype.includes('excel') || fileExt === '.xlsx' || fileExt === '.xls') {
                     fileTypeIcon = '📊';
                     console.log(`   📊 Đang đọc nội dung Excel...`);
-                    const workbook = XLSX.readFile(filePath);
+                    const XLSX = require('xlsx');
+                    let workbook = XLSX.readFile(filePath);
                     let excelContent = '';
 
                     workbook.SheetNames.forEach((sheetName, index) => {
@@ -4950,6 +4950,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
 
                     extractedContent = excelContent;
                     console.log(`   ✅ Đã trích xuất ${extractedContent.length} ký tự từ ${workbook.SheetNames.length} sheet Excel`);
+                    workbook = null;
                 }
                 // ==================== XỬ LÝ POWERPOINT ====================
                 else if (mimetype.includes('presentation') || mimetype.includes('powerpoint') || fileExt === '.pptx' || fileExt === '.ppt') {
