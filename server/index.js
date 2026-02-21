@@ -18,7 +18,6 @@ const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
-const xss = require('xss-clean'); // 🛡️ [ENTERPRISE] Chống XSS Injection
 const hpp = require('hpp'); // 🛡️ [ENTERPRISE] Chống HTTP Parameter Pollution
 const { body, param, query, validationResult } = require('express-validator'); // 🛡️ [ENTERPRISE] Input Validation
 
@@ -114,7 +113,49 @@ console.log('🛡️  MongoDB Sanitization enabled (Enterprise Layer 2)');
 
 // 🛡️ [ENTERPRISE SECURITY - LAYER 3] XSS CLEAN
 // Tự động lọc mọi thẻ <script>, mã độc HTML trong req.body, req.query, req.params
-app.use(xss());
+const sanitizeXssString = (input) => {
+    if (typeof input !== 'string') return input;
+
+    return input
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/javascript:/gi, '')
+        .replace(/vbscript:/gi, '')
+        .replace(/data:text\/html/gi, '')
+        .replace(/on\w+\s*=/gi, '');
+};
+
+const deepSanitizeXss = (value) => {
+    if (typeof value === 'string') return sanitizeXssString(value);
+
+    if (Array.isArray(value)) {
+        for (let i = 0; i < value.length; i += 1) {
+            value[i] = deepSanitizeXss(value[i]);
+        }
+        return value;
+    }
+
+    if (value && typeof value === 'object') {
+        Object.keys(value).forEach((key) => {
+            value[key] = deepSanitizeXss(value[key]);
+        });
+    }
+
+    return value;
+};
+
+app.use((req, res, next) => {
+    if (req.body && typeof req.body === 'object') {
+        deepSanitizeXss(req.body);
+    }
+    if (req.params && typeof req.params === 'object') {
+        deepSanitizeXss(req.params);
+    }
+    if (req.query && typeof req.query === 'object') {
+        deepSanitizeXss(req.query);
+    }
+
+    next();
+});
 console.log('🛡️  XSS Clean protection enabled (Enterprise Layer 3)');
 
 // 🛡️ [ENTERPRISE SECURITY - LAYER 4] HTTP PARAMETER POLLUTION
@@ -135,9 +176,9 @@ const generalLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => {
-        return req.headers['x-forwarded-for']?.split(',')[0] || req.ip;
-    }
+    keyGenerator: (req) => rateLimit.ipKeyGenerator(
+        req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip
+    )
 });
 
 // Rate limiter nghiêm ngặt cho đăng nhập (5 lần / 15 phút)
@@ -151,9 +192,9 @@ const loginLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: true, // Không tính lần đăng nhập thành công
-    keyGenerator: (req) => {
-        return req.headers['x-forwarded-for']?.split(',')[0] || req.ip;
-    }
+    keyGenerator: (req) => rateLimit.ipKeyGenerator(
+        req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip
+    )
 });
 
 // Áp dụng general rate limit cho tất cả API
