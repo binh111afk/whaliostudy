@@ -37,7 +37,12 @@ const AiChat = () => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" && window.innerWidth < 768
+  );
+  const [sidebarOpen, setSidebarOpen] = useState(
+    typeof window !== "undefined" ? window.innerWidth >= 768 : true
+  );
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -52,6 +57,19 @@ const AiChat = () => {
     if (user) {
       loadSessions();
     }
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setSidebarOpen(true);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // 2. THEO DÕI VỊ TRÍ CUỘN
@@ -338,16 +356,31 @@ const AiChat = () => {
   };
 
   return (
-    <div className="absolute inset-0 flex bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 overflow-hidden">
+    <div className="relative flex h-full min-h-0 w-full overflow-hidden rounded-2xl border border-gray-200 bg-white text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+      {isMobile && sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Đóng danh sách cuộc trò chuyện"
+          className="absolute inset-0 z-30 bg-black/35"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* SIDEBAR LỊCH SỬ CHAT - HIỆN/ẨN BẰNG NÚT MENU */}
       <div
         className={`${
-          sidebarOpen ? "w-64" : "w-0"
+          isMobile
+            ? sidebarOpen
+              ? "absolute inset-y-0 left-0 z-40 w-[85vw] max-w-xs"
+              : "hidden"
+            : sidebarOpen
+              ? "w-64"
+              : "w-0"
         } bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col h-full shrink-0 overflow-hidden`}
       >
         <div className="p-4 shrink-0 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-800 dark:text-white">LỊCH SỪTHAT</h2>
+            <h2 className="text-lg font-bold text-gray-800 dark:text-white">Lịch sử chat</h2>
             <button
               onClick={() => setSidebarOpen(false)}
               className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400"
@@ -415,10 +448,10 @@ const AiChat = () => {
         </div>
       </div>
 
-      {/* MAIN CHAT AREA */}
-      <div className="flex-1 flex flex-col min-h-0 h-full">
-        {/* SIMPLE HEADER - chỉ có logo và nút menu */}
-        <div className="h-16 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6 bg-white dark:bg-gray-800 shrink-0">
+        {/* MAIN CHAT AREA */}
+        <div className="flex-1 flex flex-col min-h-0 h-full">
+          {/* SIMPLE HEADER - chỉ có logo và nút menu */}
+          <div className="h-14 sm:h-16 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-3 sm:px-6 bg-white dark:bg-gray-800 shrink-0">
           {/* Bên trái: Nút menu và logo */}
           <div className="flex items-center gap-3">
             <button
@@ -429,14 +462,14 @@ const AiChat = () => {
               <Menu size={20} />
             </button>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-800 dark:text-white text-lg flex items-center gap-2">
+              <span className="font-bold text-gray-800 dark:text-white text-base sm:text-lg flex items-center gap-2">
                 Whalio AI{" "}
                 <Sparkles
-                  size={16}
+                  size={14}
                   className="text-yellow-500 fill-yellow-500"
                 />
               </span>
-              <span className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full font-bold border border-blue-100 dark:border-blue-700">
+              <span className="hidden sm:inline-flex text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full font-bold border border-blue-100 dark:border-blue-700">
                 Flash 2.5
               </span>
             </div>
@@ -447,7 +480,7 @@ const AiChat = () => {
         {showScrollButton && (
           <button
             onClick={scrollToBottom}
-            className="absolute bottom-24 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 animate-bounce z-50 cursor-pointer"
+            className="absolute bottom-28 sm:bottom-24 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 animate-bounce z-50 cursor-pointer text-sm"
           >
             <ChevronDown size={16} />
             Tin nhắn mới
@@ -457,32 +490,32 @@ const AiChat = () => {
         {/* Chat Messages Container */}
         <div
           ref={chatContainerRef}
-          className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 space-y-8 bg-gray-50 dark:bg-gray-900"
+          className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 md:p-8 space-y-5 sm:space-y-8 bg-gray-50 dark:bg-gray-900"
         >
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex gap-4 max-w-4xl mx-auto ${
+              className={`flex gap-2 sm:gap-4 max-w-4xl mx-auto ${
                 msg.role === "user" ? "flex-row-reverse" : ""
               }`}
             >
               {/* Avatar */}
               <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm border ${
-                  msg.role === "model"
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm border ${
+                    msg.role === "model"
                     ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-blue-600 dark:text-blue-400"
                     : "bg-blue-600 dark:bg-blue-500 border-transparent text-white"
                 }`}
               >
                 {msg.role === "model" ? (
-                  <Sparkles size={18} className="fill-blue-600" />
+                  <Sparkles size={16} className="fill-blue-600" />
                 ) : (
-                  <User size={18} />
+                  <User size={16} />
                 )}
               </div>
 
               {/* Message Content */}
-              <div className="group relative max-w-[85%] min-w-0">
+              <div className="group relative max-w-[92%] sm:max-w-[85%] min-w-0">
                 <div
                   className={`text-xs font-bold mb-1 ${
                     msg.role === "user"
@@ -494,7 +527,7 @@ const AiChat = () => {
                 </div>
 
                 <div
-                  className={`px-6 py-4 rounded-2xl shadow-sm leading-relaxed text-[15px] break-words max-w-full ${
+                  className={`px-4 sm:px-6 py-3 sm:py-4 rounded-2xl shadow-sm leading-relaxed text-sm sm:text-[15px] break-words max-w-full ${
                     msg.role === "user"
                       ? "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-tr-sm border border-gray-100 dark:border-gray-700"
                       : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-gray-700"
@@ -509,7 +542,7 @@ const AiChat = () => {
                   )}
 
                   {msg.role === "model" ? (
-                    <div className="prose prose-sm max-w-none prose-blue prose-p:leading-7 prose-pre:my-0 break-words overflow-hidden">
+                    <div className="prose prose-sm sm:prose-base max-w-none prose-blue prose-p:leading-7 prose-pre:my-0 break-words overflow-hidden">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]} // Bắt buộc phải có để AI hiểu cú pháp bảng
                         rehypePlugins={[rehypeHighlight, rehypeRaw]}
@@ -573,7 +606,7 @@ const AiChat = () => {
 
         {/* Input Area */}
         <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0">
-          <div className="max-w-4xl mx-auto p-4 relative">
+          <div className="max-w-4xl mx-auto p-3 sm:p-4 relative">
             {/* Preview ảnh */}
             {filePreview && (
               <div className="absolute bottom-full left-0 mb-3 p-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex items-start gap-2 shadow-lg z-10 max-w-[calc(100%-2rem)]">
@@ -603,7 +636,7 @@ const AiChat = () => {
 
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className={`p-3 rounded-xl transition-colors shrink-0 cursor-pointer ${
+                className={`p-2.5 sm:p-3 rounded-xl transition-colors shrink-0 cursor-pointer ${
                   selectedFile
                     ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30"
                     : "text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -611,9 +644,9 @@ const AiChat = () => {
                 title="Gửi ảnh"
               >
                 {selectedFile ? (
-                  <ImageIcon size={22} />
+                  <ImageIcon size={20} />
                 ) : (
-                  <Paperclip size={22} />
+                  <Paperclip size={20} />
                 )}
               </button>
 
@@ -627,7 +660,7 @@ const AiChat = () => {
                   }
                 }}
                 placeholder="Hỏi Whalio bất kì điều gì ..."
-                className="flex-1 bg-transparent text-gray-800 dark:text-gray-200 border-none outline-none resize-none py-3 max-h-[120px] min-h-[48px] placeholder-gray-400 dark:placeholder-gray-400 text-base break-words min-w-0 transition-colors"
+                className="flex-1 bg-transparent text-gray-800 dark:text-gray-200 border-none outline-none resize-none py-2.5 sm:py-3 max-h-[120px] min-h-[44px] placeholder-gray-400 dark:placeholder-gray-400 text-sm sm:text-base break-words min-w-0 transition-colors"
                 rows={1}
                 onInput={(e) => {
                   e.target.style.height = "auto";
@@ -639,14 +672,14 @@ const AiChat = () => {
               <button
                 onClick={handleSend}
                 disabled={(!input.trim() && !selectedFile) || isLoading}
-                className={`p-3 rounded-xl shrink-0 transition-all cursor-pointer ${
+                className={`p-2.5 sm:p-3 rounded-xl shrink-0 transition-all cursor-pointer ${
                   (input.trim() || selectedFile) && !isLoading
                     ? "bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 shadow-md hover:shadow-lg"
                     : "bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed"
                 }`}
                 title="Gửi"
               >
-                <Send size={20} />
+                <Send size={18} />
               </button>
             </div>
 

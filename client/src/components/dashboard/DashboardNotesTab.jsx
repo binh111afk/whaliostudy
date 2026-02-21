@@ -321,8 +321,7 @@ const DashboardNotesTab = ({ user }) => {
                 {note.title}
               </h4>
               <p
-                className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap leading-relaxed font-medium"
-                style={{ fontFamily: '"Comic Sans MS", cursive, sans-serif' }}
+                className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap leading-relaxed font-normal"
               >
                 {note.content}
               </p>
