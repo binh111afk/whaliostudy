@@ -18,6 +18,9 @@ const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean'); // 🛡️ [ENTERPRISE] Chống XSS Injection
+const hpp = require('hpp'); // 🛡️ [ENTERPRISE] Chống HTTP Parameter Pollution
+const { body, param, query, validationResult } = require('express-validator'); // 🛡️ [ENTERPRISE] Input Validation
 
 // ==================== SECURITY CONSTANTS ====================
 const BCRYPT_SALT_ROUNDS = 12;
@@ -38,6 +41,16 @@ const adminRouter = require('./routes/admin-refactored');
 const app = express();
 app.set('trust proxy', true);
 
+// ==================== MIDDLEWARE CONFIGURATION ====================
+// 🔧 [CRITICAL] JSON/URL Parsing PHẢI ĐẶT TRƯỚC TẤT CẢ MIDDLEWARE BẢO MẬT
+// Lý do: Các middleware bảo mật (mongoSanitize, xss, hpp) cần req.body đã được parse
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+app.use(express.static(__dirname));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/img', express.static(path.join(__dirname, '../img')));
+console.log('✅  Request parsing enabled (JSON + URL-encoded, max 2MB)');
+
 // 1. CORS Configuration - Cho phép cả Main App và Admin Panel
 const corsOptions = {
     origin: [
@@ -56,26 +69,48 @@ const corsOptions = {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
 app.use(cors(corsOptions));
+console.log('✅  CORS enabled for multiple origins');
 
 // ==================== SECURITY MIDDLEWARE ====================
-// 1. Helmet - Thêm các HTTP Security Headers
+// 🛡️ [ENTERPRISE SECURITY - LAYER 1] HELMET - HTTP Security Headers
+// Ẩn giấu dấu vết server, chống clickjacking, XSS, MIME sniffing
 app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }, // Cho phép tải resource từ domain khác
-    contentSecurityPolicy: false // Tắt CSP để tránh conflict với frontend
+    contentSecurityPolicy: false, // Tắt CSP để tránh conflict với frontend
+    hidePoweredBy: true, // 🛡️ Xóa header X-Powered-By
+    xFrameOptions: { action: 'deny' }, // Chống clickjacking
+    xContentTypeOptions: true, // Chống MIME-sniffing
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    permittedCrossDomainPolicies: { permittedPolicies: 'none' }
 }));
-console.log('🛡️  Helmet security headers enabled');
+// 🛡️ Đảm bảo xóa X-Powered-By hoàn toàn
+app.disable('x-powered-by');
+console.log('🛡️  Helmet security headers enabled (Enterprise - Server fingerprints hidden)');
 
-// 2. Express Mongo Sanitize - Chặn NoSQL Injection ($gt, $eq, etc.)
+// 🛡️ [ENTERPRISE SECURITY - LAYER 2] MONGODB SANITIZATION
+// Chặn NoSQL Injection ($gt, $eq, etc.) - CẦN req.body đã được parse
 app.use(mongoSanitize({
     replaceWith: '_', // Thay thế ký tự nguy hiểm bằng '_'
     onSanitize: ({ req, key }) => {
         console.warn(`⚠️  NoSQL Injection attempt blocked! Key: ${key}, IP: ${req.ip}`);
     }
 }));
-console.log('🛡️  MongoDB Sanitization enabled');
+console.log('🛡️  MongoDB Sanitization enabled (Enterprise Layer 2)');
 
-// 3. Rate Limiting - Chống Brute Force & DDoS
-// Rate limiter cho tất cả API (100 requests / 15 phút)
+// 🛡️ [ENTERPRISE SECURITY - LAYER 3] XSS CLEAN
+// Tự động lọc mọi thẻ <script>, mã độc HTML trong req.body, req.query, req.params
+app.use(xss());
+console.log('🛡️  XSS Clean protection enabled (Enterprise Layer 3)');
+
+// 🛡️ [ENTERPRISE SECURITY - LAYER 4] HTTP PARAMETER POLLUTION
+// Chặn tấn công gử́i nhiều tham số trùng lặp (VD: ?username=admin&username=hacker)
+app.use(hpp({
+    whitelist: ['images', 'files'] // Cho phép một số field có thể có nhiều giá trị (file upload)
+}));
+console.log('🛡️  HTTP Parameter Pollution protection enabled (Enterprise Layer 4)');
+
+// 🛡️ [ENTERPRISE SECURITY - LAYER 5] RATE LIMITING
+// Chống Brute Force & DDoS - Rate limiter cho tất cả API (100 requests / 15 phút)
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 phút
     max: 100, // Tối đa 100 requests
@@ -108,10 +143,7 @@ const loginLimiter = rateLimit({
 
 // Áp dụng general rate limit cho tất cả API
 app.use('/api/', generalLimiter);
-console.log('🛡️  Rate limiting enabled (100 req/15min general, 5 req/15min login)');
-
-// 4. Middleware xử lý JSON (để nhận tin nhắn và ảnh)
-app.use(express.json({ limit: '10mb' }));
+console.log('🛡️  Rate limiting enabled (100 req/15min general, 5 req/15min login) - Enterprise Layer 5');
 
 // ⛔ REMOVED: Static data route - Không được serve public thư mục chứa exam/questions
 // app.use('/static-data', express.static(path.join(__dirname, 'data'))); // SECURITY RISK!
@@ -754,12 +786,6 @@ async function seedInitialData() {
     await seedExamsFromJSON(false);
 }
 
-// Middleware
-app.use(express.json());
-app.use(express.static(__dirname));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/img', express.static(path.join(__dirname, '../img')));
-
 // ==================== JWT AUTHENTICATION MIDDLEWARE ====================
 /**
  * verifyToken - Middleware xác thực JWT Token
@@ -879,6 +905,88 @@ function optionalAuth(req, res, next) {
 }
 
 console.log('🔐 JWT Authentication middleware initialized');
+
+// ==================== 🛡️ ENTERPRISE INPUT VALIDATION MIDDLEWARE ====================
+/**
+ * sanitizeInput - Middleware escape các ký tự nguy hiểm trong input
+ * Sử dụng cho các API như /api/posts, /api/comments, /api/quick-notes
+ */
+const sanitizeAndValidateInput = [
+    // Validate & escape các field phổ biến
+    body('content').optional().trim().escape(),
+    body('title').optional().trim().escape(),
+    body('message').optional().trim(), // Không escape để giữ markdown
+    body('username').optional().trim().escape(),
+    query('username').optional().trim().escape(),
+    param('id').optional().trim().escape(),
+];
+
+/**
+ * validateRequest - Kiểm tra kết quả validation và trả lỗi nếu có
+ */
+function validateRequest(req, res, next) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        console.warn(`⚠️  Validation failed for ${req.path}:`, errors.array());
+        return res.status(400).json({
+            success: false,
+            message: 'Dữ liệu đầu vào không hợp lệ'
+            // 🛡️ KHÔNG trả về chi tiết lỗi cho client (Error Cloaking)
+        });
+    }
+    next();
+}
+
+/**
+ * 🛡️ [ENTERPRISE] Dangerous payload patterns to block
+ * Chặn các payload nguy hiểm trước khi xử lý
+ */
+const DANGEROUS_PATTERNS = [
+    /<script\b[^>]*>([\s\S]*?)<\/script>/gi, // Script tags
+    /javascript:/gi, // JS protocol
+    /on\w+\s*=/gi, // Inline event handlers (onclick, onerror, etc.)
+    /\$\{.*\}/g, // Template literals injection
+    /\$gt|\$lt|\$eq|\$ne|\$or|\$and|\$where|\$regex/gi, // NoSQL operators (backup layer)
+    /eval\s*\(/gi, // eval() calls
+    /document\.cookie/gi, // Cookie theft attempts
+    /window\.location/gi, // Redirect attempts
+];
+
+function blockDangerousPayload(req, res, next) {
+    const checkValue = (value, path) => {
+        if (typeof value === 'string') {
+            for (const pattern of DANGEROUS_PATTERNS) {
+                if (pattern.test(value)) {
+                    console.error(`🚨 [SECURITY] Dangerous payload blocked!`);
+                    console.error(`   Path: ${req.path}`);
+                    console.error(`   Field: ${path}`);
+                    console.error(`   IP: ${req.ip}`);
+                    console.error(`   Pattern: ${pattern}`);
+                    return true;
+                }
+            }
+        } else if (typeof value === 'object' && value !== null) {
+            for (const key in value) {
+                if (checkValue(value[key], `${path}.${key}`)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+
+    if (checkValue(req.body, 'body') || checkValue(req.query, 'query') || checkValue(req.params, 'params')) {
+        return res.status(400).json({
+            success: false,
+            message: 'Yêu cầu không hợp lệ' // 🛡️ Error Cloaking - không tiết lộ lý do
+        });
+    }
+    next();
+}
+
+// 🛡️ Áp dụng global cho tất cả API routes
+app.use('/api/', blockDangerousPayload);
+console.log('🛡️  Enterprise input validation & dangerous payload blocker enabled');
 
 // ==================== EJS TEMPLATE ENGINE ====================
 app.set('view engine', 'ejs');
@@ -1046,50 +1154,112 @@ const chatFileUpload = multer({
     }
 });
 
-// 2. Bộ lọc kiểm duyệt (Giữ nguyên cái xịn lúc nãy)
+// 🛡️ [ENTERPRISE SECURITY] Bộ lọc upload siết chặt (kiểm tra CẢ mimetype VÀ extension)
 const upload = multer({
     storage,
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
     fileFilter: (req, file, cb) => {
-        console.log('📂 Đang xử lý file:', file.originalname);
+        console.log('📂 Đang xử lý file:', file.originalname, '| MIME:', file.mimetype);
 
         const ext = path.extname(file.originalname).toLowerCase();
-        const allowedExtensions = [
-            '.pdf', '.doc', '.docx', '.txt', '.rtf',
-            '.jpg', '.jpeg', '.png', '.gif',
-            '.xls', '.xlsx', '.ppt', '.pptx',
-            '.zip', '.rar'
+        
+        // 🛡️ [ENTERPRISE] DANH SÁCH ĐEN - CHẶN TRIỆT ĐỂ các file thực thi
+        const BLOCKED_EXTENSIONS = [
+            '.exe', '.bat', '.cmd', '.sh', '.bash', '.zsh', '.ps1', '.psm1',
+            '.vbs', '.vbe', '.js', '.jse', '.ws', '.wsf', '.wsc', '.wsh',
+            '.msi', '.msp', '.com', '.scr', '.pif', '.application', '.gadget',
+            '.jar', '.hta', '.cpl', '.msc', '.dll', '.sys', '.drv',
+            '.php', '.asp', '.aspx', '.jsp', '.cgi', '.pl', '.py', '.rb',
+            '.inf', '.reg', '.lnk', '.url', '.scf'
         ];
-
-        const allowedMimes = [
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'text/plain',
-            'image/jpeg', 'image/png', 'image/gif',
-            'application/octet-stream',
-            'application/zip', 'application/x-zip-compressed', 'application/x-rar-compressed'
+        
+        // 🛡️ [ENTERPRISE] DANH SÁCH ĐEN - CHẶN các MIME type nguy hiểm
+        const BLOCKED_MIMES = [
+            'application/x-msdownload', 'application/x-msdos-program',
+            'application/x-executable', 'application/x-sh', 'application/x-bash',
+            'application/x-perl', 'application/x-python', 'application/x-ruby',
+            'application/x-csh', 'application/x-shellscript',
+            'application/hta', 'application/x-ms-application',
+            'application/vnd.ms-htmlhelp', 'application/x-java-archive'
         ];
-
-        // Chỉ cần trúng 1 trong 2 điều kiện là cho qua
-        if (allowedExtensions.includes(ext) || allowedMimes.includes(file.mimetype)) {
-            console.log('   ✅ File hợp lệ! Đang gửi lên Cloudinary...');
-            return cb(null, true);
+        
+        // 🚨 KIỂM TRA DANH SÁCH ĐEN TRƯỚC
+        if (BLOCKED_EXTENSIONS.includes(ext)) {
+            console.error(`   🚨 [SECURITY] File thực thi bị chặn: ${file.originalname}`);
+            return cb(new Error('Không được phép upload file thực thi!'), false);
+        }
+        
+        if (BLOCKED_MIMES.includes(file.mimetype)) {
+            console.error(`   🚨 [SECURITY] MIME nguy hiểm bị chặn: ${file.mimetype}`);
+            return cb(new Error('Loại file này không được phép!'), false);
         }
 
-        console.error('   ❌ File bị chặn:', file.originalname);
-        cb(new Error(`Định dạng file không hỗ trợ!`), false);
+        // 🛡️ Danh sách trắng - CẦN TRÚNG CẢ HAI điều kiện
+        const ALLOWED_MAP = {
+            // Images - KIỂM TRA KĨ mimetype để chống ngụy trang
+            '.jpg': ['image/jpeg'],
+            '.jpeg': ['image/jpeg'],
+            '.png': ['image/png'],
+            '.gif': ['image/gif'],
+            '.webp': ['image/webp'],
+            // Documents
+            '.pdf': ['application/pdf'],
+            '.doc': ['application/msword'],
+            '.docx': ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            '.txt': ['text/plain'],
+            '.rtf': ['application/rtf', 'text/rtf'],
+            // Spreadsheets
+            '.xls': ['application/vnd.ms-excel'],
+            '.xlsx': ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+            // Presentations
+            '.ppt': ['application/vnd.ms-powerpoint'],
+            '.pptx': ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+            // Archives
+            '.zip': ['application/zip', 'application/x-zip-compressed'],
+            '.rar': ['application/x-rar-compressed', 'application/vnd.rar']
+        };
+        
+        // 🛡️ KIỂM TRA CẢ HAI: extension PHẢI nằm trong whitelist VÀ mimetype PHẢI khớp
+        const allowedMimesForExt = ALLOWED_MAP[ext];
+        
+        if (!allowedMimesForExt) {
+            console.error(`   ❌ Đuôi file không hợp lệ: ${ext}`);
+            return cb(new Error('Định dạng file không hỗ trợ!'), false);
+        }
+        
+        // 🛡️ Cho phép octet-stream cho một số trường hợp (browser không nhận diện được MIME)
+        const isOctetStream = file.mimetype === 'application/octet-stream';
+        const isMimeValid = allowedMimesForExt.includes(file.mimetype) || isOctetStream;
+        
+        if (!isMimeValid) {
+            console.error(`   🚨 [SECURITY] File ngụy trang bị phát hiện!`);
+            console.error(`      Extension: ${ext}, MIME thực tế: ${file.mimetype}`);
+            console.error(`      MIME mong đợi: ${allowedMimesForExt.join(', ')}`);
+            return cb(new Error('File bị ngụy trang không hợp lệ!'), false);
+        }
+        
+        console.log('   ✅ File hợp lệ! Extension và MIME khớp. Đang gửi lên Cloudinary...');
+        return cb(null, true);
     }
 });
 
 // ==================== DOCUMENT UPLOAD WITH DIRECT CLOUDINARY SDK ====================
 // 🔥 Sử dụng memory storage + Cloudinary SDK để có full control
+// 🛡️ [ENTERPRISE] Áp dụng bảo mật tương tự upload chính
 const documentMemoryStorage = multer.memoryStorage();
 const documentUpload = multer({
     storage: documentMemoryStorage,
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
     fileFilter: (req, file, cb) => {
         const ext = path.extname(file.originalname).toLowerCase();
+        
+        // 🛡️ [ENTERPRISE] CHẶN file thực thi
+        const BLOCKED = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.vbs', '.js', '.jar', '.msi', '.dll', '.php', '.py'];
+        if (BLOCKED.includes(ext)) {
+            console.error(`🚨 [SECURITY] Document upload: File thực thi bị chặn: ${file.originalname}`);
+            return cb(new Error('Không được phép upload file thực thi!'), false);
+        }
+        
         const allowedExtensions = [
             '.pdf', '.doc', '.docx', '.txt', '.rtf',
             '.jpg', '.jpeg', '.png', '.gif', '.webp',
@@ -1727,7 +1897,10 @@ app.get('/api/quick-notes', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Thiếu username' });
         }
 
-        const notes = await QuickNote.find({ username }).sort({ createdAt: -1 }).lean();
+        const notes = await QuickNote.find({ username })
+            .select('-__v') // 🛡️ [ENTERPRISE] Data Minimization
+            .sort({ createdAt: -1 })
+            .lean();
         return res.json({ success: true, notes });
     } catch (err) {
         console.error('Get quick notes error:', err);
@@ -1782,6 +1955,7 @@ app.delete('/api/quick-notes/:id', async (req, res) => {
 app.get('/api/announcements', async (req, res) => {
     try {
         const announcements = await Announcement.find({})
+            .select('-__v') // 🛡️ [ENTERPRISE] Data Minimization
             .sort({ createdAt: -1 })
             .lean();
 
@@ -1928,9 +2102,13 @@ app.delete('/api/announcements/:id', async (req, res) => {
 });
 
 // 4. Document APIs
+// 🛡️ [ENTERPRISE] Data Minimization - loại bỏ __v và thông tin nhạy cảm
 app.get('/api/documents', async (req, res) => {
     try {
-        const docs = await Document.find().sort({ createdAt: -1 }).lean();
+        const docs = await Document.find()
+            .select('-__v') // 🛡️ Loại bỏ version key
+            .sort({ createdAt: -1 })
+            .lean();
         // Map _id to id for frontend compatibility
         const formattedDocs = docs.map(doc => ({
             ...doc,
@@ -1970,9 +2148,10 @@ app.post('/api/upload-document', (req, res, next) => {
                     message: 'File quá lớn! Kích thước tối đa là 50MB.'
                 });
             }
+            // 🛡️ [ENTERPRISE] Error Cloaking - ẨN lỗi chi tiết upload
             return res.status(400).json({
                 success: false,
-                message: err.message || 'Lỗi tải file lên'
+                message: 'Không thể tải file lên. Vui lòng kiểm tra định dạng file.'
             });
         }
         next();
@@ -2033,10 +2212,10 @@ app.post('/api/upload-document', (req, res, next) => {
         // Return status 200 with success
         return res.status(200).json({ success: true, document: docResponse });
     } catch (error) {
-        // Enhanced error logging with JSON.stringify
+        // 🛡️ [ENTERPRISE] Log đầy đủ server-side, ẨN chi tiết client-side
         console.error("UPLOAD ERROR:", JSON.stringify(error, null, 2));
         console.error("UPLOAD ERROR STACK:", error.stack);
-        return res.status(500).json({ success: false, message: error.message || "Lỗi server không xác định" });
+        return res.status(500).json({ success: false, message: "Đã xảy ra lỗi hệ thống khi tải file" });
     }
 });
 
@@ -2146,7 +2325,8 @@ app.post('/api/update-document', verifyToken, async (req, res) => {
         res.json({ success: true, message: "Cập nhật thành công!" });
     } catch (err) {
         console.error('Update document error:', err);
-        res.status(500).json({ success: false, message: "Lỗi server: " + err.message });
+        // 🛡️ [ENTERPRISE] Error Cloaking - ẨN thông tin lỗi chi tiết
+        res.status(500).json({ success: false, message: "Đã xảy ra lỗi hệ thống" });
     }
 });
 
@@ -2316,7 +2496,11 @@ app.post('/api/create-exam', async (req, res) => {
 // 8. Community APIs
 app.get('/api/recent-activities', async (req, res) => {
     try {
-        const activities = await Activity.find().sort({ timestamp: -1 }).limit(10).lean();
+        const activities = await Activity.find()
+            .select('-__v') // 🛡️ [ENTERPRISE] Data Minimization
+            .sort({ timestamp: -1 })
+            .limit(10)
+            .lean();
         res.json({ success: true, activities, count: activities.length });
     } catch (err) {
         console.error('Get recent activities error:', err);
@@ -2326,7 +2510,10 @@ app.get('/api/recent-activities', async (req, res) => {
 
 app.get('/api/posts', async (req, res) => {
     try {
-        const posts = await Post.find({ deleted: false }).sort({ createdAt: -1 }).lean();
+        const posts = await Post.find({ deleted: false })
+            .select('-__v') // 🛡️ [ENTERPRISE] Data Minimization
+            .sort({ createdAt: -1 })
+            .lean();
         res.json({ success: true, posts });
     } catch (err) {
         console.error('Get posts error:', err);
@@ -2400,7 +2587,8 @@ app.post('/api/posts', upload.fields([
         res.json({ success: true, message: "Đã đăng bài thành công!", post: newPost });
     } catch (err) {
         console.error('Create post error:', err);
-        res.status(500).json({ success: false, message: "Lỗi server: " + err.message });
+        // 🛡️ [ENTERPRISE] Error Cloaking
+        res.status(500).json({ success: false, message: "Đã xảy ra lỗi hệ thống" });
     }
 });
 
@@ -2619,11 +2807,11 @@ app.post('/api/posts/edit', async (req, res) => {
         console.error('❌ Edit post error:', err);
         console.error('Error type:', err.name);
         console.error('Error message:', err.message);
-        console.error('Full error:', JSON.stringify(err, null, 2));
+        // 🛡️ [ENTERPRISE] Error Cloaking - Log đầy đủ server-side, ẨN chi tiết client-side
         res.status(500).json({
             success: false,
-            message: "Lỗi server: " + err.message,
-            errorType: err.name
+            message: "Đã xảy ra lỗi hệ thống"
+            // 🛡️ KHÔNG trả về: errorType, err.message, err.stack
         });
     }
 });
@@ -2911,6 +3099,7 @@ app.get('/api/study/tasks', async (req, res) => {
         }
 
         const tasks = await StudyTask.find({ username: String(username).trim() })
+            .select('-__v') // 🛡️ [ENTERPRISE] Data Minimization
             .sort({ createdAt: -1 })
             .lean();
         return res.json({ success: true, tasks });
@@ -3067,7 +3256,8 @@ app.post('/api/timetable', async (req, res) => {
         res.json({ success: true, message: 'Thêm lớp học thành công!', class: newClass });
     } catch (err) {
         console.error('❌ Create class error:', err);
-        res.json({ success: false, message: 'Lỗi server: ' + err.message });
+        // 🛡️ [ENTERPRISE] Error Cloaking
+        res.json({ success: false, message: 'Đã xảy ra lỗi hệ thống' });
     }
 });
 
@@ -3084,8 +3274,10 @@ app.get('/api/timetable', async (req, res) => {
             return res.json({ success: false, message: 'User not found' });
         }
 
-        // 🔥 LẤY TẤT CẢ CLASSES (không lọc tuần ở backend)
-        let userClasses = await Timetable.find({ username }).lean();
+        // �️ [ENTERPRISE] Data Minimization - loại bỏ __v
+        let userClasses = await Timetable.find({ username })
+            .select('-__v')
+            .lean();
 
         // 🔥 CRITICAL FIX: Tính lại weeks nếu rỗng
         userClasses = userClasses.map(cls => {
@@ -3202,7 +3394,8 @@ app.post('/api/timetable/update', verifyToken, async (req, res) => {
         res.json({ success: true, message: 'Cập nhật thành công!' });
     } catch (err) {
         console.error('❌ Update class error:', err);
-        res.json({ success: false, message: 'Server error: ' + err.message });
+        // 🛡️ [ENTERPRISE] Error Cloaking
+        res.json({ success: false, message: 'Đã xảy ra lỗi hệ thống' });
     }
 });
 
@@ -3310,7 +3503,8 @@ app.post('/api/timetable/update-note', async (req, res) => {
         });
     } catch (err) {
         console.error('❌ Update note error:', err);
-        res.json({ success: false, message: 'Server error: ' + err.message });
+        // 🛡️ [ENTERPRISE] Error Cloaking
+        res.json({ success: false, message: 'Đã xảy ra lỗi hệ thống' });
     }
 });
 
@@ -3379,7 +3573,9 @@ app.get('/api/events', async (req, res) => {
             return res.json({ success: false, message: 'Username is required' });
         }
 
-        const events = await Event.find({ username }).sort({ date: 1 });
+        const events = await Event.find({ username })
+            .select('-__v') // 🛡️ [ENTERPRISE] Data Minimization
+            .sort({ date: 1 });
         console.log(`📅 Fetched ${events.length} events for ${username}`);
         res.json({ success: true, events });
     } catch (err) {
@@ -4321,22 +4517,34 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
     }
 });
 
-// ==================== GLOBAL ERROR HANDLER ====================
-// This catches any errors not handled by route-specific error handling
+// ==================== 🛡️ ENTERPRISE ERROR CLOAKING ====================
+// TUYỆT ĐỐI KHÔNG trả về err.message hoặc err.stack cho client
+// Chỉ log chi tiết lỗi vào server console để debug
 app.use((err, req, res, next) => {
-    console.error('Unhandled error:', err);
+    // 🚨 Log chi tiết lỗi vào server (KHÔNG gử́i cho client)
+    console.error('='.repeat(60));
+    console.error('🚨 [ENTERPRISE ERROR LOG]');
+    console.error(`Path: ${req.method} ${req.path}`);
+    console.error(`IP: ${req.ip}`);
+    console.error(`Time: ${new Date().toISOString()}`);
+    console.error(`Error Name: ${err.name}`);
+    console.error(`Error Message: ${err.message}`);
+    console.error(`Stack Trace: ${err.stack}`);
+    console.error('='.repeat(60));
 
-    // Always return JSON for API routes
+    // 🛡️ Trả về thông báo chung chung cho client
     if (req.path.startsWith('/api/')) {
         return res.status(err.status || 500).json({
             success: false,
-            message: err.message || 'Lỗi server không xác định'
+            message: 'Đã xảy ra lỗi hệ thống, vui lòng thử lại sau'
+            // 🛡️ KHÔNG BAO GIờ trả về: error: err.message, stack: err.stack
         });
     }
 
-    // For non-API routes, send generic error
-    res.status(err.status || 500).send('Something went wrong!');
+    // For non-API routes
+    res.status(err.status || 500).send('Đã xảy ra lỗi hệ thống');
 });
+console.log('🛡️  Enterprise Error Cloaking enabled (sensitive info hidden)');
 
 // ==================== DEBUG: CHECK AVAILABLE MODELS ====================
 async function checkAvailableModels() {
