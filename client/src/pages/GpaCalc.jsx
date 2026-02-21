@@ -1420,23 +1420,23 @@ const GpaCalc = () => {
             </div>
 
             {/* CONTROL BAR: Display Mode & Semester Selection */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-2 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-              <div className="flex items-center gap-2 px-2">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-gray-800 p-2 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+              <div className="flex min-w-0 items-center gap-2 px-2">
                 <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400">
                   <Layers size={18} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs text-gray-400 font-bold uppercase">Chế độ xem</p>
-                  <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                  <p className="text-sm font-bold text-gray-700 dark:text-gray-200 break-words">
                     {gpaDisplayMode === 'cumulative' ? 'Tích lũy toàn khóa' : 'Chi tiết học kỳ'}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center md:w-auto md:justify-end">
                 {/* Semester Dropdown (Only in Semester Mode) */}
                 {gpaDisplayMode === 'semester' && (
-                  <div ref={semesterDropdownRef} className="relative min-w-[220px]">
+                  <div ref={semesterDropdownRef} className="relative w-full min-w-0 sm:min-w-[220px]">
                     <button
                       type="button"
                       onClick={() => setIsSemesterDropdownOpen((prev) => !prev)}
@@ -1445,9 +1445,11 @@ const GpaCalc = () => {
                         : 'bg-gray-50 dark:bg-gray-700/70 border-gray-200 dark:border-gray-600 hover:border-[#134691]/40 hover:bg-white dark:hover:bg-gray-700'
                         } text-gray-800 dark:text-white`}
                     >
+                      <span className="block truncate pr-2">
                       {selectedSemesterId
                         ? semesterGpas.find((sem) => sem.id === selectedSemesterId)?.name
                         : 'Chọn học kỳ...'}
+                      </span>
                     </button>
                     <ChevronDown
                       size={16}
@@ -1486,10 +1488,10 @@ const GpaCalc = () => {
                   </div>
                 )}
 
-                <div className="flex bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl">
+                <div className="flex w-full min-w-0 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl sm:w-auto">
                   <button
                     onClick={() => setGpaDisplayMode('cumulative')}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${gpaDisplayMode === 'cumulative'
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${gpaDisplayMode === 'cumulative'
                       ? 'bg-white text-primary shadow-sm'
                       : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
                       }`}
@@ -1498,7 +1500,7 @@ const GpaCalc = () => {
                   </button>
                   <button
                     onClick={() => setGpaDisplayMode('semester')}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${gpaDisplayMode === 'semester'
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${gpaDisplayMode === 'semester'
                       ? 'bg-white text-primary shadow-sm'
                       : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
                       }`}
@@ -1510,7 +1512,7 @@ const GpaCalc = () => {
             </div>
 
             {/* MAIN ADVANCED GRID */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* COL 1: WHERE I AM (Current Status) */}
               <div className="flex flex-col h-full bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gray-200 to-gray-100 dark:from-gray-700 dark:to-gray-800"></div>
@@ -1550,10 +1552,10 @@ const GpaCalc = () => {
               </div>
 
               {/* COL 2: THE GAP (Target & Gap) - Highlighted */}
-              <div className="flex flex-col h-full space-y-4 lg:-mt-4 lg:mb-4">
+              <div className="flex flex-col h-full space-y-4 md:-mt-4 md:mb-4">
                 {/* Visual Connector (Desktop only) */}
-                <div className="hidden lg:flex justify-center items-center h-8 text-gray-300">
-                  <ArrowRight size={20} className="rotate-90 lg:rotate-0 text-gray-300 dark:text-gray-600" />
+                <div className="hidden md:flex justify-center items-center h-8 text-gray-300">
+                  <ArrowRight size={20} className="rotate-90 md:rotate-0 text-gray-300 dark:text-gray-600" />
                 </div>
 
                 {!isScholarshipMode && (
@@ -1767,21 +1769,21 @@ const GpaCalc = () => {
                     };
                     const priority = getPriorityLabel(sub.impactScore, idx);
                     return (
-                      <div key={sub.id} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isCritical ? 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-700 shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-gray-200'}`}>
-                        <div className="flex items-center gap-4">
+                      <div key={sub.id} className={`flex flex-col gap-3 p-4 rounded-xl border transition-all ${isCritical ? 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-700 shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-gray-200'} sm:flex-row sm:items-center sm:justify-between`}>
+                        <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
                           <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${isCritical ? 'bg-amber-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
                             {idx + 1}
                           </span>
-                          <div>
-                            <p className="font-bold text-gray-800 dark:text-white text-base">{sub.subjectName}</p>
+                          <div className="min-w-0">
+                            <p className="font-bold text-gray-800 dark:text-white text-base break-words leading-snug">{sub.subjectName}</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{sub.credits} TC • {sub.isFull ? `Điểm: ${sub.currentScore}/10` : 'Chưa có điểm'}</p>
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="w-full pl-11 text-left sm:w-auto sm:pl-0 sm:text-right">
                           <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${priority.color}`}>
                             {priority.label}
                           </span>
-                          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 max-w-[200px] truncate">{sub.suggestion}</p>
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 break-words leading-relaxed sm:max-w-[220px]">{sub.suggestion}</p>
                         </div>
                       </div>
                     );
