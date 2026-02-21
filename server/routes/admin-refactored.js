@@ -20,6 +20,7 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const geoip = require('geoip-lite');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
@@ -68,6 +69,19 @@ function formatBytes(bytes, decimals = 2) {
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+function normalizeIp(rawValue) {
+    let ip = String(rawValue || '').trim();
+    if (!ip) return '';
+
+    if (ip.startsWith('::ffff:')) {
+        ip = ip.slice(7);
+    }
+    if (ip === '::1') {
+        return '127.0.0.1';
+    }
+    return ip;
 }
 
 /**
@@ -244,25 +258,34 @@ router.get('/users', async (req, res) => {
         const totalStudyMinutes = studyTimeAgg[0]?.total || 0;
 
         // Format users for response
-        const formattedUsers = users.map(user => ({
-            id: user._id.toString(),
-            username: user.username,
-            fullName: user.fullName,
-            email: user.email,
-            avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`,
-            device: user.lastDevice || 'Unknown',
-            studyTime: formatMinutesToHours(user.totalStudyMinutes || 0),
-            studyTimeMinutes: user.totalStudyMinutes || 0,
-            lastIP: user.lastIP || 'N/A',
-            lastCountry: user.lastCountry || '',
-            lastCity: user.lastCity || '',
-            lastLogin: user.lastLogin,
-            uploadedFilesCount: uploadedFilesByUsername[user.username] || 0,
-            isLocked: user.isLocked || false,
-            role: user.role === 'member' ? 'student' : user.role,
-            createdAt: user.createdAt,
-            status: user.status || 'active'
-        }));
+        const formattedUsers = users.map(user => {
+            const normalizedIP = normalizeIp(user.lastIP);
+            const geo = (!user.lastCountry && normalizedIP) ? geoip.lookup(normalizedIP) : null;
+            const lastCountry = user.lastCountry || String(geo?.country || '').trim();
+            const lastCity = user.lastCity || String(geo?.city || '').trim();
+            const location = [lastCity, lastCountry].filter(Boolean).join(', ') || 'Không xác định';
+
+            return {
+                id: user._id.toString(),
+                username: user.username,
+                fullName: user.fullName,
+                email: user.email,
+                avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`,
+                device: user.lastDevice || 'Unknown',
+                studyTime: formatMinutesToHours(user.totalStudyMinutes || 0),
+                studyTimeMinutes: user.totalStudyMinutes || 0,
+                lastIP: user.lastIP || 'N/A',
+                lastCountry,
+                lastCity,
+                location,
+                lastLogin: user.lastLogin,
+                uploadedFilesCount: uploadedFilesByUsername[user.username] || 0,
+                isLocked: user.isLocked || false,
+                role: user.role === 'member' ? 'student' : user.role,
+                createdAt: user.createdAt,
+                status: user.status || 'active'
+            };
+        });
 
         res.json({
             success: true,
@@ -317,6 +340,10 @@ router.get('/users/:id', async (req, res) => {
             });
         }
 
+        const lastCountry = user.lastCountry || '';
+        const lastCity = user.lastCity || '';
+        const location = [lastCity, lastCountry].filter(Boolean).join(', ') || 'Không xác định';
+
         const formattedUser = {
             id: user._id.toString(),
             username: user.username,
@@ -327,6 +354,9 @@ router.get('/users/:id', async (req, res) => {
             studyTime: formatMinutesToHours(user.totalStudyMinutes || 0),
             studyTimeMinutes: user.totalStudyMinutes || 0,
             lastIP: user.lastIP || 'N/A',
+            lastCountry,
+            lastCity,
+            location,
             lastLogin: user.lastLogin,
             isLocked: user.isLocked || false,
             role: user.role === 'member' ? 'student' : user.role,

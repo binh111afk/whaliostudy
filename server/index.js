@@ -24,6 +24,7 @@ const { generateAIResponse } = require('./aiService'); // Bỏ cái /js/ đi là
 const adminRouter = require('./routes/admin-refactored');
 
 const app = express();
+app.set('trust proxy', true);
 
 // 1. CORS Configuration - Cho phép cả Main App và Admin Panel
 const corsOptions = {
@@ -1095,7 +1096,7 @@ app.get('/ping', (req, res) => {
 // 1. Authentication APIs
 app.post('/api/login', async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { username, password, clientContext = {} } = req.body;
         const user = await User.findOne({ username, password });
         
         if (user) {
@@ -1111,11 +1112,15 @@ app.post('/api/login', async (req, res) => {
             const clientIP = extractClientIP(req);
             const { country, city } = getGeoLocationFromIP(clientIP);
             const userAgent = req.headers['user-agent'] || '';
-            const device = parseDeviceFromUA(userAgent);
+            const device = String(clientContext.device || '').trim() || parseDeviceFromUA(userAgent);
+            const clientCountry = String(clientContext.country || '').trim().toUpperCase();
+            const clientCity = String(clientContext.city || '').trim();
+            const resolvedCountry = clientCountry || country;
+            const resolvedCity = clientCity || city;
             
             user.lastIP = clientIP;
-            user.lastCountry = country;
-            user.lastCity = city;
+            user.lastCountry = resolvedCountry;
+            user.lastCity = resolvedCity;
             user.lastDevice = device;
             user.lastLogin = new Date();
             await user.save();
@@ -1146,36 +1151,74 @@ app.post('/api/login', async (req, res) => {
 // Helper: Resolve client IP from proxy/direct connection
 function extractClientIP(req) {
     const forwarded = req.headers['x-forwarded-for'];
-    let ip = '';
+    const candidates = [];
 
+    const pushCandidate = (value) => {
+        const normalized = normalizeIp(value);
+        if (normalized) {
+            candidates.push(normalized);
+        }
+    };
+
+    if (typeof req.headers['cf-connecting-ip'] === 'string') {
+        pushCandidate(req.headers['cf-connecting-ip']);
+    }
+    if (typeof req.headers['x-real-ip'] === 'string') {
+        pushCandidate(req.headers['x-real-ip']);
+    }
     if (typeof forwarded === 'string' && forwarded.trim()) {
-        ip = forwarded.split(',')[0].trim();
-    } else if (Array.isArray(forwarded) && forwarded.length > 0) {
-        ip = String(forwarded[0] || '').trim();
-    } else {
-        ip = req.socket?.remoteAddress || req.connection?.remoteAddress || req.ip || '';
+        forwarded.split(',').forEach((item) => pushCandidate(item));
+    } else if (Array.isArray(forwarded)) {
+        forwarded.forEach((item) => pushCandidate(item));
+    }
+
+    pushCandidate(req.ip);
+    pushCandidate(req.socket?.remoteAddress);
+    pushCandidate(req.connection?.remoteAddress);
+
+    const publicIp = candidates.find((ip) => !isPrivateIp(ip));
+    return publicIp || candidates[0] || '';
+}
+
+function normalizeIp(rawValue) {
+    let ip = String(rawValue || '').trim();
+    if (!ip) return '';
+
+    if (ip.startsWith('::ffff:')) {
+        ip = ip.slice(7);
     }
 
     if (/^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(ip)) {
         ip = ip.split(':')[0];
     }
 
-    if (ip.startsWith('::ffff:')) {
-        ip = ip.slice(7);
-    }
-
     if (ip === '::1') {
-        ip = '127.0.0.1';
+        return '127.0.0.1';
     }
 
     return ip;
+}
+
+function isPrivateIp(ip) {
+    if (!ip) return true;
+    if (ip === '127.0.0.1') return true;
+
+    if (/^10\./.test(ip)) return true;
+    if (/^192\.168\./.test(ip)) return true;
+    if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(ip)) return true;
+    if (/^169\.254\./.test(ip)) return true;
+    if (ip.startsWith('fc') || ip.startsWith('fd') || ip.startsWith('fe80')) return true;
+
+    return false;
 }
 
 // Helper: Get location info from IP using geoip-lite
 function getGeoLocationFromIP(ip) {
     if (!ip) return { country: '', city: '' };
     const geo = geoip.lookup(ip);
-    if (!geo) return { country: '', city: '' };
+    if (!geo) {
+        return { country: '', city: '' };
+    }
 
     return {
         country: String(geo.country || '').trim(),
@@ -1196,14 +1239,15 @@ function parseDeviceFromUA(ua) {
     const browserVersion = String(result?.browser?.version || '').trim();
 
     const osLabel = [osName, osVersion].filter(Boolean).join(' ').trim();
-    const browserLabel = [browserName, browserVersion].filter(Boolean).join(' ').trim();
+    const browserLabel = String(browserName || '').trim();
+    const engineLabel = String(result?.engine?.name || '').trim();
 
     if (model) {
         const deviceLabel = [vendor, model].filter(Boolean).join(' ').trim();
         return [deviceLabel, osLabel].filter(Boolean).join(' • ') || 'Unknown Device';
     }
 
-    const fallbackLabel = [osLabel, browserLabel].filter(Boolean).join(' • ').trim();
+    const fallbackLabel = [osLabel, browserLabel || engineLabel].filter(Boolean).join(' • ').trim();
     return fallbackLabel || 'Unknown Device';
 }
 
