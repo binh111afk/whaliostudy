@@ -32,6 +32,7 @@ const corsOptions = {
         'http://127.0.0.1:5173',
         'http://127.0.0.1:5174',
         'https://whaliostudying.onrender.com',  // Frontend trên Render
+        'https://weblogwhalio.onrender.com',
         /\.vercel\.app$/,             // Vercel deployments
         /\.netlify\.app$/             // Netlify deployments
     ],
