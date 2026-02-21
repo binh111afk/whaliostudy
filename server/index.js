@@ -91,6 +91,210 @@ app.use(helmet({
 app.disable('x-powered-by');
 console.log('🛡️  Helmet security headers enabled (Enterprise - Server fingerprints hidden)');
 
+// ==================== IP HELPER FUNCTIONS ====================
+// Helper: Normalize IP address (remove IPv6 prefix, port, etc.)
+function normalizeIp(rawValue) {
+    let ip = String(rawValue || '').trim();
+    if (!ip) return '';
+
+    if (ip.startsWith('::ffff:')) {
+        ip = ip.slice(7);
+    }
+
+    if (/^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(ip)) {
+        ip = ip.split(':')[0];
+    }
+
+    if (ip === '::1') {
+        return '127.0.0.1';
+    }
+
+    return ip;
+}
+
+// Helper: Check if IP is private/local
+function isPrivateIp(ip) {
+    if (!ip) return true;
+    if (ip === '127.0.0.1') return true;
+
+    if (/^10\./.test(ip)) return true;
+    if (/^192\.168\./.test(ip)) return true;
+    if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(ip)) return true;
+    if (/^169\.254\./.test(ip)) return true;
+    if (ip.startsWith('fc') || ip.startsWith('fd') || ip.startsWith('fe80')) return true;
+
+    return false;
+}
+
+// Helper: Extract client IP from request (handles proxies, Cloudflare, etc.)
+function extractClientIP(req) {
+    const forwarded = req.headers['x-forwarded-for'];
+    const candidates = [];
+
+    const pushCandidate = (value) => {
+        const normalized = normalizeIp(value);
+        if (normalized) {
+            candidates.push(normalized);
+        }
+    };
+
+    if (typeof req.headers['cf-connecting-ip'] === 'string') {
+        pushCandidate(req.headers['cf-connecting-ip']);
+    }
+    if (typeof req.headers['x-real-ip'] === 'string') {
+        pushCandidate(req.headers['x-real-ip']);
+    }
+    if (typeof forwarded === 'string' && forwarded.trim()) {
+        forwarded.split(',').forEach((item) => pushCandidate(item));
+    } else if (Array.isArray(forwarded)) {
+        forwarded.forEach((item) => pushCandidate(item));
+    }
+
+    pushCandidate(req.ip);
+    pushCandidate(req.socket?.remoteAddress);
+    pushCandidate(req.connection?.remoteAddress);
+
+    const publicIp = candidates.find((ip) => !isPrivateIp(ip));
+    return publicIp || candidates[0] || '';
+}
+
+// ==================== BLACKLIST IP GATEKEEPER ====================
+const BLOCKED_IP_FORBIDDEN_MESSAGE = 'Địa chỉ IP của bạn đã bị chặn do vi phạm chính sách bảo mật. Vui lòng liên hệ Admin Whalio để được hỗ trợ.';
+const BLOCKED_IP_CACHE_REFRESH_MS = 5 * 60 * 1000; // 5 phút
+let blockedIPCacheSet = new Set();
+let blockedIPCacheLastUpdatedAt = 0;
+let blockedIPCacheRefreshPromise = null;
+let blockedIPCacheRefreshInterval = null;
+
+function normalizeBlacklistIP(ip) {
+    return normalizeIp(ip);
+}
+
+function syncBlockedIPCacheLocally(ips = [], shouldBlock = true) {
+    if (!Array.isArray(ips) || ips.length === 0) return;
+    ips.forEach((rawIp) => {
+        const normalizedIp = normalizeBlacklistIP(rawIp);
+        if (!normalizedIp) return;
+        if (shouldBlock) {
+            blockedIPCacheSet.add(normalizedIp);
+        } else {
+            blockedIPCacheSet.delete(normalizedIp);
+        }
+    });
+}
+
+async function refreshBlockedIPCache({ force = false } = {}) {
+    if (blockedIPCacheRefreshPromise) {
+        return blockedIPCacheRefreshPromise;
+    }
+
+    const cacheIsFresh =
+        blockedIPCacheLastUpdatedAt > 0 &&
+        Date.now() - blockedIPCacheLastUpdatedAt < BLOCKED_IP_CACHE_REFRESH_MS;
+    if (!force && cacheIsFresh) {
+        return blockedIPCacheSet;
+    }
+
+    blockedIPCacheRefreshPromise = (async () => {
+        try {
+            if (mongoose.connection.readyState !== 1) {
+                return blockedIPCacheSet;
+            }
+
+            const blockedIPs = await BlacklistIP.find({ status: 'blocked' }).select('ip -_id').lean();
+            blockedIPCacheSet = new Set(
+                blockedIPs
+                    .map((entry) => normalizeBlacklistIP(entry.ip))
+                    .filter(Boolean)
+            );
+            blockedIPCacheLastUpdatedAt = Date.now();
+            console.log(`🚫 Blacklist IP cache refreshed (${blockedIPCacheSet.size} blocked IPs)`);
+        } catch (error) {
+            console.error('❌ Failed to refresh Blacklist IP cache:', error.message);
+        } finally {
+            blockedIPCacheRefreshPromise = null;
+        }
+
+        return blockedIPCacheSet;
+    })();
+
+    return blockedIPCacheRefreshPromise;
+}
+
+function startBlockedIPCacheAutoRefresh() {
+    if (blockedIPCacheRefreshInterval) return;
+
+    blockedIPCacheRefreshInterval = setInterval(() => {
+        void refreshBlockedIPCache({ force: true });
+    }, BLOCKED_IP_CACHE_REFRESH_MS);
+
+    if (typeof blockedIPCacheRefreshInterval.unref === 'function') {
+        blockedIPCacheRefreshInterval.unref();
+    }
+}
+
+function attachAdminBlacklistCacheSyncHook(req, res) {
+    const requestPath = req.path || '';
+    const isBlockRoute = req.method === 'POST' && requestPath === '/api/admin/security/ips/block';
+    const isUnblockRoute = req.method === 'DELETE' && requestPath === '/api/admin/security/ips/unblock';
+
+    if (!isBlockRoute && !isUnblockRoute) {
+        return;
+    }
+
+    const ips = Array.isArray(req.body?.ips)
+        ? req.body.ips.map((ip) => normalizeBlacklistIP(ip)).filter(Boolean)
+        : [];
+    if (ips.length === 0) {
+        return;
+    }
+
+    res.once('finish', () => {
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+            return;
+        }
+
+        syncBlockedIPCacheLocally(ips, isBlockRoute);
+        blockedIPCacheLastUpdatedAt = Date.now();
+
+        // Đồng bộ lại từ DB ở nền để đảm bảo cache luôn đúng với dữ liệu thực tế
+        void refreshBlockedIPCache({ force: true });
+    });
+}
+
+async function blockIPGatekeeper(req, res, next) {
+    try {
+        attachAdminBlacklistCacheSyncHook(req, res);
+
+        const clientIP = extractClientIP(req);
+        if (!clientIP) {
+            return next();
+        }
+
+        if (blockedIPCacheLastUpdatedAt === 0) {
+            await refreshBlockedIPCache({ force: true });
+        } else if (Date.now() - blockedIPCacheLastUpdatedAt >= BLOCKED_IP_CACHE_REFRESH_MS) {
+            void refreshBlockedIPCache();
+        }
+
+        if (blockedIPCacheSet.has(clientIP)) {
+            return res.status(403).json({
+                success: false,
+                message: BLOCKED_IP_FORBIDDEN_MESSAGE
+            });
+        }
+
+        return next();
+    } catch (error) {
+        console.error('❌ blockIPGatekeeper error:', error.message);
+        return next();
+    }
+}
+
+// Middleware này phải nằm trên cùng route stack (ngay sau CORS + Helmet)
+app.use(blockIPGatekeeper);
+console.log('🚫 Blacklist IP Gatekeeper enabled (RAM cache + periodic refresh)');
+
 // 🛡️ [ENTERPRISE SECURITY - LAYER 2] MONGODB SANITIZATION
 // Chặn NoSQL Injection ($gt, $eq, etc.) - CẦN req.body đã được parse
 // 🔧 [EXPRESS 5.x FIX] Không dùng middleware mặc định vì package cố gán lại req.query
@@ -229,6 +433,13 @@ mongoose.connect(MONGO_URI, {
 })
     .then(() => {
         console.log('🚀 Whalio is now connected to MongoDB Cloud');
+        
+        // Khởi tạo Blacklist IP cache và auto-refresh
+        refreshBlockedIPCache({ force: true }).then(() => {
+            startBlockedIPCacheAutoRefresh();
+            console.log('🚫 Blacklist IP cache initialized and auto-refresh started');
+        });
+        
         seedInitialData(); // Automatically seed data on startup
     })
     .catch((err) => {
@@ -1839,70 +2050,6 @@ app.post('/api/logout', async (req, res) => {
         });
     }
 });
-
-// Helper: Resolve client IP from proxy/direct connection
-function extractClientIP(req) {
-    const forwarded = req.headers['x-forwarded-for'];
-    const candidates = [];
-
-    const pushCandidate = (value) => {
-        const normalized = normalizeIp(value);
-        if (normalized) {
-            candidates.push(normalized);
-        }
-    };
-
-    if (typeof req.headers['cf-connecting-ip'] === 'string') {
-        pushCandidate(req.headers['cf-connecting-ip']);
-    }
-    if (typeof req.headers['x-real-ip'] === 'string') {
-        pushCandidate(req.headers['x-real-ip']);
-    }
-    if (typeof forwarded === 'string' && forwarded.trim()) {
-        forwarded.split(',').forEach((item) => pushCandidate(item));
-    } else if (Array.isArray(forwarded)) {
-        forwarded.forEach((item) => pushCandidate(item));
-    }
-
-    pushCandidate(req.ip);
-    pushCandidate(req.socket?.remoteAddress);
-    pushCandidate(req.connection?.remoteAddress);
-
-    const publicIp = candidates.find((ip) => !isPrivateIp(ip));
-    return publicIp || candidates[0] || '';
-}
-
-function normalizeIp(rawValue) {
-    let ip = String(rawValue || '').trim();
-    if (!ip) return '';
-
-    if (ip.startsWith('::ffff:')) {
-        ip = ip.slice(7);
-    }
-
-    if (/^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(ip)) {
-        ip = ip.split(':')[0];
-    }
-
-    if (ip === '::1') {
-        return '127.0.0.1';
-    }
-
-    return ip;
-}
-
-function isPrivateIp(ip) {
-    if (!ip) return true;
-    if (ip === '127.0.0.1') return true;
-
-    if (/^10\./.test(ip)) return true;
-    if (/^192\.168\./.test(ip)) return true;
-    if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(ip)) return true;
-    if (/^169\.254\./.test(ip)) return true;
-    if (ip.startsWith('fc') || ip.startsWith('fd') || ip.startsWith('fe80')) return true;
-
-    return false;
-}
 
 // Helper: Get location info from IP using geoip-lite
 function getGeoLocationFromIP(ip) {
