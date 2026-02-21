@@ -94,11 +94,22 @@ console.log('🛡️  Helmet security headers enabled (Enterprise - Server finge
 
 // 🛡️ [ENTERPRISE SECURITY - LAYER 2] MONGODB SANITIZATION
 // Chặn NoSQL Injection ($gt, $eq, etc.) - CẦN req.body đã được parse
-// 🔧 [EXPRESS 5.x FIX] Sử dụng onlyData: true để tránh ghi đè req.query/req.params
-app.use(mongoSanitize({
-    replaceWith: '_',
-    onlyData: true // 🔧 CHỈ sanitize req.body, KHÔNG chạm vào req.query/req.params
-}));
+// 🔧 [EXPRESS 5.x FIX] Không dùng middleware mặc định vì package cố gán lại req.query
+app.use((req, res, next) => {
+    const sanitizeOptions = { replaceWith: '_' };
+
+    if (req.body && typeof req.body === 'object') {
+        mongoSanitize.sanitize(req.body, sanitizeOptions);
+    }
+    if (req.params && typeof req.params === 'object') {
+        mongoSanitize.sanitize(req.params, sanitizeOptions);
+    }
+    if (req.query && typeof req.query === 'object') {
+        mongoSanitize.sanitize(req.query, sanitizeOptions);
+    }
+
+    next();
+});
 console.log('🛡️  MongoDB Sanitization enabled (Enterprise Layer 2)');
 
 // 🛡️ [ENTERPRISE SECURITY - LAYER 3] XSS CLEAN
