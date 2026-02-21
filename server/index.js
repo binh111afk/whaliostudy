@@ -6,6 +6,8 @@ const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
 const mongoose = require('mongoose');
+const geoip = require('geoip-lite');
+const UAParser = require('ua-parser-js');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -295,6 +297,8 @@ const userSchema = new mongoose.Schema({
     isLocked: { type: Boolean, default: false },
     status: { type: String, default: 'active', enum: ['active', 'locked', 'pending'] },
     lastIP: { type: String, default: '' },
+    lastCountry: { type: String, default: '' },
+    lastCity: { type: String, default: '' },
     lastDevice: { type: String, default: '' },
     lastLogin: { type: Date, default: null },
     totalStudyMinutes: { type: Number, default: 0 },
@@ -1104,11 +1108,14 @@ app.post('/api/login', async (req, res) => {
             }
 
             // Cập nhật thông tin đăng nhập
-            const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip;
+            const clientIP = extractClientIP(req);
+            const { country, city } = getGeoLocationFromIP(clientIP);
             const userAgent = req.headers['user-agent'] || '';
             const device = parseDeviceFromUA(userAgent);
             
             user.lastIP = clientIP;
+            user.lastCountry = country;
+            user.lastCity = city;
             user.lastDevice = device;
             user.lastLogin = new Date();
             await user.save();
@@ -1136,21 +1143,68 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// Helper: Parse device name from User Agent
-function parseDeviceFromUA(ua) {
-    if (!ua) return 'Unknown';
-    if (ua.includes('iPhone')) return 'iPhone';
-    if (ua.includes('iPad')) return 'iPad';
-    if (ua.includes('Android')) return 'Android Device';
-    if (ua.includes('Windows')) {
-        if (ua.includes('Windows NT 10')) return 'Windows 10/11';
-        if (ua.includes('Windows NT 6.3')) return 'Windows 8.1';
-        if (ua.includes('Windows NT 6.1')) return 'Windows 7';
-        return 'Windows PC';
+// Helper: Resolve client IP from proxy/direct connection
+function extractClientIP(req) {
+    const forwarded = req.headers['x-forwarded-for'];
+    let ip = '';
+
+    if (typeof forwarded === 'string' && forwarded.trim()) {
+        ip = forwarded.split(',')[0].trim();
+    } else if (Array.isArray(forwarded) && forwarded.length > 0) {
+        ip = String(forwarded[0] || '').trim();
+    } else {
+        ip = req.socket?.remoteAddress || req.connection?.remoteAddress || req.ip || '';
     }
-    if (ua.includes('Macintosh') || ua.includes('Mac OS')) return 'MacBook/iMac';
-    if (ua.includes('Linux')) return 'Linux PC';
-    return 'Unknown Device';
+
+    if (/^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(ip)) {
+        ip = ip.split(':')[0];
+    }
+
+    if (ip.startsWith('::ffff:')) {
+        ip = ip.slice(7);
+    }
+
+    if (ip === '::1') {
+        ip = '127.0.0.1';
+    }
+
+    return ip;
+}
+
+// Helper: Get location info from IP using geoip-lite
+function getGeoLocationFromIP(ip) {
+    if (!ip) return { country: '', city: '' };
+    const geo = geoip.lookup(ip);
+    if (!geo) return { country: '', city: '' };
+
+    return {
+        country: String(geo.country || '').trim(),
+        city: String(geo.city || '').trim()
+    };
+}
+
+// Helper: Parse device details from User Agent (Vendor + Model + OS)
+function parseDeviceFromUA(ua) {
+    const parser = new UAParser(ua || '');
+    const result = parser.getResult();
+
+    const vendor = String(result?.device?.vendor || '').trim();
+    const model = String(result?.device?.model || '').trim();
+    const osName = String(result?.os?.name || '').trim();
+    const osVersion = String(result?.os?.version || '').trim();
+    const browserName = String(result?.browser?.name || '').trim();
+    const browserVersion = String(result?.browser?.version || '').trim();
+
+    const osLabel = [osName, osVersion].filter(Boolean).join(' ').trim();
+    const browserLabel = [browserName, browserVersion].filter(Boolean).join(' ').trim();
+
+    if (model) {
+        const deviceLabel = [vendor, model].filter(Boolean).join(' ').trim();
+        return [deviceLabel, osLabel].filter(Boolean).join(' • ') || 'Unknown Device';
+    }
+
+    const fallbackLabel = [osLabel, browserLabel].filter(Boolean).join(' • ').trim();
+    return fallbackLabel || 'Unknown Device';
 }
 
 app.post('/api/register', async (req, res) => {

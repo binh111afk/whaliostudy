@@ -211,6 +211,25 @@ router.get('/users', async (req, res) => {
             User.countDocuments(query)
         ]);
 
+        const usernames = users
+            .map((user) => String(user.username || '').trim())
+            .filter(Boolean);
+
+        const uploadedFileStats = usernames.length > 0
+            ? await Document.aggregate([
+                { $match: { uploaderUsername: { $in: usernames } } },
+                { $group: { _id: '$uploaderUsername', count: { $sum: 1 } } }
+            ])
+            : [];
+
+        const uploadedFilesByUsername = uploadedFileStats.reduce((acc, item) => {
+            const username = String(item?._id || '').trim();
+            if (username) {
+                acc[username] = Number(item?.count || 0);
+            }
+            return acc;
+        }, {});
+
         // Get stats
         const [totalUsers, activeUsers, lockedUsers] = await Promise.all([
             User.countDocuments({}),
@@ -235,7 +254,10 @@ router.get('/users', async (req, res) => {
             studyTime: formatMinutesToHours(user.totalStudyMinutes || 0),
             studyTimeMinutes: user.totalStudyMinutes || 0,
             lastIP: user.lastIP || 'N/A',
+            lastCountry: user.lastCountry || '',
+            lastCity: user.lastCity || '',
             lastLogin: user.lastLogin,
+            uploadedFilesCount: uploadedFilesByUsername[user.username] || 0,
             isLocked: user.isLocked || false,
             role: user.role === 'member' ? 'student' : user.role,
             createdAt: user.createdAt,
@@ -1246,14 +1268,18 @@ router.get('/stats/overview', async (req, res) => {
             usersLastMonth,
             totalDocs,
             docsLastMonth,
-            totalSubjects
+            totalSubjects,
+            domesticUsersVN
         ] = await Promise.all([
             User.countDocuments({}),
             User.countDocuments({ createdAt: { $lt: startOfMonth } }),
             Document.countDocuments({}),
             Document.countDocuments({ createdAt: { $lt: startOfMonth } }),
-            Timetable.distinct('subject').then(arr => arr.length)
+            Timetable.distinct('subject').then(arr => arr.length),
+            User.countDocuments({ lastCountry: { $regex: /^VN$/i } })
         ]);
+
+        const internationalUsers = Math.max(0, totalUsers - domesticUsersVN);
 
         // Calculate growth percentages
         const userGrowth = usersLastMonth > 0 ? Math.round(((totalUsers - usersLastMonth) / usersLastMonth) * 100) : 100;
@@ -1280,6 +1306,20 @@ router.get('/stats/overview', async (req, res) => {
                 label: 'Môn học',
                 formatted: totalSubjects.toLocaleString(),
                 growthText: '+8%'
+            },
+            domesticUsersVN: {
+                value: domesticUsersVN,
+                growth: 0,
+                label: 'User trong nước (VN)',
+                formatted: domesticUsersVN.toLocaleString(),
+                growthText: '0%'
+            },
+            internationalUsers: {
+                value: internationalUsers,
+                growth: 0,
+                label: 'User quốc tế',
+                formatted: internationalUsers.toLocaleString(),
+                growthText: '0%'
             }
         };
 
@@ -1288,7 +1328,11 @@ router.get('/stats/overview', async (req, res) => {
             data: {
                 metrics: overview,
                 summary: {
-                    period
+                    period,
+                    userLocation: {
+                        domesticVN: domesticUsersVN,
+                        international: internationalUsers
+                    }
                 }
             },
             message: 'Lấy dữ liệu tổng quan thành công'
