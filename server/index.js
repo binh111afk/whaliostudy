@@ -1079,6 +1079,28 @@ function logDeniedAdminAccess(req, reason, user = null) {
         user: username,
         userId
     }));
+
+    // Lưu vào DB để truy vết dài hạn trên admin dashboard
+    if (mongoose.connection.readyState === 1) {
+        void SystemEvent.create({
+            type: 'security',
+            severity: 'warning',
+            title: 'Admin access denied',
+            description: `${reason} - ${req.method} ${endpoint}`,
+            details: {
+                reason,
+                method: req.method,
+                endpoint,
+                ip,
+                user: username,
+                userId,
+                userAgent: req.get('User-Agent') || ''
+            },
+            performedBy: username
+        }).catch((err) => {
+            console.error('❌ Failed to persist denied admin access event:', err.message);
+        });
+    }
 }
 
 /**

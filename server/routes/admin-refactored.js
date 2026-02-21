@@ -173,6 +173,24 @@ function logDeniedAdminRouteAccess(req, reason) {
         user: username,
         userId
     }));
+
+    // Fallback router guard cũng ghi vào SystemEvent để không mất dấu truy cập trái phép
+    void logSystemEvent(
+        'security',
+        'warning',
+        'Admin router access denied',
+        `${reason} - ${req.method} ${req.originalUrl || req.url || req.path}`,
+        {
+            reason,
+            method: req.method,
+            endpoint: req.originalUrl || req.url || req.path,
+            ip,
+            user: username,
+            userId,
+            userAgent: req.get('User-Agent') || ''
+        },
+        username
+    );
 }
 
 // Defense in depth: mọi admin endpoint phải có req.user role=admin.
