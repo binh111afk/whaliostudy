@@ -8,6 +8,7 @@ import AuthModal from './components/AuthModal'; // Import Modal
 import BackupRestoreModal from './components/BackupRestoreModal';
 import { MusicProvider } from './context/MusicContext';
 import FloatingPlayer from './components/FloatingPlayer';
+import { authService } from './services/authService';
 
 // Import các trang
 import GpaCalc from './pages/GpaCalc';
@@ -226,7 +227,15 @@ function App() {
   }, []);
 
   // 3. Hàm xử lý Đăng xuất
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const currentUser = user;
+    if (currentUser?.username) {
+      try {
+        await authService.logout(currentUser.username);
+      } catch (error) {
+        console.error('Logout tracking error:', error);
+      }
+    }
     localStorage.removeItem('user');
     setUser(null);
     // Có thể thêm reload nếu muốn reset sạch mọi thứ
