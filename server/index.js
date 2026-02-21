@@ -46,10 +46,15 @@ app.set('trust proxy', true);
 // Lý do: Các middleware bảo mật (mongoSanitize, xss, hpp) cần req.body đã được parse
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
+// 🔧 [EXPRESS 5.x FIX] Kích hoạt query parser TRƯỚC mongoSanitize
+// Express 5.x không tự động parse query string, gây lỗi "Cannot set property query"
+app.set('query parser', 'extended');
+
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/img', express.static(path.join(__dirname, '../img')));
-console.log('✅  Request parsing enabled (JSON + URL-encoded, max 2MB)');
+console.log('✅  Request parsing enabled (JSON + URL-encoded + Query, max 2MB)');
 
 // 1. CORS Configuration - Cho phép cả Main App và Admin Panel
 const corsOptions = {
@@ -89,11 +94,10 @@ console.log('🛡️  Helmet security headers enabled (Enterprise - Server finge
 
 // 🛡️ [ENTERPRISE SECURITY - LAYER 2] MONGODB SANITIZATION
 // Chặn NoSQL Injection ($gt, $eq, etc.) - CẦN req.body đã được parse
+// 🔧 [EXPRESS 5.x FIX] Sử dụng onlyData: true để tránh ghi đè req.query/req.params
 app.use(mongoSanitize({
-    replaceWith: '_', // Thay thế ký tự nguy hiểm bằng '_'
-    onSanitize: ({ req, key }) => {
-        console.warn(`⚠️  NoSQL Injection attempt blocked! Key: ${key}, IP: ${req.ip}`);
-    }
+    replaceWith: '_',
+    onlyData: true // 🔧 CHỈ sanitize req.body, KHÔNG chạm vào req.query/req.params
 }));
 console.log('🛡️  MongoDB Sanitization enabled (Enterprise Layer 2)');
 
