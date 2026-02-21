@@ -556,12 +556,14 @@ router.get('/users/:id/logs', async (req, res) => {
             limit = 50,
             page = 1
         } = req.query;
+        const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
+        const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
 
         let user;
         if (mongoose.Types.ObjectId.isValid(id)) {
-            user = await User.findById(id).select('_id username fullName email').lean();
+            user = await User.findById(id).select('_id username fullName email lastCity lastCountry').lean();
         } else {
-            user = await User.findOne({ username: id }).select('_id username fullName email').lean();
+            user = await User.findOne({ username: id }).select('_id username fullName email lastCity lastCountry').lean();
         }
 
         if (!user) {
@@ -572,46 +574,71 @@ router.get('/users/:id/logs', async (req, res) => {
             });
         }
 
-        // Build query
-        let query = { userId: user._id };
+        // Build query: ưu tiên cả userId và username để không mất log legacy
+        const query = {
+            $or: [
+                { userId: user._id },
+                { username: user.username }
+            ]
+        };
+
         if (action !== 'all') {
             query.action = action;
         }
 
         // Execute query with pagination
-        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const skip = (parsedPage - 1) * parsedLimit;
         const [logs, totalCount] = await Promise.all([
             UserActivityLog.find(query)
                 .sort({ createdAt: -1 })
                 .skip(skip)
-                .limit(parseInt(limit))
+                .limit(parsedLimit)
                 .lean(),
             UserActivityLog.countDocuments(query)
         ]);
 
         // Format logs
-        const formattedLogs = logs.map((log, index) => ({
+        const defaultLocation = [String(user.lastCity || '').trim(), String(user.lastCountry || '').trim()]
+            .filter(Boolean)
+            .join(', ');
+
+        const formattedLogs = logs.map((log) => {
+            const metadata = (log && typeof log.metadata === 'object' && log.metadata !== null) ? log.metadata : {};
+            const metadataCity = String(metadata.lastCity || metadata.city || '').trim();
+            const metadataCountry = String(metadata.lastCountry || metadata.country || '').trim();
+            const location = [metadataCity, metadataCountry].filter(Boolean).join(', ') || defaultLocation;
+            const descriptionWithLocation = location
+                ? `${log.description} (Location: ${location})`
+                : log.description;
+
+            return {
             id: log._id.toString(),
             action: log.action,
-            description: log.description,
-            ip: log.ip,
-            device: log.device,
+            description: descriptionWithLocation,
+            ip: log.ip || '',
+            device: log.device || '',
+            createdAt: log.createdAt,
             timestamp: log.createdAt
-        }));
+        };
+        });
 
         res.json({
             success: true,
             data: {
                 user: {
                     id: user._id.toString(),
+                    username: user.username,
                     fullName: user.fullName,
-                    email: user.email
+                    email: user.email,
+                    lastCity: String(user.lastCity || '').trim(),
+                    lastCountry: String(user.lastCountry || '').trim()
                 },
                 logs: formattedLogs,
                 pagination: {
-                    currentPage: parseInt(page),
-                    totalPages: Math.ceil(totalCount / parseInt(limit)),
-                    totalItems: totalCount
+                    currentPage: parsedPage,
+                    totalPages: Math.ceil(totalCount / parsedLimit),
+                    totalItems: totalCount,
+                    itemsPerPage: parsedLimit
                 }
             },
             message: 'Lấy lịch sử hoạt động thành công'

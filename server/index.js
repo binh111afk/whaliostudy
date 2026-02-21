@@ -4675,6 +4675,7 @@ async function checkAvailableModels() {
 checkAvailableModels();
 
 // ==================== ADMIN API ROUTES ====================
+app.use('/api/admin/users/:id/logs', verifyToken, verifyAdmin);
 app.use('/api/admin', adminRouter);
 console.log('👑 Admin API routes mounted at /api/admin');
 
