@@ -191,6 +191,27 @@ function logDeniedAdminRouteAccess(req, reason) {
         },
         username
     );
+
+    const activityUserId = req.user?.userId;
+    if (activityUserId && mongoose.Types.ObjectId.isValid(activityUserId) && username !== 'anonymous') {
+        getModels();
+        void UserActivityLog.create({
+            userId: activityUserId,
+            username,
+            action: 'admin_access_denied',
+            description: `Truy cập Admin API bị từ chối: ${reason}`,
+            ip,
+            device: 'Admin API',
+            userAgent: req.get('User-Agent') || '',
+            metadata: {
+                reason,
+                method: req.method,
+                endpoint: req.originalUrl || req.url || req.path
+            }
+        }).catch((err) => {
+            console.error('❌ Error logging denied admin access to user activity:', err.message);
+        });
+    }
 }
 
 // Defense in depth: mọi admin endpoint phải có req.user role=admin.

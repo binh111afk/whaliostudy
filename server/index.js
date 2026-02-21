@@ -1100,6 +1100,26 @@ function logDeniedAdminAccess(req, reason, user = null) {
         }).catch((err) => {
             console.error('❌ Failed to persist denied admin access event:', err.message);
         });
+
+        const activityUserId = userId && mongoose.Types.ObjectId.isValid(userId) ? userId : null;
+        if (activityUserId && username && username !== 'anonymous') {
+            void UserActivityLog.create({
+                userId: activityUserId,
+                username,
+                action: 'admin_access_denied',
+                description: `Truy cập Admin API bị từ chối: ${reason}`,
+                ip,
+                device: 'Admin API',
+                userAgent: req.get('User-Agent') || '',
+                metadata: {
+                    reason,
+                    method: req.method,
+                    endpoint
+                }
+            }).catch((err) => {
+                console.error('❌ Failed to persist denied admin access user activity:', err.message);
+            });
+        }
     }
 }
 
