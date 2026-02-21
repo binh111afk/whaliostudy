@@ -124,19 +124,25 @@ const sanitizeXssString = (input) => {
         .replace(/on\w+\s*=/gi, '');
 };
 
-const deepSanitizeXss = (value) => {
+const SENSITIVE_FIELDS = new Set(['password', 'oldPass', 'newPass', 'confirmPassword', 'token']);
+
+const deepSanitizeXss = (value, currentKey = '') => {
+    if (SENSITIVE_FIELDS.has(currentKey)) {
+        return value;
+    }
+
     if (typeof value === 'string') return sanitizeXssString(value);
 
     if (Array.isArray(value)) {
         for (let i = 0; i < value.length; i += 1) {
-            value[i] = deepSanitizeXss(value[i]);
+            value[i] = deepSanitizeXss(value[i], currentKey);
         }
         return value;
     }
 
     if (value && typeof value === 'object') {
         Object.keys(value).forEach((key) => {
-            value[key] = deepSanitizeXss(value[key]);
+            value[key] = deepSanitizeXss(value[key], key);
         });
     }
 
@@ -145,13 +151,13 @@ const deepSanitizeXss = (value) => {
 
 app.use((req, res, next) => {
     if (req.body && typeof req.body === 'object') {
-        deepSanitizeXss(req.body);
+        deepSanitizeXss(req.body, 'body');
     }
     if (req.params && typeof req.params === 'object') {
-        deepSanitizeXss(req.params);
+        deepSanitizeXss(req.params, 'params');
     }
     if (req.query && typeof req.query === 'object') {
-        deepSanitizeXss(req.query);
+        deepSanitizeXss(req.query, 'query');
     }
 
     next();
@@ -1590,9 +1596,28 @@ app.post('/api/refresh-token', verifyToken, async (req, res) => {
 app.post('/api/login', loginLimiter, async (req, res) => {
     try {
         const { username, password, clientContext = {} } = req.body;
+        const rawUsername = String(username || '');
+        const normalizedUsername = rawUsername.trim();
+        const inputPassword = String(password || '');
+
+        if (!normalizedUsername || !inputPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng nhập tên đăng nhập và mật khẩu!'
+            });
+        }
+
+        const escapedUsername = normalizedUsername.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const usernameLooseRegex = new RegExp(`^\\s*${escapedUsername}\\s*$`);
         
         // Tìm user theo username (không so sánh password ở đây)
-        const user = await User.findOne({ username });
+        const user = await User.findOne({
+            $or: [
+                { username: rawUsername },
+                { username: normalizedUsername },
+                { username: usernameLooseRegex }
+            ]
+        });
         
         if (!user) {
             return res.status(401).json({ 
@@ -1601,8 +1626,19 @@ app.post('/api/login', loginLimiter, async (req, res) => {
             });
         }
 
-        // 🔐 Kiểm tra mật khẩu bằng bcrypt
-        const isPasswordValid = await bcrypt.compare(password, user.password);
+        // 🔐 Hỗ trợ cả mật khẩu hash (mới) và plain text (legacy) rồi tự migrate
+        const storedPassword = String(user.password || '');
+        const isBcryptHash = /^\$2[aby]\$\d{2}\$/.test(storedPassword);
+        let isPasswordValid = false;
+        let shouldMigratePasswordHash = false;
+
+        if (isBcryptHash) {
+            isPasswordValid = await bcrypt.compare(inputPassword, storedPassword);
+        } else {
+            isPasswordValid = inputPassword === storedPassword;
+            shouldMigratePasswordHash = isPasswordValid;
+        }
+
         if (!isPasswordValid) {
             return res.status(401).json({ 
                 success: false, 
@@ -1619,6 +1655,11 @@ app.post('/api/login', loginLimiter, async (req, res) => {
         }
 
         // Cập nhật thông tin đăng nhập
+        if (shouldMigratePasswordHash) {
+            user.password = await bcrypt.hash(inputPassword, BCRYPT_SALT_ROUNDS);
+            console.log(`🔄 Legacy password migrated to bcrypt for user: ${user.username}`);
+        }
+
         const clientIP = extractClientIP(req);
         const { country, city } = getGeoLocationFromIP(clientIP);
         const userAgent = req.headers['user-agent'] || '';
@@ -1779,9 +1820,13 @@ function parseDeviceFromUA(ua) {
 app.post('/api/register', async (req, res) => {
     try {
         const { username, password, fullName, email } = req.body;
+        const normalizedUsername = String(username || '').trim();
+        const normalizedPassword = String(password || '');
+        const normalizedFullName = String(fullName || '').trim();
+        const normalizedEmail = String(email || '').trim().toLowerCase();
         
         // Validate input
-        if (!username || !password || !fullName || !email) {
+        if (!normalizedUsername || !normalizedPassword || !normalizedFullName || !normalizedEmail) {
             return res.status(400).json({ 
                 success: false, 
                 message: "Vui lòng điền đầy đủ thông tin!" 
@@ -1789,32 +1834,32 @@ app.post('/api/register', async (req, res) => {
         }
 
         // Validate password strength
-        if (password.length < 6) {
+        if (normalizedPassword.length < 6) {
             return res.status(400).json({ 
                 success: false, 
                 message: "Mật khẩu phải có ít nhất 6 ký tự!" 
             });
         }
 
-        const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+        const existingUser = await User.findOne({ $or: [{ username: normalizedUsername }, { email: normalizedEmail }] });
         if (existingUser) {
-            if (existingUser.username === username) {
+            if (existingUser.username === normalizedUsername) {
                 return res.status(400).json({ success: false, message: "Tên đăng nhập đã tồn tại!" });
             }
-            if (existingUser.email === email) {
+            if (existingUser.email === normalizedEmail) {
                 return res.status(400).json({ success: false, message: "Email này đã được sử dụng!" });
             }
         }
 
         // 🔐 Hash password trước khi lưu vào database
-        const hashedPassword = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
-        console.log(`🔒 Password hashed for new user: ${username}`);
+        const hashedPassword = await bcrypt.hash(normalizedPassword, BCRYPT_SALT_ROUNDS);
+        console.log(`🔒 Password hashed for new user: ${normalizedUsername}`);
 
         const newUser = new User({
-            username,
+            username: normalizedUsername,
             password: hashedPassword, // Lưu hash, không lưu plain text
-            fullName,
-            email,
+            fullName: normalizedFullName,
+            email: normalizedEmail,
             avatar: '/img/avt.png',
             role: "member",
             savedDocs: []
@@ -1824,7 +1869,7 @@ app.post('/api/register', async (req, res) => {
         const safeUser = newUser.toObject();
         delete safeUser.password; // Không trả về password hash
         
-        console.log(`✅ New user registered: ${username}`);
+        console.log(`✅ New user registered: ${normalizedUsername}`);
         res.json({ success: true, message: "Đăng ký thành công!", user: safeUser });
     } catch (err) {
         console.error('Register error:', err);
