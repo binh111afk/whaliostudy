@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   Bell,
   CalendarDays,
@@ -85,13 +86,13 @@ const DeadlineExpandedSection = ({
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 z-[80] bg-slate-900/50 p-2 backdrop-blur-md sm:p-4"
+      className="fixed inset-0 z-[120] overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-md sm:p-4"
       onClick={onClose}
     >
       <div
-        className="mx-auto flex h-[calc(100vh-1rem)] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-white/50 bg-white/95 shadow-2xl dark:border-white/10 dark:bg-slate-900/90 sm:h-[calc(100vh-2rem)]"
+        className="mx-auto flex w-full max-w-6xl max-h-[calc(100dvh-1rem)] min-h-0 flex-col overflow-hidden rounded-3xl border border-white/50 bg-white/95 shadow-2xl dark:border-white/10 dark:bg-slate-900/90 sm:max-h-[calc(100dvh-2rem)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 border-b border-gray-200/90 px-4 py-4 dark:border-white/10 sm:px-6">
@@ -333,6 +334,10 @@ const DeadlineExpandedSection = ({
       </div>
     </div>
   );
+
+  return typeof document !== "undefined"
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };
 
 export default DeadlineExpandedSection;

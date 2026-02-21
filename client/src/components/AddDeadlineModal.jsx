@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { X, Calendar, Clock, Save, Tag, Plus } from "lucide-react";
 import { getFullApiUrl } from '../config/apiConfig';
@@ -237,9 +238,15 @@ const AddDeadlineModal = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-lg rounded-3xl bg-white p-5 shadow-2xl sm:p-6">
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-[125] flex items-end justify-center overflow-y-auto bg-black/50 p-2 backdrop-blur-sm animate-fade-in sm:items-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="mb-5 flex items-center justify-between border-b border-gray-200 pb-4">
           <h3 className="flex items-center gap-2 text-xl font-bold text-gray-800">
             <Calendar className="text-blue-600" size={22} /> {mode === "edit" ? "Sửa Deadline" : "Thêm Deadline mới"}
@@ -405,6 +412,10 @@ const AddDeadlineModal = ({
       </div>
     </div>
   );
+
+  return typeof document !== "undefined"
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };
 
 export default AddDeadlineModal;
