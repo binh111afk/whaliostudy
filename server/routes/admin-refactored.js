@@ -304,7 +304,7 @@ router.get('/users', async (req, res) => {
         const skip = (parseInt(page) - 1) * parseInt(limit);
         const [users, totalCount] = await Promise.all([
             User.find(query)
-                .select('-password')
+                .select('username fullName email avatar lastDevice totalStudyMinutes lastIP lastCountry lastCity lastLogin isLocked role createdAt status')
                 .sort(sort)
                 .skip(skip)
                 .limit(parseInt(limit))
@@ -414,9 +414,9 @@ router.get('/users/:id', async (req, res) => {
 
         let user;
         if (mongoose.Types.ObjectId.isValid(id)) {
-            user = await User.findById(id).select('-password').lean();
+            user = await User.findById(id).select('username fullName email avatar lastDevice totalStudyMinutes lastIP lastCountry lastCity lastLogin isLocked role createdAt status').lean();
         } else {
-            user = await User.findOne({ username: id }).select('-password').lean();
+            user = await User.findOne({ username: id }).select('username fullName email avatar lastDevice totalStudyMinutes lastIP lastCountry lastCity lastLogin isLocked role createdAt status').lean();
         }
 
         if (!user) {
@@ -479,9 +479,9 @@ router.patch('/users/:id/lock', async (req, res) => {
 
         let user;
         if (mongoose.Types.ObjectId.isValid(id)) {
-            user = await User.findById(id);
+            user = await User.findById(id).select('username role isLocked status updatedAt');
         } else {
-            user = await User.findOne({ username: id });
+            user = await User.findOne({ username: id }).select('username role isLocked status updatedAt');
         }
 
         if (!user) {
@@ -567,9 +567,9 @@ router.post('/users/:id/reset', async (req, res) => {
 
         let user;
         if (mongoose.Types.ObjectId.isValid(id)) {
-            user = await User.findById(id);
+            user = await User.findById(id).select('username email password updatedAt');
         } else {
-            user = await User.findOne({ username: id });
+            user = await User.findOne({ username: id }).select('username email password updatedAt');
         }
 
         if (!user) {
@@ -677,6 +677,7 @@ router.get('/users/:id/logs', async (req, res) => {
         const skip = (parsedPage - 1) * parsedLimit;
         const [logs, totalCount] = await Promise.all([
             UserActivityLog.find(query)
+                .select('action description ip device metadata createdAt')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(parsedLimit)
@@ -917,7 +918,10 @@ router.get('/security/suspicious-ips', securityLogger, async (req, res) => {
         }
 
         const [ips, stats] = await Promise.all([
-            BlacklistIP.find(query).sort(sort).lean(),
+            BlacklistIP.find(query)
+                .select('ip attackType attempts firstSeen lastSeen targetEndpoint status country isp blockedAt blockedBy reason')
+                .sort(sort)
+                .lean(),
             BlacklistIP.aggregate([
                 {
                     $group: {
@@ -1288,6 +1292,7 @@ router.get('/security/events', securityLogger, async (req, res) => {
         const skip = (parseInt(page) - 1) * parseInt(limit);
         const [events, totalCount, stats] = await Promise.all([
             SystemEvent.find(query)
+                .select('type severity title description details performedBy createdAt')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(parseInt(limit))
@@ -1744,6 +1749,7 @@ router.get('/backups', async (req, res) => {
         const skip = (parseInt(page) - 1) * parseInt(limit);
         const [backups, totalCount, settings] = await Promise.all([
             BackupRecord.find(query)
+                .select('filename filepath size type status createdAt createdBy duration')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(parseInt(limit))
@@ -1882,7 +1888,7 @@ router.get('/backups/download/:filename', async (req, res) => {
         getModels();
         const { filename } = req.params;
 
-        const backup = await BackupRecord.findOne({ filename }).lean();
+        const backup = await BackupRecord.findOne({ filename }).select('filename size').lean();
         if (!backup) {
             return res.status(404).json({
                 success: false,
@@ -1923,7 +1929,7 @@ router.delete('/backups/:filename', async (req, res) => {
         getModels();
         const { filename } = req.params;
 
-        const backup = await BackupRecord.findOne({ filename });
+        const backup = await BackupRecord.findOne({ filename }).select('filename size').lean();
         if (!backup) {
             return res.status(404).json({
                 success: false,

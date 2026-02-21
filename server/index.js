@@ -3,6 +3,7 @@ console.log("🔑 KEY CHECK:", process.env.GEMINI_API_KEY ? "Đã tìm thấy Ke
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
+const fsp = fs.promises;
 const multer = require('multer');
 const path = require('path');
 const mongoose = require('mongoose');
@@ -40,11 +41,29 @@ const adminRouter = require('./routes/admin-refactored');
 const app = express();
 app.set('trust proxy', true);
 
+const parsePositiveInt = (value, fallback) => {
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const REQUEST_BODY_LIMIT = process.env.EXPRESS_BODY_LIMIT || '2mb';
+const CHAT_CONTEXT_MAX_MESSAGES = parsePositiveInt(process.env.CHAT_CONTEXT_MAX_MESSAGES, 12);
+const CHAT_CONTEXT_MAX_CHARS_PER_MESSAGE = parsePositiveInt(process.env.CHAT_CONTEXT_MAX_CHARS_PER_MESSAGE, 700);
+const CHAT_CONTEXT_MAX_TOTAL_CHARS = parsePositiveInt(process.env.CHAT_CONTEXT_MAX_TOTAL_CHARS, 6000);
+const SERVER_TMP_DIR = process.env.RENDER_TMP_DIR || os.tmpdir();
+const UPLOAD_TMP_DIR = path.join(SERVER_TMP_DIR, 'whalio-uploads');
+
+try {
+    fs.mkdirSync(UPLOAD_TMP_DIR, { recursive: true });
+} catch (err) {
+    console.error('❌ Failed to initialize temporary upload directory:', err.message);
+}
+
 // ==================== MIDDLEWARE CONFIGURATION ====================
 // 🔧 [CRITICAL] JSON/URL Parsing PHẢI ĐẶT TRƯỚC TẤT CẢ MIDDLEWARE BẢO MẬT
 // Lý do: Các middleware bảo mật (mongoSanitize, xss, hpp) cần req.body đã được parse
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+app.use(express.json({ limit: REQUEST_BODY_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: REQUEST_BODY_LIMIT }));
 
 // 🔧 [EXPRESS 5.x FIX] Kích hoạt query parser TRƯỚC mongoSanitize
 // Express 5.x không tự động parse query string, gây lỗi "Cannot set property query"
@@ -53,7 +72,10 @@ app.set('query parser', 'extended');
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/img', express.static(path.join(__dirname, '../img')));
-console.log('✅  Request parsing enabled (JSON + URL-encoded + Query, max 2MB)');
+console.log(`✅  Request parsing enabled (JSON + URL-encoded + Query, max ${REQUEST_BODY_LIMIT})`);
+if (!String(process.env.NODE_OPTIONS || '').includes('--max-old-space-size')) {
+    console.log('💡 Memory hint: set NODE_OPTIONS="--max-old-space-size=512" on Render for tighter GC behavior.');
+}
 
 // 1. CORS Configuration - Cho phép cả Main App và Admin Panel
 const corsOptions = {
@@ -161,10 +183,12 @@ function extractClientIP(req) {
 // ==================== BLACKLIST IP GATEKEEPER ====================
 const BLOCKED_IP_FORBIDDEN_MESSAGE = 'Địa chỉ IP của bạn đã bị chặn do vi phạm chính sách bảo mật. Vui lòng liên hệ Admin Whalio để được hỗ trợ.';
 const BLOCKED_IP_CACHE_REFRESH_MS = 5 * 60 * 1000; // 5 phút
+const BLOCKED_IP_CACHE_MAX_ENTRIES = parsePositiveInt(process.env.BLOCKED_IP_CACHE_MAX_ENTRIES, 50000);
 let blockedIPCacheSet = new Set();
 let blockedIPCacheLastUpdatedAt = 0;
 let blockedIPCacheRefreshPromise = null;
 let blockedIPCacheRefreshInterval = null;
+let blockedIPCacheCleanupRegistered = false;
 
 function normalizeBlacklistIP(ip) {
     return normalizeIp(ip);
@@ -201,12 +225,23 @@ async function refreshBlockedIPCache({ force = false } = {}) {
                 return blockedIPCacheSet;
             }
 
-            const blockedIPs = await BlacklistIP.find({ status: 'blocked' }).select('ip -_id').lean();
-            blockedIPCacheSet = new Set(
-                blockedIPs
-                    .map((entry) => normalizeBlacklistIP(entry.ip))
-                    .filter(Boolean)
-            );
+            const nextCache = new Set();
+            const cursor = BlacklistIP.find({ status: 'blocked' })
+                .select('ip -_id')
+                .lean()
+                .cursor();
+
+            for await (const entry of cursor) {
+                const normalizedIp = normalizeBlacklistIP(entry?.ip);
+                if (!normalizedIp) continue;
+                nextCache.add(normalizedIp);
+                if (nextCache.size >= BLOCKED_IP_CACHE_MAX_ENTRIES) {
+                    break;
+                }
+            }
+
+            blockedIPCacheSet.clear();
+            nextCache.forEach((ip) => blockedIPCacheSet.add(ip));
             blockedIPCacheLastUpdatedAt = Date.now();
             console.log(`🚫 Blacklist IP cache refreshed (${blockedIPCacheSet.size} blocked IPs)`);
         } catch (error) {
@@ -221,6 +256,13 @@ async function refreshBlockedIPCache({ force = false } = {}) {
     return blockedIPCacheRefreshPromise;
 }
 
+function stopBlockedIPCacheAutoRefresh() {
+    if (blockedIPCacheRefreshInterval) {
+        clearInterval(blockedIPCacheRefreshInterval);
+        blockedIPCacheRefreshInterval = null;
+    }
+}
+
 function startBlockedIPCacheAutoRefresh() {
     if (blockedIPCacheRefreshInterval) return;
 
@@ -230,6 +272,13 @@ function startBlockedIPCacheAutoRefresh() {
 
     if (typeof blockedIPCacheRefreshInterval.unref === 'function') {
         blockedIPCacheRefreshInterval.unref();
+    }
+
+    if (!blockedIPCacheCleanupRegistered) {
+        process.once('SIGTERM', stopBlockedIPCacheAutoRefresh);
+        process.once('SIGINT', stopBlockedIPCacheAutoRefresh);
+        process.once('exit', stopBlockedIPCacheAutoRefresh);
+        blockedIPCacheCleanupRegistered = true;
     }
 }
 
@@ -1449,13 +1498,63 @@ const storage = new CloudinaryStorage({
     }
 });
 
-// ==================== MEMORY STORAGE FOR CHAT FILES & IMAGES ====================
-// Sử dụng memoryStorage để lưu ảnh/file chat tạm vào RAM (không upload lên Cloudinary)
-// Tối ưu tốc độ phản hồi cho chatbot
-const chatFileStorage = multer.memoryStorage();
+// ==================== TEMP DISK STORAGE FOR CHAT/DOCUMENT ====================
+// Lưu file vào thư mục tạm thay vì RAM để tránh memory spike khi upload file lớn.
+const tempDiskStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, UPLOAD_TMP_DIR);
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname || '').toLowerCase();
+        const safeExt = ext || '';
+        const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        cb(null, `${uniqueSuffix}${safeExt}`);
+    }
+});
+
+async function safeRemoveTempFile(filePath) {
+    if (!filePath) return;
+    try {
+        await fsp.unlink(filePath);
+    } catch (err) {
+        if (err?.code !== 'ENOENT') {
+            console.warn(`⚠️ Failed to remove temp file "${filePath}": ${err.message}`);
+        }
+    }
+}
+
+async function createTempUploadFromDataUri(dataUri, fallbackName = 'upload_image.png') {
+    const matches = String(dataUri || '').match(/^data:([A-Za-z-+\/.]+);base64,(.+)$/);
+    if (!matches) return null;
+
+    const mimeType = matches[1];
+    const base64Payload = matches[2];
+    const extByMime = {
+        'image/jpeg': '.jpg',
+        'image/png': '.png',
+        'image/gif': '.gif',
+        'image/webp': '.webp'
+    };
+    const ext = extByMime[mimeType] || path.extname(fallbackName || '') || '.bin';
+    const tempPath = path.join(
+        UPLOAD_TMP_DIR,
+        `datauri-${Date.now()}-${Math.random().toString(36).slice(2, 10)}${ext}`
+    );
+
+    const buffer = Buffer.from(base64Payload, 'base64');
+    await fsp.writeFile(tempPath, buffer);
+
+    return {
+        mimetype: mimeType,
+        originalname: fallbackName,
+        size: buffer.length,
+        path: tempPath,
+        filename: path.basename(tempPath)
+    };
+}
 
 const chatFileUpload = multer({
-    storage: chatFileStorage,
+    storage: tempDiskStorage,
     limits: { fileSize: 50 * 1024 * 1024 }, // Giới hạn 50MB cho file chat
     fileFilter: (req, file, cb) => {
         console.log(`📂 Checking chat file: ${file.originalname} (${file.mimetype})`);
@@ -1485,7 +1584,7 @@ const chatFileUpload = multer({
         ];
 
         const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.txt', '.xls', '.xlsx', '.ppt', '.pptx', '.zip', '.rar', '.js', '.html', '.css'];
-        const ext = require('path').extname(file.originalname).toLowerCase();
+        const ext = path.extname(file.originalname).toLowerCase();
 
         if (allowedMimes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
             console.log(`   ✅ File allowed: ${file.originalname}`);
@@ -1587,11 +1686,10 @@ const upload = multer({
 });
 
 // ==================== DOCUMENT UPLOAD WITH DIRECT CLOUDINARY SDK ====================
-// 🔥 Sử dụng memory storage + Cloudinary SDK để có full control
+// 🔥 Sử dụng temporary disk storage + Cloudinary SDK để tránh giữ file lớn trong RAM
 // 🛡️ [ENTERPRISE] Áp dụng bảo mật tương tự upload chính
-const documentMemoryStorage = multer.memoryStorage();
 const documentUpload = multer({
-    storage: documentMemoryStorage,
+    storage: tempDiskStorage,
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
     fileFilter: (req, file, cb) => {
         const ext = path.extname(file.originalname).toLowerCase();
@@ -1617,8 +1715,8 @@ const documentUpload = multer({
     }
 });
 
-// Helper: Upload buffer to Cloudinary with full control
-async function uploadToCloudinary(buffer, originalFilename, mimeType) {
+// Helper: Upload file path to Cloudinary with full control
+async function uploadToCloudinary(filePath, originalFilename) {
     const ext = path.extname(originalFilename).toLowerCase();
     const decodedName = decodeFileName(originalFilename);
     const safeName = normalizeFileName(decodedName);
@@ -1639,12 +1737,8 @@ async function uploadToCloudinary(buffer, originalFilename, mimeType) {
     console.log(`☁️ Uploading to Cloudinary: ${originalFilename}`);
     console.log(`   → resource_type: ${resourceType}, extension: ${ext}`);
 
-    // Convert buffer to base64 Data URI
-    const base64Data = buffer.toString('base64');
-    const dataUri = `data:${mimeType || 'application/octet-stream'};base64,${base64Data}`;
-
     try {
-        const result = await cloudinary.uploader.upload(dataUri, {
+        const result = await cloudinary.uploader.upload(filePath, {
             folder: 'whalio-documents',
             resource_type: resourceType,
             public_id: safeName,
@@ -1696,7 +1790,7 @@ async function uploadToCloudinary(buffer, originalFilename, mimeType) {
 // ==================== ACTIVITY LOGGING (MongoDB) ====================
 async function logActivity(username, action, target, link, type, req = null) {
     try {
-        const user = await User.findOne({ username });
+        const user = await User.findOne({ username }).select('fullName avatar').lean();
         const activity = new Activity({
             user: user?.fullName || username,
             username: username,
@@ -1712,7 +1806,11 @@ async function logActivity(username, action, target, link, type, req = null) {
 
         const activityCount = await Activity.countDocuments();
         if (activityCount > 100) {
-            const oldActivities = await Activity.find().sort({ timestamp: 1 }).limit(activityCount - 100);
+            const oldActivities = await Activity.find()
+                .select('_id')
+                .sort({ timestamp: 1 })
+                .limit(activityCount - 100)
+                .lean();
             await Activity.deleteMany({ _id: { $in: oldActivities.map(a => a._id) } });
         }
 
@@ -2582,9 +2680,10 @@ app.get('/document/:id', async (req, res) => {
 });
 
 app.post('/api/upload-document', (req, res, next) => {
-    // 🔥 SỬ DỤNG MEMORY STORAGE + CLOUDINARY SDK TRỰC TIẾP
+    // 🔥 SỬ DỤNG TEMP DISK STORAGE + CLOUDINARY SDK TRỰC TIẾP
     documentUpload.single('file')(req, res, (err) => {
         if (err) {
+            void safeRemoveTempFile(req.file?.path);
             console.error('Multer error:', err);
             if (err.code === 'LIMIT_FILE_SIZE') {
                 return res.status(400).json({
@@ -2601,6 +2700,7 @@ app.post('/api/upload-document', (req, res, next) => {
         next();
     });
 }, async (req, res) => {
+    const tempFilePath = req.file?.path;
     try {
         const { name, type, uploader, course, username, visibility } = req.body;
         const file = req.file;
@@ -2613,8 +2713,8 @@ app.post('/api/upload-document', (req, res, next) => {
 
         const decodedOriginalName = decodeFileName(file.originalname);
 
-        // 🔥 UPLOAD TRỰC TIẾP QUA CLOUDINARY SDK với full control
-        const cloudinaryResult = await uploadToCloudinary(file.buffer, file.originalname, file.mimetype);
+        // 🔥 Upload trực tiếp từ file tạm (disk) lên Cloudinary để giảm RAM
+        const cloudinaryResult = await uploadToCloudinary(file.path, file.originalname);
         let cloudinaryUrl = cloudinaryResult.secure_url;
 
         console.log(`☁️ Cloudinary result:`, {
@@ -2660,13 +2760,15 @@ app.post('/api/upload-document', (req, res, next) => {
         console.error("UPLOAD ERROR:", JSON.stringify(error, null, 2));
         console.error("UPLOAD ERROR STACK:", error.stack);
         return res.status(500).json({ success: false, message: "Đã xảy ra lỗi hệ thống khi tải file" });
+    } finally {
+        await safeRemoveTempFile(tempFilePath);
     }
 });
 
 app.post('/api/toggle-save-doc', async (req, res) => {
     try {
         const { username, docId } = req.body;
-        const user = await User.findOne({ username });
+        const user = await User.findOne({ username }).select('savedDocs');
 
         if (!user) {
             return res.status(404).json({ success: false, message: "Không tìm thấy user" });
@@ -2696,7 +2798,7 @@ app.post('/api/delete-document', verifyToken, async (req, res) => {
         const username = req.user.username; // Lấy từ JWT token
         const userRole = req.user.role;
         
-        const user = await User.findOne({ username }).select('-password');
+        const user = await User.findOne({ username }).select('fullName').lean();
         if (!user) {
             return res.status(403).json({ success: false, message: "Người dùng không tồn tại!" });
         }
@@ -2742,7 +2844,7 @@ app.post('/api/update-document', verifyToken, async (req, res) => {
         const username = req.user.username; // Lấy từ JWT token
         const userRole = req.user.role;
         
-        const user = await User.findOne({ username }).select('-password');
+        const user = await User.findOne({ username }).select('fullName').lean();
         const doc = await Document.findById(docId);
 
         if (!doc) {
@@ -2794,7 +2896,7 @@ app.post('/api/reset-password-force', async (req, res) => {
             });
         }
 
-        const user = await User.findOne({ username, email });
+        const user = await User.findOne({ username, email }).select('password updatedAt');
 
         if (!user) {
             return res.status(400).json({ success: false, message: "Tên đăng nhập hoặc Email không chính xác!" });
@@ -2817,11 +2919,24 @@ app.post('/api/reset-password-force', async (req, res) => {
 // 6. Stats API
 app.get('/api/stats', async (req, res) => {
     try {
-        const totalDocuments = await Document.countDocuments();
-        const totalUsers = await User.countDocuments();
-        const recentDocuments = await Document.find().sort({ createdAt: -1 }).limit(10).lean();
-        const docs = await Document.find().lean();
-        const storageUsed = docs.reduce((sum, doc) => sum + (doc.size || 0), 0);
+        const [totalDocuments, totalUsers, recentDocuments, storageAgg] = await Promise.all([
+            Document.countDocuments(),
+            User.countDocuments(),
+            Document.find()
+                .select('name uploader date time type path size downloadCount course visibility createdAt')
+                .sort({ createdAt: -1 })
+                .limit(10)
+                .lean(),
+            Document.aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        totalSize: { $sum: { $ifNull: ['$size', 0] } }
+                    }
+                }
+            ])
+        ]);
+        const storageUsed = storageAgg[0]?.totalSize || 0;
 
         const stats = {
             totalDocuments,
@@ -2840,9 +2955,9 @@ app.get('/api/stats', async (req, res) => {
 // 7. Exam APIs
 app.get('/api/exams', async (req, res) => {
     try {
-        // Tuyệt chiêu: Lấy mọi thứ TRỪ questions và questionBank
+        // Data minimization: chỉ trả các field list cần cho UI, không kéo questionBank vào RAM
         const exams = await Exam.find()
-            .select('-questions -questionBank')
+            .select('examId title subject questions time image createdBy createdAt')
             .sort({ createdAt: -1 })
             .lean();
 
@@ -2858,7 +2973,10 @@ app.get('/api/exams', async (req, res) => {
 app.get('/api/exams/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const exam = await Exam.findOne({ examId: id }).lean();
+        // Chỉ endpoint chi tiết này mới lấy questionBank để bắt đầu làm bài.
+        const exam = await Exam.findOne({ examId: id })
+            .select('examId title subject questions time image createdBy questionBank createdAt')
+            .lean();
 
         if (!exam) {
             return res.status(404).json({ success: false, message: 'Exam not found' });
@@ -2887,12 +3005,12 @@ app.get('/api/exams/:id', async (req, res) => {
 app.post('/api/delete-exam', async (req, res) => {
     try {
         const { examId, username } = req.body;
-        const user = await User.findOne({ username });
+        const user = await User.findOne({ username }).select('role').lean();
         if (!user) {
             return res.status(403).json({ success: false, message: "⛔ Người dùng không tồn tại!" });
         }
 
-        const exam = await Exam.findOne({ examId });
+        const exam = await Exam.findOne({ examId }).select('createdBy').lean();
         if (!exam) {
             return res.status(404).json({ success: false, message: "Không tìm thấy đề thi!" });
         }
@@ -4646,16 +4764,13 @@ app.post('/api/gpa', async (req, res) => {
 // Sử dụng multipart/form-data thay vì JSON để hỗ trợ upload ảnh/file
 // Field name phải là 'image' để khớp với frontend FormData
 app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
+    let tempChatFilePath = req.file?.path || '';
     try {
         if (!req.file && req.body.image && req.body.image.startsWith('data:')) {
-            const matches = req.body.image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-            if (matches) {
-                req.file = {
-                    mimetype: matches[1],
-                    buffer: Buffer.from(matches[2], 'base64'),
-                    originalname: 'upload_image.png',
-                    size: Buffer.from(matches[2], 'base64').length
-                };
+            const tempDataUriFile = await createTempUploadFromDataUri(req.body.image, 'upload_image.png');
+            if (tempDataUriFile) {
+                req.file = tempDataUriFile;
+                tempChatFilePath = tempDataUriFile.path;
             }
         }
         const message = req.body.message;
@@ -4711,17 +4826,38 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             console.log(`🆕 Created new chat session: ${newSessionId} (Title: "${autoTitle}")`);
         }
 
-        // ==================== BUILD GEMINI HISTORY ====================
-        // OPTIMIZED: Chỉ gửi 20 tin nhắn gần nhất để tránh payload quá nặng và token limit
-        // Convert stored messages to Gemini format for context
-        const recentMessages = session.messages.slice(-20); // Lấy 20 tin nhắn cuối
-        const geminiHistory = recentMessages.map(msg => ({
-            role: msg.role,
-            parts: [{ text: msg.content }]
-        }));
+        // ==================== BUILD COMPACT GEMINI HISTORY ====================
+        // Giới hạn số lượng + độ dài context để giảm peak RAM khi serialize JSON.
+        const recentMessages = session.messages.slice(-CHAT_CONTEXT_MAX_MESSAGES);
+        const geminiHistory = [];
+        let remainingChars = CHAT_CONTEXT_MAX_TOTAL_CHARS;
 
-        if (session.messages.length > 20) {
-            console.log(`📊 Session has ${session.messages.length} messages, sending last 20 to Gemini`);
+        for (const msg of recentMessages) {
+            if (remainingChars <= 0) break;
+            const normalizedText = String(msg?.content || '')
+                .replace(/\s+/g, ' ')
+                .trim();
+            if (!normalizedText) continue;
+
+            const clippedPerMessage = normalizedText.length > CHAT_CONTEXT_MAX_CHARS_PER_MESSAGE
+                ? `${normalizedText.slice(0, CHAT_CONTEXT_MAX_CHARS_PER_MESSAGE)}...`
+                : normalizedText;
+
+            const finalText = clippedPerMessage.length > remainingChars
+                ? `${clippedPerMessage.slice(0, Math.max(remainingChars - 3, 0))}...`
+                : clippedPerMessage;
+
+            if (!finalText) break;
+
+            geminiHistory.push({
+                role: msg.role,
+                parts: [{ text: finalText }]
+            });
+            remainingChars -= finalText.length;
+        }
+
+        if (session.messages.length > CHAT_CONTEXT_MAX_MESSAGES) {
+            console.log(`📊 Session has ${session.messages.length} messages, compacting to last ${CHAT_CONTEXT_MAX_MESSAGES}`);
         }
 
         // ==================== XÂY DỰNG MESSAGE CUỐI CÙNG ====================
@@ -4741,7 +4877,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             const filename = req.file.originalname;
             const fileExt = path.extname(filename).toLowerCase();
             const fileSizeKB = (req.file.size / 1024).toFixed(2);
-            const buffer = req.file.buffer;
+            const filePath = req.file.path;
 
             // Xác định loại attachment
             if (mimetype.startsWith('image/')) attachmentType = 'image';
@@ -4761,7 +4897,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                 if (mimetype.startsWith('image/')) {
                     fileTypeIcon = '🖼️';
                     console.log(`   🖼️ Xử lý ảnh với Gemini Multimodal...`);
-                    const base64Data = buffer.toString('base64');
+                    const base64Data = await fsp.readFile(filePath, { encoding: 'base64' });
                     contentParts.push({
                         inlineData: {
                             data: base64Data,
@@ -4773,7 +4909,8 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                 else if (mimetype === 'application/pdf' || fileExt === '.pdf') {
                     fileTypeIcon = '📄';
                     console.log(`   📄 Đang đọc nội dung PDF...`);
-                    const pdfData = await pdfParse(buffer);
+                    const pdfBuffer = await fsp.readFile(filePath);
+                    const pdfData = await pdfParse(pdfBuffer);
                     extractedContent = pdfData.text;
                     console.log(`   ✅ Đã trích xuất ${extractedContent.length} ký tự từ PDF`);
                 }
@@ -4781,7 +4918,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                 else if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || fileExt === '.docx') {
                     fileTypeIcon = '📝';
                     console.log(`   📝 Đang đọc nội dung Word (.docx)...`);
-                    const result = await mammoth.extractRawText({ buffer: buffer });
+                    const result = await mammoth.extractRawText({ path: filePath });
                     extractedContent = result.value;
                     console.log(`   ✅ Đã trích xuất ${extractedContent.length} ký tự từ Word`);
                 }
@@ -4791,7 +4928,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                     console.log(`   📝 File Word cũ (.doc) - thử đọc như text...`);
                     // .doc cũ khó đọc hơn, thử extract text cơ bản
                     try {
-                        const result = await mammoth.extractRawText({ buffer: buffer });
+                        const result = await mammoth.extractRawText({ path: filePath });
                         extractedContent = result.value;
                     } catch {
                         extractedContent = `[File .doc cũ - không thể đọc trực tiếp. Vui lòng chuyển sang .docx hoặc PDF]`;
@@ -4801,7 +4938,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                 else if (mimetype.includes('spreadsheet') || mimetype.includes('excel') || fileExt === '.xlsx' || fileExt === '.xls') {
                     fileTypeIcon = '📊';
                     console.log(`   📊 Đang đọc nội dung Excel...`);
-                    const workbook = XLSX.read(buffer, { type: 'buffer' });
+                    const workbook = XLSX.readFile(filePath);
                     let excelContent = '';
 
                     workbook.SheetNames.forEach((sheetName, index) => {
@@ -4827,7 +4964,7 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
                     ['.txt', '.html', '.css', '.js', '.json', '.xml', '.csv', '.md', '.py', '.java', '.c', '.cpp', '.h', '.php', '.sql', '.sh', '.bat', '.yaml', '.yml', '.ini', '.cfg', '.log'].includes(fileExt)) {
                     fileTypeIcon = '📝';
                     console.log(`   📝 Đang đọc file text/code...`);
-                    extractedContent = buffer.toString('utf-8');
+                    extractedContent = await fsp.readFile(filePath, 'utf-8');
                     console.log(`   ✅ Đã đọc ${extractedContent.length} ký tự`);
                 }
                 // ==================== XỬ LÝ ZIP/RAR ====================
@@ -4861,25 +4998,25 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
 
         // ==================== GỌI AI SERVICE (Gemini → DeepSeek Fallback) ====================
         // Kết hợp history context với message hiện tại
-        let finalMessage = '';
-
-        // Nếu có lịch sử chat, thêm context
+        const finalMessageParts = [];
         if (geminiHistory.length > 0) {
-            finalMessage = '--- Lịch sử cuộc trò chuyện (để tham khảo context) ---\n';
-            geminiHistory.forEach(msg => {
+            const contextLines = geminiHistory.map((msg) => {
                 const role = msg.role === 'user' ? '👤 User' : '🤖 Whalio';
-                const content = msg.parts[0].text;
-                finalMessage += `${role}: ${content}\n\n`;
+                const content = msg.parts?.[0]?.text || '';
+                return `${role}: ${content}`;
             });
-            finalMessage += '--- Tin nhắn hiện tại ---\n';
+            finalMessageParts.push('--- Lịch sử cuộc trò chuyện (đã nén để tiết kiệm RAM) ---');
+            finalMessageParts.push(contextLines.join('\n'));
+            finalMessageParts.push('--- Tin nhắn hiện tại ---');
         }
 
         // Thêm tin nhắn hiện tại (có thể là text + nội dung file đã extract)
         if (typeof contentParts[0] === 'string') {
-            finalMessage += contentParts[0];
+            finalMessageParts.push(contentParts[0]);
         } else if (contentParts[0]?.text) {
-            finalMessage += contentParts[0].text;
+            finalMessageParts.push(contentParts[0].text);
         }
+        const finalMessage = finalMessageParts.join('\n');
 
         // Nếu có ảnh trong contentParts, xử lý riêng
         let hasImageData = false;
@@ -5067,6 +5204,8 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
             success: false,
             message: 'Đã xảy ra lỗi khi xử lý yêu cầu'
         });
+    } finally {
+        await safeRemoveTempFile(tempChatFilePath);
     }
 });
 
