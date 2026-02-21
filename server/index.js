@@ -1060,6 +1060,27 @@ async function seedInitialData() {
 }
 
 // ==================== JWT AUTHENTICATION MIDDLEWARE ====================
+function logDeniedAdminAccess(req, reason, user = null) {
+    const endpoint = req.originalUrl || req.url || req.path || 'unknown';
+    if (!endpoint.startsWith('/api/admin')) {
+        return;
+    }
+
+    const username = user?.username || req.user?.username || 'anonymous';
+    const userId = user?.userId || req.user?.userId || null;
+    const ip = extractClientIP(req) || normalizeIp(req.ip) || normalizeIp(req.connection?.remoteAddress) || 'unknown';
+
+    console.warn('🚫 [ADMIN ACCESS DENIED]', JSON.stringify({
+        timestamp: new Date().toISOString(),
+        reason,
+        method: req.method,
+        endpoint,
+        ip,
+        user: username,
+        userId
+    }));
+}
+
 /**
  * verifyToken - Middleware xác thực JWT Token
  * Sử dụng: Thêm middleware này vào các route cần bảo vệ
@@ -1071,6 +1092,7 @@ function verifyToken(req, res, next) {
         const authHeader = req.headers['authorization'];
         
         if (!authHeader) {
+            logDeniedAdminAccess(req, 'missing_authorization_header');
             return res.status(401).json({
                 success: false,
                 message: '⛔ Không tìm thấy token xác thực! Vui lòng đăng nhập.'
@@ -1083,6 +1105,7 @@ function verifyToken(req, res, next) {
             : authHeader;
 
         if (!token) {
+            logDeniedAdminAccess(req, 'empty_or_malformed_token');
             return res.status(401).json({
                 success: false,
                 message: '⛔ Token không hợp lệ!'
@@ -1103,6 +1126,7 @@ function verifyToken(req, res, next) {
         next();
     } catch (error) {
         if (error.name === 'TokenExpiredError') {
+            logDeniedAdminAccess(req, 'expired_token');
             return res.status(401).json({
                 success: false,
                 message: '⛔ Token đã hết hạn! Vui lòng đăng nhập lại.',
@@ -1110,11 +1134,13 @@ function verifyToken(req, res, next) {
             });
         }
         if (error.name === 'JsonWebTokenError') {
+            logDeniedAdminAccess(req, 'invalid_jwt_token');
             return res.status(401).json({
                 success: false,
                 message: '⛔ Token không hợp lệ!'
             });
         }
+        logDeniedAdminAccess(req, `token_verification_error:${error.name || 'unknown'}`);
         console.error('Token verification error:', error);
         return res.status(500).json({
             success: false,
@@ -1129,6 +1155,7 @@ function verifyToken(req, res, next) {
  */
 function verifyAdmin(req, res, next) {
     if (!req.user) {
+        logDeniedAdminAccess(req, 'verify_admin_without_authenticated_user');
         return res.status(401).json({
             success: false,
             message: '⛔ Chưa xác thực!'
@@ -1136,6 +1163,7 @@ function verifyAdmin(req, res, next) {
     }
 
     if (req.user.role !== 'admin') {
+        logDeniedAdminAccess(req, 'insufficient_role_not_admin');
         return res.status(403).json({
             success: false,
             message: '⛔ Bạn không có quyền Admin để thực hiện thao tác này!'
@@ -5057,8 +5085,7 @@ async function checkAvailableModels() {
 checkAvailableModels();
 
 // ==================== ADMIN API ROUTES ====================
-app.use('/api/admin/users/:id/logs', verifyToken, verifyAdmin);
-app.use('/api/admin', adminRouter);
+app.use('/api/admin', verifyToken, verifyAdmin, adminRouter);
 console.log('👑 Admin API routes mounted at /api/admin');
 
 // ==================== SERVER START ====================

@@ -153,6 +153,54 @@ const securityLogger = async (req, res, next) => {
     next();
 };
 
+function logDeniedAdminRouteAccess(req, reason) {
+    const forwardedFor = req.headers['x-forwarded-for'];
+    const forwardedIp = typeof forwardedFor === 'string'
+        ? forwardedFor.split(',')[0]
+        : Array.isArray(forwardedFor)
+            ? forwardedFor[0]
+            : '';
+    const ip = normalizeIp(forwardedIp || req.ip || req.connection?.remoteAddress) || 'unknown';
+    const username = req.user?.username || 'anonymous';
+    const userId = req.user?.userId || null;
+
+    console.warn('🚫 [ADMIN ROUTER ACCESS DENIED]', JSON.stringify({
+        timestamp: new Date().toISOString(),
+        reason,
+        method: req.method,
+        endpoint: req.originalUrl || req.url || req.path,
+        ip,
+        user: username,
+        userId
+    }));
+}
+
+// Defense in depth: mọi admin endpoint phải có req.user role=admin.
+// Nếu router bị mount sai ở nơi khác, guard này vẫn chặn truy cập trái phép.
+const adminRouteGuard = (req, res, next) => {
+    if (!req.user) {
+        logDeniedAdminRouteAccess(req, 'missing_authenticated_user_on_admin_router');
+        return res.status(401).json({
+            success: false,
+            data: null,
+            message: '⛔ Chưa xác thực! Vui lòng đăng nhập.'
+        });
+    }
+
+    if (req.user.role !== 'admin') {
+        logDeniedAdminRouteAccess(req, 'insufficient_role_not_admin_on_admin_router');
+        return res.status(403).json({
+            success: false,
+            data: null,
+            message: '⛔ Bạn không có quyền Admin để truy cập endpoint này!'
+        });
+    }
+
+    return next();
+};
+
+router.use(adminRouteGuard);
+
 // ==================== MODULE 1: USER MANAGEMENT ====================
 
 /**
