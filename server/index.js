@@ -12,6 +12,18 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+// ==================== SECURITY LIBRARIES ====================
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+
+// ==================== SECURITY CONSTANTS ====================
+const BCRYPT_SALT_ROUNDS = 12;
+const JWT_SECRET = process.env.JWT_SECRET || 'whalio_super_secret_key_change_in_production_2024';
+const JWT_EXPIRES_IN = '7d'; // Token hết hạn sau 7 ngày
+
 // ==================== FILE PARSING LIBRARIES ====================
 const mammoth = require('mammoth');  // Đọc file Word (.docx)
 const XLSX = require('xlsx');         // Đọc file Excel (.xlsx, .xls)
@@ -45,10 +57,64 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// 2. Middleware xử lý JSON (để nhận tin nhắn và ảnh)
+// ==================== SECURITY MIDDLEWARE ====================
+// 1. Helmet - Thêm các HTTP Security Headers
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // Cho phép tải resource từ domain khác
+    contentSecurityPolicy: false // Tắt CSP để tránh conflict với frontend
+}));
+console.log('🛡️  Helmet security headers enabled');
+
+// 2. Express Mongo Sanitize - Chặn NoSQL Injection ($gt, $eq, etc.)
+app.use(mongoSanitize({
+    replaceWith: '_', // Thay thế ký tự nguy hiểm bằng '_'
+    onSanitize: ({ req, key }) => {
+        console.warn(`⚠️  NoSQL Injection attempt blocked! Key: ${key}, IP: ${req.ip}`);
+    }
+}));
+console.log('🛡️  MongoDB Sanitization enabled');
+
+// 3. Rate Limiting - Chống Brute Force & DDoS
+// Rate limiter cho tất cả API (100 requests / 15 phút)
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 phút
+    max: 100, // Tối đa 100 requests
+    message: {
+        success: false,
+        message: '⛔ Quá nhiều yêu cầu! Vui lòng thử lại sau 15 phút.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+        return req.headers['x-forwarded-for']?.split(',')[0] || req.ip;
+    }
+});
+
+// Rate limiter nghiêm ngặt cho đăng nhập (5 lần / 15 phút)
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 phút
+    max: 5, // Chỉ cho phép 5 lần thử
+    message: {
+        success: false,
+        message: '⛔ Quá nhiều lần đăng nhập thất bại! Vui lòng thử lại sau 15 phút.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true, // Không tính lần đăng nhập thành công
+    keyGenerator: (req) => {
+        return req.headers['x-forwarded-for']?.split(',')[0] || req.ip;
+    }
+});
+
+// Áp dụng general rate limit cho tất cả API
+app.use('/api/', generalLimiter);
+console.log('🛡️  Rate limiting enabled (100 req/15min general, 5 req/15min login)');
+
+// 4. Middleware xử lý JSON (để nhận tin nhắn và ảnh)
 app.use(express.json({ limit: '10mb' }));
 
-app.use('/static-data', express.static(path.join(__dirname, 'data')));
+// ⛔ REMOVED: Static data route - Không được serve public thư mục chứa exam/questions
+// app.use('/static-data', express.static(path.join(__dirname, 'data'))); // SECURITY RISK!
 const PORT = process.env.PORT || 3000;
 
 // ==================== CLOUDINARY CONFIGURATION ====================
@@ -694,6 +760,126 @@ app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/img', express.static(path.join(__dirname, '../img')));
 
+// ==================== JWT AUTHENTICATION MIDDLEWARE ====================
+/**
+ * verifyToken - Middleware xác thực JWT Token
+ * Sử dụng: Thêm middleware này vào các route cần bảo vệ
+ * Token được gửi trong header: Authorization: Bearer <token>
+ * Sau khi verify, thông tin user sẽ có trong req.user
+ */
+function verifyToken(req, res, next) {
+    try {
+        const authHeader = req.headers['authorization'];
+        
+        if (!authHeader) {
+            return res.status(401).json({
+                success: false,
+                message: '⛔ Không tìm thấy token xác thực! Vui lòng đăng nhập.'
+            });
+        }
+
+        // Token format: "Bearer <token>"
+        const token = authHeader.startsWith('Bearer ') 
+            ? authHeader.slice(7) 
+            : authHeader;
+
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: '⛔ Token không hợp lệ!'
+            });
+        }
+
+        // Verify token
+        const decoded = jwt.verify(token, JWT_SECRET);
+        
+        // Gắn thông tin user vào request để các route sau sử dụng
+        req.user = {
+            userId: decoded.userId,
+            username: decoded.username,
+            role: decoded.role
+        };
+
+        console.log(`🔐 Token verified for user: ${decoded.username}`);
+        next();
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({
+                success: false,
+                message: '⛔ Token đã hết hạn! Vui lòng đăng nhập lại.',
+                expired: true
+            });
+        }
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({
+                success: false,
+                message: '⛔ Token không hợp lệ!'
+            });
+        }
+        console.error('Token verification error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi xác thực token'
+        });
+    }
+}
+
+/**
+ * verifyAdmin - Middleware kiểm tra quyền Admin
+ * Phải dùng sau verifyToken
+ */
+function verifyAdmin(req, res, next) {
+    if (!req.user) {
+        return res.status(401).json({
+            success: false,
+            message: '⛔ Chưa xác thực!'
+        });
+    }
+
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({
+            success: false,
+            message: '⛔ Bạn không có quyền Admin để thực hiện thao tác này!'
+        });
+    }
+
+    next();
+}
+
+/**
+ * optionalAuth - Middleware xác thực tùy chọn
+ * Nếu có token thì verify, không có thì cho qua
+ * Dùng cho các route public nhưng cần biết user nếu đã đăng nhập
+ */
+function optionalAuth(req, res, next) {
+    try {
+        const authHeader = req.headers['authorization'];
+        
+        if (!authHeader) {
+            return next(); // Không có token, cho qua
+        }
+
+        const token = authHeader.startsWith('Bearer ') 
+            ? authHeader.slice(7) 
+            : authHeader;
+
+        if (token) {
+            const decoded = jwt.verify(token, JWT_SECRET);
+            req.user = {
+                userId: decoded.userId,
+                username: decoded.username,
+                role: decoded.role
+            };
+        }
+        next();
+    } catch (error) {
+        // Token không hợp lệ, nhưng vẫn cho qua vì là optional
+        next();
+    }
+}
+
+console.log('🔐 JWT Authentication middleware initialized');
+
 // ==================== EJS TEMPLATE ENGINE ====================
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -1093,55 +1279,168 @@ app.get('/ping', (req, res) => {
     res.status(200).send('OK');
 });
 
+// 🔐 API xác thực token - Kiểm tra token còn hợp lệ không
+app.get('/api/verify-token', verifyToken, async (req, res) => {
+    try {
+        // Token hợp lệ (đã qua middleware verifyToken)
+        // Lấy thông tin user mới nhất từ database
+        const user = await User.findOne({ username: req.user.username })
+            .select('-password')
+            .lean();
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                valid: false,
+                message: 'User không tồn tại'
+            });
+        }
+
+        // Kiểm tra tài khoản bị khóa
+        if (user.isLocked) {
+            return res.status(403).json({
+                success: false,
+                valid: false,
+                message: 'Tài khoản đã bị khóa'
+            });
+        }
+
+        res.json({
+            success: true,
+            valid: true,
+            user: user
+        });
+    } catch (err) {
+        console.error('Verify token error:', err);
+        res.status(500).json({
+            success: false,
+            valid: false,
+            message: 'Lỗi server'
+        });
+    }
+});
+
+// 🔐 API refresh token - Lấy token mới khi token cũ sắp hết hạn
+app.post('/api/refresh-token', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findOne({ username: req.user.username })
+            .select('-password')
+            .lean();
+        
+        if (!user || user.isLocked) {
+            return res.status(403).json({
+                success: false,
+                message: 'Không thể refresh token'
+            });
+        }
+
+        // Tạo token mới
+        const newToken = jwt.sign(
+            {
+                userId: user._id.toString(),
+                username: user.username,
+                role: user.role
+            },
+            JWT_SECRET,
+            { expiresIn: JWT_EXPIRES_IN }
+        );
+
+        res.json({
+            success: true,
+            token: newToken,
+            user: user
+        });
+    } catch (err) {
+        console.error('Refresh token error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server'
+        });
+    }
+});
+
 // 1. Authentication APIs
-app.post('/api/login', async (req, res) => {
+// 🛡️ Áp dụng loginLimiter cho API đăng nhập (5 lần / 15 phút)
+app.post('/api/login', loginLimiter, async (req, res) => {
     try {
         const { username, password, clientContext = {} } = req.body;
-        const user = await User.findOne({ username, password });
         
-        if (user) {
-            // Kiểm tra tài khoản bị khóa
-            if (user.isLocked) {
-                return res.status(403).json({ 
-                    success: false, 
-                    message: "Tài khoản đã bị khóa. Vui lòng liên hệ Admin." 
-                });
-            }
-
-            // Cập nhật thông tin đăng nhập
-            const clientIP = extractClientIP(req);
-            const { country, city } = getGeoLocationFromIP(clientIP);
-            const userAgent = req.headers['user-agent'] || '';
-            const device = String(clientContext.device || '').trim() || parseDeviceFromUA(userAgent);
-            const clientCountry = String(clientContext.country || '').trim().toUpperCase();
-            const clientCity = String(clientContext.city || '').trim();
-            const resolvedCountry = clientCountry || country;
-            const resolvedCity = clientCity || city;
-            
-            user.lastIP = clientIP;
-            user.lastCountry = resolvedCountry;
-            user.lastCity = resolvedCity;
-            user.lastDevice = device;
-            user.lastLogin = new Date();
-            await user.save();
-
-            // Log activity
-            await UserActivityLog.create({
-                userId: user._id,
-                username: user.username,
-                action: 'login',
-                description: 'Đăng nhập thành công',
-                ip: clientIP,
-                device: device,
-                userAgent: userAgent
+        // Tìm user theo username (không so sánh password ở đây)
+        const user = await User.findOne({ username });
+        
+        if (!user) {
+            return res.status(401).json({ 
+                success: false, 
+                message: "Tên đăng nhập hoặc mật khẩu không đúng!" 
             });
-
-            const safeUser = user.toObject();
-            delete safeUser.password;
-            res.json({ success: true, user: safeUser });
-        } else {
-            res.status(401).json({ success: false, message: "Tên đăng nhập hoặc mật khẩu không đúng!" });
         }
+
+        // 🔐 Kiểm tra mật khẩu bằng bcrypt
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ 
+                success: false, 
+                message: "Tên đăng nhập hoặc mật khẩu không đúng!" 
+            });
+        }
+        
+        // Kiểm tra tài khoản bị khóa
+        if (user.isLocked) {
+            return res.status(403).json({ 
+                success: false, 
+                message: "Tài khoản đã bị khóa. Vui lòng liên hệ Admin." 
+            });
+        }
+
+        // Cập nhật thông tin đăng nhập
+        const clientIP = extractClientIP(req);
+        const { country, city } = getGeoLocationFromIP(clientIP);
+        const userAgent = req.headers['user-agent'] || '';
+        const device = String(clientContext.device || '').trim() || parseDeviceFromUA(userAgent);
+        const clientCountry = String(clientContext.country || '').trim().toUpperCase();
+        const clientCity = String(clientContext.city || '').trim();
+        const resolvedCountry = clientCountry || country;
+        const resolvedCity = clientCity || city;
+        
+        user.lastIP = clientIP;
+        user.lastCountry = resolvedCountry;
+        user.lastCity = resolvedCity;
+        user.lastDevice = device;
+        user.lastLogin = new Date();
+        await user.save();
+
+        // Log activity
+        await UserActivityLog.create({
+            userId: user._id,
+            username: user.username,
+            action: 'login',
+            description: 'Đăng nhập thành công',
+            ip: clientIP,
+            device: device,
+            userAgent: userAgent
+        });
+
+        // 🔑 Tạo JWT Token
+        const token = jwt.sign(
+            {
+                userId: user._id.toString(),
+                username: user.username,
+                role: user.role
+            },
+            JWT_SECRET,
+            { expiresIn: JWT_EXPIRES_IN }
+        );
+
+        // Trả về user info (không có password) và token
+        const safeUser = user.toObject();
+        delete safeUser.password;
+        
+        console.log(`✅ Login successful: ${username} | Token issued`);
+        res.json({ 
+            success: true, 
+            user: safeUser,
+            token: token  // 🔑 Gửi token về frontend
+        });
     } catch (err) {
         console.error('Login error:', err);
         res.status(500).json({ success: false, message: "Lỗi server" });
@@ -1254,6 +1553,23 @@ function parseDeviceFromUA(ua) {
 app.post('/api/register', async (req, res) => {
     try {
         const { username, password, fullName, email } = req.body;
+        
+        // Validate input
+        if (!username || !password || !fullName || !email) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Vui lòng điền đầy đủ thông tin!" 
+            });
+        }
+
+        // Validate password strength
+        if (password.length < 6) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Mật khẩu phải có ít nhất 6 ký tự!" 
+            });
+        }
+
         const existingUser = await User.findOne({ $or: [{ username }, { email }] });
         if (existingUser) {
             if (existingUser.username === username) {
@@ -1264,9 +1580,13 @@ app.post('/api/register', async (req, res) => {
             }
         }
 
+        // 🔐 Hash password trước khi lưu vào database
+        const hashedPassword = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+        console.log(`🔒 Password hashed for new user: ${username}`);
+
         const newUser = new User({
             username,
-            password,
+            password: hashedPassword, // Lưu hash, không lưu plain text
             fullName,
             email,
             avatar: '/img/avt.png',
@@ -1276,7 +1596,9 @@ app.post('/api/register', async (req, res) => {
         await newUser.save();
 
         const safeUser = newUser.toObject();
-        delete safeUser.password;
+        delete safeUser.password; // Không trả về password hash
+        
+        console.log(`✅ New user registered: ${username}`);
         res.json({ success: true, message: "Đăng ký thành công!", user: safeUser });
     } catch (err) {
         console.error('Register error:', err);
@@ -1285,40 +1607,72 @@ app.post('/api/register', async (req, res) => {
 });
 
 // 2. Profile APIs
-app.post('/api/update-profile', async (req, res) => {
+// 🔐 API cập nhật profile - Yêu cầu xác thực JWT
+app.post('/api/update-profile', verifyToken, async (req, res) => {
     try {
-        const { username, ...updateData } = req.body;
+        const username = req.user.username; // Lấy từ JWT token
+        const { username: _, ...updateData } = req.body; // Bỏ qua username từ body
+        
+        // Không cho phép cập nhật password và role qua API này
+        delete updateData.password;
+        delete updateData.role;
+        
         const user = await User.findOneAndUpdate(
             { username },
             { ...updateData, updatedAt: new Date() },
             { new: true }
-        ).lean();
+        ).select('-password').lean();
 
         if (!user) {
             return res.status(404).json({ success: false, message: "Không tìm thấy user" });
         }
 
-        const { password: _, ...safeUser } = user;
-        res.json({ success: true, user: safeUser });
+        res.json({ success: true, user: user });
     } catch (err) {
         console.error('Update profile error:', err);
         res.status(500).json({ success: false, message: "Lỗi server" });
     }
 });
 
-app.post('/api/change-password', async (req, res) => {
+// 🔐 API đổi mật khẩu - Yêu cầu xác thực JWT
+app.post('/api/change-password', verifyToken, async (req, res) => {
     try {
-        const { username, oldPass, newPass } = req.body;
-        const user = await User.findOne({ username, password: oldPass });
+        const { oldPass, newPass } = req.body;
+        const username = req.user.username; // Lấy từ JWT token, không từ body
+        
+        // Validate input
+        if (!oldPass || !newPass) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Vui lòng nhập đầy đủ mật khẩu cũ và mới!" 
+            });
+        }
 
+        if (newPass.length < 6) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Mật khẩu mới phải có ít nhất 6 ký tự!" 
+            });
+        }
+
+        const user = await User.findOne({ username });
         if (!user) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy user" });
+        }
+
+        // 🔐 Kiểm tra mật khẩu cũ bằng bcrypt
+        const isOldPasswordValid = await bcrypt.compare(oldPass, user.password);
+        if (!isOldPasswordValid) {
             return res.status(400).json({ success: false, message: "Mật khẩu cũ không đúng" });
         }
 
-        user.password = newPass;
+        // 🔐 Hash mật khẩu mới
+        const hashedNewPassword = await bcrypt.hash(newPass, BCRYPT_SALT_ROUNDS);
+        user.password = hashedNewPassword;
         user.updatedAt = new Date();
         await user.save();
 
+        console.log(`🔒 Password changed for user: ${username}`);
         res.json({ success: true, message: "Đổi mật khẩu thành công!" });
     } catch (err) {
         console.error('Change password error:', err);
@@ -1326,10 +1680,10 @@ app.post('/api/change-password', async (req, res) => {
     }
 });
 
-// 3. Upload Avatar
-app.post('/api/upload-avatar', upload.single('avatar'), async (req, res) => {
+// 3. Upload Avatar - 🔐 Yêu cầu xác thực JWT
+app.post('/api/upload-avatar', verifyToken, upload.single('avatar'), async (req, res) => {
     try {
-        const { username } = req.body;
+        const username = req.user.username; // Lấy từ JWT token
         const file = req.file;
 
         if (!file) {
@@ -1337,7 +1691,7 @@ app.post('/api/upload-avatar', upload.single('avatar'), async (req, res) => {
         }
 
         const avatarPath = file.path; // Cloudinary secure_url
-        const user = await User.findOne({ username });
+        const user = await User.findOne({ username }).select('-password');
 
         if (!user) {
             return res.status(404).json({ success: false, message: "Không tìm thấy user" });
@@ -1349,9 +1703,7 @@ app.post('/api/upload-avatar', upload.single('avatar'), async (req, res) => {
         user.avatar = avatarPath;
         await user.save();
 
-        const safeUser = user.toObject();
-        delete safeUser.password;
-        res.json({ success: true, avatar: avatarPath, user: safeUser });
+        res.json({ success: true, avatar: avatarPath, user: user.toObject() });
     } catch (err) {
         console.error('Upload avatar error:', err);
         res.status(500).json({ success: false, message: "Lỗi server" });
@@ -1714,10 +2066,14 @@ app.post('/api/toggle-save-doc', async (req, res) => {
     }
 });
 
-app.post('/api/delete-document', async (req, res) => {
+// 🔐 API xóa tài liệu - Yêu cầu xác thực JWT
+app.post('/api/delete-document', verifyToken, async (req, res) => {
     try {
-        const { docId, username } = req.body;
-        const user = await User.findOne({ username });
+        const { docId } = req.body;
+        const username = req.user.username; // Lấy từ JWT token
+        const userRole = req.user.role;
+        
+        const user = await User.findOne({ username }).select('-password');
         if (!user) {
             return res.status(403).json({ success: false, message: "Người dùng không tồn tại!" });
         }
@@ -1727,7 +2083,7 @@ app.post('/api/delete-document', async (req, res) => {
             return res.status(404).json({ success: false, message: "Không tìm thấy tài liệu!" });
         }
 
-        const isAdmin = user.role === 'admin';
+        const isAdmin = userRole === 'admin';
         const isUploader = doc.uploaderUsername === username;
         const isLegacyUploader = !doc.uploaderUsername && doc.uploader === user.fullName;
 
@@ -1737,8 +2093,6 @@ app.post('/api/delete-document', async (req, res) => {
 
         // Delete file from Cloudinary
         try {
-            // Extract public_id from Cloudinary URL
-            // URL format: https://res.cloudinary.com/[cloud]/[type]/upload/[version]/[folder]/[public_id].[ext]
             const urlParts = doc.path.split('/');
             const fileWithExt = urlParts[urlParts.length - 1];
             const publicId = `whalio-documents/${fileWithExt.split('.')[0]}`;
@@ -1758,17 +2112,21 @@ app.post('/api/delete-document', async (req, res) => {
     }
 });
 
-app.post('/api/update-document', async (req, res) => {
+// 🔐 API cập nhật tài liệu - Yêu cầu xác thực JWT
+app.post('/api/update-document', verifyToken, async (req, res) => {
     try {
-        const { docId, name, course, username, visibility } = req.body;
-        const user = await User.findOne({ username });
+        const { docId, name, course, visibility } = req.body;
+        const username = req.user.username; // Lấy từ JWT token
+        const userRole = req.user.role;
+        
+        const user = await User.findOne({ username }).select('-password');
         const doc = await Document.findById(docId);
 
         if (!doc) {
             return res.status(404).json({ success: false, message: "Không tìm thấy tài liệu!" });
         }
 
-        const isAdmin = user && user.role === 'admin';
+        const isAdmin = userRole === 'admin';
         let isOwner = false;
         if (doc.uploaderUsername) {
             isOwner = doc.uploaderUsername === username;
@@ -1792,20 +2150,39 @@ app.post('/api/update-document', async (req, res) => {
     }
 });
 
-// 5. Password Reset
+// 5. Password Reset - Đặt lại mật khẩu (không cần token, dùng email xác minh)
 app.post('/api/reset-password-force', async (req, res) => {
     try {
         const { username, email, newPass } = req.body;
+        
+        // Validate input
+        if (!username || !email || !newPass) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Vui lòng điền đầy đủ thông tin!" 
+            });
+        }
+
+        if (newPass.length < 6) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Mật khẩu mới phải có ít nhất 6 ký tự!" 
+            });
+        }
+
         const user = await User.findOne({ username, email });
 
         if (!user) {
             return res.status(400).json({ success: false, message: "Tên đăng nhập hoặc Email không chính xác!" });
         }
 
-        user.password = newPass;
+        // 🔐 Hash mật khẩu mới trước khi lưu
+        const hashedPassword = await bcrypt.hash(newPass, BCRYPT_SALT_ROUNDS);
+        user.password = hashedPassword;
         user.updatedAt = new Date();
         await user.save();
 
+        console.log(`🔒 Password reset for user: ${username}`);
         res.json({ success: true, message: "Mật khẩu đã được đặt lại thành công!" });
     } catch (err) {
         console.error('Reset password error:', err);
@@ -2101,9 +2478,11 @@ app.post('/api/comments', upload.fields([
     }
 });
 
-app.post('/api/posts/save', async (req, res) => {
+// 🔐 API lưu bài viết - Yêu cầu xác thực JWT
+app.post('/api/posts/save', verifyToken, async (req, res) => {
     try {
-        const { postId, username } = req.body;
+        const { postId } = req.body;
+        const username = req.user.username; // Lấy từ JWT token
         const post = await Post.findById(postId);
 
         if (!post) {
@@ -2125,17 +2504,20 @@ app.post('/api/posts/save', async (req, res) => {
     }
 });
 
-app.post('/api/posts/delete', async (req, res) => {
+// 🔐 API xóa bài viết - Yêu cầu xác thực JWT
+app.post('/api/posts/delete', verifyToken, async (req, res) => {
     try {
-        const { postId, username } = req.body;
-        const user = await User.findOne({ username });
+        const { postId } = req.body;
+        const username = req.user.username; // Lấy từ JWT token
+        const userRole = req.user.role;
+        
         const post = await Post.findById(postId);
 
         if (!post) {
             return res.status(404).json({ success: false, message: "Bài viết không tồn tại!" });
         }
 
-        const isAdmin = user && user.role === 'admin';
+        const isAdmin = userRole === 'admin';
         const isAuthor = post.author === username;
 
         if (!isAdmin && !isAuthor) {
@@ -2151,10 +2533,13 @@ app.post('/api/posts/delete', async (req, res) => {
     }
 });
 
-app.post('/api/comments/delete', async (req, res) => {
+// 🔐 API xóa bình luận - Yêu cầu xác thực JWT
+app.post('/api/comments/delete', verifyToken, async (req, res) => {
     try {
-        const { postId, commentId, username } = req.body;
-        const user = await User.findOne({ username });
+        const { postId, commentId } = req.body;
+        const username = req.user.username; // Lấy từ JWT token
+        const userRole = req.user.role;
+        
         const post = await Post.findById(postId);
 
         if (!post) {
@@ -2166,7 +2551,7 @@ app.post('/api/comments/delete', async (req, res) => {
             return res.status(404).json({ success: false, message: "Bình luận không tồn tại!" });
         }
 
-        const isAdmin = user && user.role === 'admin';
+        const isAdmin = userRole === 'admin';
         const isCommentAuthor = comment.author === username;
 
         if (!isAdmin && !isCommentAuthor) {
@@ -2720,26 +3105,24 @@ app.get('/api/timetable', async (req, res) => {
     }
 });
 
-app.post('/api/timetable/delete', async (req, res) => {
+// 🔐 API xóa lớp học - Yêu cầu xác thực JWT
+app.post('/api/timetable/delete', verifyToken, async (req, res) => {
     try {
-        const { classId, username } = req.body;
+        const { classId } = req.body;
+        const username = req.user.username; // Lấy từ JWT token
 
-        if (!classId || !username) {
-            return res.json({ success: false, message: '❌ Missing required data' });
-        }
-
-        const user = await User.findOne({ username });
-        if (!user) {
-            return res.json({ success: false, message: '❌ User not found' });
+        if (!classId) {
+            return res.json({ success: false, message: '❌ Thiếu classId' });
         }
 
         const classToDelete = await Timetable.findById(classId);
         if (!classToDelete) {
-            return res.json({ success: false, message: '❌ Class not found' });
+            return res.json({ success: false, message: '❌ Không tìm thấy lớp học' });
         }
 
+        // Kiểm tra quyền sở hữu
         if (classToDelete.username !== username) {
-            return res.json({ success: false, message: '❌ Unauthorized - You can only delete your own classes' });
+            return res.status(403).json({ success: false, message: '❌ Bạn không có quyền xóa lớp này' });
         }
 
         await Timetable.findByIdAndDelete(classId);
@@ -2751,16 +3134,12 @@ app.post('/api/timetable/delete', async (req, res) => {
     }
 });
 
-// CRITICAL FIX: DELETE /api/timetable/clear - Clear all timetable data for a user
-app.delete('/api/timetable/clear', async (req, res) => {
+// 🔐 Xóa toàn bộ lịch học - Yêu cầu xác thực JWT
+app.delete('/api/timetable/clear', verifyToken, async (req, res) => {
     try {
-        const { username } = req.body;
+        const username = req.user.username; // Lấy từ JWT token
 
-        if (!username) {
-            return res.json({ success: false, message: '❌ Username is required' });
-        }
-
-        // Delete all timetable entries for this user
+        // Xóa tất cả lịch học của user
         const result = await Timetable.deleteMany({ username: username });
 
         console.log(`🗑️ Cleared ${result.deletedCount} timetable entries for user: ${username}`);
@@ -2776,12 +3155,14 @@ app.delete('/api/timetable/clear', async (req, res) => {
     }
 });
 
-app.post('/api/timetable/update', async (req, res) => {
+// 🔐 API cập nhật lớp học - Yêu cầu xác thực JWT
+app.post('/api/timetable/update', verifyToken, async (req, res) => {
     try {
-        const { classId, username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange, startDate, endDate, dateRangeDisplay, teacher } = req.body;
+        const { classId, subject, room, campus, day, session, startPeriod, numPeriods, timeRange, startDate, endDate, dateRangeDisplay, teacher } = req.body;
+        const username = req.user.username; // Lấy từ JWT token
 
-        if (!classId || !username) {
-            return res.json({ success: false, message: '❌ Thiếu thông tin định danh' });
+        if (!classId) {
+            return res.json({ success: false, message: '❌ Thiếu classId' });
         }
 
         const classToUpdate = await Timetable.findById(classId);
@@ -2789,11 +3170,12 @@ app.post('/api/timetable/update', async (req, res) => {
             return res.json({ success: false, message: '❌ Không tìm thấy lớp học' });
         }
 
+        // Kiểm tra quyền sở hữu
         if (classToUpdate.username !== username) {
-            return res.json({ success: false, message: '❌ Bạn không có quyền sửa lớp này' });
+            return res.status(403).json({ success: false, message: '❌ Bạn không có quyền sửa lớp này' });
         }
 
-        // 🔥 CRITICAL: Tính lại mảng weeks khi update
+        // 🔥 Tính lại mảng weeks khi update
         let calculatedWeeks = [];
         if (startDate && endDate) {
             calculatedWeeks = getWeeksBetween(startDate, endDate);
@@ -2808,8 +3190,8 @@ app.post('/api/timetable/update', async (req, res) => {
         classToUpdate.startPeriod = parseInt(startPeriod);
         classToUpdate.numPeriods = parseInt(numPeriods);
         classToUpdate.timeRange = timeRange;
-        classToUpdate.teacher = teacher ? teacher.trim() : ''; // 🔥 MỚI: Cập nhật tên giáo viên
-        classToUpdate.weeks = calculatedWeeks; // 🔥 CẬP NHẬT MẢNG TUẦN
+        classToUpdate.teacher = teacher ? teacher.trim() : '';
+        classToUpdate.weeks = calculatedWeeks;
         classToUpdate.startDate = startDate || null;
         classToUpdate.endDate = endDate || null;
         classToUpdate.dateRangeDisplay = dateRangeDisplay || '';
