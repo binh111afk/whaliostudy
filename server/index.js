@@ -1413,7 +1413,7 @@ async function uploadToCloudinary(buffer, originalFilename, mimeType) {
 }
 
 // ==================== ACTIVITY LOGGING (MongoDB) ====================
-async function logActivity(username, action, target, link, type) {
+async function logActivity(username, action, target, link, type, req = null) {
     try {
         const user = await User.findOne({ username });
         const activity = new Activity({
@@ -1434,9 +1434,72 @@ async function logActivity(username, action, target, link, type) {
             const oldActivities = await Activity.find().sort({ timestamp: 1 }).limit(activityCount - 100);
             await Activity.deleteMany({ _id: { $in: oldActivities.map(a => a._id) } });
         }
+
+        await logUserActivityLog({
+            username,
+            action: String(type || 'activity').trim() || 'activity',
+            description: `${String(action || '').trim()} ${String(target || '').trim()}`.trim(),
+            req,
+            metadata: {
+                target: String(target || '').trim(),
+                link: String(link || '').trim(),
+                activityType: String(type || 'activity').trim() || 'activity'
+            }
+        });
+
         console.log(`📌 Activity logged: ${username} ${action}`);
     } catch (err) {
         console.error('❌ Log activity error:', err);
+    }
+}
+
+async function logUserActivityLog({
+    username,
+    action,
+    description,
+    req = null,
+    metadata = {}
+}) {
+    try {
+        const normalizedUsername = String(username || '').trim();
+        if (!normalizedUsername) return;
+
+        const lowered = normalizedUsername.toLowerCase();
+        if (lowered === 'guest' || lowered === 'ẩn danh') return;
+
+        const user = await User.findOne({ username: normalizedUsername })
+            .select('_id username lastIP lastCity lastCountry lastDevice')
+            .lean();
+
+        if (!user) return;
+
+        const userAgent = String(req?.headers?.['user-agent'] || '').trim();
+        const clientIP = req ? extractClientIP(req) : String(user.lastIP || '').trim();
+        const geo = clientIP ? getGeoLocationFromIP(clientIP) : { country: '', city: '' };
+        const resolvedCountry = String(user.lastCountry || geo.country || '').trim();
+        const resolvedCity = String(user.lastCity || geo.city || '').trim();
+        const resolvedDevice = String(
+            (userAgent ? parseDeviceFromUA(userAgent) : '') ||
+            user.lastDevice ||
+            ''
+        ).trim();
+
+        await UserActivityLog.create({
+            userId: user._id,
+            username: user.username,
+            action: String(action || 'activity').trim() || 'activity',
+            description: String(description || 'Người dùng thực hiện thao tác').trim(),
+            ip: clientIP,
+            device: resolvedDevice,
+            userAgent,
+            metadata: {
+                ...metadata,
+                lastCountry: resolvedCountry,
+                lastCity: resolvedCity
+            }
+        });
+    } catch (err) {
+        console.error('❌ UserActivityLog write failed:', err);
     }
 }
 
@@ -1684,7 +1747,11 @@ app.post('/api/login', loginLimiter, async (req, res) => {
             description: 'Đăng nhập thành công',
             ip: clientIP,
             device: device,
-            userAgent: userAgent
+            userAgent: userAgent,
+            metadata: {
+                lastCountry: resolvedCountry,
+                lastCity: resolvedCity
+            }
         });
 
         // 🔑 Tạo JWT Token
@@ -1711,6 +1778,65 @@ app.post('/api/login', loginLimiter, async (req, res) => {
     } catch (err) {
         console.error('Login error:', err);
         res.status(500).json({ success: false, message: "Lỗi server" });
+    }
+});
+
+app.post('/api/logout', async (req, res) => {
+    try {
+        const { username, clientContext = {} } = req.body || {};
+        const normalizedUsername = String(username || '').trim();
+
+        if (!normalizedUsername) {
+            return res.status(400).json({
+                success: false,
+                message: 'Thiếu username'
+            });
+        }
+
+        const user = await User.findOne({ username: normalizedUsername })
+            .select('_id username lastCountry lastCity')
+            .lean();
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy người dùng'
+            });
+        }
+
+        const clientIP = extractClientIP(req);
+        const { country, city } = getGeoLocationFromIP(clientIP);
+        const userAgent = req.headers['user-agent'] || '';
+        const device = String(clientContext.device || '').trim() || parseDeviceFromUA(userAgent);
+        const clientCountry = String(clientContext.country || '').trim().toUpperCase();
+        const clientCity = String(clientContext.city || '').trim();
+        const resolvedCountry = clientCountry || user.lastCountry || country;
+        const resolvedCity = clientCity || user.lastCity || city;
+
+        await UserActivityLog.create({
+            userId: user._id,
+            username: user.username,
+            action: 'logout',
+            description: 'Đăng xuất',
+            ip: clientIP,
+            device: device,
+            userAgent: userAgent,
+            metadata: {
+                lastCountry: resolvedCountry,
+                lastCity: resolvedCity
+            }
+        });
+
+        return res.json({
+            success: true,
+            message: 'Đăng xuất thành công'
+        });
+    } catch (err) {
+        console.error('Logout log error:', err);
+        return res.status(500).json({
+            success: false,
+            message: 'Lỗi server'
+        });
     }
 });
 
@@ -2298,7 +2424,7 @@ app.post('/api/upload-document', (req, res, next) => {
         await newDoc.save();
 
         if (visibility !== 'private') {
-            await logActivity(username || 'Ẩn danh', 'đã tải lên', newDoc.name, `#doc-${newDoc._id}`, 'upload');
+            await logActivity(username || 'Ẩn danh', 'đã tải lên', newDoc.name, `#doc-${newDoc._id}`, 'upload', req);
         }
 
         // Return document with id field for frontend compatibility
@@ -2383,7 +2509,7 @@ app.post('/api/delete-document', verifyToken, async (req, res) => {
         }
 
         await Document.findByIdAndDelete(docId);
-        await logActivity(username, 'đã xóa tài liệu', doc.name, '#', 'delete');
+        await logActivity(username, 'đã xóa tài liệu', doc.name, '#', 'delete', req);
 
         res.json({ success: true, message: "Đã xóa tài liệu vĩnh viễn!" });
     } catch (err) {
@@ -2682,7 +2808,7 @@ app.post('/api/posts', upload.fields([
         });
 
         await newPost.save();
-        await logActivity(username, 'đã đăng bài viết', 'trong Cộng đồng', `#post-${newPost._id}`, 'post');
+        await logActivity(username, 'đã đăng bài viết', 'trong Cộng đồng', `#post-${newPost._id}`, 'post', req);
 
         console.log(`✅ Bài viết mới từ ${username}: ID ${newPost._id}`);
         res.json({ success: true, message: "Đã đăng bài thành công!", post: newPost });
@@ -2758,7 +2884,7 @@ app.post('/api/comments', upload.fields([
 
         post.comments.push(comment);
         await post.save();
-        await logActivity(username, 'đã bình luận', `vào bài viết của ${post.author}`, `#post-${postId}`, 'comment');
+        await logActivity(username, 'đã bình luận', `vào bài viết của ${post.author}`, `#post-${postId}`, 'comment', req);
 
         res.json({ success: true, comment: comment });
     } catch (err) {
@@ -3506,6 +3632,7 @@ app.post('/api/timetable/update-note', async (req, res) => {
         const { classId, username, action, note } = req.body;
         // action: 'add' | 'update' | 'delete' | 'toggle'
         // note: { id, content, deadline, isDone }
+        let deadlineLog = null;
 
         if (!classId || !username || !action) {
             return res.json({ success: false, message: '❌ Thiếu thông tin bắt buộc' });
@@ -3547,6 +3674,13 @@ app.post('/api/timetable/update-note', async (req, res) => {
 
                 classToUpdate.notes.push(newNote);
                 console.log(`📝 Added note to "${classToUpdate.subject}": "${newNote.content}"`);
+
+                if (newNote.deadline) {
+                    deadlineLog = {
+                        action: 'deadline_create',
+                        description: `Thêm deadline môn ${classToUpdate.subject}: ${newNote.content}`
+                    };
+                }
                 break;
 
             case 'update':
@@ -3559,6 +3693,13 @@ app.post('/api/timetable/update-note', async (req, res) => {
                     if (note.deadline !== undefined) noteToUpdate.deadline = note.deadline ? new Date(note.deadline) : null;
                     if (note.isDone !== undefined) noteToUpdate.isDone = note.isDone;
                     console.log(`✏️ Updated note "${note.id}" in "${classToUpdate.subject}"`);
+
+                    if (note.deadline !== undefined) {
+                        deadlineLog = {
+                            action: 'deadline_update',
+                            description: `Cập nhật deadline môn ${classToUpdate.subject}: ${noteToUpdate.content}`
+                        };
+                    }
                 } else {
                     return res.json({ success: false, message: '❌ Không tìm thấy ghi chú' });
                 }
@@ -3568,10 +3709,18 @@ app.post('/api/timetable/update-note', async (req, res) => {
                 if (!note || !note.id) {
                     return res.json({ success: false, message: '❌ Thiếu ID ghi chú' });
                 }
+                const noteToDelete = classToUpdate.notes.find(n => n.id === note.id);
                 const initialLength = classToUpdate.notes.length;
                 classToUpdate.notes = classToUpdate.notes.filter(n => n.id !== note.id);
                 if (classToUpdate.notes.length < initialLength) {
                     console.log(`🗑️ Deleted note "${note.id}" from "${classToUpdate.subject}"`);
+
+                    if (noteToDelete?.deadline) {
+                        deadlineLog = {
+                            action: 'deadline_delete',
+                            description: `Xóa deadline môn ${classToUpdate.subject}: ${noteToDelete.content}`
+                        };
+                    }
                 } else {
                     return res.json({ success: false, message: '❌ Không tìm thấy ghi chú' });
                 }
@@ -3585,6 +3734,13 @@ app.post('/api/timetable/update-note', async (req, res) => {
                 if (noteToToggle) {
                     noteToToggle.isDone = !noteToToggle.isDone;
                     console.log(`🔄 Toggled note "${note.id}" in "${classToUpdate.subject}" to isDone=${noteToToggle.isDone}`);
+
+                    if (noteToToggle.deadline) {
+                        deadlineLog = {
+                            action: noteToToggle.isDone ? 'deadline_complete' : 'deadline_reopen',
+                            description: `${noteToToggle.isDone ? 'Hoàn thành' : 'Mở lại'} deadline môn ${classToUpdate.subject}: ${noteToToggle.content}`
+                        };
+                    }
                 } else {
                     return res.json({ success: false, message: '❌ Không tìm thấy ghi chú' });
                 }
@@ -3596,6 +3752,20 @@ app.post('/api/timetable/update-note', async (req, res) => {
 
         classToUpdate.updatedAt = new Date();
         await classToUpdate.save();
+
+        if (deadlineLog) {
+            await logUserActivityLog({
+                username,
+                action: deadlineLog.action,
+                description: deadlineLog.description,
+                req,
+                metadata: {
+                    classId: classToUpdate._id.toString(),
+                    subject: classToUpdate.subject,
+                    source: 'timetable-note'
+                }
+            });
+        }
 
         res.json({
             success: true,
@@ -3728,6 +3898,14 @@ app.post('/api/deadline-tags', async (req, res) => {
                 name: cleanedName,
                 normalizedName,
             });
+
+            await logUserActivityLog({
+                username,
+                action: 'deadline_tag_create',
+                description: `Tạo nhãn deadline: ${cleanedName}`,
+                req,
+                metadata: { tag: cleanedName }
+            });
         }
 
         const tags = await DeadlineTag.find({ username })
@@ -3757,10 +3935,20 @@ app.delete('/api/deadline-tags', async (req, res) => {
             return res.json({ success: false, message: 'Tag không hợp lệ' });
         }
 
-        await DeadlineTag.deleteOne({
+        const deletedTag = await DeadlineTag.deleteOne({
             username,
             normalizedName: cleanedName.toLowerCase(),
         });
+
+        if (deletedTag.deletedCount > 0) {
+            await logUserActivityLog({
+                username,
+                action: 'deadline_tag_delete',
+                description: `Xóa nhãn deadline: ${cleanedName}`,
+                req,
+                metadata: { tag: cleanedName }
+            });
+        }
 
         const tags = await DeadlineTag.find({ username })
             .sort({ createdAt: -1 })
@@ -3807,6 +3995,17 @@ app.post('/api/events', async (req, res) => {
         });
 
         await event.save();
+        await logUserActivityLog({
+            username,
+            action: normalizedType === 'deadline' ? 'deadline_create' : 'event_create',
+            description: `${normalizedType === 'deadline' ? 'Tạo deadline' : 'Tạo sự kiện'}: ${event.title}`,
+            req,
+            metadata: {
+                eventId: event._id.toString(),
+                type: normalizedType,
+                deadlineTag: normalizedTag
+            }
+        });
         console.log(`✅ Event created: ${title} for ${username}`);
         res.json({ success: true, event });
     } catch (err) {
@@ -3835,7 +4034,19 @@ app.delete('/api/events/:id', async (req, res) => {
             return res.json({ success: false, message: 'Unauthorized' });
         }
 
+        const eventType = event.type;
+        const eventTitle = event.title;
         await Event.findByIdAndDelete(id);
+        await logUserActivityLog({
+            username,
+            action: eventType === 'deadline' ? 'deadline_delete' : 'event_delete',
+            description: `${eventType === 'deadline' ? 'Xóa deadline' : 'Xóa sự kiện'}: ${eventTitle}`,
+            req,
+            metadata: {
+                eventId: id,
+                type: eventType
+            }
+        });
         console.log(`🗑️ Event deleted: ${id} by ${username}`);
         res.json({ success: true, message: 'Event deleted successfully' });
     } catch (err) {
@@ -3883,6 +4094,17 @@ app.put('/api/events/:id', async (req, res, next) => {
         event.deadlineTag = String(deadlineTag || '').trim().slice(0, 40) || 'Công việc';
 
         await event.save();
+        await logUserActivityLog({
+            username,
+            action: normalizedType === 'deadline' ? 'deadline_update' : 'event_update',
+            description: `${normalizedType === 'deadline' ? 'Cập nhật deadline' : 'Cập nhật sự kiện'}: ${event.title}`,
+            req,
+            metadata: {
+                eventId: event._id.toString(),
+                type: normalizedType,
+                deadlineTag: event.deadlineTag
+            }
+        });
         return res.json({ success: true, event });
     } catch (err) {
         console.error('Error updating event:', err);
@@ -3921,6 +4143,19 @@ app.put('/api/events/toggle', async (req, res) => {
         }
         
         await event.save();
+        await logUserActivityLog({
+            username,
+            action: event.type === 'deadline'
+                ? (event.isDone ? 'deadline_complete' : 'deadline_reopen')
+                : (event.isDone ? 'event_complete' : 'event_reopen'),
+            description: `${event.isDone ? 'Đánh dấu hoàn thành' : 'Bỏ hoàn thành'}: ${event.title}`,
+            req,
+            metadata: {
+                eventId: event._id.toString(),
+                type: event.type || 'event',
+                isDone: event.isDone
+            }
+        });
         
         console.log('[Toggle] Success:', { 
             id, 
