@@ -242,7 +242,17 @@ function App() {
         if (!isMounted || !sessionUser) return;
 
         const normalizedName = sessionUser.fullName || sessionUser.name || 'Whalio User';
+        const savedUserRaw = localStorage.getItem('user');
+        let savedUser = {};
+        if (savedUserRaw) {
+          try {
+            savedUser = JSON.parse(savedUserRaw) || {};
+          } catch {
+            savedUser = {};
+          }
+        }
         const mergedUser = {
+          ...savedUser,
           ...sessionUser,
           fullName: normalizedName,
           name: normalizedName
@@ -250,6 +260,10 @@ function App() {
 
         setUser((prev) => ({ ...(prev || {}), ...mergedUser }));
         localStorage.setItem('user', JSON.stringify(mergedUser));
+
+        if (response?.data?.token) {
+          localStorage.setItem('token', response.data.token);
+        }
       } catch (error) {
         if (error?.response?.status !== 401) {
           console.error('Failed to fetch session user:', error);
@@ -268,8 +282,13 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     const oauthState = params.get('googleAuth');
     const encodedUser = params.get('user');
+    const oauthToken = params.get('token');
 
     if (!oauthState) return;
+
+    if (oauthToken) {
+      localStorage.setItem('token', oauthToken);
+    }
 
     if (oauthState === 'success' && encodedUser) {
       try {
@@ -291,6 +310,7 @@ function App() {
 
     params.delete('googleAuth');
     params.delete('user');
+    params.delete('token');
     const cleanQuery = params.toString();
     const cleanUrl = `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ''}${window.location.hash}`;
     window.history.replaceState({}, document.title, cleanUrl);

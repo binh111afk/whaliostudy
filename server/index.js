@@ -1359,6 +1359,47 @@ const GOOGLE_CALLBACK_URL = String(
 const GOOGLE_OAUTH_STATE_PARAM = 'googleAuth';
 const isGoogleOAuthEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
+function normalizeAuthUser(rawUser) {
+    const source = rawUser?.toObject ? rawUser.toObject() : { ...(rawUser || {}) };
+    const userId = String(source._id || source.userId || '').trim();
+    const username = String(source.username || '').trim();
+    const email = String(source.email || '').trim().toLowerCase();
+    const role = String(source.role || 'member').trim() || 'member';
+    const displayName = String(source.fullName || source.name || username || 'Whalio User').trim();
+
+    return {
+        _id: userId || null,
+        username,
+        email,
+        role,
+        name: displayName,
+        fullName: displayName,
+        avatar: source.avatar || '/img/avt.png',
+        whaleID: source.whaleID || null
+    };
+}
+
+function issueJwtForUser(rawUser) {
+    const normalizedUser = normalizeAuthUser(rawUser);
+    return jwt.sign(
+        {
+            userId: normalizedUser._id || '',
+            username: normalizedUser.username || '',
+            role: normalizedUser.role || 'member'
+        },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+    );
+}
+
+function buildAuthResponsePayload(rawUser) {
+    const user = normalizeAuthUser(rawUser);
+    return {
+        user,
+        token: issueJwtForUser(user)
+    };
+}
+
 function createUsernameBaseFromEmail(email) {
     const localPart = String(email || '').split('@')[0] || '';
     const sanitized = localPart.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -1457,13 +1498,13 @@ async function findOrCreateGoogleUser(googleProfile) {
 }
 
 function buildGoogleSuccessRedirect(user) {
-    const safeUser = user.toObject ? user.toObject() : { ...user };
-    delete safeUser.password;
+    const authPayload = buildAuthResponsePayload(user);
 
     const encodedUser = encodeURIComponent(
-        Buffer.from(JSON.stringify(safeUser), 'utf8').toString('base64')
+        Buffer.from(JSON.stringify(authPayload.user), 'utf8').toString('base64')
     );
-    return `${WHALIO_WEB_BASE_URL}/?${GOOGLE_OAUTH_STATE_PARAM}=success&user=${encodedUser}`;
+    const encodedToken = encodeURIComponent(authPayload.token);
+    return `${WHALIO_WEB_BASE_URL}/?${GOOGLE_OAUTH_STATE_PARAM}=success&user=${encodedUser}&token=${encodedToken}`;
 }
 
 const googleFailureRedirect = `${WHALIO_WEB_BASE_URL}/?${GOOGLE_OAUTH_STATE_PARAM}=failed`;
@@ -2446,7 +2487,7 @@ app.get('/auth/google/callback', (req, res, next) => {
     })(req, res, next);
 }, (req, res) => {
     try {
-        return res.redirect('https://whaliostudy.io.vn');
+        return res.redirect(buildGoogleSuccessRedirect(req.user));
     } catch (error) {
         console.error('Google callback redirect error:', error.message);
         return res.redirect(googleFailureRedirect);
@@ -2462,15 +2503,11 @@ app.get('/auth/user', (req, res) => {
         });
     }
 
-    const displayName = String(req.user.fullName || req.user.name || 'Whalio User').trim();
+    const authPayload = buildAuthResponsePayload(req.user);
     return res.json({
         success: true,
-        user: {
-            name: displayName,
-            fullName: displayName,
-            avatar: req.user.avatar || '/img/avt.png',
-            whaleID: req.user.whaleID || null
-        }
+        user: authPayload.user,
+        token: authPayload.token
     });
 });
 
