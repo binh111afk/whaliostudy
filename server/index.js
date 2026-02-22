@@ -1155,6 +1155,76 @@ passport.deserializeUser(async (userId, done) => {
     }
 });
 
+const ADMIN_EMAIL_ALLOWLIST = new Set(
+    String(process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || '')
+        .split(',')
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean)
+);
+
+async function loadUserByIdSafe(userId) {
+    const id = String(userId || '').trim();
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
+    return User.findById(id)
+        .select('username fullName email avatar whaleID role')
+        .lean();
+}
+
+function saveSession(req) {
+    return new Promise((resolve, reject) => {
+        req.session.save((error) => {
+            if (error) return reject(error);
+            return resolve();
+        });
+    });
+}
+
+async function isAdmin(req, res, next) {
+    try {
+        const originalAdminId = String(req.session?.adminId || '').trim();
+        const passportUserId = String(req.session?.passport?.user || '').trim();
+
+        let effectiveUser = req.user || null;
+        if (!effectiveUser && passportUserId) {
+            effectiveUser = await loadUserByIdSafe(passportUserId);
+        }
+
+        let adminActor = effectiveUser;
+        if (originalAdminId) {
+            adminActor = await loadUserByIdSafe(originalAdminId);
+        }
+
+        if (!adminActor) {
+            return res.status(401).json({
+                success: false,
+                message: 'Chưa đăng nhập phiên Admin.'
+            });
+        }
+
+        const adminEmail = String(adminActor.email || '').trim().toLowerCase();
+        const hasAdminRole = adminActor.role === 'admin';
+        const isAllowedEmail = ADMIN_EMAIL_ALLOWLIST.size > 0 && ADMIN_EMAIL_ALLOWLIST.has(adminEmail);
+
+        if (!hasAdminRole && !isAllowedEmail) {
+            return res.status(403).json({
+                success: false,
+                message: 'Bạn không có quyền Admin để dùng tính năng nhập vai.'
+            });
+        }
+
+        req.adminActor = adminActor;
+        req.effectiveUser = effectiveUser;
+        req.isImpersonating = Boolean(originalAdminId);
+        return next();
+    } catch (error) {
+        console.error('isAdmin middleware error:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Lỗi xác thực quyền Admin.'
+        });
+    }
+}
+
 // ==================== GOOGLE OAUTH HELPERS ====================
 const resolveBaseUrl = (url, fallback) => {
     const value = String(url || '').trim();
@@ -2285,6 +2355,111 @@ app.get('/auth/user', (req, res) => {
             whaleID: req.user.whaleID || null
         }
     });
+});
+
+app.post('/api/admin/impersonate/:userId', isAdmin, async (req, res) => {
+    try {
+        const targetUserId = String(req.params.userId || '').trim();
+        if (!mongoose.Types.ObjectId.isValid(targetUserId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'userId không hợp lệ.'
+            });
+        }
+
+        const targetUser = await loadUserByIdSafe(targetUserId);
+        if (!targetUser) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy người dùng mục tiêu.'
+            });
+        }
+
+        const adminId = String(req.adminActor?._id || '').trim();
+        if (!adminId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Không xác định được phiên Admin.'
+            });
+        }
+
+        if (!req.session.passport) {
+            req.session.passport = {};
+        }
+
+        if (!req.session.adminId) {
+            req.session.adminId = adminId;
+        }
+
+        req.session.passport.user = String(targetUser._id);
+        await saveSession(req);
+
+        return res.json({
+            success: true,
+            message: 'Bắt đầu nhập vai thành công.',
+            impersonating: true,
+            user: {
+                id: String(targetUser._id),
+                name: targetUser.fullName || targetUser.username || 'Whalio User',
+                avatar: targetUser.avatar || '/img/avt.png',
+                whaleID: targetUser.whaleID || null
+            }
+        });
+    } catch (error) {
+        console.error('Impersonate start error:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Không thể bắt đầu nhập vai.'
+        });
+    }
+});
+
+app.post('/api/admin/stop-impersonating', isAdmin, async (req, res) => {
+    try {
+        const adminId = String(req.session?.adminId || '').trim();
+        if (!adminId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Hiện tại không ở chế độ nhập vai.'
+            });
+        }
+
+        const adminUser = await loadUserByIdSafe(adminId);
+        if (!adminUser) {
+            delete req.session.adminId;
+            await saveSession(req);
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy tài khoản Admin gốc để khôi phục phiên.'
+            });
+        }
+
+        if (!req.session.passport) {
+            req.session.passport = {};
+        }
+
+        req.session.passport.user = String(adminUser._id);
+        delete req.session.adminId;
+        await saveSession(req);
+
+        return res.json({
+            success: true,
+            message: 'Đã dừng nhập vai và quay lại tài khoản Admin.',
+            impersonating: false,
+            user: {
+                id: String(adminUser._id),
+                name: adminUser.fullName || adminUser.username || 'Admin',
+                avatar: adminUser.avatar || '/img/avt.png',
+                whaleID: adminUser.whaleID || null
+            }
+        });
+    } catch (error) {
+        console.error('Impersonate stop error:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Không thể dừng nhập vai.'
+        });
+    }
 });
 
 // 🛡️ Áp dụng loginLimiter cho API đăng nhập (5 lần / 15 phút)
