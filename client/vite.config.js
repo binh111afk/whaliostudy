@@ -42,6 +42,17 @@ export default defineConfig({
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        navigateFallbackDenylist: [/^\/api\//, /^\/auth\//],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) =>
+              url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/'),
+            handler: 'NetworkOnly',
+            options: {
+              cacheName: 'api-auth-network-only',
+            },
+          },
+        ],
       },
     }),
   ],

@@ -20,6 +20,12 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const session = require('express-session');
+let cookieParser = null;
+try {
+    cookieParser = require('cookie-parser');
+} catch (error) {
+    console.warn('⚠️ cookie-parser is not installed. Run `npm i cookie-parser` in server/ for full cookie parsing support.');
+}
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const helmet = require('helmet');
@@ -132,6 +138,11 @@ const SESSION_SECRET = String(
 ).trim();
 if (!process.env.SESSION_SECRET) {
     console.warn('⚠️ SESSION_SECRET is not set. Using fallback secret from env/default.');
+}
+
+if (cookieParser) {
+    app.use(cookieParser(SESSION_SECRET));
+    console.log('✅  cookie-parser enabled');
 }
 
 app.use(session({
@@ -3026,10 +3037,27 @@ app.get('/api/quick-notes-health', (req, res) => {
 // 4.0 Portal APIs (MongoDB + cache)
 app.get('/api/portal', async (req, res) => {
     try {
+        const requestedUsername = String(req.query?.username || '').trim();
+        if (requestedUsername) {
+            const userExists = await User.findOne({ username: requestedUsername })
+                .select('_id')
+                .lean();
+
+            if (!userExists) {
+                return res.status(200).json({
+                    success: false,
+                    authenticated: false,
+                    data: [],
+                    message: 'User not found'
+                });
+            }
+        }
+
         const cachedCategories = getPortalFromCache();
         if (cachedCategories) {
             return res.json({
                 success: true,
+                authenticated: true,
                 data: cachedCategories,
                 cached: true
             });
@@ -3043,6 +3071,7 @@ app.get('/api/portal', async (req, res) => {
 
         return res.json({
             success: true,
+            authenticated: true,
             data: categories,
             cached: false
         });

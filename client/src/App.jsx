@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { Menu, X, Home, FileText, Users, LayoutGrid, Moon, Sun, Settings, LogOut, Save, User } from 'lucide-react';
-import axios from 'axios';
+import axios from './config/axiosConfig';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header'; 
 import AuthModal from './components/AuthModal'; // Import Modal
