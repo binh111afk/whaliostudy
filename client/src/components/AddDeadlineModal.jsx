@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { X, Calendar, Clock, Save, Tag, Plus } from "lucide-react";
+import axios from "../config/axiosConfig";
 import { getFullApiUrl } from '../config/apiConfig';
 
 const DEFAULT_DEADLINE_TAGS = ["Công việc", "Dự án", "Học bài", "Hạn chót"];
@@ -47,10 +48,11 @@ const AddDeadlineModal = ({
 
     const fetchTags = async () => {
       try {
-        const res = await fetch(
-          getFullApiUrl(`/api/deadline-tags?username=${encodeURIComponent(username)}`)
+        const res = await axios.get(
+          getFullApiUrl(`/api/deadline-tags?username=${encodeURIComponent(username)}`),
+          { withCredentials: true }
         );
-        const data = await res.json();
+        const data = res?.data;
         if (!cancelled && data?.success && Array.isArray(data.tags)) {
           setTagOptions(data.tags);
         }
@@ -126,12 +128,12 @@ const AddDeadlineModal = ({
     }
 
     try {
-      const res = await fetch(getFullApiUrl("/api/deadline-tags"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, name: nextTag }),
-      });
-      const data = await res.json();
+      const res = await axios.post(
+        getFullApiUrl("/api/deadline-tags"),
+        { username, name: nextTag },
+        { withCredentials: true }
+      );
+      const data = res?.data;
       if (!data?.success) {
         toast.error(data?.message || "Không thể thêm tag.");
         return;
@@ -155,12 +157,11 @@ const AddDeadlineModal = ({
     if (DEFAULT_DEADLINE_TAGS.includes(normalized)) return;
 
     try {
-      const res = await fetch(getFullApiUrl("/api/deadline-tags"), {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, name: normalized }),
+      const res = await axios.delete(getFullApiUrl("/api/deadline-tags"), {
+        data: { username, name: normalized },
+        withCredentials: true,
       });
-      const data = await res.json();
+      const data = res?.data;
       if (!data?.success) {
         toast.error(data?.message || "Không thể xóa tag.");
         return;
@@ -208,20 +209,20 @@ const AddDeadlineModal = ({
     setLoading(true);
     try {
       const isEdit = mode === "edit" && initialData?._id;
-      const response = await fetch(isEdit ? getFullApiUrl(`/api/events/${initialData._id}`) : getFullApiUrl("/api/events"), {
-        method: isEdit ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username,
-          title: title.trim(),
-          description: description.trim(),
-          date: finalDate.toISOString(),
-          type: "deadline",
-          deadlineTag: normalizedTag,
-        }),
-      });
+      const payload = {
+        username,
+        title: title.trim(),
+        description: description.trim(),
+        date: finalDate.toISOString(),
+        type: "deadline",
+        deadlineTag: normalizedTag,
+      };
 
-      const data = await response.json().catch(() => ({}));
+      const response = isEdit
+        ? await axios.put(getFullApiUrl(`/api/events/${initialData._id}`), payload, { withCredentials: true })
+        : await axios.post(getFullApiUrl("/api/events"), payload, { withCredentials: true });
+
+      const data = response?.data || {};
       if (data.success) {
         toast.success(isEdit ? "Cập nhật deadline thành công!" : "Thêm deadline thành công!");
         resetForm();

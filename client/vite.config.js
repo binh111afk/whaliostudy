@@ -46,7 +46,10 @@ export default defineConfig({
         runtimeCaching: [
           {
             urlPattern: ({ url }) =>
-              url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/'),
+              url.pathname === '/api' ||
+              url.pathname.startsWith('/api/') ||
+              url.pathname === '/auth' ||
+              url.pathname.startsWith('/auth/'),
             handler: 'NetworkOnly',
             options: {
               cacheName: 'api-auth-network-only',

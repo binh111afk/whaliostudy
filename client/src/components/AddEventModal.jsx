@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Calendar, Clock, MapPin, Save } from "lucide-react";
 import { toast } from "sonner";
+import axios from "../config/axiosConfig";
 import { getFullApiUrl } from '../config/apiConfig';
 
 const AddEventModal = ({ isOpen, onClose, onSuccess, username, defaultDate }) => {
@@ -57,20 +58,20 @@ const AddEventModal = ({ isOpen, onClose, onSuccess, username, defaultDate }) =>
     }
 
     try {
-      const res = await fetch(getFullApiUrl("/api/events"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await axios.post(
+        getFullApiUrl("/api/events"),
+        {
           username,
           title: title.trim(),
           date: eventDate.toISOString(),
           type: "other", // Mặc định là sự kiện khác
           description: description,
           deadlineTag: "Lịch trình", // Tag mặc định cho sự kiện
-        }),
-      });
+        },
+        { withCredentials: true }
+      );
 
-      const data = await res.json();
+      const data = res?.data;
 
       if (data.success) {
         toast.success("✅ Đã thêm lịch trình!");

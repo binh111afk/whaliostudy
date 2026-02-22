@@ -1266,6 +1266,92 @@ async function loadUserByIdSafe(userId) {
         .lean();
 }
 
+function resolveUsernameFromRequest(req) {
+    const fromSessionUser = String(req.user?.username || '').trim();
+    if (fromSessionUser) return fromSessionUser;
+
+    const fromBody = String(req.body?.username || '').trim();
+    if (fromBody) return fromBody;
+
+    return String(req.query?.username || '').trim();
+}
+
+async function ensureAuthenticated(req, res, next) {
+    try {
+        const isPassportAuthenticated =
+            typeof req.isAuthenticated === 'function' ? req.isAuthenticated() : false;
+
+        if (isPassportAuthenticated && req.user) {
+            return next();
+        }
+
+        const sessionUserId = String(req.session?.passport?.user || '').trim();
+        if (!req.user && sessionUserId && mongoose.Types.ObjectId.isValid(sessionUserId)) {
+            const sessionUser = await loadUserByIdSafe(sessionUserId);
+            if (sessionUser) {
+                req.user = sessionUser;
+                return next();
+            }
+        }
+
+        const requestedUsername = resolveUsernameFromRequest(req);
+        const authHeader = String(req.headers?.authorization || '').trim();
+        const token = authHeader.startsWith('Bearer ')
+            ? authHeader.slice(7).trim()
+            : authHeader;
+        let tokenUserId = '';
+        if (token) {
+            try {
+                const decoded = jwt.verify(token, JWT_SECRET);
+                tokenUserId = String(decoded?.userId || '').trim();
+                if (tokenUserId && mongoose.Types.ObjectId.isValid(tokenUserId)) {
+                    const tokenUser = await loadUserByIdSafe(tokenUserId);
+                    if (tokenUser) {
+                        req.user = tokenUser;
+                        return next();
+                    }
+                }
+
+                const tokenUsername = String(decoded?.username || '').trim();
+                if (tokenUsername) {
+                    const tokenUserByUsername = await User.findOne({ username: tokenUsername })
+                        .select('username fullName email avatar whaleID role')
+                        .lean();
+                    if (tokenUserByUsername) {
+                        req.user = tokenUserByUsername;
+                        return next();
+                    }
+                }
+            } catch (error) {
+                console.warn(`⚠️ [AUTH DEBUG] JWT check failed in ensureAuthenticated: ${error.message}`);
+            }
+        }
+
+        console.warn('⚠️ [AUTH DEBUG] ensureAuthenticated failed', JSON.stringify({
+            method: req.method,
+            path: req.originalUrl || req.path || '',
+            sessionUserId: sessionUserId || null,
+            tokenUserId: tokenUserId || null,
+            requestedUsername: requestedUsername || null,
+            hasReqUser: Boolean(req.user),
+            passportAuthenticated: isPassportAuthenticated
+        }));
+
+        return res.status(401).json({
+            success: false,
+            authenticated: false,
+            message: 'Chưa đăng nhập hoặc phiên đăng nhập đã hết hạn.'
+        });
+    } catch (error) {
+        console.error('ensureAuthenticated middleware error:', error.message);
+        return res.status(500).json({
+            success: false,
+            authenticated: false,
+            message: 'Lỗi xác thực phiên đăng nhập.'
+        });
+    }
+}
+
 function saveSession(req) {
     return new Promise((resolve, reject) => {
         req.session.save((error) => {
@@ -1531,8 +1617,12 @@ if (isGoogleOAuthEnabled) {
             async (_accessToken, _refreshToken, profile, done) => {
                 try {
                     const user = await findOrCreateGoogleUser(profile);
+                    if (!user || !user._id) {
+                        return done(new Error('Google OAuth user mapping failed: missing user _id'), null);
+                    }
                     return done(null, user);
                 } catch (error) {
+                    console.error('GoogleStrategy verify callback error:', error.message);
                     return done(error, null);
                 }
             }
@@ -3035,22 +3125,17 @@ app.get('/api/quick-notes-health', (req, res) => {
 });
 
 // 4.0 Portal APIs (MongoDB + cache)
-app.get('/api/portal', async (req, res) => {
+app.get('/api/portal', ensureAuthenticated, async (req, res) => {
     try {
-        const requestedUsername = String(req.query?.username || '').trim();
-        if (requestedUsername) {
-            const userExists = await User.findOne({ username: requestedUsername })
-                .select('_id')
-                .lean();
-
-            if (!userExists) {
-                return res.status(200).json({
-                    success: false,
-                    authenticated: false,
-                    data: [],
-                    message: 'User not found'
-                });
-            }
+        const requestedUsername = resolveUsernameFromRequest(req);
+        if (!requestedUsername) {
+            console.warn(`⚠️ [Portal] Missing username after authentication. sessionUserId=${req.session?.passport?.user || 'none'}`);
+            return res.status(200).json({
+                success: false,
+                authenticated: false,
+                data: [],
+                message: 'User not found'
+            });
         }
 
         const cachedCategories = getPortalFromCache();
@@ -4468,21 +4553,24 @@ app.delete('/api/study/tasks/:id', async (req, res) => {
 });
 
 // 9. Timetable APIs
-app.post('/api/timetable', async (req, res) => {
+app.post('/api/timetable', ensureAuthenticated, async (req, res) => {
     try {
-        const { username, subject, room, campus, day, session, startPeriod, numPeriods, timeRange, startDate, endDate, dateRangeDisplay, teacher, notes } = req.body;
+        const { subject, room, campus, day, session, startPeriod, numPeriods, timeRange, startDate, endDate, dateRangeDisplay, teacher, notes } = req.body;
+        const username = resolveUsernameFromRequest(req);
 
         if (!username) {
-            return res.json({ success: false, message: '❌ Missing username' });
+            console.warn(`⚠️ [Timetable] Missing username. sessionUserId=${req.session?.passport?.user || 'none'}`);
+            return res.status(401).json({ success: false, authenticated: false, message: '❌ Missing username' });
         }
 
         if (!subject || !room || !day || !session || !startPeriod || !numPeriods) {
             return res.json({ success: false, message: '❌ Thiếu thông tin bắt buộc' });
         }
 
-        const user = await User.findOne({ username });
+        const user = req.user || await User.findOne({ username }).select('username').lean();
         if (!user) {
-            return res.json({ success: false, message: '❌ Người dùng không tồn tại' });
+            console.warn(`⚠️ [Timetable] User not found for username=${username}. sessionUserId=${req.session?.passport?.user || 'none'}`);
+            return res.status(401).json({ success: false, authenticated: false, message: '❌ Người dùng không tồn tại' });
         }
 
         // 🔥 CRITICAL: Tính mảng weeks từ startDate/endDate
@@ -4522,17 +4610,19 @@ app.post('/api/timetable', async (req, res) => {
     }
 });
 
-app.get('/api/timetable', async (req, res) => {
+app.get('/api/timetable', ensureAuthenticated, async (req, res) => {
     try {
-        const { username } = req.query;
+        const username = resolveUsernameFromRequest(req);
 
         if (!username) {
-            return res.json({ success: false, message: 'Missing username' });
+            console.warn(`⚠️ [Timetable] Missing username on load. sessionUserId=${req.session?.passport?.user || 'none'}`);
+            return res.status(401).json({ success: false, authenticated: false, message: 'Missing username' });
         }
 
-        const user = await User.findOne({ username });
+        const user = req.user || await User.findOne({ username }).select('username').lean();
         if (!user) {
-            return res.json({ success: false, message: 'User not found' });
+            console.warn(`⚠️ [Timetable] User not found on load. username=${username} sessionUserId=${req.session?.passport?.user || 'none'}`);
+            return res.status(401).json({ success: false, authenticated: false, message: 'User not found' });
         }
 
         // �️ [ENTERPRISE] Data Minimization - loại bỏ __v
@@ -4661,15 +4751,17 @@ app.post('/api/timetable/update', verifyToken, async (req, res) => {
 });
 
 // 🔥 MỚI: API quản lý Notes cho Class
-app.post('/api/timetable/update-note', async (req, res) => {
+app.post('/api/timetable/update-note', ensureAuthenticated, async (req, res) => {
     try {
-        const { classId, username, action, note } = req.body;
+        const { classId, action, note } = req.body;
+        const username = resolveUsernameFromRequest(req);
         // action: 'add' | 'update' | 'delete' | 'toggle'
         // note: { id, content, deadline, isDone }
         let deadlineLog = null;
 
         if (!classId || !username || !action) {
-            return res.json({ success: false, message: '❌ Thiếu thông tin bắt buộc' });
+            console.warn(`⚠️ [Timetable] update-note missing fields. username=${username || 'none'} sessionUserId=${req.session?.passport?.user || 'none'}`);
+            return res.status(401).json({ success: false, authenticated: false, message: '❌ Thiếu thông tin bắt buộc' });
         }
 
         const classToUpdate = await Timetable.findById(classId);
@@ -4870,12 +4962,13 @@ app.get('/api/debug/db-status', async (req, res) => {
 // ==================== EVENT API ENDPOINTS ====================
 
 // GET /api/events - Fetch user's events
-app.get('/api/events', async (req, res) => {
+app.get('/api/events', ensureAuthenticated, async (req, res) => {
     try {
-        const { username } = req.query;
+        const username = resolveUsernameFromRequest(req);
 
         if (!username) {
-            return res.json({ success: false, message: 'Username is required' });
+            console.warn(`⚠️ [Events] Missing username. sessionUserId=${req.session?.passport?.user || 'none'}`);
+            return res.status(401).json({ success: false, authenticated: false, message: 'Username is required' });
         }
 
         const events = await Event.find({ username })
@@ -4890,11 +4983,12 @@ app.get('/api/events', async (req, res) => {
 });
 
 // GET /api/deadline-tags - Fetch custom deadline tags by user
-app.get('/api/deadline-tags', async (req, res) => {
+app.get('/api/deadline-tags', ensureAuthenticated, async (req, res) => {
     try {
-        const { username } = req.query;
+        const username = resolveUsernameFromRequest(req);
         if (!username) {
-            return res.json({ success: false, message: 'Username is required' });
+            console.warn(`⚠️ [DeadlineTags] Missing username. sessionUserId=${req.session?.passport?.user || 'none'}`);
+            return res.status(401).json({ success: false, authenticated: false, message: 'Username is required' });
         }
 
         const tags = await DeadlineTag.find({ username })
@@ -4912,11 +5006,13 @@ app.get('/api/deadline-tags', async (req, res) => {
 });
 
 // POST /api/deadline-tags - Add custom deadline tag for user
-app.post('/api/deadline-tags', async (req, res) => {
+app.post('/api/deadline-tags', ensureAuthenticated, async (req, res) => {
     try {
-        const { username, name } = req.body;
+        const { name } = req.body;
+        const username = resolveUsernameFromRequest(req);
         if (!username || !name) {
-            return res.json({ success: false, message: 'Missing required fields' });
+            console.warn(`⚠️ [DeadlineTags] create missing fields. username=${username || 'none'} sessionUserId=${req.session?.passport?.user || 'none'}`);
+            return res.status(401).json({ success: false, authenticated: false, message: 'Missing required fields' });
         }
 
         const cleanedName = String(name).trim().slice(0, 40);
@@ -4957,11 +5053,13 @@ app.post('/api/deadline-tags', async (req, res) => {
 });
 
 // DELETE /api/deadline-tags - Delete custom deadline tag for user
-app.delete('/api/deadline-tags', async (req, res) => {
+app.delete('/api/deadline-tags', ensureAuthenticated, async (req, res) => {
     try {
-        const { username, name } = req.body;
+        const { name } = req.body;
+        const username = resolveUsernameFromRequest(req);
         if (!username || !name) {
-            return res.json({ success: false, message: 'Missing required fields' });
+            console.warn(`⚠️ [DeadlineTags] delete missing fields. username=${username || 'none'} sessionUserId=${req.session?.passport?.user || 'none'}`);
+            return res.status(401).json({ success: false, authenticated: false, message: 'Missing required fields' });
         }
 
         const cleanedName = String(name).trim();
@@ -4999,12 +5097,14 @@ app.delete('/api/deadline-tags', async (req, res) => {
 });
 
 // POST /api/events - Add a new event
-app.post('/api/events', async (req, res) => {
+app.post('/api/events', ensureAuthenticated, async (req, res) => {
     try {
-        const { username, title, date, type, description, deadlineTag } = req.body;
+        const { title, date, type, description, deadlineTag } = req.body;
+        const username = resolveUsernameFromRequest(req);
 
         if (!username || !title || !date) {
-            return res.json({ success: false, message: 'Missing required fields' });
+            console.warn(`⚠️ [Events] create missing fields. username=${username || 'none'} sessionUserId=${req.session?.passport?.user || 'none'}`);
+            return res.status(401).json({ success: false, authenticated: false, message: 'Missing required fields' });
         }
 
         const parsedDate = new Date(date);
@@ -5049,13 +5149,14 @@ app.post('/api/events', async (req, res) => {
 });
 
 // DELETE /api/events/:id - Delete an event
-app.delete('/api/events/:id', async (req, res) => {
+app.delete('/api/events/:id', ensureAuthenticated, async (req, res) => {
     try {
         const { id } = req.params;
-        const { username } = req.query;
+        const username = resolveUsernameFromRequest(req);
 
         if (!username) {
-            return res.json({ success: false, message: 'Username is required' });
+            console.warn(`⚠️ [Events] delete missing username. sessionUserId=${req.session?.passport?.user || 'none'} eventId=${id}`);
+            return res.status(401).json({ success: false, authenticated: false, message: 'Username is required' });
         }
 
         const event = await Event.findById(id);
@@ -5090,17 +5191,19 @@ app.delete('/api/events/:id', async (req, res) => {
 });
 
 // PUT /api/events/:id - Update an event
-app.put('/api/events/:id', async (req, res, next) => {
+app.put('/api/events/:id', ensureAuthenticated, async (req, res, next) => {
     try {
         const { id } = req.params;
         if (id === 'toggle') {
             console.log('[Events/:id] Forwarding to /api/events/toggle');
             return next();
         }
-        const { username, title, date, type, description, deadlineTag } = req.body;
+        const { title, date, type, description, deadlineTag } = req.body;
+        const username = resolveUsernameFromRequest(req);
 
         if (!username || !title || !date) {
-            return res.json({ success: false, message: 'Missing required fields' });
+            console.warn(`⚠️ [Events] update missing fields. username=${username || 'none'} sessionUserId=${req.session?.passport?.user || 'none'} eventId=${id}`);
+            return res.status(401).json({ success: false, authenticated: false, message: 'Missing required fields' });
         }
 
         const event = await Event.findById(id);
@@ -5147,15 +5250,16 @@ app.put('/api/events/:id', async (req, res, next) => {
 });
 
 // PUT /api/events/toggle - Toggle completed status for an event
-app.put('/api/events/toggle', async (req, res) => {
+app.put('/api/events/toggle', ensureAuthenticated, async (req, res) => {
     try {
-        const { id, username, isDone } = req.body;
+        const { id, isDone } = req.body;
+        const username = resolveUsernameFromRequest(req);
         
         console.log('[Toggle] Request received:', { id, username, isDone });
 
         if (!id || !username) {
             console.log('[Toggle] Missing required fields');
-            return res.json({ success: false, message: 'Missing required fields' });
+            return res.status(401).json({ success: false, authenticated: false, message: 'Missing required fields' });
         }
 
         const event = await Event.findById(id);
