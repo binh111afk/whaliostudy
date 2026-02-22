@@ -8,6 +8,22 @@ import {
   Trash2,
   Edit2,
 } from "lucide-react";
+import { getFullApiUrl } from "../config/apiConfig";
+
+const resolveAvatarSrc = (avatar) => {
+  const raw = String(avatar || "").trim();
+  if (!raw) return "";
+  if (/^(https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:")) {
+    return raw;
+  }
+
+  const normalized = raw.startsWith("/") ? raw : `/${raw}`;
+  if (normalized.startsWith("/img/") || normalized.startsWith("/uploads/")) {
+    return getFullApiUrl(normalized);
+  }
+
+  return normalized;
+};
 
 const PostCard = ({
   post,
@@ -24,6 +40,7 @@ const PostCard = ({
   const isAuthor = post.author === currentUser?.username;
   const isAdmin = currentUser?.role === "admin";
   const displayAvatar = isAuthor ? currentUser?.avatar : post.authorAvatar;
+  const resolvedAvatar = resolveAvatarSrc(displayAvatar);
   const totalCommentCount = (post.comments || []).reduce(
     (acc, cmt) => acc + 1 + (cmt.replies?.length || 0),
     0
@@ -45,9 +62,9 @@ const PostCard = ({
         <div className="flex gap-3">
           {/* Thay post.authorAvatar bằng displayAvatar */}
           <div className="relative h-10 w-10 overflow-hidden rounded-full border border-gray-200 bg-gray-100 dark:border-gray-600 dark:bg-gray-700">
-            {displayAvatar && displayAvatar.includes("/") && (
+            {resolvedAvatar && (
               <img
-                src={displayAvatar}
+                src={resolvedAvatar}
                 alt="Avt" // 👈 Dùng biến displayAvatar
                 className="w-full h-full object-cover"
                 onError={(e) => {
@@ -59,10 +76,7 @@ const PostCard = ({
             <div
               className="flex h-full w-full items-center justify-center font-bold text-gray-500 dark:text-gray-300"
               style={{
-                display:
-                  displayAvatar && displayAvatar.includes("/")
-                    ? "none"
-                    : "flex",
+                display: resolvedAvatar ? "none" : "flex",
               }} // 👈 Dùng biến displayAvatar
             >
               {post.author?.charAt(0).toUpperCase()}

@@ -266,17 +266,17 @@ const ShareModal = ({ isOpen, onClose, url, title }) => {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl transform transition-all scale-100"
+        className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6 shadow-2xl transform transition-all scale-100 border border-gray-100 dark:border-gray-700"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
             <Share2 size={20} /> Chia sẻ tài liệu
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-red-500 transition-colors"
+            className="text-gray-400 dark:text-gray-500 hover:text-red-500 transition-colors"
           >
             <X size={24} />
           </button>
@@ -305,8 +305,8 @@ const ShareModal = ({ isOpen, onClose, url, title }) => {
         </div>
 
         {/* Copy Link Section (Giống YouTube) */}
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-2 flex items-center gap-2">
-          <div className="flex-1 bg-transparent px-3 py-1 text-sm text-gray-600 truncate font-mono select-all">
+        <div className="bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 rounded-xl p-2 flex items-center gap-2">
+          <div className="flex-1 bg-transparent px-3 py-1 text-sm text-gray-600 dark:text-gray-200 truncate font-mono select-all">
             {url}
           </div>
           <button
@@ -491,7 +491,7 @@ const DocumentViewer = () => {
       return (
         <iframe
           src={doc.path}
-          className="w-full h-[800px] rounded-xl border border-gray-200"
+          className="w-full h-[800px] rounded-xl border border-gray-200 dark:border-gray-700"
           title="PDF Viewer"
         />
       );
@@ -505,7 +505,7 @@ const DocumentViewer = () => {
       return (
         <iframe
           src={officeUrl}
-          className="w-full h-[800px] rounded-xl border border-gray-200"
+          className="w-full h-[800px] rounded-xl border border-gray-200 dark:border-gray-700"
           title="Office Viewer"
         />
       );
@@ -517,16 +517,16 @@ const DocumentViewer = () => {
         <img
           src={doc.path}
           alt={doc.name}
-          className="w-full h-auto rounded-xl object-contain bg-gray-50 border border-gray-200"
+          className="w-full h-auto rounded-xl object-contain bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700"
         />
       );
     }
 
     // Fallback
     return (
-      <div className="flex flex-col items-center justify-center h-96 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+      <div className="flex flex-col items-center justify-center h-96 bg-gray-50 dark:bg-gray-900 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">
         <FileText size={48} className="text-gray-400 mb-4" />
-        <p className="text-gray-500 font-medium">
+        <p className="text-gray-500 dark:text-gray-400 font-medium">
           Định dạng file này không hỗ trợ xem trước.
         </p>
         <button
@@ -551,7 +551,7 @@ const DocumentViewer = () => {
     );
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-6 min-h-screen pb-20">
+    <div className="max-w-7xl mx-auto p-4 md:p-6 min-h-screen pb-20 text-gray-800 dark:text-gray-100">
       {/* Header */}
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <button
@@ -560,10 +560,10 @@ const DocumentViewer = () => {
         >
           <ArrowLeft size={20} /> Quay lại
         </button>
-        <div className="flex gap-3">
+        <div className="flex flex-nowrap gap-3 overflow-x-auto pb-1 no-scrollbar">
           <button
             onClick={handleToggleSave}
-            className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all border ${
+            className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all border whitespace-nowrap shrink-0 ${
               isSaved
                 ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700"
                 : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -576,7 +576,7 @@ const DocumentViewer = () => {
           {/* Nút CHIA SẺ -> Mở Modal */}
           <button
             onClick={() => setShareModalOpen(true)}
-            className="px-4 py-2 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center gap-2"
+            className="px-4 py-2 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center gap-2 whitespace-nowrap shrink-0"
           >
             <Share2 size={18} /> Chia sẻ
           </button>
@@ -585,7 +585,7 @@ const DocumentViewer = () => {
           <button
             onClick={handleDownload}
             disabled={isDownloading}
-            className="px-4 py-2 bg-gray-900 dark:bg-blue-600 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-black dark:hover:bg-blue-700 shadow-lg shadow-gray-200 dark:shadow-none transition-all disabled:opacity-70 cursor-pointer"
+            className="px-4 py-2 bg-gray-900 dark:bg-blue-600 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-black dark:hover:bg-blue-700 shadow-lg shadow-gray-200 dark:shadow-none transition-all disabled:opacity-70 cursor-pointer whitespace-nowrap shrink-0"
           >
             {isDownloading ? (
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>

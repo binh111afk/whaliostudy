@@ -1,5 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { X, Image, Paperclip, Send, Trash2, FileText, CornerDownRight } from 'lucide-react';
+import { getFullApiUrl } from "../config/apiConfig";
+
+const resolveAvatarSrc = (avatar) => {
+    const raw = String(avatar || "").trim();
+    if (!raw) return "";
+    if (/^(https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:")) {
+        return raw;
+    }
+
+    const normalized = raw.startsWith("/") ? raw : `/${raw}`;
+    if (normalized.startsWith("/img/") || normalized.startsWith("/uploads/")) {
+        return getFullApiUrl(normalized);
+    }
+
+    return normalized;
+};
 
 // --- MODAL ĐĂNG BÀI / SỬA BÀI ---
 export const CreatePostModal = ({ isOpen, onClose, onSubmit, postToEdit }) => {
@@ -156,30 +172,33 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
 
     // Helper: Logic chọn Avatar (Ưu tiên currentUser nếu là chính mình để Real-time)
     const getDisplayAvatar = (authorName, authorAvatar) => {
-        if (currentUser && authorName === currentUser.username) {
+        if (currentUser && authorName === currentUser.username && currentUser.avatar) {
             return currentUser.avatar;
         }
         return authorAvatar;
     };
 
     // Helper: Component Avatar nhỏ gọn để tái sử dụng
-    const SmartAvatar = ({ src, name, size = "w-8 h-8", fontSize = "text-xs" }) => (
+    const SmartAvatar = ({ src, name, size = "w-8 h-8", fontSize = "text-xs" }) => {
+        const resolvedSrc = resolveAvatarSrc(src);
+
+        return (
         <div className={`${size} relative shrink-0 overflow-hidden rounded-full border border-gray-200 bg-gray-100 dark:border-gray-600 dark:bg-gray-700`}>
-            {src && src.includes('/') && (
+            {resolvedSrc && (
                 <img 
-                    src={src} alt="Avt" 
+                    src={resolvedSrc} alt="Avt" 
                     className="w-full h-full object-cover"
                     onError={(e) => {e.target.style.display='none'; e.target.nextSibling.style.display='flex'}}
                 />
             )}
             <div 
                 className={`flex h-full w-full items-center justify-center font-bold text-gray-500 dark:text-gray-300 ${fontSize}`} 
-                style={{display: (src && src.includes('/')) ? 'none' : 'flex'}}
+                style={{display: resolvedSrc ? 'none' : 'flex'}}
             >
                 {name?.charAt(0).toUpperCase()}
             </div>
         </div>
-    );
+    )};
 
     // Xác định Avatar cho bài viết gốc
     const postAvatar = getDisplayAvatar(post.author, post.authorAvatar);
