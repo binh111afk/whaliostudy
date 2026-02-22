@@ -71,6 +71,34 @@ function formatBytes(bytes, decimals = 2) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
+function parseBoundedInt(value, fallback, min, max) {
+    const parsed = parseInt(value, 10);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.max(min, Math.min(max, parsed));
+}
+
+const ADMIN_STATS_BATCH_CACHE_TTL_MS = 15 * 1000;
+let adminStatsBatchCache = {
+    key: '',
+    expiresAt: 0,
+    payload: null
+};
+
+function getAdminStatsBatchCache(cacheKey) {
+    if (!cacheKey || !adminStatsBatchCache.payload) return null;
+    if (adminStatsBatchCache.key !== cacheKey) return null;
+    if (Date.now() > adminStatsBatchCache.expiresAt) return null;
+    return adminStatsBatchCache.payload;
+}
+
+function setAdminStatsBatchCache(cacheKey, payload) {
+    adminStatsBatchCache = {
+        key: cacheKey,
+        expiresAt: Date.now() + ADMIN_STATS_BATCH_CACHE_TTL_MS,
+        payload
+    };
+}
+
 function normalizeIp(rawValue) {
     let ip = String(rawValue || '').trim();
     if (!ip) return '';
@@ -1677,6 +1705,456 @@ router.get('/stats/weekly-activity', async (req, res) => {
     } catch (error) {
         console.error('❌ Error fetching weekly activity:', error);
         res.status(500).json({
+            success: false,
+            data: null,
+            message: `Lỗi máy chủ nội bộ: ${error.message}`
+        });
+    }
+});
+
+/**
+ * GET /stats/batch
+ * Gộp nhiều thống kê thành 1 request để tránh burst request từ Admin Dashboard
+ */
+router.get('/stats/batch', securityLogger, async (req, res) => {
+    try {
+        getModels();
+
+        const usersLimit = parseBoundedInt(req.query.usersLimit, 20, 1, 200);
+        const backupsLimit = parseBoundedInt(req.query.backupsLimit, 5, 1, 50);
+        const eventsLimit = parseBoundedInt(req.query.eventsLimit, 5, 1, 50);
+        const suspiciousLimit = parseBoundedInt(req.query.suspiciousLimit, 10, 1, 100);
+        const subjectsLimit = parseBoundedInt(req.query.subjectsLimit, 5, 1, 20);
+        const months = parseBoundedInt(req.query.months, 7, 3, 12);
+        const metricRaw = String(req.query.metric || 'users').toLowerCase();
+        const metric = ['users', 'documents'].includes(metricRaw) ? metricRaw : 'users';
+        const timeRange = String(req.query.timeRange || '30m').trim() || '30m';
+
+        const cacheKey = JSON.stringify({
+            usersLimit,
+            backupsLimit,
+            eventsLimit,
+            suspiciousLimit,
+            subjectsLimit,
+            months,
+            metric,
+            timeRange
+        });
+        const cachedPayload = getAdminStatsBatchCache(cacheKey);
+        if (cachedPayload) {
+            return res.json({
+                success: true,
+                data: cachedPayload,
+                cached: true,
+                message: 'Lấy dữ liệu batch stats thành công (cache)'
+            });
+        }
+
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        const monthWindows = [];
+        for (let i = months - 1; i >= 0; i -= 1) {
+            const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+            monthWindows.push({
+                start: monthStart,
+                end: monthEnd,
+                label: `T${monthStart.getMonth() + 1}`,
+                month: `Tháng ${monthStart.getMonth() + 1}`
+            });
+        }
+
+        const [
+            totalUsers,
+            usersLastMonth,
+            totalDocs,
+            docsLastMonth,
+            totalSubjects,
+            domesticUsersVN,
+            topLearners,
+            recentUsers,
+            popularSubjectsRaw,
+            activityByDay,
+            suspiciousIpDocs,
+            suspiciousByType,
+            blockedCount,
+            activeCount,
+            recentSecurityEvents,
+            recentSecurityEventTotal,
+            recentBackups,
+            totalBackups,
+            backupSettings,
+            loginCount,
+            deployInfo,
+            growthUsersCounts,
+            growthDocsCounts
+        ] = await Promise.all([
+            User.countDocuments({}),
+            User.countDocuments({ createdAt: { $lt: startOfMonth } }),
+            Document.countDocuments({}),
+            Document.countDocuments({ createdAt: { $lt: startOfMonth } }),
+            Timetable.distinct('subject').then(arr => arr.length),
+            User.countDocuments({ lastCountry: { $regex: /^VN$/i } }),
+            User.find({ role: 'member' })
+                .sort({ totalStudyMinutes: -1 })
+                .limit(5)
+                .select('fullName username totalStudyMinutes avatar')
+                .lean(),
+            User.find({})
+                .select('username fullName email avatar role status lastLogin totalStudyMinutes')
+                .sort({ lastLogin: -1 })
+                .limit(usersLimit)
+                .lean(),
+            Timetable.aggregate([
+                { $group: { _id: '$subject', students: { $addToSet: '$username' } } },
+                { $project: { name: '$_id', students: { $size: '$students' } } },
+                { $sort: { students: -1 } },
+                { $limit: subjectsLimit }
+            ]),
+            UserActivityLog.aggregate([
+                { $match: { createdAt: { $gte: oneWeekAgo } } },
+                {
+                    $group: {
+                        _id: { $dayOfWeek: '$createdAt' },
+                        total: { $sum: 1 },
+                        logins: { $sum: { $cond: [{ $eq: ['$action', 'login'] }, 1, 0] } }
+                    }
+                },
+                { $sort: { _id: 1 } }
+            ]),
+            BlacklistIP.find({})
+                .select('ip attackType attempts firstSeen lastSeen status country isp')
+                .sort({ attempts: -1, lastSeen: -1 })
+                .limit(suspiciousLimit)
+                .lean(),
+            BlacklistIP.aggregate([
+                { $group: { _id: '$attackType', count: { $sum: 1 } } }
+            ]),
+            BlacklistIP.countDocuments({ status: 'blocked' }),
+            BlacklistIP.countDocuments({ status: 'active' }),
+            SystemEvent.find({})
+                .select('type severity title description details createdAt')
+                .sort({ createdAt: -1 })
+                .limit(eventsLimit)
+                .lean(),
+            SystemEvent.countDocuments({}),
+            BackupRecord.find({})
+                .select('filename filepath size type status createdAt createdBy duration')
+                .sort({ createdAt: -1 })
+                .limit(backupsLimit)
+                .lean(),
+            BackupRecord.countDocuments({}),
+            getSystemSetting('backupSettings', {
+                autoBackup: true,
+                schedule: 'Hàng ngày 03:00',
+                retentionDays: 30,
+                maxBackups: 10
+            }),
+            UserActivityLog.countDocuments({
+                action: 'login',
+                createdAt: { $gte: oneHourAgo }
+            }),
+            getSystemSetting('lastDeploy', {
+                version: 'v1.0.0',
+                time: new Date().toISOString(),
+                totalPushes: 0
+            }),
+            Promise.all(monthWindows.map((window) =>
+                User.countDocuments({ createdAt: { $lte: window.end } })
+            )),
+            Promise.all(monthWindows.map((window) =>
+                Document.countDocuments({ createdAt: { $lte: window.end } })
+            ))
+        ]);
+
+        const internationalUsers = Math.max(0, totalUsers - domesticUsersVN);
+        const userGrowth = usersLastMonth > 0 ? Math.round(((totalUsers - usersLastMonth) / usersLastMonth) * 100) : 100;
+        const docGrowth = docsLastMonth > 0 ? Math.round(((totalDocs - docsLastMonth) / docsLastMonth) * 100) : 100;
+
+        const overview = {
+            metrics: {
+                totalUsers: {
+                    value: totalUsers,
+                    growth: userGrowth,
+                    label: 'Tổng người dùng',
+                    formatted: totalUsers.toLocaleString(),
+                    growthText: `${userGrowth >= 0 ? '+' : ''}${userGrowth}%`
+                },
+                newDocuments: {
+                    value: totalDocs,
+                    growth: docGrowth,
+                    label: 'Tài liệu mới',
+                    formatted: totalDocs.toLocaleString(),
+                    growthText: `${docGrowth >= 0 ? '+' : ''}${docGrowth}%`
+                },
+                totalSubjects: {
+                    value: totalSubjects,
+                    growth: 8,
+                    label: 'Môn học',
+                    formatted: totalSubjects.toLocaleString(),
+                    growthText: '+8%'
+                },
+                domesticUsersVN: {
+                    value: domesticUsersVN,
+                    growth: 0,
+                    label: 'User trong nước (VN)',
+                    formatted: domesticUsersVN.toLocaleString(),
+                    growthText: '0%'
+                },
+                internationalUsers: {
+                    value: internationalUsers,
+                    growth: 0,
+                    label: 'User quốc tế',
+                    formatted: internationalUsers.toLocaleString(),
+                    growthText: '0%'
+                }
+            },
+            topLearners: topLearners.map((u) => ({
+                fullName: u.fullName,
+                username: u.username,
+                studyTimeMinutes: u.totalStudyMinutes || 0,
+                studyTime: formatMinutesToHours(u.totalStudyMinutes || 0),
+                avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`
+            }))
+        };
+
+        const growthChart = monthWindows.map((window, index) => ({
+            label: window.label,
+            month: window.month,
+            users: growthUsersCounts[index],
+            documents: growthDocsCounts[index],
+            value: metric === 'documents' ? growthDocsCounts[index] : growthUsersCounts[index]
+        }));
+        const growthValues = growthChart.map((item) => item.value);
+
+        const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444'];
+        const totalSubjectStudents = popularSubjectsRaw.reduce((sum, s) => sum + s.students, 0) || 1;
+        const popularSubjects = popularSubjectsRaw.map((subject, index) => ({
+            id: index + 1,
+            name: subject.name,
+            students: subject.students,
+            color: colors[index % colors.length],
+            percentage: Math.round((subject.students / totalSubjectStudents) * 100)
+        }));
+
+        const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+        const dayNames = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+        const weeklyActivityRaw = [];
+        for (let i = 1; i <= 7; i += 1) {
+            const dayIndex = i % 7;
+            const dayData = activityByDay.find((d) => d._id === i) || { total: 0, logins: 0 };
+            weeklyActivityRaw.push({
+                label: days[dayIndex],
+                day: dayNames[dayIndex],
+                value: dayData.total,
+                logins: dayData.logins
+            });
+        }
+        const weeklyActivity = [...weeklyActivityRaw.slice(1), weeklyActivityRaw[0]];
+        const weeklyValues = weeklyActivity.map((d) => d.value);
+        const weeklyTotal = weeklyValues.reduce((acc, current) => acc + current, 0);
+
+        const suspiciousByTypeMap = suspiciousByType.reduce((acc, row) => {
+            acc[row._id] = row.count;
+            return acc;
+        }, {});
+
+        const cpus = os.cpus();
+        const totalMemory = os.totalmem();
+        const freeMemory = os.freemem();
+        const usedMemory = totalMemory - freeMemory;
+        const uptimeSeconds = os.uptime();
+        let totalIdle = 0;
+        let totalTick = 0;
+        cpus.forEach((cpu) => {
+            Object.keys(cpu.times).forEach((timeKey) => {
+                totalTick += cpu.times[timeKey];
+            });
+            totalIdle += cpu.times.idle;
+        });
+        const cpuUsage = Math.round(100 - (totalIdle / totalTick * 100));
+        const ramUsage = Math.round((usedMemory / totalMemory) * 100);
+        const daysUp = Math.floor(uptimeSeconds / 86400);
+        const hoursUp = Math.floor((uptimeSeconds % 86400) / 3600);
+        const healthScore = Math.round(100 - (cpuUsage * 0.3 + ramUsage * 0.4 + 34 * 0.3));
+
+        const baseRequests = Math.max(10, loginCount * 15);
+        const trafficChart = [];
+        for (let i = 6; i >= 0; i -= 1) {
+            const time = new Date(now.getTime() - i * 5 * 60 * 1000);
+            trafficChart.push({
+                time: time.toTimeString().substring(0, 5),
+                requests: Math.floor(baseRequests * (0.5 + Math.random() * 0.5))
+            });
+        }
+        const trafficAverage = Math.round(
+            trafficChart.reduce((acc, point) => acc + point.requests, 0) / trafficChart.length
+        );
+
+        const payload = {
+            overview,
+            growth: {
+                metric,
+                months,
+                chart: growthChart,
+                stats: {
+                    min: Math.min(...growthValues),
+                    max: Math.max(...growthValues),
+                    avg: Math.round(growthValues.reduce((a, b) => a + b, 0) / growthValues.length),
+                    growthRate: growthValues[0] > 0
+                        ? Math.round(((growthValues[growthValues.length - 1] - growthValues[0]) / growthValues[0]) * 100)
+                        : 100
+                }
+            },
+            popularSubjects: {
+                subjects: popularSubjects,
+                summary: {
+                    totalSubjects: popularSubjects.length,
+                    totalStudents: popularSubjects.reduce((sum, item) => sum + item.students, 0)
+                }
+            },
+            weeklyActivity: {
+                activity: weeklyActivity,
+                stats: {
+                    total: weeklyTotal,
+                    average: Math.round(weeklyTotal / 7),
+                    peak: {
+                        day: weeklyActivity.find((d) => d.value === Math.max(...weeklyValues))?.day || 'N/A',
+                        value: Math.max(...weeklyValues)
+                    }
+                }
+            },
+            users: {
+                list: recentUsers.map((user) => ({
+                    id: user._id.toString(),
+                    username: user.username,
+                    fullName: user.fullName,
+                    email: user.email,
+                    role: user.role === 'member' ? 'student' : user.role,
+                    status: user.status || 'active',
+                    avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`,
+                    lastLogin: user.lastLogin,
+                    studyTimeMinutes: user.totalStudyMinutes || 0,
+                    studyTime: formatMinutesToHours(user.totalStudyMinutes || 0)
+                })),
+                summary: {
+                    totalUsers,
+                    previewCount: recentUsers.length
+                }
+            },
+            security: {
+                traffic: {
+                    timeRange,
+                    currentRequests: trafficChart[trafficChart.length - 1]?.requests || 0,
+                    averageRequests: trafficAverage,
+                    peakRequests: Math.max(...trafficChart.map((point) => point.requests)),
+                    chart: trafficChart
+                },
+                suspiciousIps: {
+                    ips: suspiciousIpDocs.map((ip) => ({
+                        id: ip._id.toString(),
+                        ip: ip.ip,
+                        attackType: ip.attackType,
+                        attempts: ip.attempts,
+                        firstSeen: ip.firstSeen,
+                        lastSeen: ip.lastSeen,
+                        status: ip.status,
+                        country: ip.country,
+                        isp: ip.isp,
+                        isBlocked: ip.status === 'blocked'
+                    })),
+                    stats: {
+                        totalSuspicious: suspiciousIpDocs.length,
+                        blocked: blockedCount,
+                        active: activeCount,
+                        byType: suspiciousByTypeMap
+                    }
+                },
+                serverStatus: {
+                    cpu: cpuUsage,
+                    ram: ramUsage,
+                    disk: 34,
+                    uptime: `${daysUp} ngày ${hoursUp} giờ`,
+                    uptimeSeconds,
+                    totalPushes: deployInfo.totalPushes || 0,
+                    lastDeployTime: deployInfo.time,
+                    lastDeployVersion: deployInfo.version,
+                    stableVersion: deployInfo.stableVersion || 'v2.4.0',
+                    nodeVersion: process.version,
+                    platform: `${os.type()} ${os.release()}`,
+                    hostname: os.hostname(),
+                    activeConnections: Math.floor(Math.random() * 100) + 50,
+                    processMemory: formatBytes(process.memoryUsage().heapUsed),
+                    healthScore,
+                    healthStatus: healthScore >= 70 ? 'healthy' : healthScore >= 50 ? 'warning' : 'critical'
+                },
+                events: {
+                    list: recentSecurityEvents.map((event) => ({
+                        id: event._id.toString(),
+                        type: event.type,
+                        severity: event.severity,
+                        title: event.title,
+                        description: event.description,
+                        details: event.details,
+                        createdAt: event.createdAt
+                    })),
+                    summary: {
+                        total: recentSecurityEventTotal,
+                        previewCount: recentSecurityEvents.length
+                    }
+                }
+            },
+            backups: {
+                list: recentBackups.map((backup) => ({
+                    id: backup._id.toString(),
+                    filename: backup.filename,
+                    filepath: backup.filepath,
+                    size: backup.size,
+                    sizeFormatted: formatBytes(backup.size),
+                    type: backup.type,
+                    status: backup.status,
+                    createdAt: backup.createdAt,
+                    createdBy: backup.createdBy,
+                    duration: backup.duration
+                })),
+                settings: backupSettings,
+                stats: {
+                    totalBackups,
+                    previewCount: recentBackups.length,
+                    totalSize: recentBackups.reduce((sum, backup) => sum + backup.size, 0),
+                    totalSizeFormatted: formatBytes(recentBackups.reduce((sum, backup) => sum + backup.size, 0)),
+                    lastBackup: recentBackups[0]?.createdAt || null
+                }
+            },
+            meta: {
+                generatedAt: new Date().toISOString(),
+                optimized: true,
+                query: {
+                    usersLimit,
+                    backupsLimit,
+                    eventsLimit,
+                    suspiciousLimit,
+                    subjectsLimit,
+                    months,
+                    metric,
+                    timeRange
+                }
+            }
+        };
+
+        setAdminStatsBatchCache(cacheKey, payload);
+
+        return res.json({
+            success: true,
+            data: payload,
+            cached: false,
+            message: 'Lấy dữ liệu batch stats thành công'
+        });
+    } catch (error) {
+        console.error('❌ Error fetching stats batch:', error);
+        return res.status(500).json({
             success: false,
             data: null,
             message: `Lỗi máy chủ nội bộ: ${error.message}`

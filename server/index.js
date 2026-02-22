@@ -492,16 +492,59 @@ app.use(hpp({
 console.log('🛡️  HTTP Parameter Pollution protection enabled (Enterprise Layer 4)');
 
 // 🛡️ [ENTERPRISE SECURITY - LAYER 5] RATE LIMITING
-// Chống Brute Force & DDoS - Rate limiter cho tất cả API (100 requests / 15 phút)
+const GENERAL_RATE_LIMIT_WINDOW_MS = parsePositiveInt(process.env.GENERAL_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000);
+const GENERAL_RATE_LIMIT_MAX = parsePositiveInt(process.env.GENERAL_RATE_LIMIT_MAX, 400);
+const ADMIN_DEBUG_RATE_LIMIT_WINDOW_MS = parsePositiveInt(process.env.ADMIN_DEBUG_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000);
+const ADMIN_DEBUG_RATE_LIMIT_MAX = parsePositiveInt(process.env.ADMIN_DEBUG_RATE_LIMIT_MAX, 2000);
+const ADMIN_RATE_LIMIT_ORIGINS = [
+    'https://weblogwhalio.onrender.com'
+];
+
+function isAdminDebugOriginRequest(req) {
+    const origin = String(req.headers.origin || '').trim();
+    const referer = String(req.headers.referer || '').trim();
+    return ADMIN_RATE_LIMIT_ORIGINS.some((allowedOrigin) => (
+        origin === allowedOrigin || referer.startsWith(`${allowedOrigin}/`) || referer === allowedOrigin
+    ));
+}
+
+function isAdminApiPath(req) {
+    const fullPath = String(req.originalUrl || req.url || req.path || '').toLowerCase();
+    return fullPath.startsWith('/api/admin');
+}
+
+// Chống Brute Force & DDoS - Rate limiter cho tất cả API
 const generalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 phút
-    max: 100, // Tối đa 100 requests
+    windowMs: GENERAL_RATE_LIMIT_WINDOW_MS,
+    max: GENERAL_RATE_LIMIT_MAX,
     message: {
         success: false,
         message: '⛔ Quá nhiều yêu cầu! Vui lòng thử lại sau 15 phút.'
     },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => {
+        // Không tính preflight request.
+        if (req.method === 'OPTIONS') return true;
+        // Nới hạn mức cho Admin Dashboard origin khi gọi Admin API để debug.
+        return isAdminApiPath(req) && isAdminDebugOriginRequest(req);
+    },
+    keyGenerator: (req) => rateLimit.ipKeyGenerator(
+        req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip
+    )
+});
+
+// Burst limiter riêng cho Admin Dashboard origin để debug mà không khóa nhầm.
+const adminDebugLimiter = rateLimit({
+    windowMs: ADMIN_DEBUG_RATE_LIMIT_WINDOW_MS,
+    max: ADMIN_DEBUG_RATE_LIMIT_MAX,
+    message: {
+        success: false,
+        message: '⛔ Quá nhiều yêu cầu từ Admin Dashboard. Vui lòng thử lại sau ít phút.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => !isAdminDebugOriginRequest(req),
     keyGenerator: (req) => rateLimit.ipKeyGenerator(
         req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip
     )
@@ -523,9 +566,10 @@ const loginLimiter = rateLimit({
     )
 });
 
-// Áp dụng general rate limit cho tất cả API
+// Áp dụng burst limiter cho Admin Dashboard trước, rồi general limiter cho toàn bộ API.
+app.use('/api/admin', adminDebugLimiter);
 app.use('/api/', generalLimiter);
-console.log('🛡️  Rate limiting enabled (100 req/15min general, 5 req/15min login) - Enterprise Layer 5');
+console.log(`🛡️  Rate limiting enabled (${GENERAL_RATE_LIMIT_MAX} req/${Math.round(GENERAL_RATE_LIMIT_WINDOW_MS / 60000)}min general, ${ADMIN_DEBUG_RATE_LIMIT_MAX} req/${Math.round(ADMIN_DEBUG_RATE_LIMIT_WINDOW_MS / 60000)}min admin debug burst, 5 req/15min login) - Enterprise Layer 5`);
 
 // ⛔ REMOVED: Static data route - Không được serve public thư mục chứa exam/questions
 // app.use('/static-data', express.static(path.join(__dirname, 'data'))); // SECURITY RISK!
