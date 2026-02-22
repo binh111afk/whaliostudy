@@ -11,7 +11,7 @@ import {
 import { getFullApiUrl } from "../config/apiConfig";
 
 const resolveAvatarSrc = (avatar) => {
-  const raw = String(avatar || "").trim();
+  const raw = String(avatar || "").trim().replace(/\\/g, "/");
   if (!raw) return "";
   if (/^(https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:")) {
     return raw;
@@ -23,6 +23,32 @@ const resolveAvatarSrc = (avatar) => {
   }
 
   return normalized;
+};
+
+const getDisplayName = (entity, usernameFallback = "") => {
+  if (!entity || typeof entity !== "object") {
+    return String(usernameFallback || "").trim();
+  }
+
+  return String(
+    entity.authorFullName ||
+      entity.fullName ||
+      entity.name ||
+      entity.author ||
+      usernameFallback ||
+      ""
+  ).trim();
+};
+
+const getAvatarCandidate = (entity) => {
+  if (!entity || typeof entity !== "object") return "";
+  return (
+    entity.authorAvatar ||
+    entity.avatar ||
+    entity.userAvatar ||
+    entity.profileAvatar ||
+    ""
+  );
 };
 
 const PostCard = ({
@@ -39,8 +65,11 @@ const PostCard = ({
   const isSaved = post.savedBy?.includes(currentUser?.username);
   const isAuthor = post.author === currentUser?.username;
   const isAdmin = currentUser?.role === "admin";
-  const displayAvatar = isAuthor ? currentUser?.avatar : post.authorAvatar;
+  const displayAvatar = isAuthor
+    ? currentUser?.avatar || getAvatarCandidate(post)
+    : getAvatarCandidate(post);
   const resolvedAvatar = resolveAvatarSrc(displayAvatar);
+  const authorDisplayName = getDisplayName(post, post.author);
   const totalCommentCount = (post.comments || []).reduce(
     (acc, cmt) => acc + 1 + (cmt.replies?.length || 0),
     0
@@ -79,13 +108,13 @@ const PostCard = ({
                 display: resolvedAvatar ? "none" : "flex",
               }} // 👈 Dùng biến displayAvatar
             >
-              {post.author?.charAt(0).toUpperCase()}
+              {authorDisplayName?.charAt(0).toUpperCase()}
             </div>
           </div>
 
           <div>
             <h4 className="text-sm font-bold text-gray-800 dark:text-white">
-              {post.authorFullName || post.author}
+              {authorDisplayName}
             </h4>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {getTimeAgo(post.createdAt)}{" "}

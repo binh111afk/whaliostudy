@@ -3,7 +3,7 @@ import { X, Image, Paperclip, Send, Trash2, FileText, CornerDownRight } from 'lu
 import { getFullApiUrl } from "../config/apiConfig";
 
 const resolveAvatarSrc = (avatar) => {
-    const raw = String(avatar || "").trim();
+    const raw = String(avatar || "").trim().replace(/\\/g, "/");
     if (!raw) return "";
     if (/^(https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:")) {
         return raw;
@@ -15,6 +15,32 @@ const resolveAvatarSrc = (avatar) => {
     }
 
     return normalized;
+};
+
+const getDisplayName = (entity, usernameFallback = "") => {
+    if (!entity || typeof entity !== "object") {
+        return String(usernameFallback || "").trim();
+    }
+
+    return String(
+        entity.authorFullName ||
+        entity.fullName ||
+        entity.name ||
+        entity.author ||
+        usernameFallback ||
+        ""
+    ).trim();
+};
+
+const getAvatarCandidate = (entity) => {
+    if (!entity || typeof entity !== "object") return "";
+    return (
+        entity.authorAvatar ||
+        entity.avatar ||
+        entity.userAvatar ||
+        entity.profileAvatar ||
+        ""
+    );
 };
 
 // --- MODAL ĐĂNG BÀI / SỬA BÀI ---
@@ -171,11 +197,12 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
     };
 
     // Helper: Logic chọn Avatar (Ưu tiên currentUser nếu là chính mình để Real-time)
-    const getDisplayAvatar = (authorName, authorAvatar) => {
+    const getDisplayAvatar = (entity) => {
+        const authorName = entity?.author;
         if (currentUser && authorName === currentUser.username && currentUser.avatar) {
             return currentUser.avatar;
         }
-        return authorAvatar;
+        return getAvatarCandidate(entity);
     };
 
     // Helper: Component Avatar nhỏ gọn để tái sử dụng
@@ -201,7 +228,8 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
     )};
 
     // Xác định Avatar cho bài viết gốc
-    const postAvatar = getDisplayAvatar(post.author, post.authorAvatar);
+    const postAvatar = getDisplayAvatar(post);
+    const postAuthorName = getDisplayName(post, post.author);
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -218,10 +246,10 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
                 <div className="mb-2 border-b border-gray-100 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
                     <div className="flex gap-3 mb-3">
                         {/* Avatar Post */}
-                        <SmartAvatar src={postAvatar} name={post.author} size="w-10 h-10" fontSize="text-sm"/>
+                        <SmartAvatar src={postAvatar} name={postAuthorName} size="w-10 h-10" fontSize="text-sm"/>
                         
                         <div>
-                            <p className="text-sm font-bold text-gray-900 dark:text-white">{post.authorFullName || post.author}</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">{postAuthorName}</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">Tác giả</p>
                         </div>
                     </div>
@@ -250,18 +278,19 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
                     {post.comments?.length === 0 && <p className="py-10 text-center text-sm text-gray-400 dark:text-gray-500">Chưa có bình luận nào. Hãy là người đầu tiên!</p>}
                     
                     {post.comments?.map(cmt => {
-                        const cmtAvatar = getDisplayAvatar(cmt.author, cmt.authorAvatar);
+                        const cmtAvatar = getDisplayAvatar(cmt);
+                        const cmtDisplayName = getDisplayName(cmt, cmt.author);
                         
                         return (
                         <div key={cmt.id} className="group">
                             {/* Comment cha */}
                             <div className="flex gap-3">
                                 {/* Avatar Comment */}
-                                <SmartAvatar src={cmtAvatar} name={cmt.author} />
+                                <SmartAvatar src={cmtAvatar} name={cmtDisplayName} />
                                 
                                 <div className="flex-1">
                                     <div className="inline-block min-w-[200px] rounded-2xl rounded-tl-none border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                                        <span className="block text-sm font-bold text-gray-900 dark:text-white">{cmt.author}</span>
+                                        <span className="block text-sm font-bold text-gray-900 dark:text-white">{cmtDisplayName}</span>
                                         <span className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200">{cmt.content}</span>
                                     </div>
                                     <div className="ml-2 mt-1.5 flex gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">
@@ -280,7 +309,7 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
                                                     value={replyText}
                                                     onChange={(e) => setReplyText(e.target.value)}
                                                     className="w-full rounded-full border border-gray-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:focus:ring-blue-900/40"
-                                                    placeholder={`Trả lời ${cmt.author}...`}
+                                                    placeholder={`Trả lời ${cmtDisplayName}...`}
                                                     autoFocus
                                                     onKeyDown={(e) => e.key === 'Enter' && handleReplySubmit(cmt.id)}
                                                 />
@@ -298,16 +327,17 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
                             {cmt.replies && cmt.replies.length > 0 && (
                                 <div className="ml-11 mt-3 space-y-3 border-l-2 border-gray-100 pl-3 dark:border-gray-700">
                                     {cmt.replies.map(reply => {
-                                        const replyAvatar = getDisplayAvatar(reply.author, reply.authorAvatar);
+                                        const replyAvatar = getDisplayAvatar(reply);
+                                        const replyDisplayName = getDisplayName(reply, reply.author);
                                         
                                         return (
                                         <div key={reply.id} className="flex gap-2">
                                             {/* Avatar Reply */}
-                                            <SmartAvatar src={replyAvatar} name={reply.author} size="w-6 h-6" fontSize="text-[10px]"/>
+                                            <SmartAvatar src={replyAvatar} name={replyDisplayName} size="w-6 h-6" fontSize="text-[10px]"/>
                                             
                                             <div>
                                                 <div className="rounded-xl rounded-tl-none bg-gray-100 px-3 py-2 dark:bg-gray-800">
-                                                    <span className="block text-xs font-bold text-gray-900 dark:text-gray-100">{reply.author}</span>
+                                                    <span className="block text-xs font-bold text-gray-900 dark:text-gray-100">{replyDisplayName}</span>
                                                     <span className="text-xs text-gray-700 dark:text-gray-300">{reply.content}</span>
                                                 </div>
                                             </div>
