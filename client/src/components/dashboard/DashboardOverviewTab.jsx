@@ -187,18 +187,14 @@ const DashboardOverviewTab = ({
     ? secondaryDeadlines
     : secondaryDeadlines.slice(0, 2);
 
-  // Credit chart data
-  const creditData = [
-    { name: "Hoàn thành", value: gpaMetrics.totalCredits, fill: "#16A34A" },
-    {
-      name: "Còn lại",
-      value: Math.max(0, targetCredits - gpaMetrics.totalCredits),
-      fill: "#F3F4F6",
-    },
-  ];
-  const creditPercent =
-    Math.round((gpaMetrics.totalCredits / targetCredits) * 100) || 0;
-  const remainingCredits = Math.max(0, targetCredits - gpaMetrics.totalCredits);
+  const safeTargetCredits = Math.max(1, Math.round(Number(targetCredits) || 0));
+  const completedCredits = Math.max(0, Number(gpaMetrics.totalCredits) || 0);
+  const boundedCompletedCredits = Math.min(completedCredits, safeTargetCredits);
+  const creditPercent = Math.min(
+    100,
+    Math.round((completedCredits / safeTargetCredits) * 100)
+  );
+  const remainingCredits = Math.max(0, safeTargetCredits - completedCredits);
 
   const handleDeleteDeadline = (id) => {
     toast.custom(
@@ -375,7 +371,7 @@ const DashboardOverviewTab = ({
                       barSize={24}
                       data={[
                         {
-                          value: gpaMetrics.totalCredits,
+                          value: boundedCompletedCredits,
                           fill: "url(#progressGradient)",
                         },
                       ]}
@@ -397,12 +393,11 @@ const DashboardOverviewTab = ({
 
                       <PolarAngleAxis
                         type="number"
-                        domain={[0, targetCredits]}
+                        domain={[0, safeTargetCredits]}
                         angleAxisId={0}
                         tick={false}
                       />
                       <RadialBar
-                        minAngle={15}
                         background={{
                           fill: isDarkMode ? "rgba(51,65,85,0.85)" : "#E5E7EB",
                         }}
@@ -458,7 +453,7 @@ const DashboardOverviewTab = ({
                       </span>
                     </div>
                     <span className="text-xl font-bold text-gray-800 dark:text-white">
-                      {targetCredits}{" "}
+                      {safeTargetCredits}{" "}
                       <span className="text-xs font-medium text-gray-500">
                         TC
                       </span>

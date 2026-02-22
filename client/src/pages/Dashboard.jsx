@@ -69,6 +69,27 @@ const createDefaultGpaMetrics = () => ({
   passedSubjects: 0,
 });
 
+const normalizeTargetCredits = (value, fallback = 150) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.round(parsed);
+};
+
+const readStoredUser = () => {
+  if (typeof window === "undefined") return null;
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    return null;
+  }
+};
+
+const resolveInitialTargetCredits = (user) => {
+  const storedUser = readStoredUser();
+  const rawValue = user?.totalTargetCredits ?? storedUser?.totalTargetCredits;
+  return normalizeTargetCredits(rawValue, 150);
+};
+
 const DashboardBatchSkeleton = () => (
   <div className="space-y-5">
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -100,23 +121,35 @@ const EditTargetModal = ({
     setVal(currentTarget);
   }, [currentTarget]);
   const handleSave = async () => {
+    const normalizedTarget = normalizeTargetCredits(val, 0);
+    if (normalizedTarget <= 0) {
+      toast.error("Vui lòng nhập mục tiêu tín chỉ lớn hơn 0");
+      return;
+    }
+
     try {
       const res = await fetch(getFullApiUrl("/api/update-profile"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, totalTargetCredits: val }),
+        body: JSON.stringify({ username, totalTargetCredits: normalizedTarget }),
       });
       const data = await res.json();
-      if (data.success) {
-        const user = JSON.parse(localStorage.getItem("user"));
-        user.totalTargetCredits = val;
-        localStorage.setItem("user", JSON.stringify(user));
-        onSuccess(val);
-        onClose();
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || "Không thể cập nhật mục tiêu tín chỉ");
       }
+
+      const storedUser = readStoredUser() || {};
+      const updatedUser = data?.user
+        ? { ...storedUser, ...data.user }
+        : { ...storedUser, totalTargetCredits: normalizedTarget };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+
+      onSuccess(normalizedTarget);
+      onClose();
+      toast.success("Đã cập nhật mục tiêu tín chỉ");
     } catch (e) {
       console.error(e);
-      alert("Lỗi cập nhật");
+      toast.error(e?.message || "Lỗi cập nhật");
     }
   };
   if (!isOpen) return null;
@@ -141,6 +174,7 @@ const EditTargetModal = ({
             type="number"
             value={val}
             onChange={(e) => setVal(e.target.value)}
+            min={1}
             className="w-full p-3 pl-4 pr-12 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xl"
           />
           <span className="absolute right-4 top-3.5 text-gray-400 dark:text-gray-500 font-medium text-sm">
@@ -185,8 +219,8 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   // State GPA & Credits
   const [gpaMetrics, setGpaMetrics] = useState(createDefaultGpaMetrics);
 
-  const [targetCredits, setTargetCredits] = useState(
-    user?.totalTargetCredits || 150
+  const [targetCredits, setTargetCredits] = useState(() =>
+    resolveInitialTargetCredits(user)
   );
 
   const resolveActiveUsername = (task = null) => {
@@ -293,7 +327,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
       return;
     }
 
-    setTargetCredits(user.totalTargetCredits || 150);
+    setTargetCredits(resolveInitialTargetCredits(user));
     loadDashboardBatch({ showLoading: true });
   }, [user]);
 
