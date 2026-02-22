@@ -34,6 +34,8 @@
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
     "openai": "^4.104.0",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "pdf-parse": "^2.4.5",
     "react-router-dom": "^7.13.0",
     "sweetalert2": "^11.26.17",

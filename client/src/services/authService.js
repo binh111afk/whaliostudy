@@ -103,6 +103,10 @@ const getClientContext = async () => {
 };
 
 export const authService = {
+    startGoogleLogin() {
+        window.location.href = getFullApiUrl('/auth/google');
+    },
+
     async login(username, password) {
         try {
             const clientContext = await getClientContext();

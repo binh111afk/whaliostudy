@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { Menu, X, Home, FileText, Users, LayoutGrid, Moon, Sun, Settings, LogOut, Save, User } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header'; 
@@ -224,6 +224,38 @@ function App() {
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthState = params.get('googleAuth');
+    const encodedUser = params.get('user');
+
+    if (!oauthState) return;
+
+    if (oauthState === 'success' && encodedUser) {
+      try {
+        const binary = atob(encodedUser);
+        const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+        const decodedText = new TextDecoder().decode(bytes);
+        const parsedUser = JSON.parse(decodedText);
+
+        localStorage.setItem('user', JSON.stringify(parsedUser));
+        setUser(parsedUser);
+        toast.success('Đăng nhập Google thành công');
+      } catch (error) {
+        console.error('Google OAuth parse error:', error);
+        toast.error('Không thể xử lý dữ liệu đăng nhập Google');
+      }
+    } else if (oauthState === 'failed') {
+      toast.error('Đăng nhập Google thất bại, vui lòng thử lại.');
+    }
+
+    params.delete('googleAuth');
+    params.delete('user');
+    const cleanQuery = params.toString();
+    const cleanUrl = `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ''}${window.location.hash}`;
+    window.history.replaceState({}, document.title, cleanUrl);
   }, []);
 
   // 3. Hàm xử lý Đăng xuất

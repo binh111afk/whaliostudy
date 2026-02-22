@@ -2,6 +2,15 @@ import React, { useState } from 'react';
 import { toast } from "sonner";
 import { authService } from '../services/authService';
 
+const GoogleIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
+    <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.224 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.84 1.154 7.955 3.045l5.657-5.657C34.053 6.054 29.277 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
+    <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.84 1.154 7.955 3.045l5.657-5.657C34.053 6.054 29.277 4 24 4c-7.682 0-14.347 4.337-17.694 10.691z" />
+    <path fill="#4CAF50" d="M24 44c5.177 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.149 35.091 26.684 36 24 36c-5.204 0-9.62-3.318-11.283-7.946l-6.522 5.025C9.5 39.556 16.227 44 24 44z" />
+    <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.05 12.05 0 0 1-4.084 5.571l6.19 5.238C36.971 39.215 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
+  </svg>
+);
+
 const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
   const [isLoginView, setIsLoginView] = useState(true); // true = Login, false = Register
   const [isLoading, setIsLoading] = useState(false);
@@ -149,7 +158,11 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
     } finally {
         setIsLoading(false);
     }
-};
+  };
+
+  const handleGoogleLogin = () => {
+    authService.startGoogleLogin();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -238,6 +251,33 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
           >
             {isLoading ? 'Đang xử lý...' : (isLoginView ? 'Đăng nhập' : 'Đăng ký ngay')}
           </button>
+
+          {isLoginView && (
+            <div className="space-y-3 pt-2">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-400">Hoặc</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-left transition-all hover:border-gray-300 hover:bg-gray-50"
+              >
+                <div className="flex items-center gap-3">
+                  <GoogleIcon />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">Đăng nhập với Google</p>
+                    <p className="text-xs text-gray-500">Tiếp tục nhanh bằng tài khoản Google của bạn</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          )}
         </form>
 
         {/* Footer chuyển đổi */}

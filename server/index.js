@@ -17,6 +17,8 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 // ==================== SECURITY LIBRARIES ====================
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
@@ -92,6 +94,9 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 console.log('✅  CORS enabled for multiple origins');
+
+// OAuth (Google) middleware
+app.use(passport.initialize());
 
 // ==================== SECURITY MIDDLEWARE ====================
 // 🛡️ [ENTERPRISE SECURITY - LAYER 1] HELMET - HTTP Security Headers
@@ -706,6 +711,8 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true },
     fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
+    googleId: { type: String, unique: true, sparse: true, index: true },
+    whaleID: { type: String, unique: true, sparse: true, index: true },
     avatar: { type: String, default: null },
     role: { type: String, default: 'member', enum: ['member', 'admin'] },
     savedDocs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Document' }],
@@ -1097,6 +1104,155 @@ const SystemSettings = mongoose.model('SystemSettings', systemSettingsSchema);
 const SystemEvent = mongoose.model('SystemEvent', systemEventSchema);
 const UserActivityLog = mongoose.model('UserActivityLog', userActivityLogSchema);
 const BackupRecord = mongoose.model('BackupRecord', backupRecordSchema);
+
+// ==================== GOOGLE OAUTH HELPERS ====================
+const resolveBaseUrl = (url, fallback) => {
+    const value = String(url || '').trim();
+    if (!value) return fallback;
+    return value.replace(/\/+$/, '');
+};
+
+const WHALIO_WEB_BASE_URL = resolveBaseUrl(
+    process.env.FRONTEND_URL || process.env.CLIENT_URL || process.env.APP_URL,
+    'https://whaliostudy.io.vn'
+);
+const GOOGLE_CALLBACK_URL = String(
+    process.env.GOOGLE_CALLBACK_URL || 'https://whaliostudy.io.vn/auth/google/callback'
+).trim();
+const GOOGLE_OAUTH_STATE_PARAM = 'googleAuth';
+const isGoogleOAuthEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+
+function createUsernameBaseFromEmail(email) {
+    const localPart = String(email || '').split('@')[0] || '';
+    const sanitized = localPart.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!sanitized) return 'whalio';
+    return sanitized.slice(0, 18);
+}
+
+async function generateUniqueUsername(baseUsername) {
+    const base = String(baseUsername || '').trim().toLowerCase() || 'whalio';
+    const existingBase = await User.exists({ username: base });
+    if (!existingBase) return base;
+
+    for (let i = 0; i < 30; i += 1) {
+        const suffix = Math.floor(100 + Math.random() * 900);
+        const candidate = `${base}${suffix}`.slice(0, 24);
+        const exists = await User.exists({ username: candidate });
+        if (!exists) return candidate;
+    }
+
+    return `whalio${Date.now().toString().slice(-6)}`;
+}
+
+async function generateUniqueWhaleID() {
+    for (let i = 0; i < 40; i += 1) {
+        const randomPart = String(Math.floor(10000 + Math.random() * 90000));
+        const candidate = `WHALIO-${randomPart}`;
+        const exists = await User.exists({ whaleID: candidate });
+        if (!exists) return candidate;
+    }
+
+    return `WHALIO-${Date.now().toString().slice(-5)}`;
+}
+
+async function findOrCreateGoogleUser(googleProfile) {
+    const googleId = String(googleProfile?.id || '').trim();
+    const email = String(googleProfile?.emails?.[0]?.value || '').trim().toLowerCase();
+    const fullName = String(
+        googleProfile?.displayName ||
+        googleProfile?.name?.givenName ||
+        googleProfile?.name?.familyName ||
+        'Whalio User'
+    ).trim();
+    const avatar = String(googleProfile?.photos?.[0]?.value || '/img/avt.png').trim();
+
+    if (!googleId) {
+        throw new Error('Google profile missing id');
+    }
+    if (!email) {
+        throw new Error('Google profile missing email');
+    }
+
+    const existingByGoogleId = await User.findOne({ googleId });
+    if (existingByGoogleId) {
+        if (!existingByGoogleId.whaleID) {
+            existingByGoogleId.whaleID = await generateUniqueWhaleID();
+            await existingByGoogleId.save();
+        }
+        return existingByGoogleId;
+    }
+
+    // Nếu email đã tồn tại từ tài khoản local thì liên kết Google vào tài khoản đó
+    const existingByEmail = await User.findOne({ email });
+    if (existingByEmail) {
+        existingByEmail.googleId = googleId;
+        if (avatar) existingByEmail.avatar = avatar;
+        if (fullName) existingByEmail.fullName = fullName;
+        if (!existingByEmail.whaleID) {
+            existingByEmail.whaleID = await generateUniqueWhaleID();
+        }
+        existingByEmail.updatedAt = new Date();
+        await existingByEmail.save();
+        return existingByEmail;
+    }
+
+    const username = await generateUniqueUsername(createUsernameBaseFromEmail(email));
+    const whaleID = await generateUniqueWhaleID();
+    const generatedPassword = await bcrypt.hash(
+        `google_oauth_${googleId}_${Date.now()}`,
+        BCRYPT_SALT_ROUNDS
+    );
+
+    const newUser = new User({
+        username,
+        password: generatedPassword,
+        fullName: fullName || username,
+        email,
+        avatar: avatar || '/img/avt.png',
+        googleId,
+        whaleID,
+        role: 'member',
+        savedDocs: []
+    });
+    await newUser.save();
+
+    return newUser;
+}
+
+function buildGoogleSuccessRedirect(user) {
+    const safeUser = user.toObject ? user.toObject() : { ...user };
+    delete safeUser.password;
+
+    const encodedUser = encodeURIComponent(
+        Buffer.from(JSON.stringify(safeUser), 'utf8').toString('base64')
+    );
+    return `${WHALIO_WEB_BASE_URL}/?${GOOGLE_OAUTH_STATE_PARAM}=success&user=${encodedUser}`;
+}
+
+const googleFailureRedirect = `${WHALIO_WEB_BASE_URL}/?${GOOGLE_OAUTH_STATE_PARAM}=failed`;
+
+if (isGoogleOAuthEnabled) {
+    passport.use(
+        new GoogleStrategy(
+            {
+                clientID: process.env.GOOGLE_CLIENT_ID,
+                clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+                callbackURL: GOOGLE_CALLBACK_URL
+            },
+            async (_accessToken, _refreshToken, profile, done) => {
+                try {
+                    const user = await findOrCreateGoogleUser(profile);
+                    return done(null, user);
+                } catch (error) {
+                    return done(error, null);
+                }
+            }
+        )
+    );
+    console.log(`✅ Google OAuth configured. Callback URL: ${GOOGLE_CALLBACK_URL}`);
+} else {
+    console.warn('⚠️ Google OAuth disabled. Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET.');
+}
 
 // Auto-seed on startup
 async function seedInitialData() {
@@ -2030,6 +2186,39 @@ app.post('/api/refresh-token', verifyToken, async (req, res) => {
 });
 
 // 1. Authentication APIs
+app.get('/auth/google', (req, res, next) => {
+    if (!isGoogleOAuthEnabled) {
+        return res.status(503).json({
+            success: false,
+            message: 'Google OAuth chưa được cấu hình trên server.'
+        });
+    }
+
+    return passport.authenticate('google', {
+        scope: ['profile', 'email'],
+        session: false
+    })(req, res, next);
+});
+
+app.get('/auth/google/callback', (req, res, next) => {
+    if (!isGoogleOAuthEnabled) {
+        return res.redirect(googleFailureRedirect);
+    }
+
+    return passport.authenticate('google', {
+        session: false,
+        failureRedirect: googleFailureRedirect
+    })(req, res, next);
+}, (req, res) => {
+    try {
+        const redirectUrl = buildGoogleSuccessRedirect(req.user);
+        return res.redirect(redirectUrl);
+    } catch (error) {
+        console.error('Google callback redirect error:', error.message);
+        return res.redirect(googleFailureRedirect);
+    }
+});
+
 // 🛡️ Áp dụng loginLimiter cho API đăng nhập (5 lần / 15 phút)
 app.post('/api/login', loginLimiter, async (req, res) => {
     try {
@@ -2291,12 +2480,14 @@ app.post('/api/register', async (req, res) => {
         // 🔐 Hash password trước khi lưu vào database
         const hashedPassword = await bcrypt.hash(normalizedPassword, BCRYPT_SALT_ROUNDS);
         console.log(`🔒 Password hashed for new user: ${normalizedUsername}`);
+        const whaleID = await generateUniqueWhaleID();
 
         const newUser = new User({
             username: normalizedUsername,
             password: hashedPassword, // Lưu hash, không lưu plain text
             fullName: normalizedFullName,
             email: normalizedEmail,
+            whaleID,
             avatar: '/img/avt.png',
             role: "member",
             savedDocs: []
