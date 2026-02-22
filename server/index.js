@@ -96,6 +96,7 @@ const ALLOWED_CORS_ORIGINS = [
     'https://whaliostudy.io.vn',
     'https://www.whaliostudy.io.vn',
     'https://weblogwhalio.onrender.com',
+    'https://whaliostudying.onrender.com',
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:3000',
@@ -498,6 +499,7 @@ const ADMIN_DEBUG_RATE_LIMIT_WINDOW_MS = parsePositiveInt(process.env.ADMIN_DEBU
 const ADMIN_DEBUG_RATE_LIMIT_MAX = parsePositiveInt(process.env.ADMIN_DEBUG_RATE_LIMIT_MAX, 2000);
 const ADMIN_RATE_LIMIT_ORIGINS = Array.from(new Set([
     'https://weblogwhalio.onrender.com',
+    'https://whaliostudying.onrender.com',
     'https://whaliostudy.io.vn',
     'https://www.whaliostudy.io.vn',
     ...String(process.env.ADMIN_DEBUG_RATE_LIMIT_ORIGINS || '')
