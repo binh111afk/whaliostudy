@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { studyService } from "../services/studyService";
 import AddDeadlineModal from "../components/AddDeadlineModal";
 import DeadlineExpandedSection from "../components/DeadlineExpandedSection";
 import DashboardOverviewTab from "../components/dashboard/DashboardOverviewTab";
@@ -61,6 +60,32 @@ const convertToGPA4 = (score10) => {
   if (score10 >= 3.0) return 0.5;
   return 0;
 };
+
+const createDefaultGpaMetrics = () => ({
+  current: 0.0,
+  last: 0.0,
+  diff: 0.0,
+  totalCredits: 0,
+  passedSubjects: 0,
+});
+
+const DashboardBatchSkeleton = () => (
+  <div className="space-y-5">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, idx) => (
+        <div
+          key={`dashboard-skeleton-metric-${idx}`}
+          className="h-28 rounded-2xl bg-gray-100 dark:bg-gray-700/60 animate-pulse"
+        />
+      ))}
+    </div>
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      <div className="h-80 rounded-2xl bg-gray-100 dark:bg-gray-700/60 animate-pulse xl:col-span-2" />
+      <div className="h-80 rounded-2xl bg-gray-100 dark:bg-gray-700/60 animate-pulse" />
+    </div>
+    <div className="h-64 rounded-2xl bg-gray-100 dark:bg-gray-700/60 animate-pulse" />
+  </div>
+);
 
 // --- COMPONENT: MODAL NHẬP MỤC TIÊU TÍN CHỈ ---
 const EditTargetModal = ({
@@ -155,29 +180,14 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   const [isDeadlineExpanded, setIsDeadlineExpanded] = useState(false);
   const deadlineToggleLocksRef = useRef(new Set());
   const [togglingTasks, setTogglingTasks] = useState(new Set());
+  const [isBatchLoading, setIsBatchLoading] = useState(false);
 
   // State GPA & Credits
-  const [gpaMetrics, setGpaMetrics] = useState({
-    current: 0.0,
-    last: 0.0,
-    diff: 0.0,
-    totalCredits: 0,
-    passedSubjects: 0,
-  });
+  const [gpaMetrics, setGpaMetrics] = useState(createDefaultGpaMetrics);
 
   const [targetCredits, setTargetCredits] = useState(
     user?.totalTargetCredits || 150
   );
-
-  // --- 1. LOAD DỮ LIỆU ---
-  useEffect(() => {
-    if (user) {
-      loadStats();
-      loadDeadlines();
-      loadGpaData();
-      setTargetCredits(user.totalTargetCredits || 150);
-    }
-  }, [user]);
 
   const resolveActiveUsername = (task = null) => {
     const fromTask = String(task?.username || "").trim();
@@ -199,49 +209,93 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
     return "";
   };
 
-  const loadStats = () => {
-    studyService.getStats(user.username).then((res) => {
-      if (res.success) {
-        let totalMinutes = 0;
-        const formattedData = res.data.map((item) => {
-          totalMinutes += item.minutes;
-          return {
-            name: item.name,
-            hours: parseFloat((item.minutes / 60).toFixed(1)),
-          };
-        });
-        setChartData(formattedData);
-        setTotalStudyMinutes(totalMinutes);
-      }
-    });
+  const resetDashboardMetrics = () => {
+    setChartData([]);
+    setTotalStudyMinutes(0);
+    setDeadlines([]);
+    setGpaMetrics(createDefaultGpaMetrics());
   };
 
-  const loadDeadlines = async () => {
-    try {
-      const res = await fetch(getFullApiUrl(`/api/events?username=${user.username}`));
-      const data = await res.json();
-      if (data.success) {
-        const sorted = data.events
-          .filter((event) => !isScheduleOnlyEvent(event))
-          .sort((a, b) => new Date(a.date) - new Date(b.date));
-        setDeadlines(sorted);
-      }
-    } catch (error) {
-      console.error("Lỗi tải deadline:", error);
+  const applyDashboardBatchData = (payload = {}) => {
+    const rawStudyData = Array.isArray(payload?.study?.chartData)
+      ? payload.study.chartData
+      : [];
+
+    const formattedData = rawStudyData.map((item) => ({
+      name: item?.name || "--/--",
+      hours: parseFloat(((Number(item?.minutes) || 0) / 60).toFixed(1)),
+    }));
+
+    const apiTotalMinutes = Number(payload?.study?.totalMinutes);
+    const fallbackTotalMinutes = rawStudyData.reduce(
+      (sum, item) => sum + (Number(item?.minutes) || 0),
+      0
+    );
+    const totalMinutes = Number.isFinite(apiTotalMinutes)
+      ? apiTotalMinutes
+      : fallbackTotalMinutes;
+
+    setChartData(formattedData);
+    setTotalStudyMinutes(totalMinutes);
+
+    const sortedDeadlines = (Array.isArray(payload?.events) ? payload.events : [])
+      .filter((event) => !isScheduleOnlyEvent(event))
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    setDeadlines(sortedDeadlines);
+
+    const semesters = Array.isArray(payload?.gpa?.semesters)
+      ? payload.gpa.semesters
+      : [];
+    if (semesters.length > 0) {
+      calculateGpaMetrics(semesters);
+    } else {
+      setGpaMetrics(createDefaultGpaMetrics());
     }
   };
 
-  const loadGpaData = async () => {
+  const loadDashboardBatch = async ({ showLoading = false } = {}) => {
+    const activeUsername = resolveActiveUsername();
+    if (!activeUsername) {
+      resetDashboardMetrics();
+      return;
+    }
+
+    if (showLoading) setIsBatchLoading(true);
+
     try {
-      const res = await fetch(getFullApiUrl(`/api/gpa?username=${user.username}`));
+      const res = await fetch(
+        getFullApiUrl(
+          `/api/user/dashboard-batch?username=${encodeURIComponent(activeUsername)}`
+        )
+      );
       const data = await res.json();
-      if (data.success && data.semesters && data.semesters.length > 0) {
-        calculateGpaMetrics(data.semesters);
+
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || "Không thể tải dữ liệu dashboard");
       }
+
+      applyDashboardBatchData(data.data || {});
     } catch (error) {
-      console.error("Lỗi tải GPA:", error);
+      console.error("Lỗi tải dashboard batch:", error);
+      toast.error("Không thể tải dữ liệu dashboard", {
+        position: isMobileViewport() ? "bottom-center" : "top-center",
+      });
+    } finally {
+      if (showLoading) setIsBatchLoading(false);
     }
   };
+
+  // --- 1. LOAD DỮ LIỆU ---
+  useEffect(() => {
+    if (!user) {
+      resetDashboardMetrics();
+      setIsBatchLoading(false);
+      return;
+    }
+
+    setTargetCredits(user.totalTargetCredits || 150);
+    loadDashboardBatch({ showLoading: true });
+  }, [user]);
 
   const calculateGpaMetrics = (semesters) => {
     let totalCreditsAccumulated = 0;
@@ -332,7 +386,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
       );
       const data = await res.json();
       if (data.success) {
-        loadDeadlines();
+        loadDashboardBatch();
         toast.success("Đã xóa xong!", {
           position: isMobileViewport() ? "bottom-center" : "top-center",
         });
@@ -518,21 +572,25 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
 
       {/* 3. CONTENT AREA */}
       {activeTab === "overview" && (
-        <DashboardOverviewTab
-          darkMode={darkMode}
-          gpaMetrics={gpaMetrics}
-          targetCredits={targetCredits}
-          isIncrease={isIncrease}
-          chartData={chartData}
-          totalStudyMinutes={totalStudyMinutes}
-          deadlines={deadlines}
-          togglingTasks={togglingTasks}
-          onToggleDeadline={handleToggleDeadline}
-          onEditDeadline={handleEditDeadline}
-          onDeleteDeadline={handleDeleteDeadline}
-          onOpenTargetModal={() => setIsTargetModalOpen(true)}
-          onOpenDeadlineExpanded={() => setIsDeadlineExpanded(true)}
-        />
+        isBatchLoading ? (
+          <DashboardBatchSkeleton />
+        ) : (
+          <DashboardOverviewTab
+            darkMode={darkMode}
+            gpaMetrics={gpaMetrics}
+            targetCredits={targetCredits}
+            isIncrease={isIncrease}
+            chartData={chartData}
+            totalStudyMinutes={totalStudyMinutes}
+            deadlines={deadlines}
+            togglingTasks={togglingTasks}
+            onToggleDeadline={handleToggleDeadline}
+            onEditDeadline={handleEditDeadline}
+            onDeleteDeadline={handleDeleteDeadline}
+            onOpenTargetModal={() => setIsTargetModalOpen(true)}
+            onOpenDeadlineExpanded={() => setIsDeadlineExpanded(true)}
+          />
+        )
       )}
 
       {activeTab === "documents" && <DashboardNotesTab user={user} />}
@@ -547,7 +605,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
           setIsModalOpen(false);
           setEditingDeadline(null);
         }}
-        onSuccess={loadDeadlines}
+        onSuccess={loadDashboardBatch}
         username={user?.username}
         mode={editingDeadline ? "edit" : "create"}
         initialData={editingDeadline}

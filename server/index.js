@@ -61,11 +61,41 @@ const SERVER_TMP_DIR = process.env.RENDER_TMP_DIR || os.tmpdir();
 const UPLOAD_TMP_DIR = path.join(SERVER_TMP_DIR, 'whalio-uploads');
 const PORTAL_CACHE_TTL_SECONDS = parsePositiveInt(process.env.PORTAL_CACHE_TTL_SECONDS, 120);
 const SLOW_REQUEST_THRESHOLD_MS = parsePositiveInt(process.env.SLOW_REQUEST_THRESHOLD_MS, 200);
+const USER_DASHBOARD_BATCH_CACHE_TTL_SECONDS = parsePositiveInt(process.env.USER_DASHBOARD_BATCH_CACHE_TTL_SECONDS, 30);
 const runtimeCache = new NodeCache({
     stdTTL: PORTAL_CACHE_TTL_SECONDS,
     checkperiod: Math.max(30, Math.floor(PORTAL_CACHE_TTL_SECONDS / 2)),
     useClones: false
 });
+const userDashboardBatchCache = new NodeCache({
+    stdTTL: USER_DASHBOARD_BATCH_CACHE_TTL_SECONDS,
+    checkperiod: Math.max(10, Math.floor(USER_DASHBOARD_BATCH_CACHE_TTL_SECONDS / 2)),
+    useClones: false
+});
+
+const getUserDashboardBatchCacheKey = (username) => {
+    const normalizedUsername = String(username || '').trim().toLowerCase();
+    if (!normalizedUsername) return '';
+    return `user:dashboard-batch:${normalizedUsername}`;
+};
+
+function getUserDashboardBatchFromCache(username) {
+    const cacheKey = getUserDashboardBatchCacheKey(username);
+    if (!cacheKey) return null;
+    return userDashboardBatchCache.get(cacheKey) || null;
+}
+
+function setUserDashboardBatchCache(username, payload) {
+    const cacheKey = getUserDashboardBatchCacheKey(username);
+    if (!cacheKey) return;
+    userDashboardBatchCache.set(cacheKey, payload, USER_DASHBOARD_BATCH_CACHE_TTL_SECONDS);
+}
+
+function invalidateUserDashboardBatchCache(username) {
+    const cacheKey = getUserDashboardBatchCacheKey(username);
+    if (!cacheKey) return;
+    userDashboardBatchCache.del(cacheKey);
+}
 
 try {
     fs.mkdirSync(UPLOAD_TMP_DIR, { recursive: true });
@@ -650,6 +680,7 @@ async function gracefulShutdown(signal) {
         console.log(`\n🛑 Received ${signal}. Shutting down gracefully...`);
         stopBlockedIPCacheAutoRefresh();
         runtimeCache.close();
+        userDashboardBatchCache.close();
         if (mongoose.connection.readyState === 1 || mongoose.connection.readyState === 2) {
             await mongoose.connection.close(false);
             console.log('✅ MongoDB connection closed');
@@ -912,6 +943,7 @@ const studySessionSchema = new mongoose.Schema({
     date: { type: Date, default: Date.now }, // Ngày học
     createdAt: { type: Date, default: Date.now }
 });
+studySessionSchema.index({ username: 1, date: -1 });
 
 const StudySession = mongoose.model('StudySession', studySessionSchema);
 
@@ -971,6 +1003,7 @@ const documentSchema = new mongoose.Schema({
     visibility: { type: String, default: 'public', enum: ['public', 'private'] },
     createdAt: { type: Date, default: Date.now }
 });
+documentSchema.index({ uploaderUsername: 1, createdAt: -1 });
 
 // Exam Schema
 const examSchema = new mongoose.Schema({
@@ -1168,6 +1201,7 @@ const eventSchema = new mongoose.Schema({
     isDone: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
+eventSchema.index({ username: 1, date: 1 });
 
 const deadlineTagSchema = new mongoose.Schema({
     username: { type: String, required: true, ref: 'User', index: true },
@@ -1263,6 +1297,7 @@ const userActivityLogSchema = new mongoose.Schema({
 
 userActivityLogSchema.index({ userId: 1, createdAt: -1 });
 userActivityLogSchema.index({ username: 1, action: 1 });
+userActivityLogSchema.index({ action: 1, createdAt: -1 });
 
 // Backup Record Schema - Lưu thông tin các bản backup
 const backupRecordSchema = new mongoose.Schema({
@@ -1703,9 +1738,29 @@ if (isGoogleOAuthEnabled) {
     console.warn('⚠️ Google OAuth disabled. Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET.');
 }
 
+async function ensurePerformanceIndexes() {
+    const startedAt = Date.now();
+    const indexTasks = [
+        { model: StudySession, fields: { username: 1, date: -1 }, name: 'study_session_username_date_idx' },
+        { model: Event, fields: { username: 1, date: 1 }, name: 'event_username_date_idx' },
+        { model: Document, fields: { uploaderUsername: 1, createdAt: -1 }, name: 'document_uploader_createdAt_idx' },
+        { model: UserActivityLog, fields: { action: 1, createdAt: -1 }, name: 'user_activity_action_createdAt_idx' }
+    ];
+
+    const results = await Promise.all(indexTasks.map(async ({ model, fields, name }) => {
+        const indexName = await model.collection.createIndex(fields, { name });
+        return { modelName: model.modelName, indexName };
+    }));
+
+    const durationMs = Date.now() - startedAt;
+    console.log(`⚙️  Performance indexes ensured (${results.length}) in ${durationMs}ms`);
+    return results;
+}
+
 // Auto-seed on startup
 async function seedInitialData() {
     console.log('\n🔄 AUTO-SEED: Running automatic database seeding on startup...');
+    await ensurePerformanceIndexes();
     await seedExamsFromJSON(false);
 }
 
@@ -4438,6 +4493,34 @@ app.post('/api/delete-reply', async (req, res) => {
 
 // ==================== STUDY TIMER APIs ====================
 
+function buildStudyStatsForLastSevenDays(sessions = []) {
+    const stats = {};
+
+    // Tạo khung 7 ngày (để ngày nào không học vẫn hiện 0)
+    for (let i = 6; i >= 0; i -= 1) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+        stats[key] = 0;
+    }
+
+    // Cộng dồn thời gian
+    sessions.forEach((session) => {
+        const key = new Date(session.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+        if (stats[key] !== undefined) {
+            stats[key] += Number(session.duration) || 0;
+        }
+    });
+
+    const chartData = Object.keys(stats).map((date) => ({
+        name: date,
+        minutes: stats[date]
+    }));
+    const totalMinutes = chartData.reduce((sum, day) => sum + (Number(day.minutes) || 0), 0);
+
+    return { chartData, totalMinutes };
+}
+
 // 1. Lưu phiên học (Gọi khi bấm Dừng hoặc Hết giờ)
 app.post('/api/study/save', async (req, res) => {
     try {
@@ -4451,6 +4534,7 @@ app.post('/api/study/save', async (req, res) => {
         });
 
         await newSession.save();
+        invalidateUserDashboardBatchCache(username);
         console.log(`⏱️ Đã lưu ${duration} phút học cho ${username}`);
         res.json({ success: true, message: "Đã lưu thời gian học!" });
     } catch (err) {
@@ -4474,35 +4558,85 @@ app.get('/api/study/stats', async (req, res) => {
             date: { $gte: sevenDaysAgo }
         }).sort({ date: 1 });
 
-        // Gom nhóm theo ngày (Format: DD/MM)
-        const stats = {};
-
-        // Tạo khung 7 ngày (để ngày nào không học vẫn hiện 0)
-        for (let i = 6; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            const key = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-            stats[key] = 0;
-        }
-
-        // Cộng dồn thời gian
-        sessions.forEach(session => {
-            const key = new Date(session.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-            if (stats[key] !== undefined) {
-                stats[key] += session.duration;
-            }
-        });
-
-        // Chuyển về mảng cho Recharts
-        const chartData = Object.keys(stats).map(date => ({
-            name: date,
-            minutes: stats[date]
-        }));
+        const { chartData } = buildStudyStatsForLastSevenDays(sessions);
 
         res.json({ success: true, data: chartData });
     } catch (err) {
         console.error('Get study stats error:', err);
         res.status(500).json({ success: false });
+    }
+});
+
+// User dashboard batch (GPA + study stats + upcoming events)
+app.get('/api/user/dashboard-batch', verifyToken, async (req, res) => {
+    try {
+        const username = String(req.query.username || '').trim();
+        if (!username) {
+            return res.status(400).json({ success: false, message: 'Username is required' });
+        }
+
+        const requesterUsername = String(req.user?.username || '').trim();
+        const requesterRole = String(req.user?.role || '').trim();
+        if (!requesterUsername || (requesterUsername !== username && requesterRole !== 'admin')) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
+        }
+
+        const cachedPayload = getUserDashboardBatchFromCache(username);
+        if (cachedPayload) {
+            return res.json({
+                success: true,
+                cached: true,
+                data: cachedPayload
+            });
+        }
+
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const now = new Date();
+        const [gpaData, sessions, upcomingEvents] = await Promise.all([
+            GpaModel.findOne({ username })
+                .select('semesters targetGpa updatedAt')
+                .lean(),
+            StudySession.find({
+                username,
+                date: { $gte: sevenDaysAgo }
+            })
+                .select('duration date')
+                .sort({ date: 1 })
+                .lean(),
+            Event.find({
+                username,
+                date: { $gte: now }
+            })
+                .select('-__v')
+                .sort({ date: 1 })
+                .lean()
+        ]);
+
+        const { chartData, totalMinutes } = buildStudyStatsForLastSevenDays(sessions);
+        const payload = {
+            gpa: {
+                semesters: Array.isArray(gpaData?.semesters) ? gpaData.semesters : [],
+                targetGpa: String(gpaData?.targetGpa || '')
+            },
+            study: {
+                chartData,
+                totalMinutes
+            },
+            events: Array.isArray(upcomingEvents) ? upcomingEvents : []
+        };
+
+        setUserDashboardBatchCache(username, payload);
+
+        return res.json({
+            success: true,
+            cached: false,
+            data: payload
+        });
+    } catch (err) {
+        console.error('Get user dashboard batch error:', err);
+        return res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
@@ -5199,6 +5333,7 @@ app.post('/api/events', ensureAuthenticated, async (req, res) => {
         });
 
         await event.save();
+        invalidateUserDashboardBatchCache(username);
         await logUserActivityLog({
             username,
             action: normalizedType === 'deadline' ? 'deadline_create' : 'event_create',
@@ -5242,6 +5377,7 @@ app.delete('/api/events/:id', ensureAuthenticated, async (req, res) => {
         const eventType = event.type;
         const eventTitle = event.title;
         await Event.findByIdAndDelete(id);
+        invalidateUserDashboardBatchCache(username);
         await logUserActivityLog({
             username,
             action: eventType === 'deadline' ? 'deadline_delete' : 'event_delete',
@@ -5301,6 +5437,7 @@ app.put('/api/events/:id', ensureAuthenticated, async (req, res, next) => {
         event.deadlineTag = String(deadlineTag || '').trim().slice(0, 40) || 'Công việc';
 
         await event.save();
+        invalidateUserDashboardBatchCache(username);
         await logUserActivityLog({
             username,
             action: normalizedType === 'deadline' ? 'deadline_update' : 'event_update',
@@ -5351,6 +5488,7 @@ app.put('/api/events/toggle', ensureAuthenticated, async (req, res) => {
         }
         
         await event.save();
+        invalidateUserDashboardBatchCache(username);
         await logUserActivityLog({
             username,
             action: event.type === 'deadline'
@@ -5625,6 +5763,7 @@ app.post('/api/gpa', async (req, res) => {
             },
             { upsert: true, new: true }
         );
+        invalidateUserDashboardBatchCache(username);
 
         res.json({ success: true, message: 'Đã lưu bảng điểm!' });
     } catch (err) {
