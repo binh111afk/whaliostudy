@@ -307,6 +307,9 @@ function App() {
       }
     }
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('accessToken');
     setUser(null);
     // Có thể thêm reload nếu muốn reset sạch mọi thứ
     // window.location.reload(); 

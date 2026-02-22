@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
     Search, ExternalLink, Globe, Book, CreditCard, 
     Wrench, Heart, Copy, Edit, Check, Plus, ShieldCheck, Trash2,
@@ -14,6 +14,8 @@ const Portal = ({ user }) => {
     const [editingLink, setEditingLink] = useState(null);
     const [formData, setFormData] = useState({ name: '', url: '', desc: '', categoryId: '' });
     const [loading, setLoading] = useState(true);
+    const saveDebounceRef = useRef(null);
+    const latestPortalDataRef = useRef(null);
 
     // --- 🔐 LOGIC CHECK QUYỀN ADMIN ---
     // User là Admin nếu role là 'admin' HOẶC username là 'binhdzvl' (Account của ông)
@@ -29,7 +31,7 @@ const Portal = ({ user }) => {
     };
 
     // --- DỮ LIỆU ĐẦY ĐỦ 5 DANH MỤC (BOX) ---
-    const initialData = [
+    const initialData = useMemo(() => ([
         {
             id: 'admin',
             category: "Hành chính & Đào tạo",
@@ -184,35 +186,56 @@ const Portal = ({ user }) => {
                 }
             ]
         }
-    ];
+    ]), []);
 
     const [portalData, setPortalData] = useState(initialData);
+
+    const loadPortalData = useCallback(async () => {
+        setLoading(true);
+        const result = await portalService.getPortalData();
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+            setPortalData(result.data);
+        } else {
+            // Không tự động ghi DB từ frontend khi API lỗi/không có dữ liệu (tránh loop request)
+            setPortalData(initialData);
+        }
+        setLoading(false);
+    }, [initialData]);
 
     // Load dữ liệu từ MongoDB khi component mount
     useEffect(() => {
         loadPortalData();
+    }, [loadPortalData]);
+
+    useEffect(() => {
+        return () => {
+            if (saveDebounceRef.current) {
+                clearTimeout(saveDebounceRef.current);
+                saveDebounceRef.current = null;
+            }
+        };
     }, []);
 
-    const loadPortalData = async () => {
-        setLoading(true);
-        const result = await portalService.getPortalData();
-        if (result.success && result.data.length > 0) {
-            setPortalData(result.data);
-        } else {
-            // Nếu chưa có dữ liệu, khởi tạo với initialData
-            await portalService.updatePortalData(initialData);
-            setPortalData(initialData);
-        }
-        setLoading(false);
-    };
-
     // Hàm lưu dữ liệu lên MongoDB
-    const savePortalData = async (newData) => {
-        const result = await portalService.updatePortalData(newData);
-        if (result.success) {
-            setPortalData(newData);
+    const flushPortalDataToServer = useCallback(async () => {
+        const payload = latestPortalDataRef.current;
+        if (!payload) return;
+        await portalService.updatePortalData(payload);
+    }, []);
+
+    const savePortalData = useCallback((newData) => {
+        setPortalData(newData);
+        latestPortalDataRef.current = newData;
+
+        // Debounce write requests để giảm burst API khi admin thao tác liên tục
+        if (saveDebounceRef.current) {
+            clearTimeout(saveDebounceRef.current);
         }
-    };
+
+        saveDebounceRef.current = setTimeout(() => {
+            void flushPortalDataToServer();
+        }, 500);
+    }, [flushPortalDataToServer]);
 
     // --- CÁC HÀM XỬ LÝ SỰ KIỆN (HANDLERS) ---
 
@@ -254,7 +277,7 @@ const Portal = ({ user }) => {
                 }
                 return section;
             });
-            await savePortalData(newData);
+            savePortalData(newData);
         }
     }
 
@@ -268,7 +291,7 @@ const Portal = ({ user }) => {
     // Xử lý Reset về dữ liệu gốc (Chỉ Admin)
     const handleReset = async () => {
         if(confirm("Bằn chắc chắn muốn khôi phục lại dữ liệu gốc? Tất cả thay đổi sẽ bị mất!")) {
-            await savePortalData(initialData);
+            savePortalData(initialData);
         }
     }
 
@@ -314,7 +337,7 @@ const Portal = ({ user }) => {
             });
         }
 
-        await savePortalData(newData);
+        savePortalData(newData);
         setIsModalOpen(false);
         setEditingLink(null);
         setFormData({ name: '', url: '', desc: '', categoryId: '' });

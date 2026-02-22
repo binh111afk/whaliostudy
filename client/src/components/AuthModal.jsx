@@ -65,6 +65,9 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
           if (isLoginView) {
             // --- 1. ĐĂNG NHẬP THÀNH CÔNG ---
             localStorage.setItem('user', JSON.stringify(data.user));
+            if (data.token) {
+              localStorage.setItem('token', data.token);
+            }
             onLoginSuccess(data.user);
             onClose();
           

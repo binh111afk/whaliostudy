@@ -9,6 +9,7 @@ const fsp = fs.promises;
 const multer = require('multer');
 const os = require('os');
 const mongoose = require('mongoose');
+const NodeCache = require('node-cache');
 const geoip = require('geoip-lite');
 const UAParser = require('ua-parser-js');
 const cloudinary = require('cloudinary').v2;
@@ -52,6 +53,13 @@ const CHAT_CONTEXT_MAX_CHARS_PER_MESSAGE = parsePositiveInt(process.env.CHAT_CON
 const CHAT_CONTEXT_MAX_TOTAL_CHARS = parsePositiveInt(process.env.CHAT_CONTEXT_MAX_TOTAL_CHARS, 6000);
 const SERVER_TMP_DIR = process.env.RENDER_TMP_DIR || os.tmpdir();
 const UPLOAD_TMP_DIR = path.join(SERVER_TMP_DIR, 'whalio-uploads');
+const PORTAL_CACHE_TTL_SECONDS = parsePositiveInt(process.env.PORTAL_CACHE_TTL_SECONDS, 120);
+const SLOW_REQUEST_THRESHOLD_MS = parsePositiveInt(process.env.SLOW_REQUEST_THRESHOLD_MS, 200);
+const runtimeCache = new NodeCache({
+    stdTTL: PORTAL_CACHE_TTL_SECONDS,
+    checkperiod: Math.max(30, Math.floor(PORTAL_CACHE_TTL_SECONDS / 2)),
+    useClones: false
+});
 
 try {
     fs.mkdirSync(UPLOAD_TMP_DIR, { recursive: true });
@@ -102,6 +110,22 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 console.log(`✅  CORS enabled. Credentials: true. Origins: ${ALLOWED_CORS_ORIGINS.join(', ')}`);
+
+// Performance logging middleware: theo dõi thời gian phản hồi cho từng request
+app.use((req, res, next) => {
+    if (!String(req.path || '').startsWith('/api/')) {
+        return next();
+    }
+    const startedAt = process.hrtime.bigint();
+    res.on('finish', () => {
+        const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+        const durationText = `${durationMs.toFixed(1)}ms`;
+        const prefix = durationMs > SLOW_REQUEST_THRESHOLD_MS ? '⚠️ [SLOW REQUEST]' : '⏱️ [REQ]';
+        const logFn = durationMs > SLOW_REQUEST_THRESHOLD_MS ? console.warn : console.log;
+        logFn(`${prefix} ${req.method} ${req.originalUrl} -> ${res.statusCode} (${durationText})`);
+    });
+    next();
+});
 
 const SESSION_SECRET = String(
     process.env.SESSION_SECRET || process.env.JWT_SECRET || 'whalio_session_secret_change_me'
@@ -510,7 +534,11 @@ const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb:/
 
 mongoose.connect(MONGO_URI, {
     useNewUrlParser: true,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
+    maxPoolSize: parsePositiveInt(process.env.MONGO_MAX_POOL_SIZE, 20),
+    minPoolSize: parsePositiveInt(process.env.MONGO_MIN_POOL_SIZE, 2),
+    serverSelectionTimeoutMS: parsePositiveInt(process.env.MONGO_SERVER_SELECTION_TIMEOUT_MS, 5000),
+    socketTimeoutMS: parsePositiveInt(process.env.MONGO_SOCKET_TIMEOUT_MS, 45000)
 })
     .then(() => {
         console.log('🚀 Whalio is now connected to MongoDB Cloud');
@@ -527,6 +555,37 @@ mongoose.connect(MONGO_URI, {
         console.error('❌ MongoDB connection failed:', err);
         process.exit(1);
     });
+
+mongoose.connection.on('disconnected', () => {
+    console.warn('⚠️ MongoDB disconnected');
+});
+
+mongoose.connection.on('reconnected', () => {
+    console.log('🔁 MongoDB reconnected');
+});
+
+async function gracefulShutdown(signal) {
+    try {
+        console.log(`\n🛑 Received ${signal}. Shutting down gracefully...`);
+        stopBlockedIPCacheAutoRefresh();
+        runtimeCache.close();
+        if (mongoose.connection.readyState === 1 || mongoose.connection.readyState === 2) {
+            await mongoose.connection.close(false);
+            console.log('✅ MongoDB connection closed');
+        }
+    } catch (error) {
+        console.error('❌ Graceful shutdown error:', error.message);
+    } finally {
+        process.exit(0);
+    }
+}
+
+process.once('SIGTERM', () => {
+    void gracefulShutdown('SIGTERM');
+});
+process.once('SIGINT', () => {
+    void gracefulShutdown('SIGINT');
+});
 
 // ==================== DATA SEEDING FUNCTION (ROBUST VERSION) ====================
 async function seedExamsFromJSON(forceReseed = false) {
@@ -992,6 +1051,31 @@ const announcementSchema = new mongoose.Schema({
 
 announcementSchema.index({ createdAt: -1 });
 
+// Portal Schema (cấu hình cổng tiện ích, dữ liệu ít thay đổi)
+const portalLinkSchema = new mongoose.Schema({
+    id: { type: Number, required: true },
+    name: { type: String, required: true, trim: true },
+    url: { type: String, required: true, trim: true },
+    desc: { type: String, default: '', trim: true }
+}, { _id: false });
+
+const portalCategorySchema = new mongoose.Schema({
+    id: { type: String, required: true, trim: true },
+    category: { type: String, required: true, trim: true },
+    icon: { type: String, default: 'Globe', trim: true },
+    bg: { type: String, default: 'bg-blue-50 dark:bg-blue-900/20', trim: true },
+    links: { type: [portalLinkSchema], default: [] }
+}, { _id: false });
+
+const portalConfigSchema = new mongoose.Schema({
+    key: { type: String, required: true, unique: true, index: true, default: 'main' },
+    categories: { type: [portalCategorySchema], default: [] },
+    updatedBy: { type: String, default: 'system' },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+portalConfigSchema.index({ key: 1 }, { unique: true });
+
 // Event Schema
 const eventSchema = new mongoose.Schema({
     username: { type: String, required: true, ref: 'User', index: true },
@@ -1124,6 +1208,7 @@ const Activity = mongoose.model('Activity', activitySchema);
 const Timetable = mongoose.model('Timetable', timetableSchema);
 const QuickNote = mongoose.model('QuickNote', quickNoteSchema);
 const Announcement = mongoose.model('Announcement', announcementSchema);
+const PortalConfig = mongoose.model('PortalConfig', portalConfigSchema);
 const Event = mongoose.model('Event', eventSchema);
 const DeadlineTag = mongoose.model('DeadlineTag', deadlineTagSchema);
 const ChatSession = mongoose.model('ChatSession', chatSessionSchema);
@@ -1177,6 +1262,38 @@ function saveSession(req) {
             return resolve();
         });
     });
+}
+
+const PORTAL_CACHE_KEY = 'portal:categories';
+
+function normalizePortalCategories(rawCategories = []) {
+    if (!Array.isArray(rawCategories)) return [];
+
+    return rawCategories.map((category, categoryIndex) => {
+        const links = Array.isArray(category?.links) ? category.links : [];
+        return {
+            id: String(category?.id || `category_${categoryIndex + 1}`).trim(),
+            category: String(category?.category || 'Danh mục').trim(),
+            icon: String(category?.icon || 'Globe').trim(),
+            bg: String(category?.bg || 'bg-blue-50 dark:bg-blue-900/20').trim(),
+            links: links
+                .map((link, linkIndex) => ({
+                    id: Number.isFinite(Number(link?.id)) ? Number(link.id) : Date.now() + linkIndex,
+                    name: String(link?.name || '').trim(),
+                    url: String(link?.url || '#').trim(),
+                    desc: String(link?.desc || '').trim()
+                }))
+                .filter((link) => link.name && link.url)
+        };
+    }).filter((category) => category.id && category.category);
+}
+
+function getPortalFromCache() {
+    return runtimeCache.get(PORTAL_CACHE_KEY) || null;
+}
+
+function setPortalCache(categories) {
+    runtimeCache.set(PORTAL_CACHE_KEY, categories, PORTAL_CACHE_TTL_SECONDS);
 }
 
 async function isAdmin(req, res, next) {
@@ -2495,7 +2612,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
                 { username: normalizedUsername },
                 { username: usernameLooseRegex }
             ]
-        });
+        }).select('_id username password fullName email avatar role googleId whaleID savedDocs isLocked status lastIP lastCountry lastCity lastDevice lastLogin totalStudyMinutes createdAt updatedAt');
         
         if (!user) {
             return res.status(401).json({ 
@@ -2869,6 +2986,78 @@ app.get('/api/quick-notes-health', (req, res) => {
     });
 });
 
+// 4.0 Portal APIs (MongoDB + cache)
+app.get('/api/portal', async (req, res) => {
+    try {
+        const cachedCategories = getPortalFromCache();
+        if (cachedCategories) {
+            return res.json({
+                success: true,
+                data: cachedCategories,
+                cached: true
+            });
+        }
+
+        const portalConfig = await PortalConfig.findOne({ key: 'main' })
+            .select('categories updatedAt -_id')
+            .lean();
+        const categories = normalizePortalCategories(portalConfig?.categories || []);
+        setPortalCache(categories);
+
+        return res.json({
+            success: true,
+            data: categories,
+            cached: false
+        });
+    } catch (error) {
+        console.error('Get portal data error:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Không thể tải dữ liệu portal'
+        });
+    }
+});
+
+app.post('/api/portal/update', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const categories = normalizePortalCategories(req.body?.categories || []);
+        if (!Array.isArray(categories) || categories.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Dữ liệu categories không hợp lệ.'
+            });
+        }
+
+        const updated = await PortalConfig.findOneAndUpdate(
+            { key: 'main' },
+            {
+                $set: {
+                    categories,
+                    updatedAt: new Date(),
+                    updatedBy: req.user?.username || 'admin'
+                }
+            },
+            { new: true, upsert: true, setDefaultsOnInsert: true }
+        )
+            .select('categories updatedAt updatedBy -_id')
+            .lean();
+
+        setPortalCache(updated?.categories || categories);
+
+        return res.json({
+            success: true,
+            data: updated?.categories || categories,
+            updatedAt: updated?.updatedAt || new Date()
+        });
+    } catch (error) {
+        console.error('Update portal data error:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Không thể cập nhật dữ liệu portal'
+        });
+    }
+});
+
 // 4.1 Quick Notes APIs (MongoDB)
 app.get('/api/quick-notes', async (req, res) => {
     try {
@@ -2960,7 +3149,9 @@ app.post('/api/announcements', upload.single('image'), async (req, res) => {
             return res.status(400).json({ success: false, message: 'Thiếu username' });
         }
 
-        const user = await User.findOne({ username: normalizedUsername });
+        const user = await User.findOne({ username: normalizedUsername })
+            .select('username fullName role')
+            .lean();
         if (!user || user.role !== 'admin') {
             return res.status(403).json({ success: false, message: 'Chỉ admin mới được thêm thông báo' });
         }
@@ -3009,7 +3200,9 @@ app.put('/api/announcements/:id', upload.single('image'), async (req, res) => {
             return res.status(400).json({ success: false, message: 'Thiếu username' });
         }
 
-        const user = await User.findOne({ username: normalizedUsername });
+        const user = await User.findOne({ username: normalizedUsername })
+            .select('username fullName role')
+            .lean();
         if (!user || user.role !== 'admin') {
             return res.status(403).json({ success: false, message: 'Chỉ admin mới được sửa thông báo' });
         }
@@ -3064,7 +3257,9 @@ app.delete('/api/announcements/:id', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Thiếu username' });
         }
 
-        const user = await User.findOne({ username: normalizedUsername });
+        const user = await User.findOne({ username: normalizedUsername })
+            .select('username fullName role')
+            .lean();
         if (!user || user.role !== 'admin') {
             return res.status(403).json({ success: false, message: 'Chỉ admin mới được xóa thông báo' });
         }
