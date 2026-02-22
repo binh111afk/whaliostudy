@@ -496,9 +496,21 @@ const GENERAL_RATE_LIMIT_WINDOW_MS = parsePositiveInt(process.env.GENERAL_RATE_L
 const GENERAL_RATE_LIMIT_MAX = parsePositiveInt(process.env.GENERAL_RATE_LIMIT_MAX, 400);
 const ADMIN_DEBUG_RATE_LIMIT_WINDOW_MS = parsePositiveInt(process.env.ADMIN_DEBUG_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000);
 const ADMIN_DEBUG_RATE_LIMIT_MAX = parsePositiveInt(process.env.ADMIN_DEBUG_RATE_LIMIT_MAX, 2000);
-const ADMIN_RATE_LIMIT_ORIGINS = [
-    'https://weblogwhalio.onrender.com'
-];
+const ADMIN_RATE_LIMIT_ORIGINS = Array.from(new Set([
+    'https://weblogwhalio.onrender.com',
+    'https://whaliostudy.io.vn',
+    'https://www.whaliostudy.io.vn',
+    ...String(process.env.ADMIN_DEBUG_RATE_LIMIT_ORIGINS || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+]));
+const ADMIN_DEBUG_RATE_LIMIT_IPS = Array.from(new Set(
+    String(process.env.ADMIN_DEBUG_RATE_LIMIT_IPS || '')
+        .split(',')
+        .map((item) => normalizeIp(item))
+        .filter(Boolean)
+));
 
 function isAdminDebugOriginRequest(req) {
     const origin = String(req.headers.origin || '').trim();
@@ -506,6 +518,16 @@ function isAdminDebugOriginRequest(req) {
     return ADMIN_RATE_LIMIT_ORIGINS.some((allowedOrigin) => (
         origin === allowedOrigin || referer.startsWith(`${allowedOrigin}/`) || referer === allowedOrigin
     ));
+}
+
+function isAdminDebugIpRequest(req) {
+    if (ADMIN_DEBUG_RATE_LIMIT_IPS.length === 0) return false;
+    const ip = extractClientIP(req) || normalizeIp(req.ip) || normalizeIp(req.connection?.remoteAddress) || '';
+    return Boolean(ip) && ADMIN_DEBUG_RATE_LIMIT_IPS.includes(ip);
+}
+
+function isAdminDebugWhitelistedRequest(req) {
+    return isAdminDebugOriginRequest(req) || isAdminDebugIpRequest(req);
 }
 
 function isAdminApiPath(req) {
@@ -527,7 +549,7 @@ const generalLimiter = rateLimit({
         // Không tính preflight request.
         if (req.method === 'OPTIONS') return true;
         // Nới hạn mức cho Admin Dashboard origin khi gọi Admin API để debug.
-        return isAdminApiPath(req) && isAdminDebugOriginRequest(req);
+        return isAdminApiPath(req) && isAdminDebugWhitelistedRequest(req);
     },
     keyGenerator: (req) => rateLimit.ipKeyGenerator(
         req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip
@@ -544,7 +566,7 @@ const adminDebugLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => !isAdminDebugOriginRequest(req),
+    skip: (req) => !isAdminDebugWhitelistedRequest(req),
     keyGenerator: (req) => rateLimit.ipKeyGenerator(
         req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip
     )
@@ -570,6 +592,8 @@ const loginLimiter = rateLimit({
 app.use('/api/admin', adminDebugLimiter);
 app.use('/api/', generalLimiter);
 console.log(`🛡️  Rate limiting enabled (${GENERAL_RATE_LIMIT_MAX} req/${Math.round(GENERAL_RATE_LIMIT_WINDOW_MS / 60000)}min general, ${ADMIN_DEBUG_RATE_LIMIT_MAX} req/${Math.round(ADMIN_DEBUG_RATE_LIMIT_WINDOW_MS / 60000)}min admin debug burst, 5 req/15min login) - Enterprise Layer 5`);
+console.log(`🧪 Admin debug whitelist origins: ${ADMIN_RATE_LIMIT_ORIGINS.join(', ') || '(none)'}`);
+console.log(`🧪 Admin debug whitelist IPs: ${ADMIN_DEBUG_RATE_LIMIT_IPS.join(', ') || '(none configured)'}`);
 
 // ⛔ REMOVED: Static data route - Không được serve public thư mục chứa exam/questions
 // app.use('/static-data', express.static(path.join(__dirname, 'data'))); // SECURITY RISK!

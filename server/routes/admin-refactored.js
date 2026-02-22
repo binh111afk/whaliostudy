@@ -77,8 +77,118 @@ function parseBoundedInt(value, fallback, min, max) {
     return Math.max(min, Math.min(max, parsed));
 }
 
+function resolveTrafficWindowMs(timeRange = '30m') {
+    const normalized = String(timeRange || '30m').trim().toLowerCase();
+    if (normalized === '24h') return 24 * 60 * 60 * 1000;
+    if (normalized === '12h') return 12 * 60 * 60 * 1000;
+    if (normalized === '6h') return 6 * 60 * 60 * 1000;
+    if (normalized === '1h') return 60 * 60 * 1000;
+    if (normalized === '15m') return 15 * 60 * 1000;
+    return 30 * 60 * 1000;
+}
+
+function buildTrafficSnapshot(loginCount = 0, timeRange = '30m', now = new Date()) {
+    const baseRequests = Math.max(10, Number(loginCount || 0) * 15);
+    const chart = [];
+
+    for (let i = 6; i >= 0; i -= 1) {
+        const time = new Date(now.getTime() - i * 5 * 60 * 1000);
+        chart.push({
+            time: time.toTimeString().substring(0, 5),
+            requests: Math.floor(baseRequests * (0.5 + Math.random() * 0.5))
+        });
+    }
+
+    return {
+        selectedRange: String(timeRange || '30m').trim() || '30m',
+        currentRequests: chart[chart.length - 1]?.requests || 0,
+        averageRequests: Math.round(chart.reduce((acc, point) => acc + point.requests, 0) / chart.length),
+        peakRequests: Math.max(...chart.map((point) => point.requests)),
+        timeRange: `${chart[0]?.time || '--:--'} - ${chart[chart.length - 1]?.time || '--:--'}`,
+        chart,
+        breakdown: {
+            api: Math.floor(baseRequests * 0.6),
+            static: Math.floor(baseRequests * 0.3),
+            websocket: Math.floor(baseRequests * 0.1)
+        },
+        statusCodes: {
+            '2xx': Math.floor(baseRequests * 0.94),
+            '3xx': Math.floor(baseRequests * 0.02),
+            '4xx': Math.floor(baseRequests * 0.03),
+            '5xx': Math.floor(baseRequests * 0.01)
+        }
+    };
+}
+
+function buildServerStatusSnapshot(deployInfo = {}) {
+    const cpus = os.cpus();
+    const totalMemory = os.totalmem();
+    const freeMemory = os.freemem();
+    const usedMemory = totalMemory - freeMemory;
+    const uptimeSeconds = os.uptime();
+
+    let totalIdle = 0;
+    let totalTick = 0;
+    cpus.forEach((cpu) => {
+        Object.keys(cpu.times).forEach((timeKey) => {
+            totalTick += cpu.times[timeKey];
+        });
+        totalIdle += cpu.times.idle;
+    });
+
+    const cpuUsage = Math.round(100 - (totalIdle / totalTick * 100));
+    const ramUsage = Math.round((usedMemory / totalMemory) * 100);
+    const daysUp = Math.floor(uptimeSeconds / 86400);
+    const hoursUp = Math.floor((uptimeSeconds % 86400) / 3600);
+    const healthScore = Math.round(100 - (cpuUsage * 0.3 + ramUsage * 0.4 + 34 * 0.3));
+
+    return {
+        cpu: cpuUsage,
+        ram: ramUsage,
+        disk: 34,
+        uptime: `${daysUp} ngày ${hoursUp} giờ`,
+        uptimeSeconds,
+        totalPushes: deployInfo.totalPushes || 0,
+        lastDeployTime: deployInfo.time,
+        lastDeployVersion: deployInfo.version,
+        stableVersion: deployInfo.stableVersion || 'v2.4.0',
+        nodeVersion: process.version,
+        platform: `${os.type()} ${os.release()}`,
+        hostname: os.hostname(),
+        network: {
+            inbound: '245 MB/s',
+            outbound: '128 MB/s'
+        },
+        activeConnections: Math.floor(Math.random() * 100) + 50,
+        processMemory: formatBytes(process.memoryUsage().heapUsed),
+        healthScore,
+        healthStatus: healthScore >= 70 ? 'healthy' : healthScore >= 50 ? 'warning' : 'critical'
+    };
+}
+
+function formatEventRelativeTime(timestamp) {
+    const now = Date.now();
+    const eventTime = new Date(timestamp).getTime();
+    if (!Number.isFinite(eventTime)) return 'Không xác định';
+
+    const diffMs = Math.max(0, now - eventTime);
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffHours < 1) return 'Vừa xong';
+    if (diffHours < 24) return `${diffHours} giờ trước`;
+    return `${diffDays} ngày trước`;
+}
+
 const ADMIN_STATS_BATCH_CACHE_TTL_MS = 15 * 1000;
 let adminStatsBatchCache = {
+    key: '',
+    expiresAt: 0,
+    payload: null
+};
+
+const SECURITY_OVERVIEW_CACHE_TTL_MS = 10 * 1000;
+let securityOverviewCache = {
     key: '',
     expiresAt: 0,
     payload: null
@@ -95,6 +205,21 @@ function setAdminStatsBatchCache(cacheKey, payload) {
     adminStatsBatchCache = {
         key: cacheKey,
         expiresAt: Date.now() + ADMIN_STATS_BATCH_CACHE_TTL_MS,
+        payload
+    };
+}
+
+function getSecurityOverviewCache(cacheKey) {
+    if (!cacheKey || !securityOverviewCache.payload) return null;
+    if (securityOverviewCache.key !== cacheKey) return null;
+    if (Date.now() > securityOverviewCache.expiresAt) return null;
+    return securityOverviewCache.payload;
+}
+
+function setSecurityOverviewCache(cacheKey, payload) {
+    securityOverviewCache = {
+        key: cacheKey,
+        expiresAt: Date.now() + SECURITY_OVERVIEW_CACHE_TTL_MS,
         payload
     };
 }
@@ -857,46 +982,13 @@ router.get('/security/traffic', securityLogger, async (req, res) => {
     try {
         getModels();
         const { timeRange = '30m' } = req.query;
-
-        // Get real login count from last hour
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        const windowMs = resolveTrafficWindowMs(timeRange);
+        const since = new Date(Date.now() - windowMs);
         const loginCount = await UserActivityLog.countDocuments({
             action: 'login',
-            createdAt: { $gte: oneHourAgo }
+            createdAt: { $gte: since }
         });
-
-        // Generate traffic data based on real activity
-        const baseRequests = loginCount * 15; // Estimate 15 requests per login
-        const now = new Date();
-        const chart = [];
-
-        for (let i = 6; i >= 0; i--) {
-            const time = new Date(now - i * 5 * 60 * 1000);
-            const timeStr = time.toTimeString().substring(0, 5);
-            chart.push({
-                time: timeStr,
-                requests: Math.floor(baseRequests * (0.5 + Math.random() * 0.5))
-            });
-        }
-
-        const data = {
-            currentRequests: chart[chart.length - 1].requests,
-            averageRequests: Math.round(chart.reduce((a, b) => a + b.requests, 0) / chart.length),
-            peakRequests: Math.max(...chart.map(c => c.requests)),
-            timeRange: `${chart[0].time} - ${chart[chart.length - 1].time}`,
-            chart,
-            breakdown: {
-                api: Math.floor(baseRequests * 0.6),
-                static: Math.floor(baseRequests * 0.3),
-                websocket: Math.floor(baseRequests * 0.1)
-            },
-            statusCodes: {
-                '2xx': Math.floor(baseRequests * 0.94),
-                '3xx': Math.floor(baseRequests * 0.02),
-                '4xx': Math.floor(baseRequests * 0.03),
-                '5xx': Math.floor(baseRequests * 0.01)
-            }
-        };
+        const data = buildTrafficSnapshot(loginCount, timeRange);
 
         res.json({
             success: true,
@@ -1152,66 +1244,13 @@ router.get('/security/server-status', securityLogger, async (req, res) => {
     try {
         getModels();
 
-        // Get REAL system info using Node.js os module
-        const cpus = os.cpus();
-        const totalMemory = os.totalmem();
-        const freeMemory = os.freemem();
-        const usedMemory = totalMemory - freeMemory;
-        const uptime = os.uptime();
-
-        // Calculate CPU usage
-        let totalIdle = 0, totalTick = 0;
-        cpus.forEach(cpu => {
-            for (let type in cpu.times) {
-                totalTick += cpu.times[type];
-            }
-            totalIdle += cpu.times.idle;
-        });
-        const cpuUsage = Math.round(100 - (totalIdle / totalTick * 100));
-
-        // RAM usage
-        const ramUsage = Math.round((usedMemory / totalMemory) * 100);
-
-        // Format uptime
-        const days = Math.floor(uptime / 86400);
-        const hours = Math.floor((uptime % 86400) / 3600);
-        const uptimeStr = `${days} ngày ${hours} giờ`;
-
         // Get deploy info from system settings
         const deployInfo = await getSystemSetting('lastDeploy', {
             version: 'v1.0.0',
             time: new Date().toISOString(),
             totalPushes: 0
         });
-
-        // Get total pushes (could be from git or stored value)
-        const totalPushes = deployInfo.totalPushes || 557;
-
-        const status = {
-            cpu: cpuUsage,
-            ram: ramUsage,
-            disk: 34, // TODO: Implement disk usage check
-            uptime: uptimeStr,
-            uptimeSeconds: uptime,
-            totalPushes,
-            lastDeployTime: deployInfo.time,
-            lastDeployVersion: deployInfo.version,
-            stableVersion: 'v2.4.0',
-            nodeVersion: process.version,
-            platform: `${os.type()} ${os.release()}`,
-            hostname: os.hostname(),
-            network: {
-                inbound: '245 MB/s',
-                outbound: '128 MB/s'
-            },
-            activeConnections: Math.floor(Math.random() * 100) + 50,
-            processMemory: formatBytes(process.memoryUsage().heapUsed)
-        };
-
-        // Calculate health score
-        const healthScore = Math.round(100 - (cpuUsage * 0.3 + ramUsage * 0.4 + 34 * 0.3));
-        status.healthScore = healthScore;
-        status.healthStatus = healthScore >= 70 ? 'healthy' : healthScore >= 50 ? 'warning' : 'critical';
+        const status = buildServerStatusSnapshot(deployInfo);
 
         res.json({
             success: true,
@@ -1337,29 +1376,16 @@ router.get('/security/events', securityLogger, async (req, res) => {
         ]);
 
         // Format events with relative time
-        const formattedEvents = events.map(e => {
-            const now = new Date();
-            const eventTime = new Date(e.createdAt);
-            const diffMs = now - eventTime;
-            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-            const diffDays = Math.floor(diffHours / 24);
-
-            let relativeTime;
-            if (diffHours < 1) relativeTime = 'Vừa xong';
-            else if (diffHours < 24) relativeTime = `${diffHours} giờ trước`;
-            else relativeTime = `${diffDays} ngày trước`;
-
-            return {
-                id: e._id.toString(),
-                type: e.type,
-                severity: e.severity,
-                title: e.title,
-                description: e.description,
-                timestamp: e.createdAt,
-                relativeTime,
-                details: e.details
-            };
-        });
+        const formattedEvents = events.map((e) => ({
+            id: e._id.toString(),
+            type: e.type,
+            severity: e.severity,
+            title: e.title,
+            description: e.description,
+            timestamp: e.createdAt,
+            relativeTime: formatEventRelativeTime(e.createdAt),
+            details: e.details
+        }));
 
         // Format stats
         const byType = {};
@@ -1390,6 +1416,228 @@ router.get('/security/events', securityLogger, async (req, res) => {
     } catch (error) {
         console.error('❌ Error fetching events:', error);
         res.status(500).json({
+            success: false,
+            data: null,
+            message: `Lỗi máy chủ nội bộ: ${error.message}`
+        });
+    }
+});
+
+/**
+ * GET /security/overview
+ * Mega-endpoint: gộp server-status + suspicious-ips + traffic + events + traffic-30m
+ */
+router.get('/security/overview', securityLogger, async (req, res) => {
+    try {
+        getModels();
+
+        const timeRange = String(req.query.timeRange || '30m').trim() || '30m';
+        const attackType = String(req.query.attackType || 'all').trim() || 'all';
+        const ipStatus = String(req.query.status || 'all').trim() || 'all';
+        const sortBy = String(req.query.sortBy || 'attempts').trim() || 'attempts';
+        const order = String(req.query.order || 'desc').trim() || 'desc';
+        const suspiciousLimit = parseBoundedInt(req.query.suspiciousLimit, 100, 1, 500);
+        const eventType = String(req.query.type || 'all').trim() || 'all';
+        const eventSeverity = String(req.query.severity || 'all').trim() || 'all';
+        const eventsLimit = parseBoundedInt(req.query.limit, 20, 1, 100);
+        const eventsPage = parseBoundedInt(req.query.page, 1, 1, 10000);
+
+        const cacheKey = JSON.stringify({
+            timeRange,
+            attackType,
+            ipStatus,
+            sortBy,
+            order,
+            suspiciousLimit,
+            eventType,
+            eventSeverity,
+            eventsLimit,
+            eventsPage
+        });
+        const cachedPayload = getSecurityOverviewCache(cacheKey);
+        if (cachedPayload) {
+            return res.json({
+                success: true,
+                data: cachedPayload,
+                cached: true,
+                message: 'Lấy tổng quan bảo mật thành công (cache)'
+            });
+        }
+
+        const suspiciousQuery = {};
+        if (attackType !== 'all') suspiciousQuery.attackType = attackType;
+        if (ipStatus !== 'all') suspiciousQuery.status = ipStatus;
+
+        const suspiciousSort = {};
+        if (sortBy === 'lastSeen') {
+            suspiciousSort.lastSeen = order === 'desc' ? -1 : 1;
+        } else {
+            suspiciousSort.attempts = order === 'desc' ? -1 : 1;
+        }
+
+        const eventsQuery = {};
+        if (eventType !== 'all') eventsQuery.type = eventType;
+        if (eventSeverity !== 'all') eventsQuery.severity = eventSeverity;
+        const eventsSkip = (eventsPage - 1) * eventsLimit;
+
+        const now = new Date();
+        const selectedWindowStart = new Date(now.getTime() - resolveTrafficWindowMs(timeRange));
+        const thirtyMinuteWindowStart = new Date(now.getTime() - 30 * 60 * 1000);
+
+        const [
+            deployInfo,
+            loginCountBySelectedRange,
+            loginCountBy30m,
+            suspiciousIpDocs,
+            suspiciousByTypeRows,
+            totalBlocked,
+            totalActive,
+            recentEvents,
+            totalEvents,
+            eventsStatsRows
+        ] = await Promise.all([
+            getSystemSetting('lastDeploy', {
+                version: 'v1.0.0',
+                time: new Date().toISOString(),
+                totalPushes: 0
+            }),
+            UserActivityLog.countDocuments({
+                action: 'login',
+                createdAt: { $gte: selectedWindowStart }
+            }),
+            UserActivityLog.countDocuments({
+                action: 'login',
+                createdAt: { $gte: thirtyMinuteWindowStart }
+            }),
+            BlacklistIP.find(suspiciousQuery)
+                .select('ip attackType attempts firstSeen lastSeen targetEndpoint status country isp blockedAt blockedBy reason')
+                .sort(suspiciousSort)
+                .limit(suspiciousLimit)
+                .lean(),
+            BlacklistIP.aggregate([
+                {
+                    $group: {
+                        _id: '$attackType',
+                        count: { $sum: 1 }
+                    }
+                }
+            ]),
+            BlacklistIP.countDocuments({ status: 'blocked' }),
+            BlacklistIP.countDocuments({ status: 'active' }),
+            SystemEvent.find(eventsQuery)
+                .select('type severity title description details performedBy createdAt')
+                .sort({ createdAt: -1 })
+                .skip(eventsSkip)
+                .limit(eventsLimit)
+                .lean(),
+            SystemEvent.countDocuments(eventsQuery),
+            SystemEvent.aggregate([
+                { $match: eventsQuery },
+                {
+                    $facet: {
+                        byType: [{ $group: { _id: '$type', count: { $sum: 1 } } }],
+                        bySeverity: [{ $group: { _id: '$severity', count: { $sum: 1 } } }]
+                    }
+                }
+            ])
+        ]);
+
+        const suspiciousByType = {};
+        suspiciousByTypeRows.forEach((row) => {
+            suspiciousByType[row._id] = row.count;
+        });
+
+        const formattedSuspiciousIps = suspiciousIpDocs.map((ip) => ({
+            id: ip._id.toString(),
+            ip: ip.ip,
+            attackType: ip.attackType,
+            attempts: ip.attempts,
+            firstSeen: ip.firstSeen,
+            lastSeen: ip.lastSeen,
+            targetEndpoint: ip.targetEndpoint,
+            status: ip.status,
+            country: ip.country,
+            isp: ip.isp,
+            isBlocked: ip.status === 'blocked'
+        }));
+
+        const formattedEvents = recentEvents.map((event) => ({
+            id: event._id.toString(),
+            type: event.type,
+            severity: event.severity,
+            title: event.title,
+            description: event.description,
+            timestamp: event.createdAt,
+            relativeTime: formatEventRelativeTime(event.createdAt),
+            details: event.details,
+            performedBy: event.performedBy
+        }));
+
+        const byType = {};
+        const bySeverity = {};
+        if (eventsStatsRows[0]) {
+            eventsStatsRows[0].byType.forEach((row) => {
+                byType[row._id] = row.count;
+            });
+            eventsStatsRows[0].bySeverity.forEach((row) => {
+                bySeverity[row._id] = row.count;
+            });
+        }
+
+        const payload = {
+            serverStatus: buildServerStatusSnapshot(deployInfo),
+            suspiciousIps: {
+                ips: formattedSuspiciousIps,
+                stats: {
+                    totalSuspicious: suspiciousIpDocs.length,
+                    blocked: totalBlocked,
+                    active: totalActive,
+                    byType: suspiciousByType
+                }
+            },
+            traffic: buildTrafficSnapshot(loginCountBySelectedRange, timeRange, now),
+            traffic30m: buildTrafficSnapshot(loginCountBy30m, '30m', now),
+            events: {
+                events: formattedEvents,
+                pagination: {
+                    currentPage: eventsPage,
+                    totalPages: Math.ceil(totalEvents / eventsLimit),
+                    totalItems: totalEvents
+                },
+                stats: {
+                    total: totalEvents,
+                    byType,
+                    bySeverity
+                }
+            },
+            meta: {
+                generatedAt: new Date().toISOString(),
+                query: {
+                    timeRange,
+                    attackType,
+                    status: ipStatus,
+                    sortBy,
+                    order,
+                    suspiciousLimit,
+                    type: eventType,
+                    severity: eventSeverity,
+                    limit: eventsLimit,
+                    page: eventsPage
+                }
+            }
+        };
+
+        setSecurityOverviewCache(cacheKey, payload);
+
+        return res.json({
+            success: true,
+            data: payload,
+            cached: false,
+            message: 'Lấy tổng quan bảo mật thành công'
+        });
+    } catch (error) {
+        console.error('❌ Error fetching security overview:', error);
+        return res.status(500).json({
             success: false,
             data: null,
             message: `Lỗi máy chủ nội bộ: ${error.message}`
@@ -2155,6 +2403,35 @@ router.get('/stats/batch', securityLogger, async (req, res) => {
     } catch (error) {
         console.error('❌ Error fetching stats batch:', error);
         return res.status(500).json({
+            success: false,
+            data: null,
+            message: `Lỗi máy chủ nội bộ: ${error.message}`
+        });
+    }
+});
+
+/**
+ * GET /security/traffic-30m
+ * Endpoint tương thích cũ, luôn trả traffic 30 phút gần nhất
+ */
+router.get('/security/traffic-30m', securityLogger, async (req, res) => {
+    try {
+        getModels();
+        const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+        const loginCount = await UserActivityLog.countDocuments({
+            action: 'login',
+            createdAt: { $gte: thirtyMinutesAgo }
+        });
+        const data = buildTrafficSnapshot(loginCount, '30m');
+
+        res.json({
+            success: true,
+            data,
+            message: 'Lấy dữ liệu traffic 30 phút thành công'
+        });
+    } catch (error) {
+        console.error('❌ Error fetching traffic 30m:', error);
+        res.status(500).json({
             success: false,
             data: null,
             message: `Lỗi máy chủ nội bộ: ${error.message}`

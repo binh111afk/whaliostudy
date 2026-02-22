@@ -15,6 +15,67 @@ const resolvedApiOrigin = (() => {
     return window.location.origin
   }
 })()
+const ADMIN_SECURITY_THROTTLE_MS = 800
+const adminSecurityPendingFetchMap = new Map()
+const adminSecurityResponseCache = new Map()
+
+const resolveRequestUrl = (input) => {
+  try {
+    const raw =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input?.url || ''
+    return new URL(raw, window.location.origin)
+  } catch {
+    return null
+  }
+}
+
+const resolveRequestMethod = (input, init = {}) => {
+  const method = init?.method || (input instanceof Request ? input.method : 'GET') || 'GET'
+  return String(method).toUpperCase()
+}
+
+const buildRequestKey = (method, url) => `${method}:${url.origin}${url.pathname}${url.search}`
+
+const isAdminSecurityReadRequest = (method, url) =>
+  method === 'GET' && Boolean(url?.pathname?.startsWith('/api/admin/security/'))
+
+const getCachedAdminSecurityResponse = (requestKey) => {
+  const cached = adminSecurityResponseCache.get(requestKey)
+  if (!cached) return null
+  if (Date.now() - cached.at > ADMIN_SECURITY_THROTTLE_MS) {
+    adminSecurityResponseCache.delete(requestKey)
+    return null
+  }
+  return cached.response
+}
+
+const fetchWithAdminSecurityThrottle = (input, init, requestKey) => {
+  const pendingRequest = adminSecurityPendingFetchMap.get(requestKey)
+  if (pendingRequest) {
+    return pendingRequest.then((response) => response.clone())
+  }
+
+  const requestPromise = nativeFetch(input, init)
+    .then((response) => {
+      if (response.ok) {
+        adminSecurityResponseCache.set(requestKey, {
+          at: Date.now(),
+          response: response.clone()
+        })
+      }
+      return response
+    })
+    .finally(() => {
+      adminSecurityPendingFetchMap.delete(requestKey)
+    })
+
+  adminSecurityPendingFetchMap.set(requestKey, requestPromise)
+  return requestPromise.then((response) => response.clone())
+}
 
 const shouldDecorateApiRequest = (input) => {
   try {
@@ -35,8 +96,26 @@ const shouldDecorateApiRequest = (input) => {
 }
 
 window.fetch = (input, init = {}) => {
+  const requestUrl = resolveRequestUrl(input)
+  const requestMethod = resolveRequestMethod(input, init)
+  const isAdminSecurityRequest = isAdminSecurityReadRequest(requestMethod, requestUrl)
+  const requestKey =
+    isAdminSecurityRequest && requestUrl
+      ? buildRequestKey(requestMethod, requestUrl)
+      : ''
+
+  if (isAdminSecurityRequest && requestKey) {
+    const cachedResponse = getCachedAdminSecurityResponse(requestKey)
+    if (cachedResponse) {
+      return Promise.resolve(cachedResponse.clone())
+    }
+  }
+
   if (!shouldDecorateApiRequest(input)) {
-    return nativeFetch(input, init)
+    if (!isAdminSecurityRequest || !requestKey) {
+      return nativeFetch(input, init)
+    }
+    return fetchWithAdminSecurityThrottle(input, init, requestKey)
   }
 
   const headers = new Headers(init.headers || (input instanceof Request ? input.headers : undefined))
@@ -49,11 +128,15 @@ window.fetch = (input, init = {}) => {
     headers.set('Authorization', `Bearer ${token}`)
   }
 
-  return nativeFetch(input, {
+  const fetchInit = {
     ...init,
     headers,
     credentials: init.credentials || 'include'
-  })
+  }
+  if (!isAdminSecurityRequest || !requestKey) {
+    return nativeFetch(input, fetchInit)
+  }
+  return fetchWithAdminSecurityThrottle(input, fetchInit, requestKey)
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
