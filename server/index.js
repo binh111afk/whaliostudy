@@ -928,6 +928,7 @@ const userSchema = new mongoose.Schema({
     lastDevice: { type: String, default: '' },
     lastLogin: { type: Date, default: null },
     totalStudyMinutes: { type: Number, default: 0 },
+    totalTargetCredits: { type: Number, default: 150, min: 1 },
     
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
@@ -1348,7 +1349,7 @@ passport.serializeUser((user, done) => {
 passport.deserializeUser(async (userId, done) => {
     try {
         const user = await User.findById(userId)
-            .select('username fullName email avatar whaleID role')
+            .select('username fullName email avatar whaleID role totalTargetCredits')
             .lean();
         return done(null, user || false);
     } catch (error) {
@@ -1367,7 +1368,7 @@ async function loadUserByIdSafe(userId) {
     const id = String(userId || '').trim();
     if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
     return User.findById(id)
-        .select('username fullName email avatar whaleID role')
+        .select('username fullName email avatar whaleID role totalTargetCredits')
         .lean();
 }
 
@@ -1420,7 +1421,7 @@ async function ensureAuthenticated(req, res, next) {
                 const tokenUsername = String(decoded?.username || '').trim();
                 if (tokenUsername) {
                     const tokenUserByUsername = await User.findOne({ username: tokenUsername })
-                        .select('username fullName email avatar whaleID role')
+                        .select('username fullName email avatar whaleID role totalTargetCredits')
                         .lean();
                     if (tokenUserByUsername) {
                         req.user = tokenUserByUsername;
@@ -1568,6 +1569,10 @@ function normalizeAuthUser(rawUser) {
     const email = String(source.email || '').trim().toLowerCase();
     const role = String(source.role || 'member').trim() || 'member';
     const displayName = String(source.fullName || source.name || username || 'Whalio User').trim();
+    const parsedTargetCredits = Number(source.totalTargetCredits);
+    const totalTargetCredits = Number.isFinite(parsedTargetCredits) && parsedTargetCredits > 0
+        ? Math.round(parsedTargetCredits)
+        : 150;
 
     return {
         _id: userId || null,
@@ -1577,7 +1582,8 @@ function normalizeAuthUser(rawUser) {
         name: displayName,
         fullName: displayName,
         avatar: source.avatar || '/img/avt.png',
-        whaleID: source.whaleID || null
+        whaleID: source.whaleID || null,
+        totalTargetCredits
     };
 }
 
@@ -2875,7 +2881,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
                 { username: normalizedUsername },
                 { username: usernameLooseRegex }
             ]
-        }).select('_id username password fullName email avatar role googleId whaleID savedDocs isLocked status lastIP lastCountry lastCity lastDevice lastLogin totalStudyMinutes createdAt updatedAt');
+        }).select('_id username password fullName email avatar role googleId whaleID savedDocs isLocked status lastIP lastCountry lastCity lastDevice lastLogin totalStudyMinutes totalTargetCredits createdAt updatedAt');
         
         if (!user) {
             return res.status(401).json({ 
@@ -3146,6 +3152,17 @@ app.post('/api/update-profile', verifyToken, async (req, res) => {
         // Không cho phép cập nhật password và role qua API này
         delete updateData.password;
         delete updateData.role;
+
+        if (Object.prototype.hasOwnProperty.call(updateData, 'totalTargetCredits')) {
+            const parsedTargetCredits = Number(updateData.totalTargetCredits);
+            if (!Number.isFinite(parsedTargetCredits) || parsedTargetCredits <= 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Mục tiêu tín chỉ phải là số lớn hơn 0'
+                });
+            }
+            updateData.totalTargetCredits = Math.round(parsedTargetCredits);
+        }
         
         const user = await User.findOneAndUpdate(
             { username },
