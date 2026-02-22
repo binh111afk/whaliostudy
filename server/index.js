@@ -2357,7 +2357,11 @@ app.get('/auth/user', (req, res) => {
     });
 });
 
-app.post('/api/admin/impersonate/:userId', verifyToken, verifyAdmin, async (req, res) => {
+app.options('/api/admin/impersonate/:userId', cors(corsOptions), (req, res) => {
+    return res.sendStatus(200);
+});
+
+const startImpersonationHandler = async (req, res) => {
     try {
         const targetUserId = String(req.params.userId || '').trim();
         if (!mongoose.Types.ObjectId.isValid(targetUserId)) {
@@ -2413,7 +2417,10 @@ app.post('/api/admin/impersonate/:userId', verifyToken, verifyAdmin, async (req,
             message: 'Không thể bắt đầu nhập vai.'
         });
     }
-});
+};
+
+app.get('/api/admin/impersonate/:userId', verifyToken, verifyAdmin, startImpersonationHandler);
+app.post('/api/admin/impersonate/:userId', verifyToken, verifyAdmin, startImpersonationHandler);
 
 app.post('/api/admin/stop-impersonating', verifyToken, verifyAdmin, async (req, res) => {
     try {
