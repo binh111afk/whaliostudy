@@ -81,6 +81,7 @@ if (!String(process.env.NODE_OPTIONS || '').includes('--max-old-space-size')) {
 const ALLOWED_CORS_ORIGINS = [
     'https://whaliostudy.io.vn',
     'https://www.whaliostudy.io.vn',
+    'https://weblogwhalio.onrender.com',
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:3000',
