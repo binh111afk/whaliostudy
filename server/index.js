@@ -18,6 +18,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 // ==================== SECURITY LIBRARIES ====================
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const session = require('express-session');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const helmet = require('helmet');
@@ -76,29 +77,56 @@ if (!String(process.env.NODE_OPTIONS || '').includes('--max-old-space-size')) {
     console.log('💡 Memory hint: set NODE_OPTIONS="--max-old-space-size=512" on Render for tighter GC behavior.');
 }
 
-// 1. CORS Configuration - Cho phép cả Main App và Admin Panel
+// 1. CORS Configuration (cross-domain frontend -> backend with credentials)
+const ALLOWED_CORS_ORIGINS = [
+    'https://whaliostudy.io.vn',
+    'https://www.whaliostudy.io.vn',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174'
+];
+
 const corsOptions = {
-    origin: [
-        'http://localhost:5173',      // Vite dev server (Main App)
-        'http://localhost:5174',      // Vite dev server (Admin Panel)
-        'http://localhost:3000',      // Express server
-        'http://127.0.0.1:5173',
-        'http://127.0.0.1:5174',
-        'https://whaliostudy.io.vn',  // Frontend production domain
-        'https://www.whaliostudy.io.vn',
-        'https://weblogwhalio.onrender.com',
-        /\.vercel\.app$/,             // Vercel deployments
-        /\.netlify\.app$/             // Netlify deployments
-    ],
+    origin: (origin, callback) => {
+        if (!origin || ALLOWED_CORS_ORIGINS.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error(`CORS blocked origin: ${origin}`));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
 app.use(cors(corsOptions));
-console.log('✅  CORS enabled for multiple origins');
+console.log(`✅  CORS enabled. Credentials: true. Origins: ${ALLOWED_CORS_ORIGINS.join(', ')}`);
+
+const SESSION_SECRET = String(
+    process.env.SESSION_SECRET || process.env.JWT_SECRET || 'whalio_session_secret_change_me'
+).trim();
+if (!process.env.SESSION_SECRET) {
+    console.warn('⚠️ SESSION_SECRET is not set. Using fallback secret from env/default.');
+}
+
+app.use(session({
+    name: 'whalio.sid',
+    secret: SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    proxy: true,
+    cookie: {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+    }
+}));
+console.log('✅  express-session enabled (proxy=true, SameSite=None, Secure=true)');
 
 // OAuth (Google) middleware
 app.use(passport.initialize());
+app.use(passport.session());
 
 // ==================== SECURITY MIDDLEWARE ====================
 // 🛡️ [ENTERPRISE SECURITY - LAYER 1] HELMET - HTTP Security Headers
@@ -1106,6 +1134,25 @@ const SystemSettings = mongoose.model('SystemSettings', systemSettingsSchema);
 const SystemEvent = mongoose.model('SystemEvent', systemEventSchema);
 const UserActivityLog = mongoose.model('UserActivityLog', userActivityLogSchema);
 const BackupRecord = mongoose.model('BackupRecord', backupRecordSchema);
+
+passport.serializeUser((user, done) => {
+    const userId = String(user?._id || '').trim();
+    if (!userId) {
+        return done(new Error('Cannot serialize user session without _id'));
+    }
+    return done(null, userId);
+});
+
+passport.deserializeUser(async (userId, done) => {
+    try {
+        const user = await User.findById(userId)
+            .select('username fullName email avatar whaleID role')
+            .lean();
+        return done(null, user || false);
+    } catch (error) {
+        return done(error, null);
+    }
+});
 
 // ==================== GOOGLE OAUTH HELPERS ====================
 const resolveBaseUrl = (url, fallback) => {
@@ -2197,8 +2244,7 @@ app.get('/auth/google', (req, res, next) => {
     }
 
     return passport.authenticate('google', {
-        scope: ['profile', 'email'],
-        session: false
+        scope: ['profile', 'email']
     })(req, res, next);
 });
 
@@ -2208,7 +2254,6 @@ app.get('/auth/google/callback', (req, res, next) => {
     }
 
     return passport.authenticate('google', {
-        session: false,
         failureRedirect: googleFailureRedirect
     })(req, res, next);
 }, (req, res) => {
@@ -2218,6 +2263,27 @@ app.get('/auth/google/callback', (req, res, next) => {
         console.error('Google callback redirect error:', error.message);
         return res.redirect(googleFailureRedirect);
     }
+});
+
+app.get('/auth/user', (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({
+            success: false,
+            message: 'Chưa đăng nhập',
+            user: null
+        });
+    }
+
+    const displayName = String(req.user.fullName || req.user.name || 'Whalio User').trim();
+    return res.json({
+        success: true,
+        user: {
+            name: displayName,
+            fullName: displayName,
+            avatar: req.user.avatar || '/img/avt.png',
+            whaleID: req.user.whaleID || null
+        }
+    });
 });
 
 // 🛡️ Áp dụng loginLimiter cho API đăng nhập (5 lần / 15 phút)

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { Menu, X, Home, FileText, Users, LayoutGrid, Moon, Sun, Settings, LogOut, Save, User } from 'lucide-react';
+import axios from 'axios';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header'; 
 import AuthModal from './components/AuthModal'; // Import Modal
@@ -44,6 +45,8 @@ const ROUTE_TITLES = {
   '/portal': 'Tiện ích',
   '/announcements': 'Thông báo',
 };
+
+const AUTH_USER_ENDPOINT = 'https://whaliostudy.onrender.com/auth/user';
 
 const RouteTitleManager = () => {
   const location = useLocation();
@@ -224,6 +227,41 @@ function App() {
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchSessionUser = async () => {
+      try {
+        const response = await axios.get(AUTH_USER_ENDPOINT, {
+          withCredentials: true
+        });
+
+        const sessionUser = response?.data?.user;
+        if (!isMounted || !sessionUser) return;
+
+        const normalizedName = sessionUser.fullName || sessionUser.name || 'Whalio User';
+        const mergedUser = {
+          ...sessionUser,
+          fullName: normalizedName,
+          name: normalizedName
+        };
+
+        setUser((prev) => ({ ...(prev || {}), ...mergedUser }));
+        localStorage.setItem('user', JSON.stringify(mergedUser));
+      } catch (error) {
+        if (error?.response?.status !== 401) {
+          console.error('Failed to fetch session user:', error);
+        }
+      }
+    };
+
+    fetchSessionUser();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
