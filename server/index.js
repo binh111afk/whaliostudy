@@ -84,7 +84,8 @@ const corsOptions = {
         'http://localhost:3000',      // Express server
         'http://127.0.0.1:5173',
         'http://127.0.0.1:5174',
-        'https://whaliostudy.io.vn',  // Frontend trên Render
+        'https://whaliostudy.io.vn',  // Frontend production domain
+        'https://www.whaliostudy.io.vn',
         'https://weblogwhalio.onrender.com',
         /\.vercel\.app$/,             // Vercel deployments
         /\.netlify\.app$/             // Netlify deployments
@@ -1118,7 +1119,7 @@ const WHALIO_WEB_BASE_URL = resolveBaseUrl(
     'https://whaliostudy.io.vn'
 );
 const GOOGLE_CALLBACK_URL = String(
-    process.env.GOOGLE_CALLBACK_URL || 'https://whaliostudy.io.vn/auth/google/callback'
+    process.env.GOOGLE_CALLBACK_URL || 'https://whaliostudy.onrender.com/auth/google/callback'
 ).trim();
 const GOOGLE_OAUTH_STATE_PARAM = 'googleAuth';
 const isGoogleOAuthEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
@@ -2212,8 +2213,7 @@ app.get('/auth/google/callback', (req, res, next) => {
     })(req, res, next);
 }, (req, res) => {
     try {
-        const redirectUrl = buildGoogleSuccessRedirect(req.user);
-        return res.redirect(redirectUrl);
+        return res.redirect('https://whaliostudy.io.vn');
     } catch (error) {
         console.error('Google callback redirect error:', error.message);
         return res.redirect(googleFailureRedirect);
