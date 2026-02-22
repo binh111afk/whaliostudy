@@ -460,7 +460,13 @@ const AcademicSettingsTab = ({ currentUser, onUpdateUser }) => {
 const StatisticsTab = ({ currentUser }) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isLoaded, setIsLoaded] = useState(false);
   const COLORS = ["#3B82F6", "#10B981", "#F59E0B"];
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => setIsLoaded(true));
+    return () => window.cancelAnimationFrame(frameId);
+  }, []);
 
   useEffect(() => {
     const calculateFallbackFromSemesters = (semesters = []) => {
@@ -688,43 +694,47 @@ const StatisticsTab = ({ currentUser }) => {
             </h4>
           </div>
           {hasGpaData ? (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={gpaData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#374151"
-                    opacity={0.3}
-                  />
-                  <XAxis
-                    dataKey="semester"
-                    tick={{ fontSize: 11, fill: "#9CA3AF" }}
-                    axisLine={{ stroke: "#4B5563" }}
-                  />
-                  <YAxis
-                    domain={[0, 4]}
-                    tick={{ fontSize: 12, fill: "#9CA3AF" }}
-                    axisLine={{ stroke: "#4B5563" }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#1F2937",
-                      border: "1px solid #374151",
-                      borderRadius: "8px",
-                      color: "#F9FAFB",
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="gpa"
-                    stroke="#3B82F6"
-                    strokeWidth={3}
-                    dot={{ fill: "#3B82F6", strokeWidth: 2, r: 5 }}
-                    activeDot={{ r: 7 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            isLoaded ? (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={gpaData}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="#374151"
+                      opacity={0.3}
+                    />
+                    <XAxis
+                      dataKey="semester"
+                      tick={{ fontSize: 11, fill: "#9CA3AF" }}
+                      axisLine={{ stroke: "#4B5563" }}
+                    />
+                    <YAxis
+                      domain={[0, 4]}
+                      tick={{ fontSize: 12, fill: "#9CA3AF" }}
+                      axisLine={{ stroke: "#4B5563" }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#1F2937",
+                        border: "1px solid #374151",
+                        borderRadius: "8px",
+                        color: "#F9FAFB",
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="gpa"
+                      stroke="#3B82F6"
+                      strokeWidth={3}
+                      dot={{ fill: "#3B82F6", strokeWidth: 2, r: 5 }}
+                      activeDot={{ r: 7 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-64 w-full rounded-xl bg-gray-100 dark:bg-gray-700/60 animate-pulse" />
+            )
           ) : (
             <div className="h-64 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
               <AlertCircle size={40} className="mb-3 opacity-50" />
@@ -746,50 +756,54 @@ const StatisticsTab = ({ currentUser }) => {
             </h4>
           </div>
           {hasCreditData ? (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={creditData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={({ name, percent }) =>
-                      `${name} ${(percent * 100).toFixed(0)}%`
-                    }
-                    labelLine={{ stroke: "#9CA3AF" }}
-                  >
-                    {creditData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.color || COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#1F2937",
-                      border: "1px solid #374151",
-                      borderRadius: "8px",
-                      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                    }}
-                    itemStyle={{ color: "#FFFFFF", fontWeight: "bold" }}
-                    formatter={(value) => [`${value} tín chỉ`, "Số lượng"]}
-                  />
-                  <Legend
-                    wrapperStyle={{ fontSize: "12px" }}
-                    formatter={(value) => (
-                      <span className="text-gray-600 dark:text-gray-400">
-                        {value}
-                      </span>
-                    )}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            isLoaded ? (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={creditData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({ name, percent }) =>
+                        `${name} ${(percent * 100).toFixed(0)}%`
+                      }
+                      labelLine={{ stroke: "#9CA3AF" }}
+                    >
+                      {creditData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.color || COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#1F2937",
+                        border: "1px solid #374151",
+                        borderRadius: "8px",
+                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                      }}
+                      itemStyle={{ color: "#FFFFFF", fontWeight: "bold" }}
+                      formatter={(value) => [`${value} tín chỉ`, "Số lượng"]}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: "12px" }}
+                      formatter={(value) => (
+                        <span className="text-gray-600 dark:text-gray-400">
+                          {value}
+                        </span>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-64 w-full rounded-xl bg-gray-100 dark:bg-gray-700/60 animate-pulse" />
+            )
           ) : (
             <div className="h-64 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
               <AlertCircle size={40} className="mb-3 opacity-50" />

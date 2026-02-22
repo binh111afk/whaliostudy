@@ -11,9 +11,14 @@ export const getApiUrl = () => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-  
-  // Nếu không có (development), trả về chuỗi rỗng để dùng relative path
-  return '';
+
+  // Development local: dùng relative path để tận dụng Vite proxy
+  if (import.meta.env.DEV) {
+    return '';
+  }
+
+  // Production fallback: tránh gọi relative URL gây 404 HTML trên static host
+  return 'https://whaliostudy.onrender.com';
 };
 
 export const API_BASE_URL = getApiUrl();

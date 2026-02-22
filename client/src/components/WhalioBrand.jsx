@@ -18,11 +18,15 @@ const WhalioBrand = ({ compact = false }) => {
         <div className={`absolute inset-0 bg-blue-400 rounded-full blur opacity-0 group-hover:opacity-20 transition-opacity duration-500 ${compact ? 'scale-75' : 'scale-90'}`}></div>
         
         <img
-          src="/img/logo.png"
+          src="/logo.png"
           alt="Whalio Study"
           className={`relative ${iconSizeClass} shrink-0 object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105`}
           style={{ minWidth: compact ? '2.5rem' : '3.5rem' }}
           loading="eager"
+          onError={(event) => {
+            event.currentTarget.onerror = null;
+            event.currentTarget.src = "/img/logo.png";
+          }}
         />
       </div>
 

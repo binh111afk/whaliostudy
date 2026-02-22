@@ -5713,6 +5713,11 @@ checkAvailableModels();
 app.use('/api/admin', verifyToken, verifyAdmin, adminRouter);
 console.log('👑 Admin API routes mounted at /api/admin');
 
+// API 404 fallback: luôn trả JSON thay vì trang HTML mặc định
+app.use('/api', (req, res) => {
+    return res.status(404).json({ error: 'Not Found' });
+});
+
 // ==================== SERVER START ====================
 // Thêm cái '0.0.0.0' vào vị trí thứ 2
 app.listen(PORT, () => {

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   BookOpen,
@@ -152,7 +152,13 @@ const DashboardOverviewTab = ({
 }) => {
   const [chartMode, setChartMode] = useState("credit");
   const [showAllDeadlinesMobile, setShowAllDeadlinesMobile] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const isDarkMode = Boolean(darkMode);
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => setIsLoaded(true));
+    return () => window.cancelAnimationFrame(frameId);
+  }, []);
 
   // Computed values
   const prioritizedDeadlines = useMemo(() => {
@@ -352,11 +358,16 @@ const DashboardOverviewTab = ({
           </div>
 
           <div className={chartMode === "credit" ? "w-full" : "h-64 w-full"}>
+            {!isLoaded ? (
+              <div className="h-64 w-full rounded-xl bg-gray-100 dark:bg-gray-700/60 animate-pulse" />
+            ) : null}
+
             {chartMode === "credit" ? (
               // --- BIỂU ĐỒ TIẾN ĐỘ ---
               <div className="flex flex-col items-center justify-center min-[1025px]:flex-row gap-5 sm:gap-6 min-[1025px]:gap-10 p-2">
                 {/* PHẦN 1: BIỂU ĐỒ TRÒN */}
                 <div className="relative h-44 w-44 sm:h-52 sm:w-52 min-[1025px]:h-56 min-[1025px]:w-56 flex-shrink-0 group">
+                  {isLoaded ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <RadialBarChart
                       innerRadius="75%"
@@ -420,6 +431,7 @@ const DashboardOverviewTab = ({
                       />
                     </RadialBarChart>
                   </ResponsiveContainer>
+                  ) : null}
 
                   {/* Text ở giữa biểu đồ */}
                   <div className="pointer-events-none absolute inset-0 z-[1] flex flex-col items-center justify-center pt-8">
@@ -504,6 +516,7 @@ const DashboardOverviewTab = ({
               </div>
             ) : (
               // --- BIỂU ĐỒ GIỜ HỌC ---
+              isLoaded ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <defs>
@@ -563,6 +576,7 @@ const DashboardOverviewTab = ({
                   />
                 </AreaChart>
               </ResponsiveContainer>
+              ) : null
             )}
           </div>
         </div>

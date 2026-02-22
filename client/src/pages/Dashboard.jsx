@@ -325,7 +325,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   const handleDeleteDeadline = async (id) => {
     try {
       const res = await fetch(
-        `/api/events/${id}?username=${user.username}`,
+        getFullApiUrl(`/api/events/${id}?username=${user.username}`),
         {
           method: "DELETE",
         }

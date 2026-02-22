@@ -495,10 +495,10 @@ const StudyTimer = () => {
 
     try {
       if (noteId) {
-        await fetch(`/api/quick-notes/${noteId}?username=${username}`, { method: "DELETE" });
+        await fetch(getFullApiUrl(`/api/quick-notes/${noteId}?username=${username}`), { method: "DELETE" });
       }
 
-      const res = await fetch("/api/quick-notes", {
+      const res = await fetch(getFullApiUrl("/api/quick-notes"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
