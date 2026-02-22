@@ -10,6 +10,8 @@ import BackupRestoreModal from './components/BackupRestoreModal';
 import { MusicProvider } from './context/MusicContext';
 import FloatingPlayer from './components/FloatingPlayer';
 import { authService } from './services/authService';
+import { getFullApiUrl } from './config/apiConfig';
+import SplashScreen from './components/SplashScreen';
 
 // Import các trang
 import GpaCalc from './pages/GpaCalc';
@@ -203,6 +205,9 @@ function App() {
   // 1. Khai báo State quản lý User và Modal
   const [user, setUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSplashVisible, setIsSplashVisible] = useState(true);
+  const [isSplashFadingOut, setIsSplashFadingOut] = useState(false);
+  const splashRetryTimeoutRef = useRef(null);
 
   // 2. Dark Mode State (Mặc định Light Mode)
   const [darkMode, setDarkMode] = useState(() => {
@@ -316,6 +321,78 @@ function App() {
     window.history.replaceState({}, document.title, cleanUrl);
   }, []);
 
+  useEffect(() => {
+    if (!isSplashVisible) return undefined;
+
+    let cancelled = false;
+
+    const clearRetryTimer = () => {
+      if (splashRetryTimeoutRef.current) {
+        clearTimeout(splashRetryTimeoutRef.current);
+        splashRetryTimeoutRef.current = null;
+      }
+    };
+
+    const resolveActiveUsername = () => {
+      if (user?.username) return user.username;
+
+      try {
+        const rawUser = localStorage.getItem('user');
+        if (!rawUser) return '';
+        const parsed = JSON.parse(rawUser);
+        return String(parsed?.username || '').trim();
+      } catch {
+        return '';
+      }
+    };
+
+    const hideSplashWithFade = () => {
+      setIsSplashFadingOut(true);
+      window.setTimeout(() => {
+        if (!cancelled) {
+          setIsSplashVisible(false);
+        }
+      }, 520);
+    };
+
+    const warmDashboardBatch = async () => {
+      if (cancelled) return;
+
+      const activeUsername = resolveActiveUsername();
+      if (!activeUsername) {
+        clearRetryTimer();
+        splashRetryTimeoutRef.current = window.setTimeout(warmDashboardBatch, 400);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          getFullApiUrl(`/api/user/dashboard-batch?username=${encodeURIComponent(activeUsername)}`)
+        );
+        const payload = await response.json().catch(() => null);
+
+        if (cancelled) return;
+
+        if (response.ok && payload?.success) {
+          hideSplashWithFade();
+          return;
+        }
+      } catch (error) {
+        console.warn('Dashboard batch warmup failed, retrying...', error);
+      }
+
+      clearRetryTimer();
+      splashRetryTimeoutRef.current = window.setTimeout(warmDashboardBatch, 2000);
+    };
+
+    warmDashboardBatch();
+
+    return () => {
+      cancelled = true;
+      clearRetryTimer();
+    };
+  }, [user?.username, isSplashVisible]);
+
   // 3. Hàm xử lý Đăng xuất
   const handleLogout = async () => {
     const currentUser = user;
@@ -357,6 +434,7 @@ function App() {
     <Router>
       <RouteTitleManager />
       <MusicProvider>
+      <SplashScreen isVisible={isSplashVisible} isFadingOut={isSplashFadingOut} />
       <div className="flex h-screen w-full max-w-full overflow-hidden bg-gray-50 dark:bg-gray-900">
         <div className="hidden min-[1025px]:block">
           <Sidebar />
