@@ -2357,7 +2357,7 @@ app.get('/auth/user', (req, res) => {
     });
 });
 
-app.post('/api/admin/impersonate/:userId', isAdmin, async (req, res) => {
+app.post('/api/admin/impersonate/:userId', verifyToken, verifyAdmin, async (req, res) => {
     try {
         const targetUserId = String(req.params.userId || '').trim();
         if (!mongoose.Types.ObjectId.isValid(targetUserId)) {
@@ -2375,11 +2375,11 @@ app.post('/api/admin/impersonate/:userId', isAdmin, async (req, res) => {
             });
         }
 
-        const adminId = String(req.adminActor?._id || '').trim();
+        const adminId = String(req.session?.adminId || req.user?.userId || '').trim();
         if (!adminId) {
             return res.status(401).json({
                 success: false,
-                message: 'Không xác định được phiên Admin.'
+                message: 'Không xác định được tài khoản Admin.'
             });
         }
 
@@ -2398,6 +2398,7 @@ app.post('/api/admin/impersonate/:userId', isAdmin, async (req, res) => {
             success: true,
             message: 'Bắt đầu nhập vai thành công.',
             impersonating: true,
+            adminId,
             user: {
                 id: String(targetUser._id),
                 name: targetUser.fullName || targetUser.username || 'Whalio User',
@@ -2414,13 +2415,13 @@ app.post('/api/admin/impersonate/:userId', isAdmin, async (req, res) => {
     }
 });
 
-app.post('/api/admin/stop-impersonating', isAdmin, async (req, res) => {
+app.post('/api/admin/stop-impersonating', verifyToken, verifyAdmin, async (req, res) => {
     try {
-        const adminId = String(req.session?.adminId || '').trim();
+        const adminId = String(req.session?.adminId || req.user?.userId || '').trim();
         if (!adminId) {
             return res.status(400).json({
                 success: false,
-                message: 'Hiện tại không ở chế độ nhập vai.'
+                message: 'Không xác định được tài khoản Admin để khôi phục.'
             });
         }
 
