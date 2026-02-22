@@ -1,3 +1,5 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 require('dotenv').config();
 console.log("🔑 KEY CHECK:", process.env.GEMINI_API_KEY ? "Đã tìm thấy Key!" : "❌ KHÔNG THẤY KEY");
 const express = require('express');
@@ -5,7 +7,6 @@ const cors = require('cors');
 const fs = require('fs');
 const fsp = fs.promises;
 const multer = require('multer');
-const path = require('path');
 const os = require('os');
 const mongoose = require('mongoose');
 const geoip = require('geoip-lite');
