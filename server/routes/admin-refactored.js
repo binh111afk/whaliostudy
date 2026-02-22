@@ -181,21 +181,13 @@ function formatEventRelativeTime(timestamp) {
 }
 
 const ADMIN_STATS_BATCH_CACHE_TTL_MS = 15 * 1000;
-let adminStatsBatchCache = {
-    key: '',
-    expiresAt: 0,
-    payload: null
-};
+let adminStatsBatchCache = null;
 
 const SECURITY_OVERVIEW_CACHE_TTL_MS = 10 * 1000;
-let securityOverviewCache = {
-    key: '',
-    expiresAt: 0,
-    payload: null
-};
+let securityOverviewCache = null;
 
 function getAdminStatsBatchCache(cacheKey) {
-    if (!cacheKey || !adminStatsBatchCache.payload) return null;
+    if (!cacheKey || !adminStatsBatchCache || !adminStatsBatchCache.payload) return null;
     if (adminStatsBatchCache.key !== cacheKey) return null;
     if (Date.now() > adminStatsBatchCache.expiresAt) return null;
     return adminStatsBatchCache.payload;
@@ -210,7 +202,7 @@ function setAdminStatsBatchCache(cacheKey, payload) {
 }
 
 function getSecurityOverviewCache(cacheKey) {
-    if (!cacheKey || !securityOverviewCache.payload) return null;
+    if (!cacheKey || !securityOverviewCache || !securityOverviewCache.payload) return null;
     if (securityOverviewCache.key !== cacheKey) return null;
     if (Date.now() > securityOverviewCache.expiresAt) return null;
     return securityOverviewCache.payload;
@@ -222,6 +214,11 @@ function setSecurityOverviewCache(cacheKey, payload) {
         expiresAt: Date.now() + SECURITY_OVERVIEW_CACHE_TTL_MS,
         payload
     };
+}
+
+function resetAdminRuntimeCaches() {
+    adminStatsBatchCache = null;
+    securityOverviewCache = null;
 }
 
 function normalizeIp(rawValue) {
@@ -3001,5 +2998,6 @@ async function maintenanceCheck(req, res, next) {
 
 // Export middleware
 router.maintenanceCheck = maintenanceCheck;
+router.resetAdminRuntimeCaches = resetAdminRuntimeCaches;
 
 module.exports = router;

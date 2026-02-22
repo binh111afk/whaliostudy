@@ -72,6 +72,14 @@ const userDashboardBatchCache = new NodeCache({
     checkperiod: Math.max(10, Math.floor(USER_DASHBOARD_BATCH_CACHE_TTL_SECONDS / 2)),
     useClones: false
 });
+const RENDER_MEMORY_LIMIT_MB = parsePositiveInt(process.env.RENDER_MEMORY_LIMIT_MB, 512);
+const EMERGENCY_HEAP_USAGE_THRESHOLD_PERCENT = Math.min(
+    99,
+    Math.max(1, parsePositiveInt(process.env.EMERGENCY_HEAP_USAGE_THRESHOLD_PERCENT, 85))
+);
+const EMERGENCY_HEAP_CHECK_INTERVAL_MS = parsePositiveInt(process.env.EMERGENCY_HEAP_CHECK_INTERVAL_MS, 60 * 1000);
+const EMERGENCY_HEAP_THRESHOLD_BYTES =
+    Math.floor(RENDER_MEMORY_LIMIT_MB * 1024 * 1024 * (EMERGENCY_HEAP_USAGE_THRESHOLD_PERCENT / 100));
 
 const getUserDashboardBatchCacheKey = (username) => {
     const normalizedUsername = String(username || '').trim().toLowerCase();
@@ -287,6 +295,111 @@ let blockedIPCacheLastUpdatedAt = 0;
 let blockedIPCacheRefreshPromise = null;
 let blockedIPCacheRefreshInterval = null;
 let blockedIPCacheCleanupRegistered = false;
+let emergencyMemoryMonitorInterval = null;
+let emergencyMemoryCleanupInProgress = false;
+
+function toMB(bytes) {
+    return Number((Number(bytes || 0) / (1024 * 1024)).toFixed(2));
+}
+
+function isExposeGcEnabled() {
+    const fromExecArgv = Array.isArray(process.execArgv) && process.execArgv.some((arg) => String(arg).includes('--expose-gc'));
+    const fromNodeOptions = String(process.env.NODE_OPTIONS || '').includes('--expose-gc');
+    return fromExecArgv || fromNodeOptions;
+}
+
+async function logEmergencyMemoryCleanupEvent(payload = {}) {
+    if (mongoose.connection.readyState !== 1) return;
+    try {
+        await SystemEvent.create({
+            type: 'warning',
+            severity: 'danger',
+            title: 'Emergency memory cleanup executed',
+            description: `heapUsed vượt ngưỡng ${EMERGENCY_HEAP_USAGE_THRESHOLD_PERCENT}% (${RENDER_MEMORY_LIMIT_MB} MB plan)`,
+            details: payload,
+            performedBy: 'System/MemoryMonitor'
+        });
+    } catch (error) {
+        console.error('❌ Failed to persist emergency memory cleanup event:', error.message);
+    }
+}
+
+async function runEmergencyMemoryCleanupCheck() {
+    if (emergencyMemoryCleanupInProgress) return;
+
+    const before = process.memoryUsage();
+    if (before.heapUsed <= EMERGENCY_HEAP_THRESHOLD_BYTES) return;
+
+    emergencyMemoryCleanupInProgress = true;
+    const startTs = Date.now();
+    const actions = {
+        runtimeCacheFlushed: false,
+        adminCachesReset: false,
+        gcRequested: false,
+        gcInvoked: false
+    };
+
+    try {
+        runtimeCache.flushAll();
+        actions.runtimeCacheFlushed = true;
+
+        if (typeof adminRouter.resetAdminRuntimeCaches === 'function') {
+            adminRouter.resetAdminRuntimeCaches();
+            actions.adminCachesReset = true;
+        }
+
+        const gcEnabled = isExposeGcEnabled();
+        actions.gcRequested = gcEnabled;
+        if (gcEnabled && typeof global.gc === 'function') {
+            global.gc();
+            actions.gcInvoked = true;
+        }
+    } catch (error) {
+        console.error('❌ Emergency memory cleanup failed:', error.message);
+    } finally {
+        const after = process.memoryUsage();
+        const payload = {
+            timestamp: new Date().toISOString(),
+            threshold: {
+                renderPlanMemoryMB: RENDER_MEMORY_LIMIT_MB,
+                thresholdPercent: EMERGENCY_HEAP_USAGE_THRESHOLD_PERCENT,
+                thresholdMB: toMB(EMERGENCY_HEAP_THRESHOLD_BYTES)
+            },
+            heapUsedBeforeMB: toMB(before.heapUsed),
+            heapUsedAfterMB: toMB(after.heapUsed),
+            rssBeforeMB: toMB(before.rss),
+            rssAfterMB: toMB(after.rss),
+            heapTotalBeforeMB: toMB(before.heapTotal),
+            heapTotalAfterMB: toMB(after.heapTotal),
+            osTotalMemoryMB: toMB(os.totalmem()),
+            osFreeMemoryMB: toMB(os.freemem()),
+            durationMs: Date.now() - startTs,
+            actions
+        };
+
+        console.warn('🚨 Emergency memory cleanup triggered:', payload);
+        await logEmergencyMemoryCleanupEvent(payload);
+        emergencyMemoryCleanupInProgress = false;
+    }
+}
+
+function startEmergencyMemoryMonitor() {
+    if (emergencyMemoryMonitorInterval) return;
+
+    emergencyMemoryMonitorInterval = setInterval(() => {
+        void runEmergencyMemoryCleanupCheck();
+    }, EMERGENCY_HEAP_CHECK_INTERVAL_MS);
+
+    if (typeof emergencyMemoryMonitorInterval.unref === 'function') {
+        emergencyMemoryMonitorInterval.unref();
+    }
+}
+
+function stopEmergencyMemoryMonitor() {
+    if (!emergencyMemoryMonitorInterval) return;
+    clearInterval(emergencyMemoryMonitorInterval);
+    emergencyMemoryMonitorInterval = null;
+}
 
 function normalizeBlacklistIP(ip) {
     return normalizeIp(ip);
@@ -657,7 +770,12 @@ mongoose.connect(MONGO_URI, {
         // Khởi tạo Blacklist IP cache và auto-refresh
         refreshBlockedIPCache({ force: true }).then(() => {
             startBlockedIPCacheAutoRefresh();
+            startEmergencyMemoryMonitor();
+            void runEmergencyMemoryCleanupCheck();
             console.log('🚫 Blacklist IP cache initialized and auto-refresh started');
+            console.log(
+                `🧠 Memory monitor started: check every ${Math.round(EMERGENCY_HEAP_CHECK_INTERVAL_MS / 1000)}s, threshold ${toMB(EMERGENCY_HEAP_THRESHOLD_BYTES)} MB heapUsed`
+            );
         });
         
         seedInitialData(); // Automatically seed data on startup
@@ -679,6 +797,7 @@ async function gracefulShutdown(signal) {
     try {
         console.log(`\n🛑 Received ${signal}. Shutting down gracefully...`);
         stopBlockedIPCacheAutoRefresh();
+        stopEmergencyMemoryMonitor();
         runtimeCache.close();
         userDashboardBatchCache.close();
         if (mongoose.connection.readyState === 1 || mongoose.connection.readyState === 2) {
