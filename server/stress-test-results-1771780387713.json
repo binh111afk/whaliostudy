@@ -1,0 +1,126 @@
+{
+  "testConfig": {
+    "url": "http://localhost:10000/api/health",
+    "connectionLevels": [
+      100,
+      200,
+      500,
+      1000,
+      2000,
+      3000,
+      5000
+    ],
+    "durationPerTest": 10,
+    "maxAcceptableLatency": 1000,
+    "maxAcceptableErrorRate": 1,
+    "pipelining": 1,
+    "timeout": 10000
+  },
+  "testDate": "2026-02-22T17:13:07.713Z",
+  "breakPoint": {
+    "connections": 100,
+    "firstError": "High Latency",
+    "rps": 1.11,
+    "latencyP99": 10074
+  },
+  "maxSafeConnections": 0,
+  "maxRPS": 0,
+  "results": [
+    {
+      "connections": 100,
+      "rps": 1,
+      "latencyP50": 10062,
+      "latencyP99": 10074,
+      "latencyAvg": 10063.91,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "errorRate": 0,
+      "isBroken": true,
+      "timestamp": "2026-02-22T17:11:33.669Z"
+    },
+    {
+      "connections": 200,
+      "rps": 1,
+      "latencyP50": 10109,
+      "latencyP99": 10113,
+      "latencyAvg": 10108.89,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "errorRate": 0,
+      "isBroken": true,
+      "timestamp": "2026-02-22T17:11:48.842Z"
+    },
+    {
+      "connections": 500,
+      "rps": 1,
+      "latencyP50": 10191,
+      "latencyP99": 10193,
+      "latencyAvg": 10191.13,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "errorRate": 0,
+      "isBroken": true,
+      "timestamp": "2026-02-22T17:12:04.081Z"
+    },
+    {
+      "connections": 1000,
+      "rps": 0,
+      "latencyP50": 0,
+      "latencyP99": 0,
+      "latencyAvg": 0,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "errorRate": 0,
+      "isBroken": false,
+      "timestamp": "2026-02-22T17:12:19.306Z"
+    },
+    {
+      "connections": 2000,
+      "rps": 0,
+      "latencyP50": 0,
+      "latencyP99": 0,
+      "latencyAvg": 0,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "errorRate": 0,
+      "isBroken": false,
+      "timestamp": "2026-02-22T17:12:34.713Z"
+    },
+    {
+      "connections": 3000,
+      "rps": 0,
+      "latencyP50": 0,
+      "latencyP99": 0,
+      "latencyAvg": 0,
+      "errors": 747,
+      "timeouts": 0,
+      "non2xx": 0,
+      "errorRate": 0,
+      "isBroken": true,
+      "timestamp": "2026-02-22T17:12:50.869Z"
+    },
+    {
+      "connections": 5000,
+      "rps": 0,
+      "latencyP50": 0,
+      "latencyP99": 0,
+      "latencyAvg": 0,
+      "errors": 392,
+      "timeouts": 0,
+      "non2xx": 0,
+      "errorRate": 0,
+      "isBroken": true,
+      "timestamp": "2026-02-22T17:13:07.710Z"
+    }
+  ],
+  "summary": {
+    "totalTests": 7,
+    "passedTests": 2,
+    "failedTests": 5
+  }
+}

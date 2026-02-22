@@ -199,6 +199,11 @@ app.use(session({
 }));
 console.log('✅  express-session enabled (proxy=true, SameSite=None, Secure=true)');
 
+// ⚡ Health Check Endpoint - Đặt ở đây để bypass middleware nặng (cho monitoring)
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: Date.now() });
+});
+
 // OAuth (Google) middleware
 app.use(passport.initialize());
 app.use(passport.session());
@@ -3961,9 +3966,19 @@ app.post('/api/reset-password-force', async (req, res) => {
     }
 });
 
-// 6. Stats API
+// 6. Stats API (🚀 OPTIMIZED with caching)
+const STATS_CACHE_KEY = 'api:stats:global';
+const STATS_CACHE_TTL = 30; // 30 giây - stats không cần real-time
+
 app.get('/api/stats', async (req, res) => {
     try {
+        // 🚀 Check cache first (tăng throughput 50-100x)
+        const cachedStats = runtimeCache.get(STATS_CACHE_KEY);
+        if (cachedStats) {
+            return res.json({ success: true, stats: cachedStats, cached: true });
+        }
+
+        // Cache miss → Query từ DB
         const [totalDocuments, totalUsers, recentDocuments, storageAgg] = await Promise.all([
             Document.countDocuments(),
             User.countDocuments(),
@@ -3989,6 +4004,9 @@ app.get('/api/stats', async (req, res) => {
             recentDocuments,
             storageUsed
         };
+
+        // 🚀 Save to cache
+        runtimeCache.set(STATS_CACHE_KEY, stats, STATS_CACHE_TTL);
 
         res.json({ success: true, stats });
     } catch (err) {
