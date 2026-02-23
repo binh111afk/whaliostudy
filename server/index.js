@@ -16,6 +16,7 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const PQueue = require('p-queue').default;
+const { Worker } = require('worker_threads');
 
 // ==================== SECURITY LIBRARIES ====================
 const bcrypt = require('bcrypt');
@@ -131,7 +132,10 @@ const EMERGENCY_HEAP_THRESHOLD_BYTES =
     Math.floor(RENDER_MEMORY_LIMIT_MB * 1024 * 1024 * (EMERGENCY_HEAP_USAGE_THRESHOLD_PERCENT / 100));
 const CHAT_QUEUE_CONCURRENCY = Math.max(1, parsePositiveInt(process.env.CHAT_QUEUE_CONCURRENCY, 2));
 const CHAT_QUEUE_MAX_PENDING = Math.max(1, parsePositiveInt(process.env.CHAT_QUEUE_MAX_PENDING, 50));
+const CHAT_FILE_PARSE_WORKER_TIMEOUT_MS = Math.max(1000, parsePositiveInt(process.env.CHAT_FILE_PARSE_WORKER_TIMEOUT_MS, 30000));
+const ACTIVITY_LOG_QUEUE_CONCURRENCY = Math.max(1, parsePositiveInt(process.env.ACTIVITY_LOG_QUEUE_CONCURRENCY, 8));
 const chatQueue = new PQueue({ concurrency: CHAT_QUEUE_CONCURRENCY });
+const activityLogQueue = new PQueue({ concurrency: ACTIVITY_LOG_QUEUE_CONCURRENCY });
 
 const getUserDashboardBatchCacheKey = (username) => {
     const normalizedUsername = String(username || '').trim().toLowerCase();
@@ -2571,6 +2575,65 @@ async function safeRemoveTempFile(filePath) {
     }
 }
 
+function parseFileInWorker({ filePath, mimetype, fileExt, filename, fileSizeKB }) {
+    return new Promise((resolve, reject) => {
+        let worker;
+        try {
+            worker = new Worker(path.join(__dirname, 'file-parser-worker.js'), {
+                workerData: {
+                    filePath,
+                    mimetype: String(mimetype || ''),
+                    fileExt: String(fileExt || '').toLowerCase(),
+                    filename: String(filename || ''),
+                    fileSizeKB: String(fileSizeKB || '')
+                }
+            });
+        } catch (error) {
+            reject(error);
+            return;
+        }
+        let settled = false;
+        let timeout = null;
+
+        const finalize = (handler, value) => {
+            if (settled) return;
+            settled = true;
+            if (timeout) clearTimeout(timeout);
+            handler(value);
+        };
+
+        timeout = setTimeout(() => {
+            worker.terminate().catch(() => {});
+            finalize(reject, new Error(`Worker parse timeout after ${CHAT_FILE_PARSE_WORKER_TIMEOUT_MS}ms`));
+        }, CHAT_FILE_PARSE_WORKER_TIMEOUT_MS);
+
+        worker.on('message', (payload) => {
+            if (!payload || typeof payload !== 'object') {
+                return finalize(reject, new Error('Worker returned invalid payload'));
+            }
+            if (payload.error) {
+                return finalize(reject, new Error(payload.error));
+            }
+            finalize(resolve, payload);
+        });
+
+        worker.on('error', (error) => finalize(reject, error));
+        worker.on('exit', (code) => {
+            if (code !== 0) {
+                finalize(reject, new Error(`Worker stopped with exit code ${code}`));
+            }
+        });
+    });
+}
+
+function enqueueActivityLog(task, label = 'activity') {
+    setImmediate(() => {
+        activityLogQueue.add(task).catch((err) => {
+            console.error(`❌ Async ${label} queue error:`, err);
+        });
+    });
+}
+
 async function createTempUploadFromDataUri(dataUri, fallbackName = 'upload_image.png') {
     const matches = String(dataUri || '').match(/^data:([A-Za-z-+\/.]+);base64,(.+)$/);
     if (!matches) return null;
@@ -2836,7 +2899,7 @@ async function uploadToCloudinary(filePath, originalFilename) {
 }
 
 // ==================== ACTIVITY LOGGING (MongoDB) ====================
-async function logActivity(username, action, target, link, type, req = null) {
+async function writeActivityLog(username, action, target, link, type, req = null) {
     try {
         const user = await User.findOne({ username }).select('fullName avatar').lean();
         const activity = new Activity({
@@ -2862,7 +2925,7 @@ async function logActivity(username, action, target, link, type, req = null) {
             await Activity.deleteMany({ _id: { $in: oldActivities.map(a => a._id) } });
         }
 
-        await logUserActivityLog({
+        await writeUserActivityLog({
             username,
             action: String(type || 'activity').trim() || 'activity',
             description: `${String(action || '').trim()} ${String(target || '').trim()}`.trim(),
@@ -2880,7 +2943,7 @@ async function logActivity(username, action, target, link, type, req = null) {
     }
 }
 
-async function logUserActivityLog({
+async function writeUserActivityLog({
     username,
     action,
     description,
@@ -2930,6 +2993,20 @@ async function logUserActivityLog({
     }
 }
 
+function logActivity(username, action, target, link, type, req = null) {
+    enqueueActivityLog(
+        () => writeActivityLog(username, action, target, link, type, req),
+        'activity'
+    );
+}
+
+function logUserActivityLog(payload) {
+    enqueueActivityLog(
+        () => writeUserActivityLog(payload || {}),
+        'user-activity'
+    );
+}
+
 // ==================== LOGIC TÍNH TUẦN CHUẨN (ISO-8601) ====================
 
 /**
@@ -2938,18 +3015,32 @@ async function logUserActivityLog({
  * @returns {number} - Số tuần (1-53)
  */
 function getWeekNumber(date) {
+    return getIsoWeekInfo(date).week;
+}
+
+function getIsoWeekInfo(inputDate) {
+    const date = new Date(inputDate);
+    if (Number.isNaN(date.getTime())) {
+        return { week: 0, isoYear: 0 };
+    }
+
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
     const dayNum = d.getUTCDay() || 7; // Chủ Nhật = 7
     d.setUTCDate(d.getUTCDate() + 4 - dayNum); // Đặt về Thứ 5 của tuần
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    const isoYear = d.getUTCFullYear();
+    const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+    const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 
-    console.log(`🔢 getWeekNumber(${date.toISOString().split('T')[0]}) = Week ${weekNo}`);
-    return weekNo;
+    return { week, isoYear };
+}
+
+function getIsoWeeksInYear(isoYear) {
+    const dec28 = new Date(Date.UTC(isoYear, 11, 28));
+    return getIsoWeekInfo(dec28).week;
 }
 
 /**
- * Lấy mảng các tuần từ startDate đến endDate (Day-by-Day Iteration)
+ * Lấy mảng các tuần từ startDate đến endDate (O(số tuần), không quét từng ngày)
  * @param {string} startDateStr - Ngày bắt đầu (ISO format)
  * @param {string} endDateStr - Ngày kết thúc (ISO format)
  * @returns {number[]} - Mảng số tuần [1, 2, 3, ...]
@@ -2960,9 +3051,12 @@ function getWeeksBetween(startDateStr, endDateStr) {
         return [];
     }
 
-    const weeks = new Set();
     const start = new Date(startDateStr);
     const end = new Date(endDateStr);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        console.warn('⚠️ getWeeksBetween: Invalid date input, returning []');
+        return [];
+    }
 
     start.setHours(0, 0, 0, 0);
     end.setHours(23, 59, 59, 999);
@@ -2972,19 +3066,47 @@ function getWeeksBetween(startDateStr, endDateStr) {
         return [];
     }
 
-    let current = new Date(start);
-    let iterations = 0;
-    const maxIterations = 400; // Safety limit (400 days ≈ 1 year)
+    const startInfo = getIsoWeekInfo(start);
+    const endInfo = getIsoWeekInfo(end);
+    if (!startInfo.week || !endInfo.week) return [];
 
-    while (current <= end && iterations < maxIterations) {
-        const weekNum = getWeekNumber(current);
-        weeks.add(weekNum);
-        current.setDate(current.getDate() + 1); // +1 day
-        iterations++;
+    const weeks = [];
+
+    if (startInfo.isoYear === endInfo.isoYear) {
+        if (startInfo.week <= endInfo.week) {
+            for (let week = startInfo.week; week <= endInfo.week; week++) {
+                weeks.push(week);
+            }
+        } else {
+            // Rare edge-case cuối năm theo ISO nhưng cùng ISO year.
+            const totalWeeks = getIsoWeeksInYear(startInfo.isoYear);
+            for (let week = startInfo.week; week <= totalWeeks; week++) {
+                weeks.push(week);
+            }
+            for (let week = 1; week <= endInfo.week; week++) {
+                weeks.push(week);
+            }
+        }
+    } else {
+        const startYearTotalWeeks = getIsoWeeksInYear(startInfo.isoYear);
+        for (let week = startInfo.week; week <= startYearTotalWeeks; week++) {
+            weeks.push(week);
+        }
+
+        for (let year = startInfo.isoYear + 1; year < endInfo.isoYear; year++) {
+            const totalWeeks = getIsoWeeksInYear(year);
+            for (let week = 1; week <= totalWeeks; week++) {
+                weeks.push(week);
+            }
+        }
+
+        for (let week = 1; week <= endInfo.week; week++) {
+            weeks.push(week);
+        }
     }
 
-    const result = Array.from(weeks).sort((a, b) => a - b);
-    console.log(`✅ getWeeksBetween(${startDateStr.split('T')[0]} → ${endDateStr.split('T')[0]}): [${result.join(', ')}] (${iterations} days scanned)`);
+    const result = Array.from(new Set(weeks)).sort((a, b) => a - b);
+    console.log(`✅ getWeeksBetween(${startDateStr.split('T')[0]} → ${endDateStr.split('T')[0]}): [${result.join(', ')}]`);
     return result;
 }
 
@@ -4053,7 +4175,7 @@ app.post('/api/upload-document', (req, res, next) => {
         await newDoc.save();
 
         if (visibility !== 'private') {
-            await logActivity(username || 'Ẩn danh', 'đã tải lên', newDoc.name, `#doc-${newDoc._id}`, 'upload', req);
+            void logActivity(username || 'Ẩn danh', 'đã tải lên', newDoc.name, `#doc-${newDoc._id}`, 'upload', req);
         }
 
         // Return document with id field for frontend compatibility
@@ -4140,7 +4262,7 @@ app.post('/api/delete-document', verifyToken, async (req, res) => {
         }
 
         await Document.findByIdAndDelete(docId);
-        await logActivity(username, 'đã xóa tài liệu', doc.name, '#', 'delete', req);
+        void logActivity(username, 'đã xóa tài liệu', doc.name, '#', 'delete', req);
 
         res.json({ success: true, message: "Đã xóa tài liệu vĩnh viễn!" });
     } catch (err) {
@@ -4468,7 +4590,7 @@ app.post('/api/posts', upload.fields([
         });
 
         await newPost.save();
-        await logActivity(username, 'đã đăng bài viết', 'trong Cộng đồng', `#post-${newPost._id}`, 'post', req);
+        void logActivity(username, 'đã đăng bài viết', 'trong Cộng đồng', `#post-${newPost._id}`, 'post', req);
 
         console.log(`✅ Bài viết mới từ ${username}: ID ${newPost._id}`);
         res.json({ success: true, message: "Đã đăng bài thành công!", post: newPost });
@@ -4544,7 +4666,7 @@ app.post('/api/comments', upload.fields([
 
         post.comments.push(comment);
         await post.save();
-        await logActivity(username, 'đã bình luận', `vào bài viết của ${post.author}`, `#post-${postId}`, 'comment', req);
+        void logActivity(username, 'đã bình luận', `vào bài viết của ${post.author}`, `#post-${postId}`, 'comment', req);
 
         res.json({ success: true, comment: comment });
     } catch (err) {
@@ -5246,19 +5368,12 @@ app.get('/api/timetable', ensureAuthenticated, async (req, res) => {
         }
 
         // �️ [ENTERPRISE] Data Minimization - loại bỏ __v
-        let userClasses = await Timetable.find({ username })
+        const userClasses = await Timetable.find({ username })
             .select('-__v')
             .lean();
 
-        // 🔥 CRITICAL FIX: Tính lại weeks nếu rỗng
-        userClasses = userClasses.map(cls => {
-            if ((!cls.weeks || cls.weeks.length === 0) && cls.startDate && cls.endDate) {
-                console.warn(`⚠️ Class "${cls.subject}" has empty weeks, recalculating...`);
-                cls.weeks = getWeeksBetween(cls.startDate, cls.endDate);
-                console.log(`✅ Recalculated weeks: [${cls.weeks.join(', ')}]`);
-            }
-            return cls;
-        });
+        // Không tính lại weeks khi load để tránh tốn CPU trên request path.
+        // weeks được tính và lưu từ lúc create/update.
 
         console.log(`📅 Loaded ${userClasses.length} classes for ${username}`);
         res.json({ success: true, timetable: userClasses });
@@ -5500,7 +5615,7 @@ app.post('/api/timetable/update-note', ensureAuthenticated, async (req, res) => 
         await classToUpdate.save();
 
         if (deadlineLog) {
-            await logUserActivityLog({
+            void logUserActivityLog({
                 username,
                 action: deadlineLog.action,
                 description: deadlineLog.description,
@@ -5649,7 +5764,7 @@ app.post('/api/deadline-tags', ensureAuthenticated, async (req, res) => {
                 normalizedName,
             });
 
-            await logUserActivityLog({
+            void logUserActivityLog({
                 username,
                 action: 'deadline_tag_create',
                 description: `Tạo nhãn deadline: ${cleanedName}`,
@@ -5693,7 +5808,7 @@ app.delete('/api/deadline-tags', ensureAuthenticated, async (req, res) => {
         });
 
         if (deletedTag.deletedCount > 0) {
-            await logUserActivityLog({
+            void logUserActivityLog({
                 username,
                 action: 'deadline_tag_delete',
                 description: `Xóa nhãn deadline: ${cleanedName}`,
@@ -5750,7 +5865,7 @@ app.post('/api/events', ensureAuthenticated, async (req, res) => {
 
         await event.save();
         invalidateUserDashboardBatchCache(username);
-        await logUserActivityLog({
+        void logUserActivityLog({
             username,
             action: normalizedType === 'deadline' ? 'deadline_create' : 'event_create',
             description: `${normalizedType === 'deadline' ? 'Tạo deadline' : 'Tạo sự kiện'}: ${event.title}`,
@@ -5794,7 +5909,7 @@ app.delete('/api/events/:id', ensureAuthenticated, async (req, res) => {
         const eventTitle = event.title;
         await Event.findByIdAndDelete(id);
         invalidateUserDashboardBatchCache(username);
-        await logUserActivityLog({
+        void logUserActivityLog({
             username,
             action: eventType === 'deadline' ? 'deadline_delete' : 'event_delete',
             description: `${eventType === 'deadline' ? 'Xóa deadline' : 'Xóa sự kiện'}: ${eventTitle}`,
@@ -5854,7 +5969,7 @@ app.put('/api/events/:id', ensureAuthenticated, async (req, res, next) => {
 
         await event.save();
         invalidateUserDashboardBatchCache(username);
-        await logUserActivityLog({
+        void logUserActivityLog({
             username,
             action: normalizedType === 'deadline' ? 'deadline_update' : 'event_update',
             description: `${normalizedType === 'deadline' ? 'Cập nhật deadline' : 'Cập nhật sự kiện'}: ${event.title}`,
@@ -5905,7 +6020,7 @@ app.put('/api/events/toggle', ensureAuthenticated, async (req, res) => {
         
         await event.save();
         invalidateUserDashboardBatchCache(username);
-        await logUserActivityLog({
+        void logUserActivityLog({
             username,
             action: event.type === 'deadline'
                 ? (event.isDone ? 'deadline_complete' : 'deadline_reopen')
@@ -6333,56 +6448,35 @@ async function processChat(req, res) {
                         }
                     });
                 }
-                // ==================== XỬ LÝ PDF ====================
-                else if (mimetype === 'application/pdf' || fileExt === '.pdf') {
-                    fileTypeIcon = '📄';
-                    console.log(`   📄 Đang đọc nội dung PDF...`);
-                    const pdfParse = require('pdf-parse');
-                    let pdfBuffer = await fsp.readFile(filePath);
-                    const pdfData = await pdfParse(pdfBuffer);
-                    extractedContent = pdfData.text;
-                    pdfBuffer = null;
-                    console.log(`   ✅ Đã trích xuất ${extractedContent.length} ký tự từ PDF`);
-                }
-                // ==================== XỬ LÝ WORD (.docx) ====================
-                else if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || fileExt === '.docx') {
-                    fileTypeIcon = '📝';
-                    console.log(`   📝 Đang đọc nội dung Word (.docx)...`);
-                    const mammoth = require('mammoth');
-                    const result = await mammoth.extractRawText({ path: filePath });
-                    extractedContent = result.value;
-                    console.log(`   ✅ Đã trích xuất ${extractedContent.length} ký tự từ Word`);
-                }
-                // ==================== XỬ LÝ WORD CŨ (.doc) ====================
-                else if (mimetype === 'application/msword' || fileExt === '.doc') {
-                    fileTypeIcon = '📝';
-                    console.log(`   📝 File Word cũ (.doc) - thử đọc như text...`);
-                    // .doc cũ khó đọc hơn, thử extract text cơ bản
-                    try {
-                        const mammoth = require('mammoth');
-                        const result = await mammoth.extractRawText({ path: filePath });
-                        extractedContent = result.value;
-                    } catch {
-                        extractedContent = `[File .doc cũ - không thể đọc trực tiếp. Vui lòng chuyển sang .docx hoặc PDF]`;
-                    }
-                }
-                // ==================== XỬ LÝ EXCEL (.xlsx, .xls) ====================
-                else if (mimetype.includes('spreadsheet') || mimetype.includes('excel') || fileExt === '.xlsx' || fileExt === '.xls') {
-                    fileTypeIcon = '📊';
-                    console.log(`   📊 Đang đọc nội dung Excel...`);
-                    const XLSX = require('xlsx');
-                    let workbook = XLSX.readFile(filePath);
-                    let excelContent = '';
+                // ==================== XỬ LÝ PDF / WORD / EXCEL BẰNG WORKER THREAD ====================
+                else if (
+                    mimetype === 'application/pdf' ||
+                    fileExt === '.pdf' ||
+                    mimetype === 'application/msword' ||
+                    mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                    fileExt === '.doc' ||
+                    fileExt === '.docx' ||
+                    mimetype.includes('spreadsheet') ||
+                    mimetype.includes('excel') ||
+                    fileExt === '.xlsx' ||
+                    fileExt === '.xls'
+                ) {
+                    const parserLabel = (fileExt === '.pdf' || mimetype === 'application/pdf')
+                        ? 'PDF'
+                        : ((fileExt === '.doc' || fileExt === '.docx' || mimetype.includes('word')) ? 'Word' : 'Excel');
+                    console.log(`   ⚙️ Đang parse ${parserLabel} bằng worker thread...`);
 
-                    workbook.SheetNames.forEach((sheetName, index) => {
-                        const sheet = workbook.Sheets[sheetName];
-                        const csvData = XLSX.utils.sheet_to_csv(sheet);
-                        excelContent += `\n--- Sheet ${index + 1}: ${sheetName} ---\n${csvData}\n`;
+                    const workerResult = await parseFileInWorker({
+                        filePath,
+                        mimetype,
+                        fileExt,
+                        filename,
+                        fileSizeKB
                     });
 
-                    extractedContent = excelContent;
-                    console.log(`   ✅ Đã trích xuất ${extractedContent.length} ký tự từ ${workbook.SheetNames.length} sheet Excel`);
-                    workbook = null;
+                    fileTypeIcon = workerResult.fileTypeIcon || fileTypeIcon;
+                    extractedContent = String(workerResult.extractedContent || '');
+                    console.log(`   ✅ Worker parse thành công: ${extractedContent.length} ký tự`);
                 }
                 // ==================== XỬ LÝ POWERPOINT ====================
                 else if (mimetype.includes('presentation') || mimetype.includes('powerpoint') || fileExt === '.pptx' || fileExt === '.ppt') {

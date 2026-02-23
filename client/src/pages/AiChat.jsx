@@ -82,7 +82,6 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
   const fileInputRef = useRef(null);
   const chatContainerRef = useRef(null);
   const isUserAtBottom = useRef(true);
-  const sidebarStateBeforeFullscreenRef = useRef(true);
 
   useEffect(() => {
     setIsUserAvatarBroken(false);
@@ -280,12 +279,6 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
   const handleToggleFullscreen = () => {
     setIsFullscreen((prev) => {
       const next = !prev;
-      if (next) {
-        sidebarStateBeforeFullscreenRef.current = sidebarOpen;
-        setSidebarOpen(false);
-      } else {
-        setSidebarOpen(sidebarStateBeforeFullscreenRef.current);
-      }
       onFullscreenChange(next);
       return next;
     });
@@ -417,7 +410,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
         isFullscreen ? "rounded-none border-0" : "rounded-2xl border border-gray-200 dark:border-gray-700"
       }`}
     >
-      {isMobile && sidebarOpen && !isFullscreen && (
+      {isMobile && sidebarOpen && (
         <button
           type="button"
           aria-label="Đóng danh sách cuộc trò chuyện"
@@ -428,9 +421,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
 
       {/* SIDEBAR LỊCH SỬ CHAT - HIỆN/ẨN BẰNG NÚT MENU */}
       <div
-        className={`${isFullscreen
-            ? "hidden"
-            : `${
+        className={`${
           isMobile
             ? sidebarOpen
               ? "absolute inset-y-0 left-0 z-40 w-[85vw] max-w-xs"
@@ -438,8 +429,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
             : sidebarOpen
               ? "w-64"
               : "w-0"
-          }`
-          } bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col h-full shrink-0 overflow-hidden`}
+        } bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col h-full shrink-0 overflow-hidden`}
       >
         <div className="p-4 shrink-0 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
@@ -526,15 +516,13 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
           <div className="h-14 sm:h-16 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-3 sm:px-6 bg-white dark:bg-gray-800 shrink-0">
           {/* Bên trái: Nút menu và logo */}
           <div className="flex items-center gap-3">
-            {!isFullscreen && (
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400"
-                title="Mở lịch sử chat"
-              >
-                <Menu size={20} />
-              </button>
-            )}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400"
+              title="Mở lịch sử chat"
+            >
+              <Menu size={20} />
+            </button>
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-800 dark:text-white text-base sm:text-lg flex items-center gap-2">
                 Whalio AI{" "}
