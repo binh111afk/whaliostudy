@@ -29,6 +29,12 @@ try {
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const helmet = require('helmet');
+let UpstashRedis = null;
+try {
+    ({ Redis: UpstashRedis } = require('@upstash/redis'));
+} catch (error) {
+    console.warn('⚠️ @upstash/redis is not installed. Rate limit storage will fallback to in-memory.');
+}
 let compression = null;
 try {
     compression = require('compression');
@@ -79,6 +85,15 @@ const deepCloneSafe = (value) => {
 
 const REQUEST_BODY_LIMIT = process.env.EXPRESS_BODY_LIMIT || '1mb';
 const API_COMPRESSION_THRESHOLD_BYTES = parsePositiveInt(process.env.API_COMPRESSION_THRESHOLD_BYTES, 1024);
+const RATE_LIMIT_REDIS_URL = String(
+    process.env.UPSTASH_REDIS_REST_URL || process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_REST_URL || ''
+).trim();
+const RATE_LIMIT_REDIS_TOKEN = String(
+    process.env.UPSTASH_REDIS_REST_TOKEN || process.env.RATE_LIMIT_REDIS_TOKEN || process.env.REDIS_REST_TOKEN || ''
+).trim();
+const RATE_LIMIT_REDIS_FAILURE_BACKOFF_MS = parsePositiveInt(process.env.RATE_LIMIT_REDIS_FAILURE_BACKOFF_MS, 30 * 1000);
+const RATE_LIMIT_REDIS_ERROR_LOG_INTERVAL_MS = parsePositiveInt(process.env.RATE_LIMIT_REDIS_ERROR_LOG_INTERVAL_MS, 60 * 1000);
+const RATE_LIMIT_LOCAL_FALLBACK_MAX_KEYS = parsePositiveInt(process.env.RATE_LIMIT_LOCAL_FALLBACK_MAX_KEYS, 5000);
 const CHAT_CONTEXT_MAX_MESSAGES = parsePositiveInt(process.env.CHAT_CONTEXT_MAX_MESSAGES, 12);
 const CHAT_CONTEXT_MAX_CHARS_PER_MESSAGE = parsePositiveInt(process.env.CHAT_CONTEXT_MAX_CHARS_PER_MESSAGE, 700);
 const CHAT_CONTEXT_MAX_TOTAL_CHARS = parsePositiveInt(process.env.CHAT_CONTEXT_MAX_TOTAL_CHARS, 6000);
@@ -143,6 +158,166 @@ try {
     fs.mkdirSync(UPLOAD_TMP_DIR, { recursive: true });
 } catch (err) {
     console.error('❌ Failed to initialize temporary upload directory:', err.message);
+}
+
+let upstashRateLimitRedisClient = null;
+if (UpstashRedis && RATE_LIMIT_REDIS_URL && RATE_LIMIT_REDIS_TOKEN) {
+    try {
+        upstashRateLimitRedisClient = new UpstashRedis({
+            url: RATE_LIMIT_REDIS_URL,
+            token: RATE_LIMIT_REDIS_TOKEN
+        });
+        if (typeof upstashRateLimitRedisClient.ping === 'function') {
+            void upstashRateLimitRedisClient
+                .ping()
+                .then(() => {
+                    console.log('🧠 Upstash Redis connected for rate limiting.');
+                })
+                .catch((error) => {
+                    console.warn(`⚠️ Upstash Redis ping failed at startup. Falling back to memory until retry: ${error.message}`);
+                });
+        } else {
+            console.log('🧠 Upstash Redis client initialized for rate limiting.');
+        }
+    } catch (error) {
+        console.error(`❌ Failed to initialize Upstash Redis client: ${error.message}`);
+        upstashRateLimitRedisClient = null;
+    }
+} else {
+    console.log('ℹ️ Upstash Redis credentials not found. Rate limiting uses in-memory store.');
+}
+
+function createResilientUpstashRateLimitStore({ redisClient, keyPrefix, windowMs, label }) {
+    const localStore = new Map();
+    let redisDisabledUntil = 0;
+    let lastRedisErrorLogAt = 0;
+    let redisWasDown = false;
+
+    const cleanupExpiredLocalEntries = (now) => {
+        if (localStore.size <= RATE_LIMIT_LOCAL_FALLBACK_MAX_KEYS) {
+            return;
+        }
+
+        for (const [storedKey, storedValue] of localStore.entries()) {
+            if (!storedValue || storedValue.resetAt <= now) {
+                localStore.delete(storedKey);
+            }
+            if (localStore.size <= RATE_LIMIT_LOCAL_FALLBACK_MAX_KEYS) {
+                break;
+            }
+        }
+    };
+
+    const buildPrefixedKey = (rawKey) => `${keyPrefix}:${rawKey}`;
+
+    const incrementLocalFallback = (prefixedKey) => {
+        const now = Date.now();
+        cleanupExpiredLocalEntries(now);
+
+        const existing = localStore.get(prefixedKey);
+        if (!existing || existing.resetAt <= now) {
+            const resetAt = now + windowMs;
+            localStore.set(prefixedKey, { totalHits: 1, resetAt });
+            return { totalHits: 1, resetTime: new Date(resetAt) };
+        }
+
+        existing.totalHits += 1;
+        localStore.set(prefixedKey, existing);
+        return { totalHits: existing.totalHits, resetTime: new Date(existing.resetAt) };
+    };
+
+    const markRedisFailure = (error) => {
+        const now = Date.now();
+        redisDisabledUntil = now + RATE_LIMIT_REDIS_FAILURE_BACKOFF_MS;
+
+        if (now - lastRedisErrorLogAt >= RATE_LIMIT_REDIS_ERROR_LOG_INTERVAL_MS) {
+            console.warn(
+                `⚠️ [RateLimit:${label}] Upstash unavailable. Using local fallback for ${RATE_LIMIT_REDIS_FAILURE_BACKOFF_MS}ms. Reason: ${error.message}`
+            );
+            lastRedisErrorLogAt = now;
+        }
+        redisWasDown = true;
+    };
+
+    const markRedisRecovery = () => {
+        if (!redisWasDown) return;
+        redisWasDown = false;
+        console.log(`✅ [RateLimit:${label}] Upstash recovered. Using Redis store again.`);
+    };
+
+    return {
+        localKeys: false,
+        init: () => {},
+        async increment(key) {
+            const prefixedKey = buildPrefixedKey(key);
+            const now = Date.now();
+
+            if (!redisClient || now < redisDisabledUntil) {
+                return incrementLocalFallback(prefixedKey);
+            }
+
+            try {
+                const totalHitsRaw = await redisClient.incr(prefixedKey);
+                const totalHits = Number(totalHitsRaw);
+
+                if (totalHits === 1) {
+                    await redisClient.pexpire(prefixedKey, windowMs);
+                }
+
+                const ttlRaw = await redisClient.pttl(prefixedKey);
+                const ttlMs = Number(ttlRaw);
+                const effectiveTtlMs = Number.isFinite(ttlMs) && ttlMs > 0 ? ttlMs : windowMs;
+
+                localStore.delete(prefixedKey);
+                markRedisRecovery();
+                return {
+                    totalHits: Number.isFinite(totalHits) && totalHits > 0 ? totalHits : 1,
+                    resetTime: new Date(now + effectiveTtlMs)
+                };
+            } catch (error) {
+                markRedisFailure(error);
+                return incrementLocalFallback(prefixedKey);
+            }
+        },
+        async decrement(key) {
+            const prefixedKey = buildPrefixedKey(key);
+            const now = Date.now();
+
+            if (redisClient && now >= redisDisabledUntil) {
+                try {
+                    await redisClient.decr(prefixedKey);
+                    markRedisRecovery();
+                } catch (error) {
+                    markRedisFailure(error);
+                }
+            }
+
+            const existing = localStore.get(prefixedKey);
+            if (!existing) return;
+            existing.totalHits = Math.max(0, existing.totalHits - 1);
+            if (existing.totalHits <= 0 || existing.resetAt <= now) {
+                localStore.delete(prefixedKey);
+                return;
+            }
+            localStore.set(prefixedKey, existing);
+        },
+        async resetKey(key) {
+            const prefixedKey = buildPrefixedKey(key);
+
+            if (redisClient) {
+                try {
+                    await redisClient.del(prefixedKey);
+                    markRedisRecovery();
+                } catch (error) {
+                    markRedisFailure(error);
+                }
+            }
+            localStore.delete(prefixedKey);
+        },
+        async resetAll() {
+            localStore.clear();
+        }
+    };
 }
 
 // ==================== MIDDLEWARE CONFIGURATION ====================
@@ -752,10 +927,21 @@ function isAdminApiPath(req) {
     return fullPath.startsWith('/api/admin');
 }
 
+const buildRateLimiterStore = (windowMs, keyPrefix, label) => {
+    if (!upstashRateLimitRedisClient) return undefined;
+    return createResilientUpstashRateLimitStore({
+        redisClient: upstashRateLimitRedisClient,
+        keyPrefix,
+        windowMs,
+        label
+    });
+};
+
 // Chống Brute Force & DDoS - Rate limiter cho tất cả API
 const generalLimiter = rateLimit({
     windowMs: GENERAL_RATE_LIMIT_WINDOW_MS,
     max: GENERAL_RATE_LIMIT_MAX,
+    store: buildRateLimiterStore(GENERAL_RATE_LIMIT_WINDOW_MS, 'ratelimit:general', 'general'),
     message: {
         success: false,
         message: '⛔ Quá nhiều yêu cầu! Vui lòng thử lại sau 15 phút.'
@@ -777,6 +963,7 @@ const generalLimiter = rateLimit({
 const adminDebugLimiter = rateLimit({
     windowMs: ADMIN_DEBUG_RATE_LIMIT_WINDOW_MS,
     max: ADMIN_DEBUG_RATE_LIMIT_MAX,
+    store: buildRateLimiterStore(ADMIN_DEBUG_RATE_LIMIT_WINDOW_MS, 'ratelimit:admin-debug', 'admin-debug'),
     message: {
         success: false,
         message: '⛔ Quá nhiều yêu cầu từ Admin Dashboard. Vui lòng thử lại sau ít phút.'
@@ -793,6 +980,7 @@ const adminDebugLimiter = rateLimit({
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 phút
     max: 5, // Chỉ cho phép 5 lần thử
+    store: buildRateLimiterStore(15 * 60 * 1000, 'ratelimit:login', 'login'),
     message: {
         success: false,
         message: '⛔ Quá nhiều lần đăng nhập thất bại! Vui lòng thử lại sau 15 phút.'
@@ -809,6 +997,7 @@ const loginLimiter = rateLimit({
 app.use('/api/admin', adminDebugLimiter);
 app.use('/api/', generalLimiter);
 console.log(`🛡️  Rate limiting enabled (${GENERAL_RATE_LIMIT_MAX} req/${Math.round(GENERAL_RATE_LIMIT_WINDOW_MS / 60000)}min general, ${ADMIN_DEBUG_RATE_LIMIT_MAX} req/${Math.round(ADMIN_DEBUG_RATE_LIMIT_WINDOW_MS / 60000)}min admin debug burst, 5 req/15min login) - Enterprise Layer 5`);
+console.log(`🗄️  Rate limit store: ${upstashRateLimitRedisClient ? 'Upstash Redis (with automatic local fallback)' : 'In-memory (default)'}`);
 console.log(`🧪 Admin debug whitelist origins: ${ADMIN_RATE_LIMIT_ORIGINS.join(', ') || '(none)'}`);
 console.log(`🧪 Admin debug whitelist IPs: ${ADMIN_DEBUG_RATE_LIMIT_IPS.join(', ') || '(none configured)'}`);
 
