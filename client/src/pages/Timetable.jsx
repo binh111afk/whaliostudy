@@ -10,6 +10,7 @@ import {
   PERIOD_TIMES,
 } from "../utils/timetableHelpers"; // 👈 Import PERIOD_TIMES
 import { ClassModal, NotesModal } from "../components/TimetableModals";
+import LoadingOverlay from "../components/LoadingOverlay";
 
 import {
   Plus,
@@ -51,6 +52,9 @@ const Timetable = () => {
   const [isNotesModalOpen, setNotesModalOpen] = useState(false);
   const [classForNotes, setClassForNotes] = useState(null);
 
+  // Loading overlay state
+  const [loadingState, setLoadingState] = useState({ isLoading: false, message: "" });
+
   const loadTimetable = async () => {
     if (user) {
       const res = await timetableService.getTimetable(user.username);
@@ -79,12 +83,32 @@ const Timetable = () => {
       username: user.username,
       classId: isEdit ? classToEdit._id || classToEdit.id : undefined,
     };
-    const res = await timetableService.saveClass(classData, isEdit);
-    if (res.success) {
-      loadTimetable();
-      setClassModalOpen(false);
-    } else {
-      alert("Lỗi: " + res.message);
+    
+    setLoadingState({ 
+      isLoading: true, 
+      message: isEdit ? "Đang cập nhật lớp học..." : "Đang thêm lớp học..." 
+    });
+    
+    try {
+      const res = await timetableService.saveClass(classData, isEdit);
+      if (res.success) {
+        await loadTimetable();
+        setClassModalOpen(false);
+        toast.success(isEdit ? "Cập nhật thành công!" : "Thêm lớp học thành công!", {
+          position: isMobileViewport() ? "bottom-center" : "top-center",
+        });
+      } else {
+        toast.error("Lỗi: " + res.message, {
+          position: isMobileViewport() ? "bottom-center" : "top-center",
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Đã xảy ra lỗi khi lưu lớp học!", {
+        position: isMobileViewport() ? "bottom-center" : "top-center",
+      });
+    } finally {
+      setLoadingState({ isLoading: false, message: "" });
     }
   };
 
@@ -141,9 +165,10 @@ const Timetable = () => {
           <button
             onClick={async () => {
               toast.dismiss(t);
+              setLoadingState({ isLoading: true, message: "Đang xóa lớp học..." });
               try {
                 await timetableService.deleteClass(classId, user.username);
-                loadTimetable();
+                await loadTimetable();
                 toast.success("Đã xóa môn học!", {
                   position: isMobileViewport() ? "bottom-center" : "top-center",
                 });
@@ -152,6 +177,8 @@ const Timetable = () => {
                 toast.error("Lỗi khi xóa môn!", {
                   position: isMobileViewport() ? "bottom-center" : "top-center",
                 });
+              } finally {
+                setLoadingState({ isLoading: false, message: "" });
               }
             }}
             className="w-full flex-1 py-3 sm:py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
@@ -189,9 +216,10 @@ const Timetable = () => {
           <button
             onClick={async () => {
               toast.dismiss(t);
+              setLoadingState({ isLoading: true, message: "Đang xóa toàn bộ lịch học..." });
               try {
                 await timetableService.clearTimetable(user.username);
-                loadTimetable();
+                await loadTimetable();
                 toast.success("Đã dọn sạch thời khóa biểu!", {
                   position: isMobileViewport() ? "bottom-center" : "top-center",
                 });
@@ -200,6 +228,8 @@ const Timetable = () => {
                 toast.error("Lỗi khi xóa dữ liệu!", {
                   position: isMobileViewport() ? "bottom-center" : "top-center",
                 });
+              } finally {
+                setLoadingState({ isLoading: false, message: "" });
               }
             }}
             className="w-full flex-1 py-3 sm:py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-red-500/30 transition-all"
@@ -218,15 +248,33 @@ const Timetable = () => {
     try {
       const importedData = await processExcelFile(file);
       if (confirm(`Tìm thấy ${importedData.length} lớp học. Nhập ngay?`)) {
-        for (const cls of importedData) {
-          await timetableService.saveClass({ ...cls, username: user.username });
+        setLoadingState({ isLoading: true, message: `Đang thêm ${importedData.length} lớp học...` });
+        try {
+          for (const cls of importedData) {
+            await timetableService.saveClass({ ...cls, username: user.username });
+          }
+          await loadTimetable();
+          setImportModalOpen(false);
+          toast.success(`Đã thêm ${importedData.length} lớp học thành công!`, {
+            position: isMobileViewport() ? "bottom-center" : "top-center",
+          });
+        } catch (saveErr) {
+          console.error(saveErr);
+          toast.error("Lỗi khi lưu lớp học!", {
+            position: isMobileViewport() ? "bottom-center" : "top-center",
+          });
+        } finally {
+          setLoadingState({ isLoading: false, message: "" });
         }
-        await loadTimetable();
-        setImportModalOpen(false);
       }
     } catch (err) {
-      alert("Lỗi đọc file Excel!");
+      console.error(err);
+      toast.error("Lỗi đọc file Excel!", {
+        position: isMobileViewport() ? "bottom-center" : "top-center",
+      });
     }
+    // Reset input
+    e.target.value = '';
   };
 
   const handleWeekChange = (offset) => {
@@ -645,6 +693,12 @@ const Timetable = () => {
         onAdd={(content) => handleNoteAction("add", content)}
         onToggle={(noteId) => handleNoteAction("toggle", null, noteId)}
         onDelete={(noteId) => handleNoteAction("delete", null, noteId)}
+      />
+
+      {/* --- LOADING OVERLAY --- */}
+      <LoadingOverlay 
+        isVisible={loadingState.isLoading} 
+        message={loadingState.message} 
       />
     </div>
   );
