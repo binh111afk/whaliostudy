@@ -29,6 +29,12 @@ try {
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const helmet = require('helmet');
+let compression = null;
+try {
+    compression = require('compression');
+} catch (error) {
+    console.warn('⚠️ compression is not installed. Run `npm i compression` in server/ to enable API response compression.');
+}
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const hpp = require('hpp'); // 🛡️ [ENTERPRISE] Chống HTTP Parameter Pollution
@@ -53,7 +59,26 @@ const parsePositiveInt = (value, fallback) => {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-const REQUEST_BODY_LIMIT = process.env.EXPRESS_BODY_LIMIT || '2mb';
+const deepCloneSafe = (value) => {
+    if (value === null || value === undefined) return value;
+
+    if (typeof global.structuredClone === 'function') {
+        try {
+            return global.structuredClone(value);
+        } catch (error) {
+            // Fallback sang JSON clone cho dữ liệu plain object/array.
+        }
+    }
+
+    try {
+        return JSON.parse(JSON.stringify(value));
+    } catch (error) {
+        return value;
+    }
+};
+
+const REQUEST_BODY_LIMIT = process.env.EXPRESS_BODY_LIMIT || '1mb';
+const API_COMPRESSION_THRESHOLD_BYTES = parsePositiveInt(process.env.API_COMPRESSION_THRESHOLD_BYTES, 1024);
 const CHAT_CONTEXT_MAX_MESSAGES = parsePositiveInt(process.env.CHAT_CONTEXT_MAX_MESSAGES, 12);
 const CHAT_CONTEXT_MAX_CHARS_PER_MESSAGE = parsePositiveInt(process.env.CHAT_CONTEXT_MAX_CHARS_PER_MESSAGE, 700);
 const CHAT_CONTEXT_MAX_TOTAL_CHARS = parsePositiveInt(process.env.CHAT_CONTEXT_MAX_TOTAL_CHARS, 6000);
@@ -72,6 +97,14 @@ const userDashboardBatchCache = new NodeCache({
     checkperiod: Math.max(10, Math.floor(USER_DASHBOARD_BATCH_CACHE_TTL_SECONDS / 2)),
     useClones: false
 });
+const HEAVY_SECURITY_ROUTE_PREFIXES = Array.from(new Set([
+    '/api/admin',
+    '/api/upload',
+    ...String(process.env.HEAVY_SECURITY_ROUTE_PREFIXES || '')
+        .split(',')
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean)
+]));
 const RENDER_MEMORY_LIMIT_MB = parsePositiveInt(process.env.RENDER_MEMORY_LIMIT_MB, 512);
 const EMERGENCY_HEAP_USAGE_THRESHOLD_PERCENT = Math.min(
     99,
@@ -90,13 +123,14 @@ const getUserDashboardBatchCacheKey = (username) => {
 function getUserDashboardBatchFromCache(username) {
     const cacheKey = getUserDashboardBatchCacheKey(username);
     if (!cacheKey) return null;
-    return userDashboardBatchCache.get(cacheKey) || null;
+    const cached = userDashboardBatchCache.get(cacheKey);
+    return cached ? deepCloneSafe(cached) : null;
 }
 
 function setUserDashboardBatchCache(username, payload) {
     const cacheKey = getUserDashboardBatchCacheKey(username);
     if (!cacheKey) return;
-    userDashboardBatchCache.set(cacheKey, payload, USER_DASHBOARD_BATCH_CACHE_TTL_SECONDS);
+    userDashboardBatchCache.set(cacheKey, deepCloneSafe(payload), USER_DASHBOARD_BATCH_CACHE_TTL_SECONDS);
 }
 
 function invalidateUserDashboardBatchCache(username) {
@@ -155,6 +189,12 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 console.log(`✅  CORS enabled. Credentials: true. Origins: ${ALLOWED_CORS_ORIGINS.join(', ')}`);
+if (compression) {
+    app.use('/api', compression({
+        threshold: API_COMPRESSION_THRESHOLD_BYTES
+    }));
+    console.log(`🗜️  API compression enabled (threshold ${API_COMPRESSION_THRESHOLD_BYTES} bytes)`);
+}
 
 // Performance logging middleware: theo dõi thời gian phản hồi cho từng request
 app.use((req, res, next) => {
@@ -208,10 +248,36 @@ app.get('/api/health', (req, res) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
+function getRequestPath(req) {
+    return String(req.originalUrl || req.url || req.path || '')
+        .split('?')[0]
+        .trim()
+        .toLowerCase();
+}
+
+function shouldApplyHeavySecurity(req) {
+    const requestPath = getRequestPath(req);
+    if (!requestPath.startsWith('/api/')) return false;
+    return HEAVY_SECURITY_ROUTE_PREFIXES.some((prefix) => (
+        requestPath === prefix ||
+        requestPath.startsWith(`${prefix}/`) ||
+        requestPath.startsWith(prefix)
+    ));
+}
+
+function runOnHeavySecurityRoutes(middleware) {
+    return (req, res, next) => {
+        if (!shouldApplyHeavySecurity(req)) {
+            return next();
+        }
+        return middleware(req, res, next);
+    };
+}
+
 // ==================== SECURITY MIDDLEWARE ====================
 // 🛡️ [ENTERPRISE SECURITY - LAYER 1] HELMET - HTTP Security Headers
 // Ẩn giấu dấu vết server, chống clickjacking, XSS, MIME sniffing
-app.use(helmet({
+const helmetMiddleware = helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }, // Cho phép tải resource từ domain khác
     contentSecurityPolicy: false, // Tắt CSP để tránh conflict với frontend
     hidePoweredBy: true, // 🛡️ Xóa header X-Powered-By
@@ -219,10 +285,11 @@ app.use(helmet({
     xContentTypeOptions: true, // Chống MIME-sniffing
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     permittedCrossDomainPolicies: { permittedPolicies: 'none' }
-}));
+});
+app.use(runOnHeavySecurityRoutes(helmetMiddleware));
 // 🛡️ Đảm bảo xóa X-Powered-By hoàn toàn
 app.disable('x-powered-by');
-console.log('🛡️  Helmet security headers enabled (Enterprise - Server fingerprints hidden)');
+console.log(`🛡️  Helmet security headers enabled for sensitive APIs: ${HEAVY_SECURITY_ROUTE_PREFIXES.join(', ')}`);
 
 // ==================== IP HELPER FUNCTIONS ====================
 // Helper: Normalize IP address (remove IPv6 prefix, port, etc.)
@@ -563,7 +630,7 @@ console.log('🚫 Blacklist IP Gatekeeper enabled (RAM cache + periodic refresh)
 // 🛡️ [ENTERPRISE SECURITY - LAYER 2] MONGODB SANITIZATION
 // Chặn NoSQL Injection ($gt, $eq, etc.) - CẦN req.body đã được parse
 // 🔧 [EXPRESS 5.x FIX] Không dùng middleware mặc định vì package cố gán lại req.query
-app.use((req, res, next) => {
+app.use(runOnHeavySecurityRoutes((req, res, next) => {
     const sanitizeOptions = { replaceWith: '_' };
 
     if (req.body && typeof req.body === 'object') {
@@ -577,8 +644,8 @@ app.use((req, res, next) => {
     }
 
     next();
-});
-console.log('🛡️  MongoDB Sanitization enabled (Enterprise Layer 2)');
+}));
+console.log('🛡️  MongoDB Sanitization enabled for sensitive APIs (Enterprise Layer 2)');
 
 // 🛡️ [ENTERPRISE SECURITY - LAYER 3] XSS CLEAN
 // Tự động lọc mọi thẻ <script>, mã độc HTML trong req.body, req.query, req.params
@@ -618,7 +685,7 @@ const deepSanitizeXss = (value, currentKey = '') => {
     return value;
 };
 
-app.use((req, res, next) => {
+app.use(runOnHeavySecurityRoutes((req, res, next) => {
     if (req.body && typeof req.body === 'object') {
         deepSanitizeXss(req.body, 'body');
     }
@@ -630,15 +697,15 @@ app.use((req, res, next) => {
     }
 
     next();
-});
-console.log('🛡️  XSS Clean protection enabled (Enterprise Layer 3)');
+}));
+console.log('🛡️  XSS Clean protection enabled for sensitive APIs (Enterprise Layer 3)');
 
 // 🛡️ [ENTERPRISE SECURITY - LAYER 4] HTTP PARAMETER POLLUTION
 // Chặn tấn công gử́i nhiều tham số trùng lặp (VD: ?username=admin&username=hacker)
-app.use(hpp({
+app.use(runOnHeavySecurityRoutes(hpp({
     whitelist: ['images', 'files'] // Cho phép một số field có thể có nhiều giá trị (file upload)
-}));
-console.log('🛡️  HTTP Parameter Pollution protection enabled (Enterprise Layer 4)');
+})));
+console.log('🛡️  HTTP Parameter Pollution protection enabled for sensitive APIs (Enterprise Layer 4)');
 
 // 🛡️ [ENTERPRISE SECURITY - LAYER 5] RATE LIMITING
 const GENERAL_RATE_LIMIT_WINDOW_MS = parsePositiveInt(process.env.GENERAL_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000);
@@ -1616,11 +1683,12 @@ function normalizePortalCategories(rawCategories = []) {
 }
 
 function getPortalFromCache() {
-    return runtimeCache.get(PORTAL_CACHE_KEY) || null;
+    const cached = runtimeCache.get(PORTAL_CACHE_KEY);
+    return cached ? deepCloneSafe(cached) : null;
 }
 
 function setPortalCache(categories) {
-    runtimeCache.set(PORTAL_CACHE_KEY, categories, PORTAL_CACHE_TTL_SECONDS);
+    runtimeCache.set(PORTAL_CACHE_KEY, deepCloneSafe(categories), PORTAL_CACHE_TTL_SECONDS);
 }
 
 async function isAdmin(req, res, next) {
@@ -2134,6 +2202,7 @@ function blockDangerousPayload(req, res, next) {
     const checkValue = (value, path) => {
         if (typeof value === 'string') {
             for (const pattern of DANGEROUS_PATTERNS) {
+                pattern.lastIndex = 0;
                 if (pattern.test(value)) {
                     console.error(`🚨 [SECURITY] Dangerous payload blocked!`);
                     console.error(`   Path: ${req.path}`);
@@ -2162,9 +2231,9 @@ function blockDangerousPayload(req, res, next) {
     next();
 }
 
-// 🛡️ Áp dụng global cho tất cả API routes
-app.use('/api/', blockDangerousPayload);
-console.log('🛡️  Enterprise input validation & dangerous payload blocker enabled');
+// 🛡️ Chỉ bật cho route nhạy cảm để giảm overhead toàn cục
+app.use('/api/', runOnHeavySecurityRoutes(blockDangerousPayload));
+console.log('🛡️  Enterprise dangerous payload blocker enabled for sensitive APIs');
 
 // ==================== EJS TEMPLATE ENGINE ====================
 app.set('view engine', 'ejs');
@@ -3975,7 +4044,7 @@ app.get('/api/stats', async (req, res) => {
         // 🚀 Check cache first (tăng throughput 50-100x)
         const cachedStats = runtimeCache.get(STATS_CACHE_KEY);
         if (cachedStats) {
-            return res.json({ success: true, stats: cachedStats, cached: true });
+            return res.json({ success: true, stats: deepCloneSafe(cachedStats), cached: true });
         }
 
         // Cache miss → Query từ DB
@@ -4006,7 +4075,7 @@ app.get('/api/stats', async (req, res) => {
         };
 
         // 🚀 Save to cache
-        runtimeCache.set(STATS_CACHE_KEY, stats, STATS_CACHE_TTL);
+        runtimeCache.set(STATS_CACHE_KEY, deepCloneSafe(stats), STATS_CACHE_TTL);
 
         res.json({ success: true, stats });
     } catch (err) {
