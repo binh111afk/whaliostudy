@@ -5786,10 +5786,10 @@ app.get('/api/timetable', ensureAuthenticated, async (req, res) => {
 app.post('/api/timetable/delete', verifyToken, async (req, res) => {
     try {
         const { classId } = req.body;
-        const username = req.user.username; // Lấy từ JWT token
+        const username = resolveUsernameFromRequest(req);
 
-        if (!classId) {
-            return res.json({ success: false, message: '❌ Thiếu classId' });
+        if (!classId || !username) {
+            return res.json({ success: false, message: '❌ Thiếu classId hoặc username' });
         }
 
         const classToDelete = await Timetable.findById(classId);
@@ -5814,7 +5814,11 @@ app.post('/api/timetable/delete', verifyToken, async (req, res) => {
 // 🔐 Xóa toàn bộ lịch học - Yêu cầu xác thực JWT
 app.delete('/api/timetable/clear', verifyToken, async (req, res) => {
     try {
-        const username = req.user.username; // Lấy từ JWT token
+        const username = resolveUsernameFromRequest(req);
+
+        if (!username) {
+            return res.json({ success: false, message: '❌ Thiếu username' });
+        }
 
         // Xóa tất cả lịch học của user
         const result = await Timetable.deleteMany({ username: username });
@@ -5836,10 +5840,10 @@ app.delete('/api/timetable/clear', verifyToken, async (req, res) => {
 app.post('/api/timetable/update', verifyToken, async (req, res) => {
     try {
         const { classId, subject, room, campus, day, session, startPeriod, numPeriods, timeRange, startDate, endDate, dateRangeDisplay, teacher } = req.body;
-        const username = req.user.username; // Lấy từ JWT token
+        const username = resolveUsernameFromRequest(req);
 
-        if (!classId) {
-            return res.json({ success: false, message: '❌ Thiếu classId' });
+        if (!classId || !username) {
+            return res.json({ success: false, message: '❌ Thiếu classId hoặc username' });
         }
 
         const classToUpdate = await Timetable.findById(classId);
