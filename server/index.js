@@ -15,6 +15,7 @@ const UAParser = require('ua-parser-js');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const PQueue = require('p-queue').default;
 
 // ==================== SECURITY LIBRARIES ====================
 const bcrypt = require('bcrypt');
@@ -128,6 +129,9 @@ const EMERGENCY_HEAP_USAGE_THRESHOLD_PERCENT = Math.min(
 const EMERGENCY_HEAP_CHECK_INTERVAL_MS = parsePositiveInt(process.env.EMERGENCY_HEAP_CHECK_INTERVAL_MS, 60 * 1000);
 const EMERGENCY_HEAP_THRESHOLD_BYTES =
     Math.floor(RENDER_MEMORY_LIMIT_MB * 1024 * 1024 * (EMERGENCY_HEAP_USAGE_THRESHOLD_PERCENT / 100));
+const CHAT_QUEUE_CONCURRENCY = Math.max(1, parsePositiveInt(process.env.CHAT_QUEUE_CONCURRENCY, 2));
+const CHAT_QUEUE_MAX_PENDING = Math.max(1, parsePositiveInt(process.env.CHAT_QUEUE_MAX_PENDING, 50));
+const chatQueue = new PQueue({ concurrency: CHAT_QUEUE_CONCURRENCY });
 
 const getUserDashboardBatchCacheKey = (username) => {
     const normalizedUsername = String(username || '').trim().toLowerCase();
@@ -6187,7 +6191,7 @@ app.post('/api/gpa', async (req, res) => {
 // POST /api/chat - Chat with Whalio AI (Hỗ trợ Multimodal: Text + Image + Files + Session History)
 // Sử dụng multipart/form-data thay vì JSON để hỗ trợ upload ảnh/file
 // Field name phải là 'image' để khớp với frontend FormData
-app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
+async function processChat(req, res) {
     let tempChatFilePath = req.file?.path || '';
     try {
         if (!req.file && req.body.image && req.body.image.startsWith('data:')) {
@@ -6597,6 +6601,10 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
     } catch (err) {
         console.error('❌ Gemini AI Error:', err.message);
 
+        if (res.headersSent || res.writableEnded) {
+            return;
+        }
+
         // Handle specific error types
         if (err.message?.includes('API_KEY_INVALID')) {
             return res.status(500).json({
@@ -6637,6 +6645,35 @@ app.post('/api/chat', chatFileUpload.single('image'), async (req, res) => {
     } finally {
         await safeRemoveTempFile(tempChatFilePath);
     }
+}
+
+app.post('/api/chat', chatFileUpload.single('image'), (req, res) => {
+    const totalQueuedJobs = chatQueue.size + chatQueue.pending;
+    if (totalQueuedJobs >= CHAT_QUEUE_MAX_PENDING) {
+        void safeRemoveTempFile(req.file?.path);
+        return res.status(503).json({
+            success: false,
+            message: 'Hệ thống đang quá tải, vui lòng thử lại sau.'
+        });
+    }
+
+    chatQueue.add(async () => {
+        if (req.aborted || res.writableEnded) {
+            await safeRemoveTempFile(req.file?.path);
+            return;
+        }
+        await processChat(req, res);
+    })
+        .catch((err) => {
+            console.error('Chat queue error:', err);
+            void safeRemoveTempFile(req.file?.path);
+            if (!res.headersSent && !res.writableEnded) {
+                res.status(503).json({
+                    success: false,
+                    message: 'Hệ thống đang quá tải, vui lòng thử lại sau.'
+                });
+            }
+        });
 });
 
 // ==================== 🛡️ ENTERPRISE ERROR CLOAKING ====================

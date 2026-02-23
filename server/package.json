@@ -40,6 +40,7 @@
     "multer-storage-cloudinary": "^4.0.0",
     "node-cache": "^5.1.2",
     "openai": "^4.104.0",
+    "p-queue": "^6.6.2",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "pdf-parse": "^2.4.5",

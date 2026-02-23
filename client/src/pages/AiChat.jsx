@@ -8,7 +8,6 @@ import { getFullApiUrl } from '../config/apiConfig';
 import {
   Send,
   Paperclip,
-  User,
   Plus,
   MessageSquare,
   MoreVertical,
@@ -22,8 +21,36 @@ import {
   Menu,
 } from "lucide-react";
 
+const resolveAvatarSrc = (avatar) => {
+  const raw = String(avatar || "").trim().replace(/\\/g, "/");
+  if (!raw) return "";
+  if (/^(https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:")) {
+    return raw;
+  }
+
+  const normalized = raw.startsWith("/") ? raw : `/${raw}`;
+  if (normalized.startsWith("/img/") || normalized.startsWith("/uploads/")) {
+    return getFullApiUrl(normalized);
+  }
+
+  return normalized;
+};
+
+const getInitials = (name, fallback = "U") => {
+  const normalized = String(name || "").trim();
+  if (!normalized) return fallback;
+  const parts = normalized.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0] || ""}${parts[parts.length - 1][0] || ""}`.toUpperCase();
+  }
+  return normalized.slice(0, 2).toUpperCase();
+};
+
 const AiChat = () => {
   const user = JSON.parse(localStorage.getItem("user"));
+  const userDisplayName = user?.fullName || user?.name || user?.username || "Bạn";
+  const userAvatarSrc = resolveAvatarSrc(user?.avatar);
+  const userInitials = getInitials(userDisplayName, "QB");
 
   // --- STATE ---
   const [sessions, setSessions] = useState([]);
@@ -46,11 +73,16 @@ const AiChat = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isUserAvatarBroken, setIsUserAvatarBroken] = useState(false);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const chatContainerRef = useRef(null);
   const isUserAtBottom = useRef(true);
+
+  useEffect(() => {
+    setIsUserAvatarBroken(false);
+  }, [userAvatarSrc]);
 
   // 1. LOAD SESSIONS
   useEffect(() => {
@@ -438,7 +470,16 @@ const AiChat = () => {
         <div className="p-4 border-t border-gray-100 dark:border-gray-700 shrink-0">
           <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors">
             <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-100 to-blue-50 dark:from-blue-900/50 dark:to-blue-800/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
-              {user ? user.username.substring(0, 2).toUpperCase() : "QB"}
+              {userAvatarSrc && !isUserAvatarBroken ? (
+                <img
+                  src={userAvatarSrc}
+                  alt={userDisplayName}
+                  className="w-full h-full rounded-full object-cover"
+                  onError={() => setIsUserAvatarBroken(true)}
+                />
+              ) : (
+                userInitials
+              )}
             </div>
             <div className="flex-1 text-sm font-bold text-gray-700 dark:text-gray-200 truncate min-w-0">
               {user ? user.username : "Quang Bình"}
@@ -501,16 +542,32 @@ const AiChat = () => {
             >
               {/* Avatar */}
               <div
-                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm border ${
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm border overflow-hidden ${
                     msg.role === "model"
                     ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-blue-600 dark:text-blue-400"
                     : "bg-blue-600 dark:bg-blue-500 border-transparent text-white"
                 }`}
               >
                 {msg.role === "model" ? (
-                  <Sparkles size={16} className="fill-blue-600" />
+                  <img
+                    src="/logo.png"
+                    alt="Whalio AI"
+                    className="w-full h-full object-contain p-1"
+                    onError={(e) => {
+                      e.currentTarget.src = "/img/logo.png";
+                    }}
+                  />
                 ) : (
-                  <User size={16} />
+                  userAvatarSrc && !isUserAvatarBroken ? (
+                    <img
+                      src={userAvatarSrc}
+                      alt={userDisplayName}
+                      className="w-full h-full object-cover"
+                      onError={() => setIsUserAvatarBroken(true)}
+                    />
+                  ) : (
+                    <span className="text-[11px] font-bold">{userInitials}</span>
+                  )
                 )}
               </div>
 
@@ -590,13 +647,25 @@ const AiChat = () => {
           {/* Loading Indicator */}
           {isLoading && (
             <div className="flex gap-4 max-w-4xl mx-auto animate-pulse">
-              <div className="w-9 h-9 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center shrink-0">
-                <Sparkles size={18} className="text-blue-600 dark:text-blue-400" />
+              <div className="w-9 h-9 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center shrink-0 overflow-hidden">
+                <img
+                  src="/logo.png"
+                  alt="Whalio AI"
+                  className="w-full h-full object-contain p-1"
+                  onError={(e) => {
+                    e.currentTarget.src = "/img/logo.png";
+                  }}
+                />
               </div>
-              <div className="bg-white dark:bg-gray-800 px-5 py-4 rounded-2xl rounded-tl-sm border border-gray-100 dark:border-gray-700 flex items-center gap-2 shadow-sm">
-                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-75"></div>
-                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-150"></div>
+              <div className="bg-white dark:bg-gray-800 px-5 py-4 rounded-2xl rounded-tl-sm border border-gray-100 dark:border-gray-700 shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-75"></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-150"></div>
+                </div>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                  Whalio đang suy nghĩ, bạn chịu khó đợi mình một chút nhé
+                </p>
               </div>
             </div>
           )}
