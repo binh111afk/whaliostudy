@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import { Menu, X, Home, FileText, Users, LayoutGrid, Moon, Sun, Settings, LogOut, Save, User } from 'lucide-react';
 import axios from './config/axiosConfig';
 import Sidebar from './components/Sidebar';
-import Header from './components/Header'; 
+import Header from './components/Header';
 import AuthModal from './components/AuthModal'; // Import Modal
 import BackupRestoreModal from './components/BackupRestoreModal';
 import { MusicProvider } from './context/MusicContext';
@@ -93,10 +94,9 @@ const MobileBottomNav = ({ user, onLoginClick, onLogoutClick }) => {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-[11px] font-semibold transition-colors ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
-                      : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                  `flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-[11px] font-semibold transition-colors ${isActive
+                    ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
+                    : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
                   }`
                 }
               >
@@ -442,133 +442,144 @@ function App() {
     <Router>
       <RouteTitleManager />
       <MusicProvider>
-      <SplashScreen isVisible={isSplashVisible} isFadingOut={isSplashFadingOut} />
-      <div className="flex h-screen w-full max-w-full overflow-hidden bg-gray-50 dark:bg-gray-900">
-        {!isAiChatFullscreen && (
-        <div className="hidden min-[1025px]:block">
-          <Sidebar />
-        </div>
-        )}
-
-        {!isAiChatFullscreen && isMobileSidebarOpen && (
-          <div className="fixed inset-0 z-[90] flex min-[1025px]:hidden">
-            <div
-              className="flex-1 bg-black/45 backdrop-blur-[1px]"
-              onClick={() => setIsMobileSidebarOpen(false)}
-            />
-            <div className="relative h-full w-[86vw] max-w-xs">
-              <button
-                onClick={() => setIsMobileSidebarOpen(false)}
-                className="absolute right-3 top-3 z-10 rounded-lg border border-gray-200 bg-white/90 p-1.5 text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-300"
-                aria-label="Đóng menu"
-              >
-                <X size={16} />
-              </button>
-              <Sidebar
-                isMobile
-                onNavigate={() => setIsMobileSidebarOpen(false)}
-              />
-            </div>
-          </div>
-        )}
-
-        <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${isAiChatFullscreen ? '' : 'min-[1025px]:ml-64'}`}>
+        <SplashScreen isVisible={isSplashVisible} isFadingOut={isSplashFadingOut} />
+        <div className="flex h-screen w-full max-w-full overflow-hidden bg-gray-50 dark:bg-gray-900">
           {!isAiChatFullscreen && (
-          <div className="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between border-b border-gray-200 bg-white/95 px-3 backdrop-blur-md dark:border-gray-700 dark:bg-gray-900/95 min-[1025px]:hidden">
-            <button
-              onClick={() => setIsMobileSidebarOpen(true)}
-              className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-              aria-label="Mở menu"
-            >
-              <Menu size={20} />
-            </button>
-            <div className="text-sm font-extrabold tracking-tight text-gray-800 dark:text-white">
-              Whalio 2.0
+            <div className="hidden min-[1025px]:block">
+              <Sidebar />
             </div>
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-              aria-label="Đổi giao diện"
-            >
-              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-          </div>
           )}
 
-          {!isAiChatFullscreen && (
-          <div className="hidden min-[1025px]:block">
-          {/* HEADER: Truyền props xuống để Header biết:
+          <AnimatePresence>
+            {!isAiChatFullscreen && isMobileSidebarOpen && (
+              <div className="fixed inset-0 z-[90] flex min-[1025px]:hidden">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex-1 bg-black/45 backdrop-blur-[1px]"
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                />
+                <motion.div
+                  initial={{ x: '-100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '-100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                  className="relative h-full w-[86vw] max-w-xs"
+                >
+                  <button
+                    onClick={() => setIsMobileSidebarOpen(false)}
+                    className="absolute right-3 top-3 z-10 rounded-lg border border-gray-200 bg-white/90 p-1.5 text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-300"
+                    aria-label="Đóng menu"
+                  >
+                    <X size={16} />
+                  </button>
+                  <Sidebar
+                    isMobile
+                    onNavigate={() => setIsMobileSidebarOpen(false)}
+                  />
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${isAiChatFullscreen ? '' : 'min-[1025px]:ml-64'}`}>
+            {!isAiChatFullscreen && (
+              <div className="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between border-b border-gray-200 bg-white/95 px-3 backdrop-blur-md dark:border-gray-700 dark:bg-gray-900/95 min-[1025px]:hidden">
+                <button
+                  onClick={() => setIsMobileSidebarOpen(true)}
+                  className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  aria-label="Mở menu"
+                >
+                  <Menu size={20} />
+                </button>
+                <div className="text-sm font-extrabold tracking-tight text-gray-800 dark:text-white">
+                  Whalio 2.0
+                </div>
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  aria-label="Đổi giao diện"
+                >
+                  {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
+              </div>
+            )}
+
+            {!isAiChatFullscreen && (
+              <div className="hidden min-[1025px]:block">
+                {/* HEADER: Truyền props xuống để Header biết:
              - user: Có ai đang đăng nhập không?
              - onLoginClick: Khi bấm nút "Đăng nhập" thì làm gì? (Mở modal)
              - onLogoutClick: Khi bấm nút "Thoát" thì làm gì? (Logout)
           */}
-          <Header 
-            user={user} 
-            onLoginClick={() => setIsModalOpen(true)} 
-            onLogoutClick={handleLogout}
-            darkMode={darkMode}
-            onToggleDarkMode={() => setDarkMode(!darkMode)}
-          /> 
-          </div>
-          )}
+                <Header
+                  user={user}
+                  onLoginClick={() => setIsModalOpen(true)}
+                  onLogoutClick={handleLogout}
+                  darkMode={darkMode}
+                  onToggleDarkMode={() => setDarkMode(!darkMode)}
+                />
+              </div>
+            )}
 
-          {/* Main content */}
-          <main className={isAiChatFullscreen
-            ? "min-w-0 flex-1 overflow-hidden p-0"
-            : "min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 pb-24 pt-16 scroll-smooth sm:p-4 sm:pt-16 md:p-5 md:pt-16 min-[1025px]:p-6 min-[1025px]:pb-6 min-[1025px]:pt-20"
-          }>
-            <Routes>
-            <Route path="/" element={<Dashboard user={user} darkMode={darkMode} setDarkMode={setDarkMode} />} />
-              <Route path="/gpa" element={<GpaCalc />} />
-              <Route
-                path="/ai-assistant"
-                element={
-                  <AiChat
-                    onFullscreenChange={handleAiChatFullscreenChange}
-                  />
-                }
+            {/* Main content */}
+            <main className={isAiChatFullscreen
+              ? "min-w-0 flex-1 overflow-hidden p-0"
+              : "min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 pb-24 pt-16 scroll-smooth sm:p-4 sm:pt-16 md:p-5 md:pt-16 min-[1025px]:p-6 min-[1025px]:pb-6 min-[1025px]:pt-20"
+            }>
+              <Routes>
+                <Route path="/" element={<Dashboard user={user} darkMode={darkMode} setDarkMode={setDarkMode} />} />
+                <Route path="/gpa" element={<GpaCalc />} />
+                <Route
+                  path="/ai-assistant"
+                  element={
+                    <AiChat
+                      onFullscreenChange={handleAiChatFullscreenChange}
+                    />
+                  }
+                />
+                <Route path="/profile" element={
+                  <Profile user={user} onUpdateUser={handleUpdateUser} />
+                } />
+                <Route path="/community" element={<Community />} />
+                <Route path="/timer" element={<StudyTimer />} />
+                <Route path="/timetable" element={<Timetable />} />
+                <Route path="/documents" element={<Documents />} />
+                <Route path="/exams" element={<Exams />} />
+                <Route path="/documents/:id" element={<DocumentViewer />} />
+                <Route path="/portal" element={<Portal user={user} />} />
+                <Route path="/announcements" element={<Announcements user={user} />} />
+              </Routes>
+            </main>
+
+            {!isAiChatFullscreen && (
+              <MobileBottomNav
+                user={user}
+                onLoginClick={() => setIsModalOpen(true)}
+                onLogoutClick={handleLogout}
               />
-              <Route path="/profile" element={
-                <Profile user={user} onUpdateUser={handleUpdateUser} />
-              } />
-              <Route path="/community" element={<Community />} />
-              <Route path="/timer" element={<StudyTimer />} />
-              <Route path="/timetable" element={<Timetable />} />
-              <Route path="/documents" element={<Documents />} />
-              <Route path="/exams" element={<Exams />} />
-              <Route path="/documents/:id" element={<DocumentViewer />} />
-              <Route path="/portal" element={<Portal user={user} />} />
-              <Route path="/announcements" element={<Announcements user={user} />} />
-            </Routes>
-          </main>
+            )}
+          </div>
 
-          {!isAiChatFullscreen && (
-          <MobileBottomNav
-            user={user}
-            onLoginClick={() => setIsModalOpen(true)}
-            onLogoutClick={handleLogout}
+          {/* Floating Music Player - controlled by MusicContext */}
+          <FloatingPlayer />
+
+          <AuthModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onLoginSuccess={(userData) => setUser(userData)}
           />
-          )}
+
+          {/* Toaster cho notifications */}
+          <Toaster
+            richColors
+            closeButton
+            position="top-right"
+            duration={3000}
+            theme={darkMode ? 'dark' : 'light'}
+          />
         </div>
-
-        {/* Floating Music Player - controlled by MusicContext */}
-        <FloatingPlayer />
-
-        <AuthModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-          onLoginSuccess={(userData) => setUser(userData)} 
-        />
-        
-        {/* Toaster cho notifications */}
-        <Toaster 
-          richColors 
-          closeButton 
-          position="top-right" 
-          duration={3000}
-          theme={darkMode ? 'dark' : 'light'}
-        />
-      </div>
       </MusicProvider>
     </Router>
   );
