@@ -373,7 +373,8 @@ export const ExamRunner = ({ exam, mode, onExit }) => {
 
                 {isMapOpen && (
                     <div className="fixed inset-0 z-[100] flex flex-col bg-black/60 backdrop-blur-sm animate-fade-in">
-                        <div className="mt-auto bg-white rounded-t-3xl p-6 shadow-2xl animate-slide-up max-h-[80vh] flex flex-col">
+                        <div className="flex-1" onClick={() => setIsMapOpen(false)}></div>
+                        <div className="bg-white rounded-t-3xl p-6 shadow-2xl animate-slide-up max-h-[66vh] flex flex-col">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="font-black text-xl text-gray-800">Sơ đồ câu hỏi</h3>
                                 <button
@@ -391,7 +392,7 @@ export const ExamRunner = ({ exam, mode, onExit }) => {
                                             onClick={() => {
                                                 document.getElementById(`q-${q.internalId}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
                                                 setIsMapOpen(false);
-                                                setIsExpanded(true); // Đảm bảo mở rộng để thấy câu hỏi nếu nó ở ngoài 4 câu đầu
+                                                setIsExpanded(true);
                                             }}
                                             className={`aspect-square rounded-xl flex items-center justify-center text-sm font-black border-2 transition-all ${getQuestionStatusClass(q)}`}
                                         >
@@ -401,7 +402,6 @@ export const ExamRunner = ({ exam, mode, onExit }) => {
                                 </div>
                             </div>
                         </div>
-                        <div className="flex-1" onClick={() => setIsMapOpen(false)}></div>
                     </div>
                 )}
             </div>

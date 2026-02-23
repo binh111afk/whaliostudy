@@ -454,13 +454,6 @@ function App() {
             {!isAiChatFullscreen && isMobileSidebarOpen && (
               <div className="fixed inset-0 z-[90] flex min-[1025px]:hidden">
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex-1 bg-black/45 backdrop-blur-[1px]"
-                  onClick={() => setIsMobileSidebarOpen(false)}
-                />
-                <motion.div
                   initial={{ x: '-100%' }}
                   animate={{ x: 0 }}
                   exit={{ x: '-100%' }}
@@ -479,6 +472,13 @@ function App() {
                     onNavigate={() => setIsMobileSidebarOpen(false)}
                   />
                 </motion.div>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex-1 bg-black/45 backdrop-blur-[1px]"
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                />
               </div>
             )}
           </AnimatePresence>
