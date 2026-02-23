@@ -22,6 +22,7 @@ const { Worker } = require('worker_threads');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const session = require('express-session');
+const crypto = require('crypto');
 let cookieParser = null;
 try {
     cookieParser = require('cookie-parser');
@@ -96,7 +97,7 @@ const RATE_LIMIT_REDIS_TOKEN = String(
 const RATE_LIMIT_REDIS_FAILURE_BACKOFF_MS = parsePositiveInt(process.env.RATE_LIMIT_REDIS_FAILURE_BACKOFF_MS, 30 * 1000);
 const RATE_LIMIT_REDIS_ERROR_LOG_INTERVAL_MS = parsePositiveInt(process.env.RATE_LIMIT_REDIS_ERROR_LOG_INTERVAL_MS, 60 * 1000);
 const RATE_LIMIT_LOCAL_FALLBACK_MAX_KEYS = parsePositiveInt(process.env.RATE_LIMIT_LOCAL_FALLBACK_MAX_KEYS, 5000);
-const CHAT_CONTEXT_MAX_MESSAGES = parsePositiveInt(process.env.CHAT_CONTEXT_MAX_MESSAGES, 12);
+const CHAT_CONTEXT_MAX_MESSAGES = parsePositiveInt(process.env.CHAT_CONTEXT_MAX_MESSAGES, 8);
 const CHAT_CONTEXT_MAX_CHARS_PER_MESSAGE = parsePositiveInt(process.env.CHAT_CONTEXT_MAX_CHARS_PER_MESSAGE, 700);
 const CHAT_CONTEXT_MAX_TOTAL_CHARS = parsePositiveInt(process.env.CHAT_CONTEXT_MAX_TOTAL_CHARS, 6000);
 const SERVER_TMP_DIR = process.env.RENDER_TMP_DIR || os.tmpdir();
@@ -104,6 +105,9 @@ const UPLOAD_TMP_DIR = path.join(SERVER_TMP_DIR, 'whalio-uploads');
 const PORTAL_CACHE_TTL_SECONDS = parsePositiveInt(process.env.PORTAL_CACHE_TTL_SECONDS, 120);
 const SLOW_REQUEST_THRESHOLD_MS = parsePositiveInt(process.env.SLOW_REQUEST_THRESHOLD_MS, 200);
 const USER_DASHBOARD_BATCH_CACHE_TTL_SECONDS = parsePositiveInt(process.env.USER_DASHBOARD_BATCH_CACHE_TTL_SECONDS, 30);
+const STUDY_STATS_CACHE_TTL_SECONDS = parsePositiveInt(process.env.STUDY_STATS_CACHE_TTL_SECONDS, 30);
+const CHAT_RESPONSE_CACHE_TTL_SECONDS = parsePositiveInt(process.env.CHAT_RESPONSE_CACHE_TTL_SECONDS, 90);
+const CHAT_RESPONSE_CACHE_MAX_PROMPT_CHARS = parsePositiveInt(process.env.CHAT_RESPONSE_CACHE_MAX_PROMPT_CHARS, 2000);
 const runtimeCache = new NodeCache({
     stdTTL: PORTAL_CACHE_TTL_SECONDS,
     checkperiod: Math.max(30, Math.floor(PORTAL_CACHE_TTL_SECONDS / 2)),
@@ -112,6 +116,16 @@ const runtimeCache = new NodeCache({
 const userDashboardBatchCache = new NodeCache({
     stdTTL: USER_DASHBOARD_BATCH_CACHE_TTL_SECONDS,
     checkperiod: Math.max(10, Math.floor(USER_DASHBOARD_BATCH_CACHE_TTL_SECONDS / 2)),
+    useClones: false
+});
+const studyStatsCache = new NodeCache({
+    stdTTL: STUDY_STATS_CACHE_TTL_SECONDS,
+    checkperiod: Math.max(10, Math.floor(STUDY_STATS_CACHE_TTL_SECONDS / 2)),
+    useClones: false
+});
+const chatResponseCache = new NodeCache({
+    stdTTL: CHAT_RESPONSE_CACHE_TTL_SECONDS,
+    checkperiod: Math.max(10, Math.floor(CHAT_RESPONSE_CACHE_TTL_SECONDS / 2)),
     useClones: false
 });
 const HEAVY_SECURITY_ROUTE_PREFIXES = Array.from(new Set([
@@ -160,6 +174,78 @@ function invalidateUserDashboardBatchCache(username) {
     const cacheKey = getUserDashboardBatchCacheKey(username);
     if (!cacheKey) return;
     userDashboardBatchCache.del(cacheKey);
+}
+
+const normalizeCacheUsername = (username) => String(username || '').trim().toLowerCase();
+
+function getStudyStatsCacheKey(username) {
+    const normalizedUsername = normalizeCacheUsername(username);
+    if (!normalizedUsername) return '';
+    return `study:stats:${normalizedUsername}`;
+}
+
+function getStudyStatsFromCache(username) {
+    const cacheKey = getStudyStatsCacheKey(username);
+    if (!cacheKey) return null;
+    const cached = studyStatsCache.get(cacheKey);
+    return cached ? deepCloneSafe(cached) : null;
+}
+
+function setStudyStatsCache(username, payload) {
+    const cacheKey = getStudyStatsCacheKey(username);
+    if (!cacheKey) return;
+    studyStatsCache.set(cacheKey, deepCloneSafe(payload), STUDY_STATS_CACHE_TTL_SECONDS);
+}
+
+function invalidateStudyStatsCache(username) {
+    const cacheKey = getStudyStatsCacheKey(username);
+    if (!cacheKey) return;
+    studyStatsCache.del(cacheKey);
+}
+
+function buildChatResponseCacheKey(rawPrompt) {
+    const normalized = String(rawPrompt || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    if (!normalized) return '';
+    const digest = crypto.createHash('sha256').update(normalized).digest('hex');
+    return `chat:response:${digest}`;
+}
+
+async function getChatResponseFromCache(cacheKey) {
+    if (!cacheKey) return null;
+
+    const memoryCached = chatResponseCache.get(cacheKey);
+    if (memoryCached) return deepCloneSafe(memoryCached);
+
+    if (!upstashRateLimitRedisClient) return null;
+    try {
+        const redisCached = await upstashRateLimitRedisClient.get(cacheKey);
+        if (!redisCached) return null;
+        const parsed = typeof redisCached === 'string'
+            ? JSON.parse(redisCached)
+            : redisCached;
+        if (!parsed || typeof parsed !== 'object') return null;
+        chatResponseCache.set(cacheKey, parsed, CHAT_RESPONSE_CACHE_TTL_SECONDS);
+        return deepCloneSafe(parsed);
+    } catch (error) {
+        console.warn(`⚠️ AI response cache read failed (${cacheKey}): ${error.message}`);
+        return null;
+    }
+}
+
+async function setChatResponseToCache(cacheKey, payload) {
+    if (!cacheKey || !payload || typeof payload !== 'object') return;
+
+    chatResponseCache.set(cacheKey, deepCloneSafe(payload), CHAT_RESPONSE_CACHE_TTL_SECONDS);
+    if (!upstashRateLimitRedisClient) return;
+
+    try {
+        await upstashRateLimitRedisClient.set(cacheKey, JSON.stringify(payload), { ex: CHAT_RESPONSE_CACHE_TTL_SECONDS });
+    } catch (error) {
+        console.warn(`⚠️ AI response cache write failed (${cacheKey}): ${error.message}`);
+    }
 }
 
 try {
@@ -589,6 +675,8 @@ async function runEmergencyMemoryCleanupCheck() {
     const startTs = Date.now();
     const actions = {
         runtimeCacheFlushed: false,
+        studyStatsCacheFlushed: false,
+        chatResponseCacheFlushed: false,
         adminCachesReset: false,
         gcRequested: false,
         gcInvoked: false
@@ -597,6 +685,10 @@ async function runEmergencyMemoryCleanupCheck() {
     try {
         runtimeCache.flushAll();
         actions.runtimeCacheFlushed = true;
+        studyStatsCache.flushAll();
+        actions.studyStatsCacheFlushed = true;
+        chatResponseCache.flushAll();
+        actions.chatResponseCacheFlushed = true;
 
         if (typeof adminRouter.resetAdminRuntimeCaches === 'function') {
             adminRouter.resetAdminRuntimeCaches();
@@ -1069,6 +1161,8 @@ async function gracefulShutdown(signal) {
         stopEmergencyMemoryMonitor();
         runtimeCache.close();
         userDashboardBatchCache.close();
+        studyStatsCache.close();
+        chatResponseCache.close();
         if (mongoose.connection.readyState === 1 || mongoose.connection.readyState === 2) {
             await mongoose.connection.close(false);
             console.log('✅ MongoDB connection closed');
@@ -5059,6 +5153,41 @@ function buildStudyStatsForLastSevenDays(sessions = []) {
     return { chartData, totalMinutes };
 }
 
+async function getStudyStatsPayload(username) {
+    const normalizedUsername = String(username || '').trim();
+    if (!normalizedUsername) {
+        return { chartData: [], totalMinutes: 0, cached: false };
+    }
+
+    const cachedStats = getStudyStatsFromCache(normalizedUsername);
+    if (cachedStats) {
+        return {
+            chartData: Array.isArray(cachedStats.chartData) ? cachedStats.chartData : [],
+            totalMinutes: Number(cachedStats.totalMinutes) || 0,
+            cached: true
+        };
+    }
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const sessions = await StudySession.find({
+        username: normalizedUsername,
+        date: { $gte: sevenDaysAgo }
+    })
+        .select('duration date')
+        .sort({ date: 1 })
+        .lean();
+
+    const computed = buildStudyStatsForLastSevenDays(sessions);
+    setStudyStatsCache(normalizedUsername, computed);
+    return {
+        chartData: computed.chartData,
+        totalMinutes: computed.totalMinutes,
+        cached: false
+    };
+}
+
 // 1. Lưu phiên học (Gọi khi bấm Dừng hoặc Hết giờ)
 app.post('/api/study/save', async (req, res) => {
     try {
@@ -5073,6 +5202,7 @@ app.post('/api/study/save', async (req, res) => {
 
         await newSession.save();
         invalidateUserDashboardBatchCache(username);
+        invalidateStudyStatsCache(username);
         console.log(`⏱️ Đã lưu ${duration} phút học cho ${username}`);
         res.json({ success: true, message: "Đã lưu thời gian học!" });
     } catch (err) {
@@ -5087,18 +5217,8 @@ app.get('/api/study/stats', async (req, res) => {
         const { username } = req.query;
         if (!username) return res.status(400).json({ success: false });
 
-        // Lấy dữ liệu 7 ngày qua
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-        const sessions = await StudySession.find({
-            username,
-            date: { $gte: sevenDaysAgo }
-        }).sort({ date: 1 });
-
-        const { chartData } = buildStudyStatsForLastSevenDays(sessions);
-
-        res.json({ success: true, data: chartData });
+        const studyStats = await getStudyStatsPayload(username);
+        res.json({ success: true, data: studyStats.chartData, cached: studyStats.cached });
     } catch (err) {
         console.error('Get study stats error:', err);
         res.status(500).json({ success: false });
@@ -5128,21 +5248,12 @@ app.get('/api/user/dashboard-batch', verifyToken, async (req, res) => {
             });
         }
 
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
         const now = new Date();
-        const [gpaData, sessions, upcomingEvents] = await Promise.all([
+        const [gpaData, studyStats, upcomingEvents] = await Promise.all([
             GpaModel.findOne({ username })
                 .select('semesters targetGpa updatedAt')
                 .lean(),
-            StudySession.find({
-                username,
-                date: { $gte: sevenDaysAgo }
-            })
-                .select('duration date')
-                .sort({ date: 1 })
-                .lean(),
+            getStudyStatsPayload(username),
             Event.find({
                 username,
                 date: { $gte: now }
@@ -5152,15 +5263,14 @@ app.get('/api/user/dashboard-batch', verifyToken, async (req, res) => {
                 .lean()
         ]);
 
-        const { chartData, totalMinutes } = buildStudyStatsForLastSevenDays(sessions);
         const payload = {
             gpa: {
                 semesters: Array.isArray(gpaData?.semesters) ? gpaData.semesters : [],
                 targetGpa: String(gpaData?.targetGpa || '')
             },
             study: {
-                chartData,
-                totalMinutes
+                chartData: Array.isArray(studyStats?.chartData) ? studyStats.chartData : [],
+                totalMinutes: Number(studyStats?.totalMinutes) || 0
             },
             events: Array.isArray(upcomingEvents) ? upcomingEvents : []
         };
@@ -6556,6 +6666,26 @@ async function processChat(req, res) {
 
         let aiResponseText;
         let modelUsed = 'Unknown';
+        const canUseAiResponseCache = (
+            !hasImageData &&
+            !hasAttachment &&
+            geminiHistory.length === 0 &&
+            finalMessage.length > 0 &&
+            finalMessage.length <= CHAT_RESPONSE_CACHE_MAX_PROMPT_CHARS
+        );
+        const aiResponseCacheKey = canUseAiResponseCache
+            ? buildChatResponseCacheKey(finalMessage)
+            : '';
+        let cachedAiResponse = null;
+
+        if (aiResponseCacheKey) {
+            cachedAiResponse = await getChatResponseFromCache(aiResponseCacheKey);
+            if (cachedAiResponse?.message) {
+                aiResponseText = String(cachedAiResponse.message);
+                modelUsed = String(cachedAiResponse.model || 'AI') + ' (Cached)';
+                console.log(`⚡ Chat response cache hit: ${aiResponseCacheKey.slice(0, 24)}...`);
+            }
+        }
 
         // Nếu có ảnh, dùng Gemini trực tiếp (vì DeepSeek không tốt với vision)
         // Nếu có ảnh, dùng Gemini trước -> Nếu lỗi thì Fallback sang Groq Vision
@@ -6631,7 +6761,7 @@ async function processChat(req, res) {
                     throw geminiErr; // Nếu lỗi khác (VD: ảnh sex, ảnh lỗi) thì không fallback
                 }
             }
-        } else {
+        } else if (!cachedAiResponse?.message) {
             // Không có ảnh -> Dùng aiService với fallback thông minh
             console.log('💬 Gọi AI Service với Fallback (Gemini → DeepSeek)...');
             const aiResult = await generateAIResponse(finalMessage);
@@ -6653,6 +6783,15 @@ async function processChat(req, res) {
             // Log nếu đã fallback
             if (aiResult.fallback) {
                 console.log(`🔄 Đã fallback sang ${modelUsed}`);
+            }
+
+            if (aiResponseCacheKey && aiResponseText) {
+                await setChatResponseToCache(aiResponseCacheKey, {
+                    message: aiResponseText,
+                    model: modelUsed,
+                    cachedAt: new Date().toISOString()
+                });
+                console.log(`🧠 Chat response cached: ${aiResponseCacheKey.slice(0, 24)}...`);
             }
         }
 
