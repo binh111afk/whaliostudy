@@ -68,6 +68,15 @@ const parsePositiveInt = (value, fallback) => {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
+const parseEnvBoolean = (value, fallback = false) => {
+    if (value === undefined || value === null) return fallback;
+    const normalized = String(value).trim().toLowerCase();
+    if (!normalized) return fallback;
+    if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+    if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+    return fallback;
+};
+
 const deepCloneSafe = (value) => {
     if (value === null || value === undefined) return value;
 
@@ -94,6 +103,15 @@ const RATE_LIMIT_REDIS_URL = String(
 const RATE_LIMIT_REDIS_TOKEN = String(
     process.env.UPSTASH_REDIS_REST_TOKEN || process.env.RATE_LIMIT_REDIS_TOKEN || process.env.REDIS_REST_TOKEN || ''
 ).trim();
+const SESSION_REDIS_URL = String(
+    process.env.SESSION_REDIS_REST_URL || process.env.UPSTASH_REDIS_REST_URL || process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_REST_URL || ''
+).trim();
+const SESSION_REDIS_TOKEN = String(
+    process.env.SESSION_REDIS_REST_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || process.env.RATE_LIMIT_REDIS_TOKEN || process.env.REDIS_REST_TOKEN || ''
+).trim();
+const SESSION_STORE_PREFIX = String(process.env.SESSION_STORE_PREFIX || 'sess:').trim() || 'sess:';
+const SESSION_DEFAULT_TTL_SECONDS = parsePositiveInt(process.env.SESSION_REDIS_TTL_SECONDS, 7 * 24 * 60 * 60);
+const SESSION_DISABLE_TOUCH = parseEnvBoolean(process.env.SESSION_DISABLE_TOUCH, false);
 const RATE_LIMIT_REDIS_FAILURE_BACKOFF_MS = parsePositiveInt(process.env.RATE_LIMIT_REDIS_FAILURE_BACKOFF_MS, 30 * 1000);
 const RATE_LIMIT_REDIS_ERROR_LOG_INTERVAL_MS = parsePositiveInt(process.env.RATE_LIMIT_REDIS_ERROR_LOG_INTERVAL_MS, 60 * 1000);
 const RATE_LIMIT_LOCAL_FALLBACK_MAX_KEYS = parsePositiveInt(process.env.RATE_LIMIT_LOCAL_FALLBACK_MAX_KEYS, 5000);
@@ -108,6 +126,17 @@ const USER_DASHBOARD_BATCH_CACHE_TTL_SECONDS = parsePositiveInt(process.env.USER
 const STUDY_STATS_CACHE_TTL_SECONDS = parsePositiveInt(process.env.STUDY_STATS_CACHE_TTL_SECONDS, 30);
 const CHAT_RESPONSE_CACHE_TTL_SECONDS = parsePositiveInt(process.env.CHAT_RESPONSE_CACHE_TTL_SECONDS, 90);
 const CHAT_RESPONSE_CACHE_MAX_PROMPT_CHARS = parsePositiveInt(process.env.CHAT_RESPONSE_CACHE_MAX_PROMPT_CHARS, 2000);
+const XSS_SANITIZE_MAX_DEPTH = parsePositiveInt(process.env.XSS_SANITIZE_MAX_DEPTH, 6);
+const XSS_SANITIZE_MAX_NODES = parsePositiveInt(process.env.XSS_SANITIZE_MAX_NODES, 400);
+const XSS_SANITIZE_MAX_STRING_LENGTH = parsePositiveInt(process.env.XSS_SANITIZE_MAX_STRING_LENGTH, 4000);
+const XSS_SKIP_ROUTE_PREFIXES = Array.from(new Set([
+    '/api/chat',
+    '/api/ai',
+    ...String(process.env.XSS_SKIP_ROUTE_PREFIXES || '')
+        .split(',')
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean)
+]));
 const runtimeCache = new NodeCache({
     stdTTL: PORTAL_CACHE_TTL_SECONDS,
     checkperiod: Math.max(30, Math.floor(PORTAL_CACHE_TTL_SECONDS / 2)),
@@ -279,6 +308,183 @@ if (UpstashRedis && RATE_LIMIT_REDIS_URL && RATE_LIMIT_REDIS_TOKEN) {
     }
 } else {
     console.log('ℹ️ Upstash Redis credentials not found. Rate limiting uses in-memory store.');
+}
+
+// ==================== UPSTASH SESSION STORE ====================
+// Custom express-session store using @upstash/redis REST API
+// Supports TTL sync with cookie.maxAge, resilient fallback to MemoryStore
+let upstashSessionRedisClient = null;
+let sessionStoreInstance = null;
+let isUsingRedisSessionStore = false;
+
+class UpstashSessionStore extends session.Store {
+    constructor(options = {}) {
+        super(options);
+        this.client = options.client;
+        this.prefix = options.prefix || SESSION_STORE_PREFIX;
+        this.ttl = options.ttl || SESSION_DEFAULT_TTL_SECONDS;
+        this.disableTouch = options.disableTouch || SESSION_DISABLE_TOUCH;
+        this._localFallback = new Map();
+        this._redisAvailable = true;
+        this._lastErrorLogAt = 0;
+    }
+
+    _buildKey(sid) {
+        return `${this.prefix}${sid}`;
+    }
+
+    _getTtlFromSession(sess) {
+        if (sess && sess.cookie && typeof sess.cookie.maxAge === 'number' && sess.cookie.maxAge > 0) {
+            return Math.ceil(sess.cookie.maxAge / 1000);
+        }
+        return this.ttl;
+    }
+
+    _logRedisError(action, error) {
+        const now = Date.now();
+        if (now - this._lastErrorLogAt >= RATE_LIMIT_REDIS_ERROR_LOG_INTERVAL_MS) {
+            console.warn(`⚠️ [SessionStore] Redis ${action} failed: ${error.message}. Using memory fallback.`);
+            this._lastErrorLogAt = now;
+        }
+        this._redisAvailable = false;
+    }
+
+    _markRedisRecovery() {
+        if (!this._redisAvailable) {
+            console.log('✅ [SessionStore] Redis recovered. Using Redis store again.');
+            this._redisAvailable = true;
+        }
+    }
+
+    async get(sid, callback) {
+        const key = this._buildKey(sid);
+        try {
+            if (this.client && this._redisAvailable) {
+                const data = await this.client.get(key);
+                if (data) {
+                    this._markRedisRecovery();
+                    const sess = typeof data === 'string' ? JSON.parse(data) : data;
+                    return callback(null, sess);
+                }
+                this._markRedisRecovery();
+                return callback(null, null);
+            }
+        } catch (error) {
+            this._logRedisError('GET', error);
+        }
+        // Fallback to memory
+        const localSess = this._localFallback.get(key);
+        if (localSess && localSess.expiresAt > Date.now()) {
+            return callback(null, localSess.data);
+        }
+        this._localFallback.delete(key);
+        return callback(null, null);
+    }
+
+    async set(sid, sess, callback) {
+        const key = this._buildKey(sid);
+        const ttlSeconds = this._getTtlFromSession(sess);
+        try {
+            if (this.client && this._redisAvailable) {
+                await this.client.set(key, JSON.stringify(sess), { ex: ttlSeconds });
+                this._markRedisRecovery();
+                this._localFallback.delete(key);
+                return callback && callback(null);
+            }
+        } catch (error) {
+            this._logRedisError('SET', error);
+        }
+        // Fallback to memory with TTL
+        this._localFallback.set(key, {
+            data: sess,
+            expiresAt: Date.now() + ttlSeconds * 1000
+        });
+        callback && callback(null);
+    }
+
+    async destroy(sid, callback) {
+        const key = this._buildKey(sid);
+        try {
+            if (this.client && this._redisAvailable) {
+                await this.client.del(key);
+                this._markRedisRecovery();
+            }
+        } catch (error) {
+            this._logRedisError('DEL', error);
+        }
+        this._localFallback.delete(key);
+        callback && callback(null);
+    }
+
+    async touch(sid, sess, callback) {
+        if (this.disableTouch) {
+            return callback && callback(null);
+        }
+        const key = this._buildKey(sid);
+        const ttlSeconds = this._getTtlFromSession(sess);
+        try {
+            if (this.client && this._redisAvailable) {
+                await this.client.expire(key, ttlSeconds);
+                this._markRedisRecovery();
+            }
+        } catch (error) {
+            this._logRedisError('TOUCH', error);
+        }
+        // Update local fallback TTL if exists
+        const localSess = this._localFallback.get(key);
+        if (localSess) {
+            localSess.expiresAt = Date.now() + ttlSeconds * 1000;
+        }
+        callback && callback(null);
+    }
+
+    // Periodic cleanup for memory fallback
+    _cleanupExpiredLocal() {
+        const now = Date.now();
+        for (const [key, value] of this._localFallback.entries()) {
+            if (!value || value.expiresAt <= now) {
+                this._localFallback.delete(key);
+            }
+        }
+    }
+}
+
+// Initialize session Redis client (can use separate credentials from rate limit)
+if (UpstashRedis && SESSION_REDIS_URL && SESSION_REDIS_TOKEN) {
+    try {
+        upstashSessionRedisClient = new UpstashRedis({
+            url: SESSION_REDIS_URL,
+            token: SESSION_REDIS_TOKEN
+        });
+        // Create the session store instance
+        sessionStoreInstance = new UpstashSessionStore({
+            client: upstashSessionRedisClient,
+            prefix: SESSION_STORE_PREFIX,
+            ttl: SESSION_DEFAULT_TTL_SECONDS,
+            disableTouch: SESSION_DISABLE_TOUCH
+        });
+        isUsingRedisSessionStore = true;
+        // Test connection
+        if (typeof upstashSessionRedisClient.ping === 'function') {
+            void upstashSessionRedisClient
+                .ping()
+                .then(() => {
+                    console.log(`🗄️  Upstash Redis connected for session store (prefix: ${SESSION_STORE_PREFIX}, TTL: ${SESSION_DEFAULT_TTL_SECONDS}s)`);
+                })
+                .catch((error) => {
+                    console.warn(`⚠️ Session Redis ping failed at startup. Store will fallback to memory: ${error.message}`);
+                });
+        } else {
+            console.log(`🗄️  Upstash Redis client initialized for session store (prefix: ${SESSION_STORE_PREFIX})`);
+        }
+    } catch (error) {
+        console.error(`❌ Failed to initialize session Redis client: ${error.message}`);
+        upstashSessionRedisClient = null;
+        sessionStoreInstance = null;
+        isUsingRedisSessionStore = false;
+    }
+} else {
+    console.log('ℹ️ Session Redis credentials not found. Sessions will use MemoryStore (not recommended for production).');
 }
 
 function createResilientUpstashRateLimitStore({ redisClient, keyPrefix, windowMs, label }) {
@@ -493,7 +699,8 @@ if (cookieParser) {
     console.log('✅  cookie-parser enabled');
 }
 
-app.use(session({
+// Build session configuration with Redis store if available
+const sessionConfig = {
     name: 'whalio.sid',
     secret: SESSION_SECRET,
     resave: false,
@@ -505,8 +712,25 @@ app.use(session({
         sameSite: 'none',
         maxAge: 7 * 24 * 60 * 60 * 1000
     }
-}));
-console.log('✅  express-session enabled (proxy=true, SameSite=None, Secure=true)');
+};
+
+// Use Redis store if available, otherwise fallback to default MemoryStore
+if (sessionStoreInstance && isUsingRedisSessionStore) {
+    sessionConfig.store = sessionStoreInstance;
+    // Sync TTL with cookie maxAge
+    if (sessionStoreInstance.ttl && sessionConfig.cookie.maxAge) {
+        const cookieTtlSeconds = Math.ceil(sessionConfig.cookie.maxAge / 1000);
+        if (cookieTtlSeconds !== sessionStoreInstance.ttl) {
+            sessionStoreInstance.ttl = cookieTtlSeconds;
+        }
+    }
+    console.log(`🗄️  Session using Redis store (prefix: ${SESSION_STORE_PREFIX}, TTL synced with cookie.maxAge)`);
+} else {
+    console.log('⚠️  Session using MemoryStore (not recommended for production - sessions lost on restart)');
+}
+
+app.use(session(sessionConfig));
+console.log(`✅  express-session enabled (proxy=true, SameSite=None, Secure=true, store=${isUsingRedisSessionStore ? 'Redis' : 'Memory'})`);
 
 // ⚡ Health Check Endpoint - Đặt ở đây để bypass middleware nặng (cho monitoring)
 app.get('/api/health', (req, res) => {
@@ -922,12 +1146,28 @@ app.use(runOnHeavySecurityRoutes((req, res, next) => {
 }));
 console.log('🛡️  MongoDB Sanitization enabled for sensitive APIs (Enterprise Layer 2)');
 
-// 🛡️ [ENTERPRISE SECURITY - LAYER 3] XSS CLEAN
+// 🛡️ [ENTERPRISE SECURITY - LAYER 3] XSS CLEAN (OPTIMIZED)
 // Tự động lọc mọi thẻ <script>, mã độc HTML trong req.body, req.query, req.params
-const sanitizeXssString = (input) => {
-    if (typeof input !== 'string') return input;
+// OPTIMIZATIONS:
+// 1. Iterative approach với giới hạn (max depth, max nodes, max string length) để chặn CPU spike
+// 2. Fast-path: chuỗi không có dấu hiệu XSS thì bỏ qua, không chạy regex nặng  
+// 3. Skip configurable routes (mặc định skip chat/AI vì payload dài và ít rủi ro XSS ở tầng input)
 
-    return input
+// Fast-path regex để detect potential XSS patterns (chỉ chạy full sanitize nếu match)
+const XSS_SUSPECT_PATTERN = /<|>|javascript:|vbscript:|on\w+=|data:text\/html/i;
+
+const sanitizeXssString = (input, maxLength = XSS_SANITIZE_MAX_STRING_LENGTH) => {
+    if (typeof input !== 'string') return input;
+    
+    // Truncate extremely long strings to prevent ReDoS
+    const truncated = input.length > maxLength ? input.slice(0, maxLength) : input;
+    
+    // Fast-path: skip regex processing if no XSS indicators found
+    if (!XSS_SUSPECT_PATTERN.test(truncated)) {
+        return truncated;
+    }
+
+    return truncated
         .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
         .replace(/javascript:/gi, '')
         .replace(/vbscript:/gi, '')
@@ -937,43 +1177,92 @@ const sanitizeXssString = (input) => {
 
 const SENSITIVE_FIELDS = new Set(['password', 'oldPass', 'newPass', 'confirmPassword', 'token']);
 
-const deepSanitizeXss = (value, currentKey = '') => {
-    if (SENSITIVE_FIELDS.has(currentKey)) {
-        return value;
-    }
-
-    if (typeof value === 'string') return sanitizeXssString(value);
-
-    if (Array.isArray(value)) {
-        for (let i = 0; i < value.length; i += 1) {
-            value[i] = deepSanitizeXss(value[i], currentKey);
+// Iterative XSS sanitizer with limits to prevent CPU spike on deeply nested/large payloads
+const deepSanitizeXssIterative = (rootValue, maxDepth = XSS_SANITIZE_MAX_DEPTH, maxNodes = XSS_SANITIZE_MAX_NODES) => {
+    if (rootValue === null || rootValue === undefined) return rootValue;
+    
+    let nodeCount = 0;
+    // Stack stores { value, key, parent, parentKey, depth }
+    const stack = [{ value: rootValue, key: '', parent: null, parentKey: null, depth: 0 }];
+    
+    while (stack.length > 0) {
+        const { value, key, parent, parentKey, depth } = stack.pop();
+        nodeCount += 1;
+        
+        // Limit check: stop processing if exceeds max nodes
+        if (nodeCount > maxNodes) {
+            break;
         }
-        return value;
+        
+        // Skip sensitive fields
+        if (SENSITIVE_FIELDS.has(key)) {
+            continue;
+        }
+        
+        // Process string values
+        if (typeof value === 'string') {
+            const sanitized = sanitizeXssString(value);
+            if (parent !== null && parentKey !== null) {
+                parent[parentKey] = sanitized;
+            }
+            continue;
+        }
+        
+        // Skip deeper levels to prevent recursion DoS
+        if (depth >= maxDepth) {
+            continue;
+        }
+        
+        // Process arrays
+        if (Array.isArray(value)) {
+            for (let i = value.length - 1; i >= 0; i -= 1) {
+                stack.push({ value: value[i], key, parent: value, parentKey: i, depth: depth + 1 });
+            }
+            continue;
+        }
+        
+        // Process objects
+        if (value && typeof value === 'object') {
+            const keys = Object.keys(value);
+            for (let i = keys.length - 1; i >= 0; i -= 1) {
+                const k = keys[i];
+                stack.push({ value: value[k], key: k, parent: value, parentKey: k, depth: depth + 1 });
+            }
+        }
     }
-
-    if (value && typeof value === 'object') {
-        Object.keys(value).forEach((key) => {
-            value[key] = deepSanitizeXss(value[key], key);
-        });
-    }
-
-    return value;
+    
+    return rootValue;
 };
 
+// Check if route should skip XSS sanitization
+function shouldSkipXssSanitize(req) {
+    const requestPath = getRequestPath(req);
+    return XSS_SKIP_ROUTE_PREFIXES.some((prefix) => (
+        requestPath === prefix ||
+        requestPath.startsWith(`${prefix}/`) ||
+        requestPath.startsWith(prefix)
+    ));
+}
+
 app.use(runOnHeavySecurityRoutes((req, res, next) => {
+    // Skip XSS sanitize for configured routes (e.g., chat/AI)
+    if (shouldSkipXssSanitize(req)) {
+        return next();
+    }
+    
     if (req.body && typeof req.body === 'object') {
-        deepSanitizeXss(req.body, 'body');
+        deepSanitizeXssIterative(req.body);
     }
     if (req.params && typeof req.params === 'object') {
-        deepSanitizeXss(req.params, 'params');
+        deepSanitizeXssIterative(req.params);
     }
     if (req.query && typeof req.query === 'object') {
-        deepSanitizeXss(req.query, 'query');
+        deepSanitizeXssIterative(req.query);
     }
 
     next();
 }));
-console.log('🛡️  XSS Clean protection enabled for sensitive APIs (Enterprise Layer 3)');
+console.log(`🛡️  XSS Clean protection enabled (iterative, maxDepth=${XSS_SANITIZE_MAX_DEPTH}, maxNodes=${XSS_SANITIZE_MAX_NODES}, skip: ${XSS_SKIP_ROUTE_PREFIXES.join(', ')})`);
 
 // 🛡️ [ENTERPRISE SECURITY - LAYER 4] HTTP PARAMETER POLLUTION
 // Chặn tấn công gử́i nhiều tham số trùng lặp (VD: ?username=admin&username=hacker)
