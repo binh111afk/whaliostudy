@@ -19,6 +19,31 @@ export const PERIOD_TIMES = {
     15: { start: '19:50', end: '20:40' }
 };
 
+// Map giờ -> tiết (để xử lý trường hợp chỉ có giờ, không có số tiết)
+const TIME_TO_PERIOD = {
+    '6h30': 1, '06h30': 1, '6:30': 1, '06:30': 1,
+    '7h20': 2, '07h20': 2, '7:20': 2, '07:20': 2,
+    '8h10': 3, '08h10': 3, '8:10': 3, '08:10': 3,
+    '9h00': 3, '09h00': 3, '9:00': 3, '09:00': 3, // end of period 3
+    '9h10': 4, '09h10': 4, '9:10': 4, '09:10': 4,
+    '10h00': 5, '10:00': 5,
+    '10h50': 6, '10:50': 6,
+    '11h40': 6, '11:40': 6, // end of period 6
+    '12h30': 7, '12:30': 7,
+    '13h20': 8, '13:20': 8,
+    '14h10': 9, '14:10': 9,
+    '15h00': 9, '15:00': 9, // end of period 9
+    '15h10': 10, '15:10': 10,
+    '16h00': 11, '16:00': 11,
+    '16h50': 12, '16:50': 12,
+    '17h40': 12, '17:40': 12, // end of period 12
+    '17h50': 13, '17:50': 13,
+    '18h40': 14, '18:40': 14,
+    '19h30': 14, '19:30': 14, // end of period 14
+    '19h50': 15, '19:50': 15,
+    '20h40': 15, '20:40': 15, // end of period 15
+};
+
 export const PASTEL_COLORS = [
     '#FFE5E5', '#E5F3FF', '#FFF5E5', '#E5FFE5', 
     '#F5E5FF', '#FFE5F5', '#E5FFFF', '#FFFFE5'
@@ -59,172 +84,422 @@ export const isClassInWeek = (cls, weekStart) => {
     return (start <= currentWeekEnd && end >= currentWeekStart);
 };
 
-// --- LOGIC IMPORT EXCEL (Được port từ code cũ) ---
+// --- LOGIC IMPORT EXCEL (Cải tiến để xử lý file phức tạp từ trường) ---
+
+/**
+ * Parse cột Thứ (day) - Chuẩn hóa về '2'-'7' hoặc 'CN'
+ */
+const parseDayString = (dayStr) => {
+    if (!dayStr) return null;
+    
+    // Xử lý wrap text: "Thứ\nHai" -> "Thứ Hai"
+    let s = String(dayStr).replace(/[\n\r]+/g, ' ').toLowerCase().trim();
+    
+    // Loại bỏ "thứ " ở đầu
+    s = s.replace(/^thứ\s*/i, '');
+    
+    // Map tên ngày sang số
+    if (s.includes('hai') || s === '2') return '2';
+    if (s.includes('ba') || s === '3') return '3';
+    if (s.includes('tư') || s.includes('tu') || s === '4') return '4';
+    if (s.includes('năm') || s.includes('nam') || s === '5') return '5';
+    if (s.includes('sáu') || s.includes('sau') || s === '6') return '6';
+    if (s.includes('bảy') || s.includes('bay') || s === '7') return '7';
+    if (s.includes('chủ') || s.includes('chu') || s.includes('cn') || s === 'cn') return 'CN';
+    
+    return null;
+};
+
+/**
+ * Parse cột Tiết - Trích xuất startPeriod và numPeriods
+ * Các format có thể gặp:
+ * - "1 (6h30)->3 (9h00)"
+ * - "13 (17h50)->15 (20h40)"
+ * - "13 (17h50)->13"
+ * - "(18h40)" - chỉ có giờ
+ * - "7 (12h30)->9 (15h00)"
+ */
+const parsePeriodString = (periodStr) => {
+    if (!periodStr) return null;
+    
+    const str = String(periodStr).trim();
+    
+    // Pattern 1: Có số tiết rõ ràng
+    // VD: "1 (6h30)->3 (9h00)", "13 (17h50)->15", "7->9"
+    const periodPattern = /(\d+)\s*(?:[\(（][^)）]*[\)）])?\s*[-→>]+\s*(\d+)/;
+    let match = str.match(periodPattern);
+    
+    if (match) {
+        const start = parseInt(match[1]);
+        const end = parseInt(match[2]);
+        
+        // Kiểm tra nếu số hợp lệ (tiết từ 1-15)
+        if (start >= 1 && start <= 15 && end >= 1 && end <= 15) {
+            return {
+                startPeriod: start,
+                numPeriods: Math.max(1, end - start + 1)
+            };
+        }
+    }
+    
+    // Pattern 2: Chỉ có một số tiết (VD: "13 (17h50)")
+    const singlePeriodPattern = /^(\d{1,2})\s*(?:[\(（]|$)/;
+    match = str.match(singlePeriodPattern);
+    if (match) {
+        const period = parseInt(match[1]);
+        if (period >= 1 && period <= 15) {
+            return { startPeriod: period, numPeriods: 1 };
+        }
+    }
+    
+    // Pattern 3: Chỉ có giờ - cố gắng map về tiết
+    // VD: "(18h40)", "(17h50)->15 (20h40)"
+    const timePattern = /(\d{1,2})[hH:](\d{2})/g;
+    const times = [...str.matchAll(timePattern)];
+    
+    if (times.length > 0) {
+        const firstTimeStr = `${times[0][1]}h${times[0][2]}`;
+        const startPeriod = TIME_TO_PERIOD[firstTimeStr];
+        
+        if (startPeriod) {
+            let endPeriod = startPeriod;
+            if (times.length > 1) {
+                const lastTimeStr = `${times[times.length - 1][1]}h${times[times.length - 1][2]}`;
+                endPeriod = TIME_TO_PERIOD[lastTimeStr] || startPeriod;
+            }
+            return {
+                startPeriod,
+                numPeriods: Math.max(1, endPeriod - startPeriod + 1)
+            };
+        }
+    }
+    
+    // Không parse được
+    return null;
+};
+
+/**
+ * Parse cột Ngày - Chuyển đổi về YYYY-MM-DD
+ * Các format có thể gặp:
+ * - "19/01/2026->11/05/2026"
+ * - "2026-01-19->2026-05-11"
+ * - "19/01/2026"
+ * - "2026-01-19 00:00:00"
+ * - "29/01/2026" (chỉ một ngày)
+ */
+const parseDateRange = (dateStr) => {
+    if (!dateStr) return { startDate: '', endDate: '' };
+    
+    const raw = String(dateStr).trim();
+    
+    // Tách theo "->" hoặc "→"
+    const parts = raw.split(/[-→>]+/).map(p => p.trim()).filter(p => p);
+    
+    const parseOneDate = (s) => {
+        if (!s) return '';
+        
+        // Format DD/MM/YYYY hoặc DD-MM-YYYY
+        let match = s.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
+        if (match) {
+            const day = match[1].padStart(2, '0');
+            const month = match[2].padStart(2, '0');
+            const year = match[3];
+            return `${year}-${month}-${day}`;
+        }
+        
+        // Format YYYY-MM-DD (có thể có HH:MM:SS)
+        match = s.match(/(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
+        if (match) {
+            const year = match[1];
+            const month = match[2].padStart(2, '0');
+            const day = match[3].padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        return '';
+    };
+    
+    const startDate = parseOneDate(parts[0]);
+    const endDate = parts.length > 1 ? parseOneDate(parts[1]) : startDate;
+    
+    return { startDate, endDate };
+};
+
+/**
+ * Tìm dòng header trong dữ liệu Excel
+ * Trả về chỉ số dòng chứa "STT" ở cột B (hoặc cột khác)
+ */
+const findHeaderRow = (jsonData) => {
+    for (let i = 0; i < Math.min(30, jsonData.length); i++) {
+        const row = jsonData[i];
+        if (!row) continue;
+        
+        // Tìm ô chứa "STT" (thường ở cột B = index 1)
+        for (let j = 0; j < Math.min(10, row.length); j++) {
+            const cell = String(row[j] || '').toLowerCase().trim();
+            if (cell === 'stt') {
+                return { rowIndex: i, sttColIndex: j };
+            }
+        }
+    }
+    return null;
+};
+
+/**
+ * Xác định chỉ số cột dựa trên header row
+ * Trả về mapping các cột quan trọng
+ */
+const mapColumns = (headerRow, sttColIndex) => {
+    const colMap = {
+        stt: sttColIndex,
+        subject: -1,
+        teacher: -1,
+        credits: -1,
+        classCode: -1,
+        day: -1,
+        period: -1,
+        room: -1,
+        dateRange: -1,
+        campus: -1
+    };
+    
+    if (!headerRow) return colMap;
+    
+    for (let i = 0; i < headerRow.length; i++) {
+        const cell = String(headerRow[i] || '').toLowerCase().trim();
+        
+        // Mã LHP/Tên LHP
+        if (cell.includes('lhp') || cell.includes('tên lhp') || cell.includes('môn')) {
+            if (colMap.subject === -1) colMap.subject = i;
+        }
+        // Giảng viên
+        else if (cell.includes('gv') || cell.includes('giảng viên') || cell.includes('giáo viên')) {
+            if (colMap.teacher === -1) colMap.teacher = i;
+        }
+        // Số tín chỉ
+        else if (cell === 'stc' || cell.includes('tín chỉ')) {
+            if (colMap.credits === -1) colMap.credits = i;
+        }
+        // Mã lớp
+        else if (cell === 'mã lớp' || cell.includes('mã lớp')) {
+            if (colMap.classCode === -1) colMap.classCode = i;
+        }
+        // Thứ
+        else if (cell === 'thứ' || cell.includes('thứ')) {
+            if (colMap.day === -1) colMap.day = i;
+        }
+        // Tiết
+        else if (cell.includes('tiết') || cell.includes('giờ') || cell.includes('bắt đầu')) {
+            if (colMap.period === -1) colMap.period = i;
+        }
+        // Phòng
+        else if (cell.includes('phòng')) {
+            if (colMap.room === -1) colMap.room = i;
+        }
+        // Ngày
+        else if (cell.includes('ngày') || cell.includes('từ ngày')) {
+            if (colMap.dateRange === -1) colMap.dateRange = i;
+        }
+        // Cơ sở
+        else if (cell.includes('cơ sở') || cell === 'campus') {
+            if (colMap.campus === -1) colMap.campus = i;
+        }
+    }
+    
+    return colMap;
+};
+
+/**
+ * Trích xuất tên môn sạch từ chuỗi "Mã-Tên môn"
+ * VD: "2521EDUC280121-Phương pháp học tập hiệu quả" -> "Phương pháp học tập hiệu quả"
+ */
+const extractSubjectName = (raw) => {
+    if (!raw) return '';
+    
+    let str = String(raw).trim();
+    
+    // Xử lý wrap text
+    str = str.replace(/[\n\r]+/g, ' ');
+    
+    // Nếu có dạng "Mã-Tên môn", lấy phần sau dấu "-"
+    if (str.includes('-')) {
+        const parts = str.split('-');
+        if (parts.length > 1) {
+            // Kiểm tra phần đầu có phải mã môn không (bắt đầu bằng số hoặc chữ cái)
+            const firstPart = parts[0].trim();
+            if (/^[A-Z0-9]{4,}/.test(firstPart)) {
+                return parts.slice(1).join('-').trim();
+            }
+        }
+    }
+    
+    return str.trim();
+};
+
+/**
+ * Hàm chính xử lý file Excel phức tạp từ trường học
+ */
 export const processExcelFile = async (file) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
+        
         reader.onload = (e) => {
             try {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-
-                // Logic map cột tự động (giống code cũ)
-                let headerRow = -1;
-                const colMap = { subject: -1, day: -1, period: -1, date: -1, room: -1, teacher: -1 };
-
-                // Scan 20 dòng đầu tìm header
-                for (let i = 0; i < Math.min(20, jsonData.length); i++) {
-                    const row = jsonData[i] || [];
-                    const cells = row.map(c => String(c || '').toLowerCase().trim());
-
-                    if (colMap.subject === -1) colMap.subject = cells.findIndex(c => c.includes('tên lhp') || c.includes('môn'));
-                    if (colMap.day === -1) colMap.day = cells.findIndex(c => c.includes('thứ'));
-                    if (colMap.period === -1) colMap.period = cells.findIndex(c => c.includes('tiết') || c.includes('giờ'));
-                    if (colMap.date === -1) colMap.date = cells.findIndex(c => c.includes('ngày') || c.includes('thời gian'));
-                    if (colMap.room === -1) colMap.room = cells.findIndex(c => c.includes('phòng'));
-                    if (colMap.teacher === -1) colMap.teacher = cells.findIndex(c => c.includes('gv') || c.includes('giáo viên'));
-
-                    if (colMap.subject > -1 && colMap.day > -1) { headerRow = i; break; }
+                
+                // Đọc tất cả dữ liệu dưới dạng mảng 2D
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+                    header: 1, 
+                    defval: '',
+                    raw: false, // Chuyển đổi tất cả về string để xử lý nhất quán
+                    blankrows: true // Giữ lại dòng trống để duy trì index
+                });
+                
+                // Tìm dòng header
+                const headerInfo = findHeaderRow(jsonData);
+                
+                if (!headerInfo) {
+                    console.warn('Không tìm thấy dòng header (STT), sử dụng fallback');
                 }
-
-                // Fallback nếu không tìm thấy
-                if (headerRow === -1) {
-                    colMap.subject = 2; colMap.teacher = 3; colMap.day = 6; colMap.period = 7; colMap.room = 8; colMap.date = 9;
-                    headerRow = 0;
-                }
-                if (colMap.teacher === -1) colMap.teacher = 3;
-
+                
+                const headerRowIndex = headerInfo?.rowIndex ?? 0;
+                const sttColIndex = headerInfo?.sttColIndex ?? 1;
+                
+                // Map các cột
+                const colMap = mapColumns(jsonData[headerRowIndex], sttColIndex);
+                
+                // Fallback cho các cột quan trọng nếu không tìm thấy
+                // Dựa trên cấu trúc file mẫu: B=STT, C=Subject, D=Teacher, E=STC, F=ClassCode, G=Day, H=Period, I=Room, J=Date, K=Campus
+                if (colMap.subject === -1) colMap.subject = sttColIndex + 1;
+                if (colMap.teacher === -1) colMap.teacher = sttColIndex + 2;
+                if (colMap.credits === -1) colMap.credits = sttColIndex + 3;
+                if (colMap.classCode === -1) colMap.classCode = sttColIndex + 4;
+                if (colMap.day === -1) colMap.day = sttColIndex + 5;
+                if (colMap.period === -1) colMap.period = sttColIndex + 6;
+                if (colMap.room === -1) colMap.room = sttColIndex + 7;
+                if (colMap.dateRange === -1) colMap.dateRange = sttColIndex + 8;
+                if (colMap.campus === -1) colMap.campus = sttColIndex + 9;
+                
                 const importedClasses = [];
-                let lastSubject = null;
-
-                for (let i = headerRow + 1; i < jsonData.length; i++) {
+                const warnings = [];
+                
+                // Context hiện tại (lưu thông tin môn học khi gặp STT mới)
+                let currentContext = {
+                    subject: '',
+                    teacher: '',
+                    credits: '',
+                    classCode: ''
+                };
+                
+                // Duyệt từ dòng sau header đến hết
+                for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
                     const row = jsonData[i];
-                    if (!row) continue;
-
-                    let subjectRaw = row[colMap.subject];
-                    let dayRaw = row[colMap.day];
-                    let periodRaw = row[colMap.period];
-                    let dateRaw = row[colMap.date];
-                    let roomRaw = row[colMap.room];
-                    let teacherRaw = row[colMap.teacher];
-
-                    // Fill down logic
-                    if ((!subjectRaw || String(subjectRaw).trim() === '') && dayRaw && lastSubject) {
-                        subjectRaw = lastSubject;
-                    } else if (subjectRaw) {
-                        lastSubject = subjectRaw;
+                    if (!row || row.length === 0) continue;
+                    
+                    // Lấy giá trị từ các cột
+                    const sttValue = String(row[colMap.stt] || '').trim();
+                    const subjectValue = String(row[colMap.subject] || '').trim();
+                    const teacherValue = String(row[colMap.teacher] || '').trim();
+                    const creditsValue = String(row[colMap.credits] || '').trim();
+                    const classCodeValue = String(row[colMap.classCode] || '').trim();
+                    const dayValue = String(row[colMap.day] || '').trim();
+                    const periodValue = String(row[colMap.period] || '').trim();
+                    const roomValue = String(row[colMap.room] || '').trim();
+                    const dateRangeValue = String(row[colMap.dateRange] || '').trim();
+                    const campusValue = String(row[colMap.campus] || '').trim();
+                    
+                    // Kiểm tra xem có phải dòng bắt đầu môn học mới không (có STT là số)
+                    if (sttValue && /^\d+$/.test(sttValue)) {
+                        // Cập nhật context mới
+                        if (subjectValue) {
+                            currentContext.subject = extractSubjectName(subjectValue);
+                        }
+                        if (teacherValue) {
+                            currentContext.teacher = teacherValue.split(/[\n\r]/)[0].trim();
+                        }
+                        if (creditsValue) {
+                            currentContext.credits = creditsValue;
+                        }
+                        if (classCodeValue) {
+                            currentContext.classCode = classCodeValue;
+                        }
                     }
-
-                    if (!subjectRaw || !dayRaw || !periodRaw) continue;
-
-                    try {
-                        const day = parseDayString(dayRaw);
-                        const periodInfo = parseAdvancedPeriod(periodRaw);
-                        const dateInfo = parseAdvancedDateRange(dateRaw);
-                        
-                        let cleanSubject = String(subjectRaw);
-                        if (cleanSubject.includes('\n')) cleanSubject = cleanSubject.split('\n')[1] || cleanSubject;
-                        if (cleanSubject.includes('-')) cleanSubject = cleanSubject.split('-')[1] || cleanSubject;
-
-                        importedClasses.push({
-                            subject: cleanSubject.trim(),
-                            day: day,
-                            session: periodInfo.session,
-                            startPeriod: periodInfo.startPeriod,
-                            numPeriods: periodInfo.numPeriods,
-                            room: roomRaw || 'Online',
-                            teacher: teacherRaw ? String(teacherRaw).trim() : '',
-                            startDate: dateInfo.startDate,
-                            endDate: dateInfo.endDate,
-                            dateRangeDisplay: dateInfo.display,
-                            campus: 'Cơ sở chính', // Tạm để mặc định
-                            notes: []
-                        });
-                    } catch (err) {
-                        // console.warn('Row error:', err);
+                    
+                    // Kiểm tra xem dòng có thông tin lịch học không
+                    const day = parseDayString(dayValue);
+                    const periodInfo = parsePeriodString(periodValue);
+                    
+                    // Chỉ tạo lớp học khi có đủ thông tin tối thiểu
+                    if (day === null || periodInfo === null) {
+                        // Bỏ qua dòng này nhưng không báo lỗi nếu là dòng trống hoàn toàn
+                        const allEmpty = !sttValue && !subjectValue && !dayValue && !periodValue;
+                        if (!allEmpty && (dayValue || periodValue)) {
+                            warnings.push(`Dòng ${i + 1}: Thiếu thông tin Thứ hoặc Tiết (Day: "${dayValue}", Period: "${periodValue}")`);
+                        }
+                        continue;
                     }
+                    
+                    // Phải có context môn học
+                    if (!currentContext.subject) {
+                        warnings.push(`Dòng ${i + 1}: Không có tên môn học`);
+                        continue;
+                    }
+                    
+                    // Parse ngày
+                    const dateInfo = parseDateRange(dateRangeValue);
+                    
+                    // Tính session dựa trên tiết bắt đầu
+                    let session = 'morning';
+                    if (periodInfo.startPeriod >= 13) session = 'evening';
+                    else if (periodInfo.startPeriod >= 7) session = 'afternoon';
+                    
+                    // Tạo object lớp học
+                    const classObj = {
+                        subject: currentContext.subject,
+                        teacher: currentContext.teacher,
+                        room: roomValue || 'Online',
+                        campus: campusValue || 'Cơ sở chính',
+                        day: day,
+                        session: session,
+                        startPeriod: periodInfo.startPeriod,
+                        numPeriods: periodInfo.numPeriods,
+                        startDate: dateInfo.startDate ? new Date(dateInfo.startDate + 'T00:00:00').toISOString() : null,
+                        endDate: dateInfo.endDate ? new Date(dateInfo.endDate + 'T23:59:59').toISOString() : null,
+                        dateRangeDisplay: dateInfo.startDate && dateInfo.endDate 
+                            ? `${dateInfo.startDate} - ${dateInfo.endDate}` 
+                            : '',
+                        notes: []
+                    };
+                    
+                    importedClasses.push(classObj);
                 }
+                
+                // Log warnings
+                if (warnings.length > 0) {
+                    console.warn(`Import Excel - ${warnings.length} dòng không thể xử lý:`);
+                    warnings.forEach(w => console.warn(w));
+                }
+                
+                // Nếu có quá nhiều lỗi, có thể cần thông báo
+                if (warnings.length > 10) {
+                    console.warn(`CẢNH BÁO: Có ${warnings.length} dòng không được import. Vui lòng kiểm tra lại file.`);
+                }
+                
                 resolve(importedClasses);
+                
             } catch (error) {
+                console.error('Lỗi xử lý file Excel:', error);
                 reject(error);
             }
         };
+        
+        reader.onerror = () => {
+            reject(new Error('Không thể đọc file'));
+        };
+        
         reader.readAsArrayBuffer(file);
     });
-};
-
-// --- CÁC HÀM HELPER PARSE (Dữ nguyên logic từ code cũ) ---
-const parseDayString = (dayStr) => {
-    const s = String(dayStr).toLowerCase().trim();
-    if (s.includes('hai') || s.includes('2')) return '2';
-    if (s.includes('ba') || s.includes('3')) return '3';
-    if (s.includes('tư') || s.includes('4')) return '4';
-    if (s.includes('năm') || s.includes('5')) return '5';
-    if (s.includes('sáu') || s.includes('6')) return '6';
-    if (s.includes('bảy') || s.includes('7')) return '7';
-    if (s.includes('chủ') || s.includes('cn')) return 'CN';
-    return '2';
-};
-
-const parseAdvancedPeriod = (periodStr) => {
-    const str = String(periodStr).trim();
-    const numbers = str.match(/\d+/g);
-    
-    if (numbers && numbers.length >= 1) {
-        // Xử lý case (15h10) -> extract 15, 10...
-        // Để đơn giản hóa, ta lấy số đầu làm start, số cuối làm end (nếu <= 15)
-        // Logic cũ của bạn phức tạp hơn nhưng ở đây tôi tối ưu cho React
-        
-        let start = parseInt(numbers[0]);
-        let end = numbers.length > 1 ? parseInt(numbers[numbers.length - 1]) : start;
-        
-        // Nếu số > 15 (vd giờ phút), cần logic map giờ -> tiết (Dùng bảng PERIOD_TIMES)
-        // Tạm thời fallback logic đơn giản:
-        if (start > 15) { 
-             // Logic tìm tiết theo giờ (đã có trong code cũ, ở đây tôi lược giản)
-             start = 1; // Fallback an toàn
-             end = 3;
-        }
-
-        const numPeriods = Math.max(1, end - start + 1);
-        let session = 'morning';
-        if (start >= 13) session = 'evening';
-        else if (start >= 7) session = 'afternoon';
-
-        return { startPeriod: start, numPeriods, session };
-    }
-    return { startPeriod: 1, numPeriods: 2, session: 'morning' };
-};
-
-const parseAdvancedDateRange = (dateStr) => {
-    if (!dateStr) return { startDate: null, endDate: null, display: '' };
-    
-    const raw = String(dateStr);
-    const datePattern = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/g;
-    const matches = raw.match(datePattern);
-
-    if (matches && matches.length > 0) {
-        // Parse date VN format dd/mm/yyyy
-        const parseDate = (s) => {
-            const [d, m, y] = s.split(/[\/\-\.]/).map(Number);
-            return new Date(y, m - 1, d);
-        };
-
-        const start = parseDate(matches[0]);
-        const end = matches.length > 1 ? parseDate(matches[matches.length - 1]) : new Date(start);
-        
-        // Set time boundaries
-        start.setHours(0, 0, 0, 0);
-        end.setHours(23, 59, 59, 999);
-
-        return {
-            startDate: start.toISOString(),
-            endDate: end.toISOString(),
-            display: `${matches[0]} - ${matches.length > 1 ? matches[matches.length - 1] : matches[0]}`
-        };
-    }
-    return { startDate: null, endDate: null, display: '' };
 };
