@@ -19,6 +19,8 @@ import {
   Sparkles,
   ChevronDown,
   Menu,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 
 const resolveAvatarSrc = (avatar) => {
@@ -46,7 +48,7 @@ const getInitials = (name, fallback = "U") => {
   return normalized.slice(0, 2).toUpperCase();
 };
 
-const AiChat = () => {
+const AiChat = ({ onFullscreenChange = () => {} }) => {
   const user = JSON.parse(localStorage.getItem("user"));
   const userDisplayName = user?.fullName || user?.name || user?.username || "Bạn";
   const userAvatarSrc = resolveAvatarSrc(user?.avatar);
@@ -74,15 +76,23 @@ const AiChat = () => {
   const [filePreview, setFilePreview] = useState(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isUserAvatarBroken, setIsUserAvatarBroken] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const chatContainerRef = useRef(null);
   const isUserAtBottom = useRef(true);
+  const sidebarStateBeforeFullscreenRef = useRef(true);
 
   useEffect(() => {
     setIsUserAvatarBroken(false);
   }, [userAvatarSrc]);
+
+  useEffect(() => {
+    return () => {
+      onFullscreenChange(false);
+    };
+  }, [onFullscreenChange]);
 
   // 1. LOAD SESSIONS
   useEffect(() => {
@@ -267,6 +277,20 @@ const AiChat = () => {
     }
   };
 
+  const handleToggleFullscreen = () => {
+    setIsFullscreen((prev) => {
+      const next = !prev;
+      if (next) {
+        sidebarStateBeforeFullscreenRef.current = sidebarOpen;
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(sidebarStateBeforeFullscreenRef.current);
+      }
+      onFullscreenChange(next);
+      return next;
+    });
+  };
+
   const handleSend = async () => {
     if ((!input.trim() && !selectedFile) || isLoading) return;
 
@@ -388,8 +412,12 @@ const AiChat = () => {
   };
 
   return (
-    <div className="relative flex h-full min-h-0 w-full overflow-hidden rounded-2xl border border-gray-200 bg-white text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
-      {isMobile && sidebarOpen && (
+    <div
+      className={`relative flex h-full min-h-0 w-full overflow-hidden bg-white text-gray-800 dark:bg-gray-900 dark:text-gray-100 ${
+        isFullscreen ? "rounded-none border-0" : "rounded-2xl border border-gray-200 dark:border-gray-700"
+      }`}
+    >
+      {isMobile && sidebarOpen && !isFullscreen && (
         <button
           type="button"
           aria-label="Đóng danh sách cuộc trò chuyện"
@@ -400,7 +428,9 @@ const AiChat = () => {
 
       {/* SIDEBAR LỊCH SỬ CHAT - HIỆN/ẨN BẰNG NÚT MENU */}
       <div
-        className={`${
+        className={`${isFullscreen
+            ? "hidden"
+            : `${
           isMobile
             ? sidebarOpen
               ? "absolute inset-y-0 left-0 z-40 w-[85vw] max-w-xs"
@@ -408,7 +438,8 @@ const AiChat = () => {
             : sidebarOpen
               ? "w-64"
               : "w-0"
-        } bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col h-full shrink-0 overflow-hidden`}
+          }`
+          } bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col h-full shrink-0 overflow-hidden`}
       >
         <div className="p-4 shrink-0 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
@@ -495,13 +526,15 @@ const AiChat = () => {
           <div className="h-14 sm:h-16 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-3 sm:px-6 bg-white dark:bg-gray-800 shrink-0">
           {/* Bên trái: Nút menu và logo */}
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400"
-              title="Mở lịch sử chat"
-            >
-              <Menu size={20} />
-            </button>
+            {!isFullscreen && (
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400"
+                title="Mở lịch sử chat"
+              >
+                <Menu size={20} />
+              </button>
+            )}
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-800 dark:text-white text-base sm:text-lg flex items-center gap-2">
                 Whalio AI{" "}
@@ -515,6 +548,14 @@ const AiChat = () => {
               </span>
             </div>
           </div>
+          <button
+            onClick={handleToggleFullscreen}
+            className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+            title={isFullscreen ? "Thu nhỏ AiChat" : "Phóng to AiChat"}
+            aria-label={isFullscreen ? "Thu nhỏ AiChat" : "Phóng to AiChat"}
+          >
+            {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+          </button>
         </div>
 
         {/* Nút cuộn xuống */}

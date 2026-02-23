@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { Menu, X, Home, FileText, Users, LayoutGrid, Moon, Sun, Settings, LogOut, Save, User } from 'lucide-react';
@@ -418,6 +418,14 @@ function App() {
   };
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isAiChatFullscreen, setIsAiChatFullscreen] = useState(false);
+
+  const handleAiChatFullscreenChange = useCallback((next) => {
+    setIsAiChatFullscreen(next);
+    if (next) {
+      setIsMobileSidebarOpen(false);
+    }
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -436,11 +444,13 @@ function App() {
       <MusicProvider>
       <SplashScreen isVisible={isSplashVisible} isFadingOut={isSplashFadingOut} />
       <div className="flex h-screen w-full max-w-full overflow-hidden bg-gray-50 dark:bg-gray-900">
+        {!isAiChatFullscreen && (
         <div className="hidden min-[1025px]:block">
           <Sidebar />
         </div>
+        )}
 
-        {isMobileSidebarOpen && (
+        {!isAiChatFullscreen && isMobileSidebarOpen && (
           <div className="fixed inset-0 z-[90] flex min-[1025px]:hidden">
             <div
               className="flex-1 bg-black/45 backdrop-blur-[1px]"
@@ -462,7 +472,8 @@ function App() {
           </div>
         )}
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col min-[1025px]:ml-64">
+        <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${isAiChatFullscreen ? '' : 'min-[1025px]:ml-64'}`}>
+          {!isAiChatFullscreen && (
           <div className="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between border-b border-gray-200 bg-white/95 px-3 backdrop-blur-md dark:border-gray-700 dark:bg-gray-900/95 min-[1025px]:hidden">
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
@@ -482,7 +493,9 @@ function App() {
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
           </div>
+          )}
 
+          {!isAiChatFullscreen && (
           <div className="hidden min-[1025px]:block">
           {/* HEADER: Truyền props xuống để Header biết:
              - user: Có ai đang đăng nhập không?
@@ -497,13 +510,24 @@ function App() {
             onToggleDarkMode={() => setDarkMode(!darkMode)}
           /> 
           </div>
+          )}
 
           {/* Main content */}
-          <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 pb-24 pt-16 scroll-smooth sm:p-4 sm:pt-16 md:p-5 md:pt-16 min-[1025px]:p-6 min-[1025px]:pb-6 min-[1025px]:pt-20">
+          <main className={isAiChatFullscreen
+            ? "min-w-0 flex-1 overflow-hidden p-0"
+            : "min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 pb-24 pt-16 scroll-smooth sm:p-4 sm:pt-16 md:p-5 md:pt-16 min-[1025px]:p-6 min-[1025px]:pb-6 min-[1025px]:pt-20"
+          }>
             <Routes>
             <Route path="/" element={<Dashboard user={user} darkMode={darkMode} setDarkMode={setDarkMode} />} />
               <Route path="/gpa" element={<GpaCalc />} />
-              <Route path="/ai-assistant" element={<AiChat />} />
+              <Route
+                path="/ai-assistant"
+                element={
+                  <AiChat
+                    onFullscreenChange={handleAiChatFullscreenChange}
+                  />
+                }
+              />
               <Route path="/profile" element={
                 <Profile user={user} onUpdateUser={handleUpdateUser} />
               } />
@@ -518,11 +542,13 @@ function App() {
             </Routes>
           </main>
 
+          {!isAiChatFullscreen && (
           <MobileBottomNav
             user={user}
             onLoginClick={() => setIsModalOpen(true)}
             onLogoutClick={handleLogout}
           />
+          )}
         </div>
 
         {/* Floating Music Player - controlled by MusicContext */}
