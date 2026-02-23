@@ -19,22 +19,19 @@ const LoadingOverlay = ({ isVisible, message = "Đang xử lý..." }) => {
       
       {/* Content */}
       <div className="relative z-10 mx-auto flex w-full max-w-sm flex-col items-center text-center px-6">
-        {/* Card container */}
-        <div className="bg-[#0a2f73]/95 rounded-2xl p-8 shadow-2xl border border-blue-400/20">
-          <img
-            src="/logo.png"
-            alt="Whalio Loading"
-            className="h-20 w-20 animate-whale-float object-contain mx-auto"
-          />
-          <p className="mt-5 text-sm font-semibold leading-relaxed text-blue-100 sm:text-base">
-            {message}
-          </p>
-          {/* Loading dots animation */}
-          <div className="flex justify-center gap-1.5 mt-4">
-            <span className="w-2 h-2 bg-blue-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-            <span className="w-2 h-2 bg-blue-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <span className="w-2 h-2 bg-blue-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-          </div>
+        <img
+          src="/logo.png"
+          alt="Whalio Loading"
+          className="h-24 w-24 animate-whale-float object-contain drop-shadow-2xl sm:h-28 sm:w-28"
+        />
+        <p className="mt-6 text-base font-bold leading-relaxed text-white drop-shadow-lg sm:text-lg">
+          {message}
+        </p>
+        {/* Loading dots animation */}
+        <div className="flex justify-center gap-1.5 mt-4">
+          <span className="w-2.5 h-2.5 bg-white rounded-full animate-bounce drop-shadow-md" style={{ animationDelay: '0ms' }} />
+          <span className="w-2.5 h-2.5 bg-white rounded-full animate-bounce drop-shadow-md" style={{ animationDelay: '150ms' }} />
+          <span className="w-2.5 h-2.5 bg-white rounded-full animate-bounce drop-shadow-md" style={{ animationDelay: '300ms' }} />
         </div>
       </div>
     </div>
