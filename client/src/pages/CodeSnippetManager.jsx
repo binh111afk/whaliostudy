@@ -726,7 +726,8 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
               </div>
             </div>
 
-            <div className="grid gap-3 border-b border-gray-200 bg-gray-50/80 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/60 md:grid-cols-3">
+            <div className="space-y-3 border-b border-gray-200 bg-gray-50/80 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/60">
+              <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Tên môn học
@@ -743,11 +744,12 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   {selectedSnippet.assignmentName || selectedSnippet.cardTitle || 'Chưa cập nhật'}
                 </p>
               </div>
+              </div>
               <div className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Nội dung bài tập
                 </p>
-                <p className="mt-1 line-clamp-2 text-sm text-gray-700 dark:text-gray-200">
+                <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200">
                   {selectedSnippet.assignmentDescription || 'Chưa có mô tả'}
                 </p>
               </div>
