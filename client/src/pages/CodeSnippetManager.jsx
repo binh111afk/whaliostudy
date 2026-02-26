@@ -755,7 +755,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
               </div>
             </div>
 
-            <div className="min-h-[66vh] flex-1 shrink-0 p-4">
+            <div className="h-[75vh] min-h-[75vh] shrink-0 p-4">
               <div className="h-full overflow-hidden rounded-2xl border border-gray-200 shadow-sm dark:border-gray-700">
                 <HighlightCodeEditor
                   language={editorLanguage}
