@@ -674,8 +674,8 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
       />
 
       {selectedSnippet && (
-        <div className="fixed inset-x-0 bottom-0 top-14 z-[80] bg-white dark:bg-gray-900 min-[1025px]:top-16">
-          <div className="flex h-full flex-col">
+        <div className="w-full bg-white pb-6 dark:bg-gray-900">
+          <div className="flex min-h-0 flex-col">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
               <button
                 onClick={handleCloseDetail}

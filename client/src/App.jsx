@@ -536,9 +536,12 @@ function App() {
             )}
 
             {/* Main content */}
-            <main className={isFullscreenLayout
-              ? "min-w-0 flex-1 overflow-hidden p-0"
-              : "min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 pb-24 pt-16 scroll-smooth sm:p-4 sm:pt-16 md:p-5 md:pt-16 min-[1025px]:p-6 min-[1025px]:pb-6 min-[1025px]:pt-20"
+            <main className={
+              isAiChatFullscreen
+                ? "min-w-0 flex-1 overflow-hidden p-0"
+                : isCodeVaultFullscreen
+                  ? "min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-0"
+                  : "min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 pb-24 pt-16 scroll-smooth sm:p-4 sm:pt-16 md:p-5 md:pt-16 min-[1025px]:p-6 min-[1025px]:pb-6 min-[1025px]:pt-20"
             }>
               <Routes>
                 <Route path="/" element={<Dashboard user={user} darkMode={darkMode} setDarkMode={setDarkMode} />} />
