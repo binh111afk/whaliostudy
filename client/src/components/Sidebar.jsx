@@ -10,6 +10,7 @@ import {
   Settings,
   Hourglass,
   Bell,
+  Code2,
 } from "lucide-react";
 import WhalioBrand from "./WhalioBrand";
 
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { icon: Hourglass, label: "StudyTime", to: "/timer" },
   { icon: Calendar, label: "Thời khóa biểu", to: "/timetable" },
   { icon: Bell, label: "Thông báo", to: "/announcements" },
+  { icon: Code2, label: "Kho Code", to: "/code-vault" },
 ];
 
 const Sidebar = ({ isMobile = false, onNavigate }) => {

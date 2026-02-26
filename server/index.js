@@ -1919,6 +1919,21 @@ const quickNoteSchema = new mongoose.Schema({
 
 quickNoteSchema.index({ username: 1, createdAt: -1 });
 
+// Code Snippet Schema (Kho Code)
+const codeSnippetSchema = new mongoose.Schema({
+    username: { type: String, required: true, index: true },
+    cardTitle: { type: String, required: true, trim: true, maxlength: 200 },
+    subjectName: { type: String, default: '', trim: true, maxlength: 120 },
+    assignmentName: { type: String, default: '', trim: true, maxlength: 220 },
+    assignmentDescription: { type: String, default: '', trim: true, maxlength: 12000 },
+    code: { type: String, default: '' },
+    language: { type: String, default: 'plaintext', trim: true, maxlength: 60 },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+codeSnippetSchema.index({ username: 1, createdAt: -1 });
+
 // Announcement Schema (Admin notifications)
 const announcementSchema = new mongoose.Schema({
     title: { type: String, required: true, trim: true, maxlength: 200 },
@@ -2095,6 +2110,7 @@ const Post = mongoose.model('Post', postSchema);
 const Activity = mongoose.model('Activity', activitySchema);
 const Timetable = mongoose.model('Timetable', timetableSchema);
 const QuickNote = mongoose.model('QuickNote', quickNoteSchema);
+const CodeSnippet = mongoose.model('CodeSnippet', codeSnippetSchema);
 const Announcement = mongoose.model('Announcement', announcementSchema);
 const PortalConfig = mongoose.model('PortalConfig', portalConfigSchema);
 const Event = mongoose.model('Event', eventSchema);
@@ -4456,6 +4472,165 @@ app.delete('/api/announcements/:id', async (req, res) => {
         return res.json({ success: true });
     } catch (err) {
         console.error('Delete announcement error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+// 4.3 Code Snippet APIs (MongoDB)
+app.get('/api/code-snippets', async (req, res) => {
+    try {
+        const normalizedUsername = String(req.query.username || '').trim();
+        if (!normalizedUsername) {
+            return res.status(400).json({ success: false, message: 'Thiếu username', snippets: [] });
+        }
+
+        const snippets = await CodeSnippet.find({ username: normalizedUsername })
+            .select('-__v')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const formattedSnippets = snippets.map((item) => ({
+            ...item,
+            id: item._id.toString()
+        }));
+
+        return res.json({ success: true, snippets: formattedSnippets });
+    } catch (err) {
+        console.error('Get code snippets error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server', snippets: [] });
+    }
+});
+
+app.post('/api/code-snippets', async (req, res) => {
+    try {
+        const {
+            username,
+            cardTitle,
+            subjectName,
+            assignmentName,
+            assignmentDescription,
+            code,
+            language
+        } = req.body || {};
+
+        const normalizedUsername = String(username || '').trim();
+        const normalizedCardTitle = String(cardTitle || '').trim();
+
+        if (!normalizedUsername) {
+            return res.status(400).json({ success: false, message: 'Thiếu username' });
+        }
+        if (!normalizedCardTitle) {
+            return res.status(400).json({ success: false, message: 'Tên card là bắt buộc' });
+        }
+
+        const now = new Date();
+        const snippet = new CodeSnippet({
+            username: normalizedUsername,
+            cardTitle: normalizedCardTitle,
+            subjectName: String(subjectName || '').trim(),
+            assignmentName: String(assignmentName || '').trim(),
+            assignmentDescription: String(assignmentDescription || '').trim(),
+            code: String(code || ''),
+            language: String(language || 'plaintext').trim() || 'plaintext',
+            createdAt: now,
+            updatedAt: now
+        });
+
+        await snippet.save();
+        return res.json({
+            success: true,
+            snippet: {
+                ...snippet.toObject(),
+                id: snippet._id.toString()
+            }
+        });
+    } catch (err) {
+        console.error('Create code snippet error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+app.patch('/api/code-snippets/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            username,
+            cardTitle,
+            subjectName,
+            assignmentName,
+            assignmentDescription,
+            code,
+            language
+        } = req.body || {};
+
+        const normalizedUsername = String(username || '').trim();
+        if (!normalizedUsername) {
+            return res.status(400).json({ success: false, message: 'Thiếu username' });
+        }
+
+        const update = { updatedAt: new Date() };
+
+        if (typeof cardTitle === 'string') {
+            const value = cardTitle.trim();
+            if (!value) {
+                return res.status(400).json({ success: false, message: 'Tên card không được để trống' });
+            }
+            update.cardTitle = value;
+        }
+
+        if (typeof subjectName === 'string') update.subjectName = subjectName.trim();
+        if (typeof assignmentName === 'string') update.assignmentName = assignmentName.trim();
+        if (typeof assignmentDescription === 'string') update.assignmentDescription = assignmentDescription.trim();
+        if (typeof code === 'string') update.code = code;
+        if (typeof language === 'string') {
+            const normalizedLanguage = language.trim();
+            update.language = normalizedLanguage || 'plaintext';
+        }
+
+        const snippet = await CodeSnippet.findOneAndUpdate(
+            { _id: id, username: normalizedUsername },
+            { $set: update },
+            { new: true, runValidators: true }
+        );
+
+        if (!snippet) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy card code' });
+        }
+
+        return res.json({
+            success: true,
+            snippet: {
+                ...snippet.toObject(),
+                id: snippet._id.toString()
+            }
+        });
+    } catch (err) {
+        console.error('Update code snippet error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+app.delete('/api/code-snippets/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const normalizedUsername = String(req.query.username || '').trim();
+
+        if (!normalizedUsername) {
+            return res.status(400).json({ success: false, message: 'Thiếu username' });
+        }
+
+        const deleted = await CodeSnippet.findOneAndDelete({
+            _id: id,
+            username: normalizedUsername
+        });
+
+        if (!deleted) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy card code' });
+        }
+
+        return res.json({ success: true });
+    } catch (err) {
+        console.error('Delete code snippet error:', err);
         return res.status(500).json({ success: false, message: 'Lỗi server' });
     }
 });

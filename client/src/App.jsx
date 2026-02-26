@@ -27,6 +27,7 @@ import Exams from './pages/Exams';
 import DocumentViewer from './pages/DocumentViewer';
 import Portal from './pages/Portal';
 import Announcements from './pages/Announcements';
+import CodeSnippetManager from './pages/CodeSnippetManager';
 
 const MOBILE_NAV_ITEMS = [
   { to: '/', label: 'Trang chủ', icon: Home },
@@ -47,6 +48,7 @@ const ROUTE_TITLES = {
   '/exams': 'Đề thi',
   '/portal': 'Tiện ích',
   '/announcements': 'Thông báo',
+  '/code-vault': 'Kho Code',
 };
 
 const AUTH_USER_ENDPOINT = 'https://whaliostudy.onrender.com/auth/user';
@@ -419,6 +421,7 @@ function App() {
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAiChatFullscreen, setIsAiChatFullscreen] = useState(false);
+  const [isCodeVaultFullscreen, setIsCodeVaultFullscreen] = useState(false);
 
   const handleAiChatFullscreenChange = useCallback((next) => {
     setIsAiChatFullscreen(next);
@@ -426,6 +429,15 @@ function App() {
       setIsMobileSidebarOpen(false);
     }
   }, []);
+
+  const handleCodeVaultFullscreenChange = useCallback((next) => {
+    setIsCodeVaultFullscreen(next);
+    if (next) {
+      setIsMobileSidebarOpen(false);
+    }
+  }, []);
+
+  const isFullscreenLayout = isAiChatFullscreen || isCodeVaultFullscreen;
 
   useEffect(() => {
     const handleResize = () => {
@@ -444,14 +456,14 @@ function App() {
       <MusicProvider>
         <SplashScreen isVisible={isSplashVisible} isFadingOut={isSplashFadingOut} />
         <div className="flex h-screen w-full max-w-full overflow-hidden bg-gray-50 dark:bg-gray-900">
-          {!isAiChatFullscreen && (
+          {!isFullscreenLayout && (
             <div className="hidden min-[1025px]:block">
               <Sidebar />
             </div>
           )}
 
           <AnimatePresence>
-            {!isAiChatFullscreen && isMobileSidebarOpen && (
+            {!isFullscreenLayout && isMobileSidebarOpen && (
               <div className="fixed inset-0 z-[90] flex min-[1025px]:hidden">
                 <motion.div
                   initial={{ x: '-100%' }}
@@ -483,8 +495,8 @@ function App() {
             )}
           </AnimatePresence>
 
-          <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${isAiChatFullscreen ? '' : 'min-[1025px]:ml-64'}`}>
-            {!isAiChatFullscreen && (
+          <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${isFullscreenLayout ? '' : 'min-[1025px]:ml-64'}`}>
+            {!isFullscreenLayout && (
               <div className="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between border-b border-gray-200 bg-white/95 px-3 backdrop-blur-md dark:border-gray-700 dark:bg-gray-900/95 min-[1025px]:hidden">
                 <button
                   onClick={() => setIsMobileSidebarOpen(true)}
@@ -506,7 +518,7 @@ function App() {
               </div>
             )}
 
-            {!isAiChatFullscreen && (
+            {!isFullscreenLayout && (
               <div className="hidden min-[1025px]:block">
                 {/* HEADER: Truyền props xuống để Header biết:
              - user: Có ai đang đăng nhập không?
@@ -524,7 +536,7 @@ function App() {
             )}
 
             {/* Main content */}
-            <main className={isAiChatFullscreen
+            <main className={isFullscreenLayout
               ? "min-w-0 flex-1 overflow-hidden p-0"
               : "min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 pb-24 pt-16 scroll-smooth sm:p-4 sm:pt-16 md:p-5 md:pt-16 min-[1025px]:p-6 min-[1025px]:pb-6 min-[1025px]:pt-20"
             }>
@@ -550,10 +562,19 @@ function App() {
                 <Route path="/documents/:id" element={<DocumentViewer />} />
                 <Route path="/portal" element={<Portal user={user} />} />
                 <Route path="/announcements" element={<Announcements user={user} />} />
+                <Route
+                  path="/code-vault"
+                  element={
+                    <CodeSnippetManager
+                      user={user}
+                      onFullscreenChange={handleCodeVaultFullscreenChange}
+                    />
+                  }
+                />
               </Routes>
             </main>
 
-            {!isAiChatFullscreen && (
+            {!isFullscreenLayout && (
               <MobileBottomNav
                 user={user}
                 onLoginClick={() => setIsModalOpen(true)}
