@@ -10,8 +10,10 @@ import {
   Download,
   FileCode2,
   Moon,
+  Play,
   Pencil,
   Plus,
+  RotateCcw,
   Search,
   Sparkles,
   Sun,
@@ -168,6 +170,239 @@ const getHighlightLanguage = (language) => {
   return language;
 };
 
+const INDENT_UNIT = '  ';
+const AUTO_PAIR_MAP = {
+  '(': ')',
+  '[': ']',
+  '{': '}',
+  '"': '"',
+  "'": "'",
+  '`': '`',
+};
+const OPENING_CHARS = new Set(Object.keys(AUTO_PAIR_MAP));
+const CLOSING_CHARS = new Set(Object.values(AUTO_PAIR_MAP));
+const JS_LIKE_LANGUAGES = new Set(['javascript', 'typescript', 'cpp', 'java']);
+const DIRECT_RUN_LANGUAGES = new Set(['javascript']);
+
+const collectCodeIssues = (code, language) => {
+  const issues = [];
+  const source = String(code || '');
+  const normalizedLanguage = String(language || 'plaintext');
+  const stack = [];
+  const stackEntryMeta = [];
+  const supportsJsComments = JS_LIKE_LANGUAGES.has(normalizedLanguage);
+  let line = 1;
+  let col = 0;
+  let activeQuote = '';
+  let quoteLine = 1;
+  let quoteCol = 1;
+  let inLineComment = false;
+  let inBlockComment = false;
+  let escaped = false;
+
+  for (let i = 0; i < source.length; i += 1) {
+    const char = source[i];
+    const nextChar = source[i + 1];
+    col += 1;
+
+    if (char === '\n') {
+      line += 1;
+      col = 0;
+      inLineComment = false;
+      escaped = false;
+      continue;
+    }
+
+    if (inLineComment) continue;
+
+    if (inBlockComment) {
+      if (char === '*' && nextChar === '/') {
+        inBlockComment = false;
+        i += 1;
+        col += 1;
+      }
+      continue;
+    }
+
+    if (activeQuote) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (char === activeQuote) {
+        activeQuote = '';
+      }
+      continue;
+    }
+
+    if (supportsJsComments && char === '/' && nextChar === '/') {
+      inLineComment = true;
+      i += 1;
+      col += 1;
+      continue;
+    }
+    if (supportsJsComments && char === '/' && nextChar === '*') {
+      inBlockComment = true;
+      i += 1;
+      col += 1;
+      continue;
+    }
+
+    if (char === '"' || char === "'" || char === '`') {
+      activeQuote = char;
+      quoteLine = line;
+      quoteCol = col;
+      continue;
+    }
+
+    if (char === '(' || char === '[' || char === '{') {
+      stack.push(char);
+      stackEntryMeta.push({ line, col });
+      continue;
+    }
+
+    if (char === ')' || char === ']' || char === '}') {
+      const last = stack.pop();
+      const lastMeta = stackEntryMeta.pop();
+      if (!last || AUTO_PAIR_MAP[last] !== char) {
+        const expected = last ? AUTO_PAIR_MAP[last] : 'không có';
+        const from = lastMeta ? ` (mở tại dòng ${lastMeta.line})` : '';
+        issues.push(`Sai cặp ngoặc tại dòng ${line}, cột ${col}: gặp "${char}", mong đợi "${expected}"${from}.`);
+      }
+    }
+  }
+
+  if (activeQuote) {
+    issues.push(`Thiếu dấu đóng cho ${activeQuote} bắt đầu ở dòng ${quoteLine}, cột ${quoteCol}.`);
+  }
+  while (stack.length > 0) {
+    const opened = stack.pop();
+    const openedMeta = stackEntryMeta.pop();
+    issues.push(
+      `Thiếu dấu đóng "${AUTO_PAIR_MAP[opened]}" cho "${opened}" ở dòng ${openedMeta?.line || 1}, cột ${openedMeta?.col || 1}.`
+    );
+  }
+
+  if (normalizedLanguage === 'json' && source.trim()) {
+    try {
+      JSON.parse(source);
+    } catch (error) {
+      const message = String(error?.message || 'JSON không hợp lệ');
+      issues.push(`JSON lỗi: ${message}`);
+    }
+  }
+
+  if (normalizedLanguage === 'javascript' && source.trim()) {
+    try {
+      // Validate syntax quickly before running in worker.
+      new Function(source);
+    } catch (error) {
+      const message = String(error?.message || 'Lỗi cú pháp JavaScript');
+      issues.push(`JavaScript lỗi cú pháp: ${message}`);
+    }
+  }
+
+  return issues;
+};
+
+const runJavaScriptInWorker = ({ code, input, timeoutMs = 5000 }) => {
+  const workerSource = `
+self.onmessage = async (event) => {
+  const payload = event.data || {};
+  const source = String(payload.code || '');
+  const rawInput = String(payload.input || '');
+  const inputLines = rawInput.split(/\\r?\\n/);
+  let inputIndex = 0;
+  const readInput = () => (inputIndex < inputLines.length ? inputLines[inputIndex++] : '');
+  const stringifyValue = (value) => {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'undefined') return 'undefined';
+    try {
+      return JSON.stringify(value);
+    } catch (error) {
+      return String(value);
+    }
+  };
+  const output = [];
+  const print = (...args) => {
+    output.push(args.map((arg) => stringifyValue(arg)).join(' '));
+  };
+  const consoleProxy = {
+    log: (...args) => print(...args),
+    info: (...args) => print(...args),
+    warn: (...args) => print(...args),
+    error: (...args) => output.push('[error] ' + args.map((arg) => stringifyValue(arg)).join(' ')),
+  };
+  try {
+    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    const runner = new AsyncFunction('console', 'input', 'readLine', 'print', 'prompt', '"use strict";\\n' + source);
+    const result = await runner(consoleProxy, readInput, readInput, print, readInput);
+    if (typeof result !== 'undefined') {
+      output.push('=> ' + stringifyValue(result));
+    }
+    self.postMessage({
+      type: 'success',
+      output: output.join('\\n') || '(Không có output)',
+    });
+  } catch (error) {
+    self.postMessage({
+      type: 'error',
+      error: error && error.message ? error.message : String(error),
+    });
+  }
+};
+`;
+
+  return new Promise((resolve, reject) => {
+    const blob = new Blob([workerSource], { type: 'application/javascript' });
+    const url = URL.createObjectURL(blob);
+    const worker = new Worker(url);
+    let finished = false;
+
+    const cleanup = () => {
+      worker.terminate();
+      URL.revokeObjectURL(url);
+    };
+
+    const timeoutId = window.setTimeout(() => {
+      if (finished) return;
+      finished = true;
+      cleanup();
+      reject(new Error('Code chạy quá lâu (>5 giây). Hãy kiểm tra vòng lặp vô hạn.'));
+    }, timeoutMs);
+
+    worker.onmessage = (event) => {
+      if (finished) return;
+      finished = true;
+      window.clearTimeout(timeoutId);
+      cleanup();
+      const payload = event?.data || {};
+      if (payload.type === 'success') {
+        resolve(String(payload.output || '(Không có output)'));
+        return;
+      }
+      reject(new Error(String(payload.error || 'Lỗi chạy code')));
+    };
+
+    worker.onerror = (event) => {
+      if (finished) return;
+      finished = true;
+      window.clearTimeout(timeoutId);
+      cleanup();
+      reject(new Error(String(event?.message || 'Worker gặp lỗi')));
+    };
+
+    worker.postMessage({
+      code: String(code || ''),
+      input: String(input || ''),
+    });
+  });
+};
+
 const HighlightCodeEditor = ({ value, onChange, language, theme }) => {
   const previewRef = useRef(null);
   const inputRef = useRef(null);
@@ -199,21 +434,162 @@ const HighlightCodeEditor = ({ value, onChange, language, theme }) => {
     syncScroll(event.target);
   };
 
-  const handleKeyDown = (event) => {
-    if (event.key !== 'Tab') return;
+  const applyEditorMutation = (target, nextValue, caretStart, caretEnd = caretStart) => {
+    onChange(nextValue);
+    window.requestAnimationFrame(() => {
+      target.selectionStart = caretStart;
+      target.selectionEnd = caretEnd;
+      syncScroll(target);
+    });
+  };
 
-    event.preventDefault();
+  const outdentLine = (line) => {
+    if (line.startsWith(INDENT_UNIT)) {
+      return { line: line.slice(INDENT_UNIT.length), removed: INDENT_UNIT.length };
+    }
+    if (line.startsWith('\t')) {
+      return { line: line.slice(1), removed: 1 };
+    }
+    const leadingSpaces = (line.match(/^ +/) || [''])[0].length;
+    const removed = Math.min(INDENT_UNIT.length, leadingSpaces);
+    return { line: line.slice(removed), removed };
+  };
+
+  const handleKeyDown = (event) => {
     const target = event.currentTarget;
     const start = target.selectionStart;
     const end = target.selectionEnd;
-    const nextValue = `${value.slice(0, start)}  ${value.slice(end)}`;
+    const hasSelection = start !== end;
+    const key = event.key;
+    const before = value.slice(0, start);
+    const selected = value.slice(start, end);
+    const after = value.slice(end);
 
-    onChange(nextValue);
-    window.requestAnimationFrame(() => {
-      target.selectionStart = start + 2;
-      target.selectionEnd = start + 2;
-      syncScroll(target);
-    });
+    if (key === 'Tab') {
+      event.preventDefault();
+
+      if (hasSelection) {
+        const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+        let lineEnd = value.indexOf('\n', end);
+        if (lineEnd === -1) lineEnd = value.length;
+
+        const block = value.slice(lineStart, lineEnd);
+        const lines = block.split('\n');
+
+        if (event.shiftKey) {
+          let removedTotal = 0;
+          let removedFirstLine = 0;
+          const nextLines = lines.map((line, index) => {
+            const { line: nextLine, removed } = outdentLine(line);
+            removedTotal += removed;
+            if (index === 0) removedFirstLine = removed;
+            return nextLine;
+          });
+
+          const nextBlock = nextLines.join('\n');
+          const nextValue = `${value.slice(0, lineStart)}${nextBlock}${value.slice(lineEnd)}`;
+          const nextStart = Math.max(lineStart, start - removedFirstLine);
+          const nextEnd = Math.max(nextStart, end - removedTotal);
+          applyEditorMutation(target, nextValue, nextStart, nextEnd);
+          return;
+        }
+
+        const nextBlock = lines.map((line) => `${INDENT_UNIT}${line}`).join('\n');
+        const nextValue = `${value.slice(0, lineStart)}${nextBlock}${value.slice(lineEnd)}`;
+        const nextStart = start + INDENT_UNIT.length;
+        const nextEnd = end + INDENT_UNIT.length * lines.length;
+        applyEditorMutation(target, nextValue, nextStart, nextEnd);
+        return;
+      }
+
+      const nextValue = `${before}${INDENT_UNIT}${after}`;
+      const nextCaret = start + INDENT_UNIT.length;
+      applyEditorMutation(target, nextValue, nextCaret);
+      return;
+    }
+
+    if (key === 'Enter') {
+      event.preventDefault();
+
+      const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+      const lineBeforeCursor = value.slice(lineStart, start);
+      const trimmedLineBeforeCursor = lineBeforeCursor.replace(/[ \t]+$/g, '');
+      const currentIndent = (trimmedLineBeforeCursor.match(/^\s*/) || [''])[0];
+      const previousChar = trimmedLineBeforeCursor.trimEnd().slice(-1);
+      const nextChar = value.slice(end, end + 1);
+      const shouldIndent = previousChar === '{' || previousChar === '[' || previousChar === '(';
+
+      if (
+        !hasSelection &&
+        shouldIndent &&
+        nextChar &&
+        ((previousChar === '{' && nextChar === '}') ||
+          (previousChar === '[' && nextChar === ']') ||
+          (previousChar === '(' && nextChar === ')'))
+      ) {
+        const linePrefix = `${value.slice(0, lineStart)}${trimmedLineBeforeCursor}`;
+        const nextValue = `${linePrefix}\n${currentIndent}${INDENT_UNIT}\n${currentIndent}${value.slice(end)}`;
+        const nextCaret = linePrefix.length + 1 + currentIndent.length + INDENT_UNIT.length;
+        applyEditorMutation(target, nextValue, nextCaret);
+        return;
+      }
+
+      const normalizedBefore = `${value.slice(0, lineStart)}${trimmedLineBeforeCursor}`;
+      const nextIndent = shouldIndent ? `${currentIndent}${INDENT_UNIT}` : currentIndent;
+      const nextValue = `${normalizedBefore}\n${nextIndent}${value.slice(end)}`;
+      const nextCaret = normalizedBefore.length + 1 + nextIndent.length;
+      applyEditorMutation(target, nextValue, nextCaret);
+      return;
+    }
+
+    if (key === 'Backspace' && !hasSelection && start > 0) {
+      const previousChar = value[start - 1];
+      const nextChar = value[start];
+      if (AUTO_PAIR_MAP[previousChar] === nextChar) {
+        event.preventDefault();
+        const nextValue = `${value.slice(0, start - 1)}${value.slice(start + 1)}`;
+        applyEditorMutation(target, nextValue, start - 1);
+        return;
+      }
+    }
+
+    if (OPENING_CHARS.has(key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      const closeChar = AUTO_PAIR_MAP[key];
+      const previousChar = value[start - 1] || '';
+      const nextChar = value[end] || '';
+      const isQuote = key === '"' || key === "'" || key === '`';
+
+      if (isQuote && !hasSelection) {
+        if (nextChar === key) {
+          applyEditorMutation(target, value, start + 1);
+          return;
+        }
+        if (/\w/.test(previousChar)) {
+          const nextValue = `${before}${key}${after}`;
+          applyEditorMutation(target, nextValue, start + 1);
+          return;
+        }
+      }
+
+      if (hasSelection) {
+        const nextValue = `${before}${key}${selected}${closeChar}${after}`;
+        applyEditorMutation(target, nextValue, start + 1, end + 1);
+        return;
+      }
+
+      const nextValue = `${before}${key}${closeChar}${after}`;
+      applyEditorMutation(target, nextValue, start + 1);
+      return;
+    }
+
+    if (CLOSING_CHARS.has(key) && !hasSelection) {
+      const nextChar = value[start] || '';
+      if (nextChar === key) {
+        event.preventDefault();
+        applyEditorMutation(target, value, start + 1);
+      }
+    }
   };
 
   return (
@@ -393,6 +769,10 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     }
   });
   const [closingDetail, setClosingDetail] = useState(false);
+  const [programInput, setProgramInput] = useState('');
+  const [programOutput, setProgramOutput] = useState('');
+  const [programError, setProgramError] = useState('');
+  const [runningCode, setRunningCode] = useState(false);
 
   const username = useMemo(() => resolveUsername(user), [user]);
 
@@ -652,6 +1032,9 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     setSelectedSnippet(snippet);
     setEditorCode(String(snippet.code || ''));
     setEditorLanguage(String(snippet.language || inferLanguageFromSubject(snippet.subjectName)));
+    setProgramInput('');
+    setProgramOutput('');
+    setProgramError('');
   };
 
   const handleCloseDetail = async () => {
@@ -711,6 +1094,57 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     anchor.download = `${fileNameBase}.${extension}`;
     anchor.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleRunCode = async () => {
+    const source = String(editorCode || '');
+    if (!source.trim()) {
+      toast.error('Vui lòng nhập code trước khi chạy');
+      return;
+    }
+
+    const issues = collectCodeIssues(source, editorLanguage);
+    if (issues.length > 0) {
+      const issueText = issues.join('\n');
+      setProgramError(issueText);
+      setProgramOutput('');
+      toast.error('Code đang có lỗi cú pháp');
+      return;
+    }
+
+    if (!DIRECT_RUN_LANGUAGES.has(editorLanguage)) {
+      const message =
+        'Hiện chỉ chạy trực tiếp JavaScript trong trình duyệt. Các ngôn ngữ khác vẫn được lưu và highlight.';
+      setProgramError(message);
+      setProgramOutput('');
+      toast.error('Ngôn ngữ này chưa hỗ trợ chạy trực tiếp');
+      return;
+    }
+
+    setRunningCode(true);
+    setProgramError('');
+    setProgramOutput('Đang chạy...');
+
+    try {
+      const output = await runJavaScriptInWorker({
+        code: source,
+        input: String(programInput || ''),
+      });
+      setProgramOutput(output);
+      toast.success('Chạy code thành công');
+    } catch (error) {
+      const message = String(error?.message || 'Lỗi runtime');
+      setProgramError(message);
+      setProgramOutput('');
+      toast.error('Chạy code thất bại');
+    } finally {
+      setRunningCode(false);
+    }
+  };
+
+  const handleClearConsole = () => {
+    setProgramOutput('');
+    setProgramError('');
   };
 
   const filteredSnippets = useMemo(() => {
@@ -904,6 +1338,24 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                 </button>
 
                 <button
+                  onClick={handleRunCode}
+                  disabled={runningCode}
+                  className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  title="Chạy code"
+                >
+                  <Play size={16} />
+                  {runningCode ? 'Đang chạy...' : 'Run'}
+                </button>
+
+                <button
+                  onClick={handleClearConsole}
+                  className="inline-flex items-center gap-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                >
+                  <RotateCcw size={16} />
+                  Xóa output
+                </button>
+
+                <button
                   onClick={handleCopyCode}
                   className="inline-flex items-center gap-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
                 >
@@ -973,8 +1425,8 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
               </div>
             </div>
 
-            <div className="h-[75vh] min-h-[75vh] shrink-0 p-4">
-              <div className="h-full overflow-hidden rounded-2xl border border-gray-200 shadow-sm dark:border-gray-700">
+            <div className="grid gap-3 p-4 xl:h-[75vh] xl:min-h-[75vh] xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="h-[62vh] min-h-[420px] overflow-hidden rounded-2xl border border-gray-200 shadow-sm dark:border-gray-700 xl:h-full xl:min-h-0">
                 <HighlightCodeEditor
                   language={editorLanguage}
                   theme={editorTheme}
@@ -982,7 +1434,42 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   onChange={setEditorCode}
                 />
               </div>
+
+              <div className="grid gap-3 xl:h-full xl:min-h-0 xl:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]">
+                <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                  <div className="border-b border-gray-200 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                    Input
+                  </div>
+                  <textarea
+                    value={programInput}
+                    onChange={(event) => setProgramInput(event.target.value)}
+                    spellCheck={false}
+                    placeholder="Nhập input, mỗi dòng là 1 giá trị..."
+                    className="h-40 w-full resize-none bg-transparent p-3 font-mono text-sm text-gray-800 outline-none dark:text-gray-100 xl:h-full"
+                  />
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                  <div className="border-b border-gray-200 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                    Output
+                  </div>
+                  <pre className="h-40 overflow-auto whitespace-pre-wrap p-3 font-mono text-sm text-gray-800 dark:text-gray-100 xl:h-[calc(100%-38px)]">
+                    {programOutput || '(Chưa có output)'}
+                  </pre>
+                </div>
+              </div>
             </div>
+
+            <div className="px-4 pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+              Chạy trực tiếp: JavaScript. Hỗ trợ `input()` / `readLine()` / `prompt()` để đọc dữ liệu từ ô Input.
+            </div>
+
+            {programError && (
+              <div className="mx-4 mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+                <p className="mb-1 font-bold">Lỗi:</p>
+                <pre className="whitespace-pre-wrap font-mono text-xs">{programError}</pre>
+              </div>
+            )}
           </div>
         </div>
       )}
