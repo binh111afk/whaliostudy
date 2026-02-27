@@ -39,10 +39,16 @@ GET /api/code-snippets/runner-health
 ```
 
 ## 3) Runner URL config
-Backend defaults to local:
+Local dev defaults to:
 
 ```env
 CODE_RUNNER_API_URL=http://127.0.0.1:2000/api/v2/execute
+```
+
+For production/public domain (Render, `*.onrender.com`, `*.io.vn`), you must set a public runner URL:
+
+```env
+CODE_RUNNER_API_URL=https://your-piston-service.example.com/api/v2/execute
 ```
 
 Optional fallback list:
@@ -62,3 +68,4 @@ docker compose -f docker-compose.piston.yml down
 ## Notes
 - `SQL` in this app is executed via Python + SQLite in-memory runner script.
 - For `C++`, install package `gcc` in Piston.
+- If app is public, `127.0.0.1` only points to your app container itself, not your local PC.

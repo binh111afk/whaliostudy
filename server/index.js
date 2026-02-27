@@ -4605,15 +4605,18 @@ app.post('/api/code-snippets', async (req, res) => {
 });
 
 const DEFAULT_LOCAL_CODE_RUNNER_API_URL = 'http://127.0.0.1:2000/api/v2/execute';
+const IS_PRODUCTION_RUNTIME = String(process.env.NODE_ENV || '').trim().toLowerCase() === 'production';
 const CODE_RUNNER_TIMEOUT_MS = parsePositiveInt(process.env.CODE_RUNNER_TIMEOUT_MS, 15000);
 const CODE_RUNNER_API_URLS = (() => {
     const rawValue = String(
         process.env.CODE_RUNNER_API_URLS ||
         process.env.CODE_RUNNER_API_URL ||
-        DEFAULT_LOCAL_CODE_RUNNER_API_URL
+        ''
     ).trim();
 
-    if (!rawValue) return [DEFAULT_LOCAL_CODE_RUNNER_API_URL];
+    if (!rawValue) {
+        return IS_PRODUCTION_RUNTIME ? [] : [DEFAULT_LOCAL_CODE_RUNNER_API_URL];
+    }
 
     const urls = rawValue
         .split(/[\n,;]+/)
@@ -4621,17 +4624,30 @@ const CODE_RUNNER_API_URLS = (() => {
         .filter((item) => item.startsWith('http://') || item.startsWith('https://'));
 
     const deduplicated = Array.from(new Set(urls));
-    return deduplicated.length > 0 ? deduplicated : [DEFAULT_LOCAL_CODE_RUNNER_API_URL];
+    if (deduplicated.length > 0) return deduplicated;
+    return IS_PRODUCTION_RUNTIME ? [] : [DEFAULT_LOCAL_CODE_RUNNER_API_URL];
 })();
 const LOCAL_PISTON_URL_PATTERN = /^https?:\/\/(127\.0\.0\.1|localhost):2000/i;
 
-console.log(`🧪 Code runner endpoints: ${CODE_RUNNER_API_URLS.join(', ')}`);
+if (CODE_RUNNER_API_URLS.length === 0) {
+    console.warn('⚠️ Code runner is not configured. Set CODE_RUNNER_API_URL for production.');
+} else {
+    console.log(`🧪 Code runner endpoints: ${CODE_RUNNER_API_URLS.join(', ')}`);
+}
 
 const sanitizeRunnerText = (value, limit = 20000) => String(value || '').slice(0, limit);
 const toRunnerRuntimesUrl = (executeUrl) =>
     String(executeUrl || '').replace(/\/execute\/?$/i, '/runtimes');
 
 const executeRunnerRequest = async (payload) => {
+    if (CODE_RUNNER_API_URLS.length === 0) {
+        return {
+            success: false,
+            configError: true,
+            attempts: []
+        };
+    }
+
     const attempts = [];
 
     for (const runnerUrl of CODE_RUNNER_API_URLS) {
@@ -4857,8 +4873,19 @@ app.post('/api/code-snippets/run', async (req, res) => {
             });
         }
 
+        const requestHost = String(req.get('host') || '').trim().toLowerCase();
+        const isPublicHost = Boolean(requestHost) && !/(^|\.)localhost(:\d+)?$/.test(requestHost) && !/^127\.0\.0\.1(:\d+)?$/.test(requestHost);
+
         const runnerResult = await executeRunnerRequest(payload);
         if (!runnerResult.success) {
+            if (runnerResult.configError) {
+                return res.status(503).json({
+                    success: false,
+                    message: 'Chưa cấu hình code runner cho production. Vui lòng set CODE_RUNNER_API_URL tới dịch vụ Piston public của bạn.',
+                    diagnostics: []
+                });
+            }
+
             const attempts = Array.isArray(runnerResult.attempts) ? runnerResult.attempts : [];
             const whitelistAttempt = attempts.find((item) =>
                 Number(item?.status) === 401 && /whitelist/i.test(String(item?.message || ''))
@@ -4870,7 +4897,9 @@ app.post('/api/code-snippets/run', async (req, res) => {
 
             let message = 'Không thể chạy code lúc này.';
             if (localUnavailableAttempt) {
-                message = 'Không kết nối được local Piston tại http://127.0.0.1:2000. Hãy chạy `docker compose -f docker-compose.piston.yml up -d`.';
+                message = isPublicHost
+                    ? 'Server đang chạy public nên không thể dùng local Piston (127.0.0.1). Hãy cấu hình CODE_RUNNER_API_URL tới một Piston service public.'
+                    : 'Không kết nối được local Piston tại http://127.0.0.1:2000. Hãy chạy `docker compose -f docker-compose.piston.yml up -d`.';
             } else if (whitelistAttempt) {
                 message = 'Runner public đã chuyển sang whitelist từ 15/02/2026. Hãy dùng local Piston hoặc runner có API key.';
             } else if (firstAttempt?.message) {
