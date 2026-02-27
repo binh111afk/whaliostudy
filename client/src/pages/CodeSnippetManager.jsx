@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import hljs from 'highlight.js';
+import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -111,114 +111,6 @@ const sanitizeFileName = (name) => {
     .replace(/^-|-$/g, '');
 };
 
-const HIGHLIGHT_EDITOR_CSS = `
-.code-editor-shell .hljs {
-  background: transparent;
-  color: inherit;
-  padding: 0;
-}
-.code-editor-light .hljs-keyword,
-.code-editor-light .hljs-selector-tag,
-.code-editor-light .hljs-meta .hljs-keyword,
-.code-editor-light .hljs-doctag {
-  color: #0f4ec7;
-  font-weight: 700;
-}
-.code-editor-light .hljs-title,
-.code-editor-light .hljs-title.function_,
-.code-editor-light .hljs-title.class_ {
-  color: #c2410c;
-  font-weight: 700;
-}
-.code-editor-light .hljs-built_in,
-.code-editor-light .hljs-type,
-.code-editor-light .hljs-literal {
-  color: #7c3aed;
-}
-.code-editor-light .hljs-string,
-.code-editor-light .hljs-regexp,
-.code-editor-light .hljs-attr,
-.code-editor-light .hljs-attribute {
-  color: #047857;
-}
-.code-editor-light .hljs-number,
-.code-editor-light .hljs-symbol,
-.code-editor-light .hljs-bullet,
-.code-editor-light .hljs-link {
-  color: #b45309;
-}
-.code-editor-light .hljs-variable,
-.code-editor-light .hljs-template-variable {
-  color: #be123c;
-}
-.code-editor-light .hljs-comment,
-.code-editor-light .hljs-quote {
-  color: #6b7280;
-  font-style: italic;
-}
-.code-editor-dark .hljs-keyword,
-.code-editor-dark .hljs-selector-tag,
-.code-editor-dark .hljs-meta .hljs-keyword,
-.code-editor-dark .hljs-doctag {
-  color: #7dd3fc;
-  font-weight: 700;
-}
-.code-editor-dark .hljs-title,
-.code-editor-dark .hljs-title.function_,
-.code-editor-dark .hljs-title.class_ {
-  color: #fb923c;
-  font-weight: 700;
-}
-.code-editor-dark .hljs-built_in,
-.code-editor-dark .hljs-type,
-.code-editor-dark .hljs-literal {
-  color: #c4b5fd;
-}
-.code-editor-dark .hljs-string,
-.code-editor-dark .hljs-regexp,
-.code-editor-dark .hljs-attr,
-.code-editor-dark .hljs-attribute {
-  color: #6ee7b7;
-}
-.code-editor-dark .hljs-number,
-.code-editor-dark .hljs-symbol,
-.code-editor-dark .hljs-bullet,
-.code-editor-dark .hljs-link {
-  color: #fbbf24;
-}
-.code-editor-dark .hljs-variable,
-.code-editor-dark .hljs-template-variable {
-  color: #fda4af;
-}
-.code-editor-dark .hljs-comment,
-.code-editor-dark .hljs-quote {
-  color: #94a3b8;
-  font-style: italic;
-}
-.code-editor-light .hljs-operator,
-.code-editor-light .hljs-punctuation {
-  color: #475569;
-}
-.code-editor-dark .hljs-operator,
-.code-editor-dark .hljs-punctuation {
-  color: #cbd5e1;
-}
-`;
-
-const escapeHtml = (value) => {
-  return String(value || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-};
-
-const getHighlightLanguage = (language) => {
-  if (!language || language === 'plaintext') return '';
-  if (language === 'cpp') return 'cpp';
-  return language;
-};
-
-const INDENT_UNIT = '  ';
 const AUTO_PAIR_MAP = {
   '(': ')',
   '[': ']',
@@ -227,8 +119,6 @@ const AUTO_PAIR_MAP = {
   "'": "'",
   '`': '`',
 };
-const OPENING_CHARS = new Set(Object.keys(AUTO_PAIR_MAP));
-const CLOSING_CHARS = new Set(Object.values(AUTO_PAIR_MAP));
 const JS_LIKE_LANGUAGES = new Set(['javascript', 'typescript', 'cpp', 'java']);
 const AUTO_FORMAT_LINE_LANGUAGES = new Set(['javascript', 'typescript', 'cpp', 'java']);
 const LOCAL_RUN_LANGUAGES = new Set(['plaintext', 'json', 'html', 'css']);
@@ -653,229 +543,141 @@ const runLocalLanguage = ({ language, code, input }) => {
   };
 };
 
-const HighlightCodeEditor = ({ value, onChange, language, theme }) => {
-  const previewRef = useRef(null);
-  const inputRef = useRef(null);
-
-  const highlighted = useMemo(() => {
-    const normalizedValue = String(value || '');
-    if (!normalizedValue) return ' ';
-
-    const selectedLanguage = getHighlightLanguage(language);
-    if (!selectedLanguage) {
-      return escapeHtml(normalizedValue);
-    }
-
-    try {
-      return hljs.highlight(normalizedValue, { language: selectedLanguage }).value;
-    } catch {
-      return hljs.highlightAuto(normalizedValue).value;
-    }
-  }, [value, language]);
-
-  const syncScroll = (element) => {
-    if (!previewRef.current || !element) return;
-    previewRef.current.scrollTop = element.scrollTop;
-    previewRef.current.scrollLeft = element.scrollLeft;
+const toMonacoLanguage = (language) => {
+  const normalized = String(language || 'plaintext').toLowerCase();
+  const map = {
+    cpp: 'cpp',
+    cxx: 'cpp',
+    'c++': 'cpp',
+    javascript: 'javascript',
+    js: 'javascript',
+    typescript: 'typescript',
+    ts: 'typescript',
+    python: 'python',
+    py: 'python',
+    java: 'java',
+    html: 'html',
+    css: 'css',
+    sql: 'sql',
+    json: 'json',
+    plaintext: 'plaintext',
+    text: 'plaintext',
   };
+  return map[normalized] || 'plaintext';
+};
 
-  const handleChange = (event) => {
-    onChange(event.target.value);
-    syncScroll(event.target);
-  };
+const MonacoCodeEditor = ({ value, onChange, language, theme }) => {
+  const editorRef = useRef(null);
+  const monacoRef = useRef(null);
+  const languageRef = useRef(language);
 
-  const applyEditorMutation = (target, nextValue, caretStart, caretEnd = caretStart) => {
-    onChange(nextValue);
-    window.requestAnimationFrame(() => {
-      target.selectionStart = caretStart;
-      target.selectionEnd = caretEnd;
-      syncScroll(target);
-    });
-  };
+  useEffect(() => {
+    languageRef.current = language;
+  }, [language]);
 
-  const outdentLine = (line) => {
-    if (line.startsWith(INDENT_UNIT)) {
-      return { line: line.slice(INDENT_UNIT.length), removed: INDENT_UNIT.length };
-    }
-    if (line.startsWith('\t')) {
-      return { line: line.slice(1), removed: 1 };
-    }
-    const leadingSpaces = (line.match(/^ +/) || [''])[0].length;
-    const removed = Math.min(INDENT_UNIT.length, leadingSpaces);
-    return { line: line.slice(removed), removed };
-  };
+  useEffect(() => {
+    if (!editorRef.current || !monacoRef.current) return;
+    const model = editorRef.current.getModel();
+    if (!model) return;
+    monacoRef.current.editor.setModelLanguage(model, toMonacoLanguage(language));
+  }, [language]);
 
-  const handleKeyDown = (event) => {
-    const target = event.currentTarget;
-    const start = target.selectionStart;
-    const end = target.selectionEnd;
-    const hasSelection = start !== end;
-    const key = event.key;
-    const before = value.slice(0, start);
-    const selected = value.slice(start, end);
-    const after = value.slice(end);
+  const options = useMemo(
+    () => ({
+      automaticLayout: true,
+      minimap: { enabled: false },
+      fontSize: 14,
+      lineHeight: 24,
+      fontLigatures: true,
+      wordWrap: 'on',
+      scrollBeyondLastLine: false,
+      tabSize: 2,
+      insertSpaces: true,
+      detectIndentation: false,
+      autoIndent: 'full',
+      formatOnType: true,
+      formatOnPaste: true,
+      autoClosingBrackets: 'always',
+      autoClosingQuotes: 'always',
+      autoSurround: 'languageDefined',
+      bracketPairColorization: { enabled: true },
+      matchBrackets: 'always',
+      guides: {
+        bracketPairs: true,
+        indentation: true,
+      },
+      smoothScrolling: true,
+      cursorSmoothCaretAnimation: 'on',
+      quickSuggestions: {
+        other: true,
+        comments: false,
+        strings: true,
+      },
+      suggestOnTriggerCharacters: true,
+    }),
+    []
+  );
 
-    if (key === 'Tab') {
-      event.preventDefault();
+  const handleMount = useCallback(
+    (editor, monaco) => {
+      editorRef.current = editor;
+      monacoRef.current = monaco;
 
-      if (hasSelection) {
-        const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-        let lineEnd = value.indexOf('\n', end);
-        if (lineEnd === -1) lineEnd = value.length;
+      const typedDisposable = editor.onDidType((text) => {
+        if (text !== ';') return;
+        if (!AUTO_FORMAT_LINE_LANGUAGES.has(String(languageRef.current || ''))) return;
 
-        const block = value.slice(lineStart, lineEnd);
-        const lines = block.split('\n');
+        window.requestAnimationFrame(() => {
+          const activeEditor = editorRef.current;
+          const activeMonaco = monacoRef.current;
+          if (!activeEditor || !activeMonaco) return;
 
-        if (event.shiftKey) {
-          let removedTotal = 0;
-          let removedFirstLine = 0;
-          const nextLines = lines.map((line, index) => {
-            const { line: nextLine, removed } = outdentLine(line);
-            removedTotal += removed;
-            if (index === 0) removedFirstLine = removed;
-            return nextLine;
-          });
+          const model = activeEditor.getModel();
+          const position = activeEditor.getPosition();
+          if (!model || !position) return;
 
-          const nextBlock = nextLines.join('\n');
-          const nextValue = `${value.slice(0, lineStart)}${nextBlock}${value.slice(lineEnd)}`;
-          const nextStart = Math.max(lineStart, start - removedFirstLine);
-          const nextEnd = Math.max(nextStart, end - removedTotal);
-          applyEditorMutation(target, nextValue, nextStart, nextEnd);
-          return;
-        }
+          const lineNumber = position.lineNumber;
+          const currentLine = model.getLineContent(lineNumber);
+          const formattedLine = autoFormatCommittedLine(currentLine, languageRef.current);
+          if (formattedLine === currentLine) return;
 
-        const nextBlock = lines.map((line) => `${INDENT_UNIT}${line}`).join('\n');
-        const nextValue = `${value.slice(0, lineStart)}${nextBlock}${value.slice(lineEnd)}`;
-        const nextStart = start + INDENT_UNIT.length;
-        const nextEnd = end + INDENT_UNIT.length * lines.length;
-        applyEditorMutation(target, nextValue, nextStart, nextEnd);
-        return;
-      }
+          const nextColumn = Math.max(
+            1,
+            Math.min(formattedLine.length + 1, position.column + (formattedLine.length - currentLine.length))
+          );
 
-      const nextValue = `${before}${INDENT_UNIT}${after}`;
-      const nextCaret = start + INDENT_UNIT.length;
-      applyEditorMutation(target, nextValue, nextCaret);
-      return;
-    }
+          activeEditor.executeEdits('semicolon-magic', [
+            {
+              range: new activeMonaco.Range(lineNumber, 1, lineNumber, currentLine.length + 1),
+              text: formattedLine,
+            },
+          ]);
+          activeEditor.setPosition({ lineNumber, column: nextColumn });
+        });
+      });
 
-    if (key === 'Enter') {
-      event.preventDefault();
-
-      const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-      const lineBeforeCursor = value.slice(lineStart, start);
-      const formattedLineBeforeCursor = autoFormatCommittedLine(lineBeforeCursor, language).replace(/[ \t]+$/g, '');
-      const currentIndent = (formattedLineBeforeCursor.match(/^\s*/) || [''])[0];
-      const previousChar = formattedLineBeforeCursor.trimEnd().slice(-1);
-      const nextChar = value.slice(end, end + 1);
-      const shouldIndent = previousChar === '{' || previousChar === '[' || previousChar === '(';
-
-      if (
-        !hasSelection &&
-        shouldIndent &&
-        nextChar &&
-        ((previousChar === '{' && nextChar === '}') ||
-          (previousChar === '[' && nextChar === ']') ||
-          (previousChar === '(' && nextChar === ')'))
-      ) {
-        const linePrefix = `${value.slice(0, lineStart)}${formattedLineBeforeCursor}`;
-        const nextValue = `${linePrefix}\n${currentIndent}${INDENT_UNIT}\n${currentIndent}${value.slice(end)}`;
-        const nextCaret = linePrefix.length + 1 + currentIndent.length + INDENT_UNIT.length;
-        applyEditorMutation(target, nextValue, nextCaret);
-        return;
-      }
-
-      const normalizedBefore = `${value.slice(0, lineStart)}${formattedLineBeforeCursor}`;
-      const nextIndent = shouldIndent ? `${currentIndent}${INDENT_UNIT}` : currentIndent;
-      const nextValue = `${normalizedBefore}\n${nextIndent}${value.slice(end)}`;
-      const nextCaret = normalizedBefore.length + 1 + nextIndent.length;
-      applyEditorMutation(target, nextValue, nextCaret);
-      return;
-    }
-
-    if (key === 'Backspace' && !hasSelection && start > 0) {
-      const previousChar = value[start - 1];
-      const nextChar = value[start];
-      if (AUTO_PAIR_MAP[previousChar] === nextChar) {
-        event.preventDefault();
-        const nextValue = `${value.slice(0, start - 1)}${value.slice(start + 1)}`;
-        applyEditorMutation(target, nextValue, start - 1);
-        return;
-      }
-    }
-
-    if (OPENING_CHARS.has(key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
-      event.preventDefault();
-      const closeChar = AUTO_PAIR_MAP[key];
-      const previousChar = value[start - 1] || '';
-      const nextChar = value[end] || '';
-      const isQuote = key === '"' || key === "'" || key === '`';
-
-      if (isQuote && !hasSelection) {
-        if (nextChar === key) {
-          applyEditorMutation(target, value, start + 1);
-          return;
-        }
-        if (/\w/.test(previousChar)) {
-          const nextValue = `${before}${key}${after}`;
-          applyEditorMutation(target, nextValue, start + 1);
-          return;
-        }
-      }
-
-      if (hasSelection) {
-        const nextValue = `${before}${key}${selected}${closeChar}${after}`;
-        applyEditorMutation(target, nextValue, start + 1, end + 1);
-        return;
-      }
-
-      const nextValue = `${before}${key}${closeChar}${after}`;
-      applyEditorMutation(target, nextValue, start + 1);
-      return;
-    }
-
-    if (CLOSING_CHARS.has(key) && !hasSelection) {
-      const nextChar = value[start] || '';
-      if (nextChar === key) {
-        event.preventDefault();
-        applyEditorMutation(target, value, start + 1);
-      }
-    }
-  };
+      editor.onDidDispose(() => {
+        typedDisposable.dispose();
+      });
+    },
+    []
+  );
 
   return (
-    <div
-      className={`code-editor-shell ${theme === 'dark' ? 'code-editor-dark' : 'code-editor-light'} relative h-full`}
-    >
-      <style>{HIGHLIGHT_EDITOR_CSS}</style>
-      <pre
-        ref={previewRef}
-        className={`h-full overflow-auto p-4 font-mono text-sm leading-6 ${
-          theme === 'dark'
-            ? 'bg-slate-950 text-slate-100'
-            : 'bg-slate-50 text-slate-900'
-        }`}
-      >
-        <code
-          className="hljs block min-h-full whitespace-pre"
-          dangerouslySetInnerHTML={{ __html: highlighted }}
-        />
-      </pre>
-      <textarea
-        ref={inputRef}
-        value={value}
-        spellCheck={false}
-        onChange={handleChange}
-        onScroll={(event) => syncScroll(event.currentTarget)}
-        onKeyDown={handleKeyDown}
-        className={`absolute inset-0 h-full w-full resize-none border-0 bg-transparent p-4 font-mono text-sm leading-6 outline-none ${
-          theme === 'dark'
-            ? 'caret-slate-100 selection:bg-blue-400/30'
-            : 'caret-slate-900 selection:bg-blue-500/25'
-        }`}
-        style={{ color: 'transparent' }}
-        aria-label="Code editor"
-      />
-    </div>
+    <Editor
+      height="100%"
+      language={toMonacoLanguage(language)}
+      theme={theme === 'dark' ? 'vs-dark' : 'vs'}
+      value={String(value || '')}
+      onChange={(nextValue) => onChange(String(nextValue || ''))}
+      onMount={handleMount}
+      options={options}
+      loading={
+        <div className="flex h-full items-center justify-center bg-slate-50 text-sm font-semibold text-slate-500 dark:bg-slate-950 dark:text-slate-300">
+          Đang tải Monaco Editor...
+        </div>
+      }
+    />
   );
 };
 
@@ -2056,7 +1858,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
 
             <div className="grid gap-3 p-4 xl:h-[75vh] xl:min-h-[75vh] xl:grid-cols-[minmax(0,1fr)_360px]">
               <div className="h-[62vh] min-h-[420px] overflow-hidden rounded-2xl border border-gray-200 shadow-sm dark:border-gray-700 xl:h-full xl:min-h-0">
-                <HighlightCodeEditor
+                <MonacoCodeEditor
                   language={editorLanguage}
                   theme={editorTheme}
                   value={editorCode}

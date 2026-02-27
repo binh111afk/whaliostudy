@@ -10,11 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "axios": "^1.13.4",
     "framer-motion": "^12.31.0",
     "localforage": "^1.10.0",
     "lucide-react": "^0.563.0",
     "mammoth": "^1.11.0",
+    "monaco-editor": "^0.52.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-fast-marquee": "^1.6.5",
