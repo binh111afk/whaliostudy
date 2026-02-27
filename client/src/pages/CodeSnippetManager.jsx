@@ -1881,7 +1881,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
             </div>
 
             <div className="px-4 pt-3">
-              {statusBanner.kind !== 'hidden' && (
+              {statusBanner.kind !== 'hidden' && statusBanner.kind !== 'judged' && (
                 <div
                   className={`rounded-2xl border px-4 py-3 text-sm font-semibold shadow-sm ${
                     statusBanner.kind === 'run-output'
@@ -1897,34 +1897,19 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                     )}
                     {statusBanner.kind === 'run-output' && <span>Có kết quả output</span>}
                     {statusBanner.kind === 'judging' && <span>{statusBanner.message || 'Đang chấm bài...'}</span>}
-                    {statusBanner.kind === 'judged' && (
-                      <span>Điểm tổng kết: {statusBanner.message}</span>
-                    )}
                   </div>
                 </div>
               )}
 
-              <div className="mt-3 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-cyan-50 to-sky-50 p-4 shadow-sm dark:border-emerald-700/60 dark:from-emerald-900/20 dark:via-cyan-900/20 dark:to-sky-900/20">
-                {runningAction === 'judge' ? (
+              {runningAction === 'judge' && (
+                <div className="mt-3 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-cyan-50 to-sky-50 p-4 shadow-sm dark:border-emerald-700/60 dark:from-emerald-900/20 dark:via-cyan-900/20 dark:to-sky-900/20">
                   <div className="animate-pulse">
                     <div className="h-3 w-28 rounded bg-emerald-200/90 dark:bg-emerald-700/70" />
                     <div className="mt-2 h-6 w-24 rounded bg-emerald-200/90 dark:bg-emerald-700/70" />
                     <div className="mt-3 h-2.5 rounded-full bg-emerald-200/80 dark:bg-emerald-700/60" />
                   </div>
-                ) : (
-                  <>
-                    
-                    <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-900/50">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 transition-all duration-500"
-                        style={{
-                          width: `${Math.max(0, Math.min(100, (earnedScore / Math.max(totalJudgeScore, 1)) * 100))}%`,
-                        }}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             <div className="grid gap-3 p-4 xl:h-[75vh] xl:min-h-[75vh] xl:grid-cols-[minmax(0,1fr)_360px]">
