@@ -1982,9 +1982,12 @@ const codeSnippetTestCaseSchema = new mongoose.Schema({
 
 const codeSnippetSchema = new mongoose.Schema({
     username: { type: String, required: true, index: true },
+    title: { type: String, default: '', trim: true, maxlength: 200 },
     cardTitle: { type: String, required: true, trim: true, maxlength: 200 },
     subjectName: { type: String, default: '', trim: true, maxlength: 120 },
+    exerciseName: { type: String, default: '', trim: true, maxlength: 220 },
     assignmentName: { type: String, default: '', trim: true, maxlength: 220 },
+    formattedDescription: { type: String, default: '', trim: true, maxlength: 12000 },
     assignmentDescription: { type: String, default: '', trim: true, maxlength: 12000 },
     code: { type: String, default: '' },
     language: { type: String, default: 'plaintext', trim: true, maxlength: 60 },
@@ -4741,6 +4744,12 @@ app.get('/api/code-snippets', async (req, res) => {
 
         const formattedSnippets = snippets.map((item) => ({
             ...item,
+            title: String(item.title || item.cardTitle || '').trim(),
+            cardTitle: String(item.cardTitle || item.title || '').trim(),
+            exerciseName: String(item.exerciseName || item.assignmentName || '').trim(),
+            assignmentName: String(item.assignmentName || item.exerciseName || '').trim(),
+            formattedDescription: String(item.formattedDescription || item.assignmentDescription || '').trim(),
+            assignmentDescription: String(item.assignmentDescription || item.formattedDescription || '').trim(),
             id: item._id.toString()
         }));
 
@@ -4755,32 +4764,37 @@ app.post('/api/code-snippets', async (req, res) => {
     try {
         const {
             username,
+            title,
             cardTitle,
             subjectName,
+            exerciseName,
             assignmentName,
+            formattedDescription,
             assignmentDescription,
             code,
             language
         } = req.body || {};
 
         const normalizedUsername = String(username || '').trim();
-        const normalizedCardTitle = String(cardTitle || '').trim();
+        const normalizedTitle = String(title || cardTitle || '').trim();
         const normalizedSubjectName = String(subjectName || '').trim();
-        const normalizedAssignmentName = String(assignmentName || '').trim();
-        const normalizedAssignmentDescription = String(assignmentDescription || '').trim();
+        const normalizedExerciseName = String(exerciseName || assignmentName || '').trim();
+        const normalizedFormattedDescription = String(
+            formattedDescription || assignmentDescription || ''
+        ).trim();
 
         if (!normalizedUsername) {
             return res.status(400).json({ success: false, message: 'Thiếu username' });
         }
-        if (!normalizedCardTitle) {
+        if (!normalizedTitle) {
             return res.status(400).json({ success: false, message: 'Tên card là bắt buộc' });
         }
 
         const testCaseResult = await generateCodeSnippetTestCases({
-            cardTitle: normalizedCardTitle,
+            cardTitle: normalizedTitle,
             subjectName: normalizedSubjectName,
-            assignmentName: normalizedAssignmentName,
-            assignmentDescription: normalizedAssignmentDescription
+            assignmentName: normalizedExerciseName,
+            assignmentDescription: normalizedFormattedDescription
         });
         if (!testCaseResult.success) {
             return res.status(502).json({
@@ -4792,10 +4806,13 @@ app.post('/api/code-snippets', async (req, res) => {
         const now = new Date();
         const snippet = new CodeSnippet({
             username: normalizedUsername,
-            cardTitle: normalizedCardTitle,
+            title: normalizedTitle,
+            cardTitle: normalizedTitle,
             subjectName: normalizedSubjectName,
-            assignmentName: normalizedAssignmentName,
-            assignmentDescription: normalizedAssignmentDescription,
+            exerciseName: normalizedExerciseName,
+            assignmentName: normalizedExerciseName,
+            formattedDescription: normalizedFormattedDescription,
+            assignmentDescription: normalizedFormattedDescription,
             code: String(code || ''),
             language: String(language || 'plaintext').trim() || 'plaintext',
             testCases: testCaseResult.testCases,
@@ -5097,6 +5114,14 @@ const executeWandboxRun = async (payload) => {
     }
 };
 
+const detectWandboxErrorType = (errorText, hasCompilerError) => {
+    if (hasCompilerError) return 'compiler_error';
+    if (/(timeout|time limit|timed out|execution timed out|tle|quá lâu)/i.test(String(errorText || ''))) {
+        return 'time_limit';
+    }
+    return 'runtime_error';
+};
+
 const checkWandboxHealth = async () => {
     const listResult = await fetchWandboxCompilerList({ force: true });
     const languages = listResult.success
@@ -5153,6 +5178,7 @@ app.post('/api/code-snippets/run', async (req, res) => {
         const programError = sanitizeRunnerText(data?.program_error || '');
         const compilerMessage = sanitizeRunnerText(data?.compiler_message || '');
         const programMessage = sanitizeRunnerText(data?.program_message || '');
+        const hasCompilerError = Boolean(compilerError.trim());
         const nonZeroStatus = status && status !== '0';
         let errorText = [compilerError, programError].filter(Boolean).join('\n').trim();
 
@@ -5167,10 +5193,14 @@ app.post('/api/code-snippets/run', async (req, res) => {
         }
 
         if (errorText) {
+            const errorType = detectWandboxErrorType(errorText, hasCompilerError);
             return res.json({
                 success: false,
                 output: stdout || '(Không có output)',
                 error: errorText,
+                errorType,
+                compilerError: hasCompilerError,
+                compiler_error: compilerError,
                 language: payloadResult.language,
                 provider: 'wandbox',
                 compiler: payloadResult.compiler,
@@ -5262,9 +5292,12 @@ app.patch('/api/code-snippets/:id', async (req, res) => {
         const { id } = req.params;
         const {
             username,
+            title,
             cardTitle,
             subjectName,
+            exerciseName,
             assignmentName,
+            formattedDescription,
             assignmentDescription,
             code,
             language
@@ -5277,17 +5310,42 @@ app.patch('/api/code-snippets/:id', async (req, res) => {
 
         const update = { updatedAt: new Date() };
 
-        if (typeof cardTitle === 'string') {
-            const value = cardTitle.trim();
+        const incomingTitle = typeof title === 'string'
+            ? title
+            : typeof cardTitle === 'string'
+                ? cardTitle
+                : null;
+        if (incomingTitle !== null) {
+            const value = incomingTitle.trim();
             if (!value) {
                 return res.status(400).json({ success: false, message: 'Tên card không được để trống' });
             }
+            update.title = value;
             update.cardTitle = value;
         }
 
         if (typeof subjectName === 'string') update.subjectName = subjectName.trim();
-        if (typeof assignmentName === 'string') update.assignmentName = assignmentName.trim();
-        if (typeof assignmentDescription === 'string') update.assignmentDescription = assignmentDescription.trim();
+        const incomingExerciseName = typeof exerciseName === 'string'
+            ? exerciseName
+            : typeof assignmentName === 'string'
+                ? assignmentName
+                : null;
+        if (incomingExerciseName !== null) {
+            const value = incomingExerciseName.trim();
+            update.exerciseName = value;
+            update.assignmentName = value;
+        }
+
+        const incomingDescription = typeof formattedDescription === 'string'
+            ? formattedDescription
+            : typeof assignmentDescription === 'string'
+                ? assignmentDescription
+                : null;
+        if (incomingDescription !== null) {
+            const value = incomingDescription.trim();
+            update.formattedDescription = value;
+            update.assignmentDescription = value;
+        }
         if (typeof code === 'string') update.code = code;
         if (typeof language === 'string') {
             const normalizedLanguage = language.trim();

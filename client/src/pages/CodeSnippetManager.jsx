@@ -260,6 +260,11 @@ const isExpectedOutputMatched = (actualOutput, expectedOutput) =>
 const isTimeLimitError = (errorText) =>
   /(timeout|time limit|timed out|quá lâu|tle)/i.test(String(errorText || ''));
 
+const isCompilerErrorResult = (payload) =>
+  String(payload?.errorType || '').toLowerCase() === 'compiler_error' ||
+  payload?.compilerError === true ||
+  Boolean(String(payload?.compiler_error || '').trim());
+
 const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 const toSnippetTestCaseList = (snippet) => {
@@ -1022,6 +1027,9 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   const [programError, setProgramError] = useState('');
   const [programPreviewHtml, setProgramPreviewHtml] = useState('');
   const [runningCode, setRunningCode] = useState(false);
+  const [runningAction, setRunningAction] = useState('');
+  const [statusBanner, setStatusBanner] = useState({ kind: 'hidden', message: '' });
+  const [judgeCompilerError, setJudgeCompilerError] = useState('');
   const [snippetTestCases, setSnippetTestCases] = useState([]);
   const [judgeResults, setJudgeResults] = useState([]);
   const [earnedScore, setEarnedScore] = useState(0);
@@ -1039,6 +1047,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   const codeRef = useRef(editorCode);
   const languageRef = useRef(editorLanguage);
   const judgeAnimationRunRef = useRef(0);
+  const terminalOutputRef = useRef(null);
 
   useEffect(() => {
     usernameRef.current = username;
@@ -1091,6 +1100,11 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
       // Ignore localStorage write errors
     }
   }, [editorTheme]);
+
+  useEffect(() => {
+    if (!terminalOutputRef.current) return;
+    terminalOutputRef.current.scrollTop = terminalOutputRef.current.scrollHeight;
+  }, [programOutput, programError, runningCode, runningAction]);
 
   const hasDraftChanged = useCallback((snippet, draftCode, draftLanguage) => {
     if (!snippet) return false;
@@ -1189,9 +1203,12 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     const basePayload = {
       username,
       cardTitle,
+      title: cardTitle,
       subjectName: String(createForm.subjectName || '').trim(),
       assignmentName: String(createForm.assignmentName || '').trim(),
+      exerciseName: String(createForm.assignmentName || '').trim(),
       assignmentDescription: String(createForm.assignmentDescription || '').trim(),
+      formattedDescription: String(createForm.assignmentDescription || '').trim(),
     };
 
     const isEditMode = Boolean(editingSnippet);
@@ -1298,12 +1315,15 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     setEditorCode(String(snippet.code || ''));
     setEditorLanguage(String(snippet.language || inferLanguageFromSubject(snippet.subjectName)));
     setSnippetTestCases(normalizedTestCases);
-    setJudgeResults(buildPendingJudgeResults(normalizedTestCases));
+    setJudgeResults([]);
     setEarnedScore(0);
     setProgramInput('');
     setProgramOutput('');
     setProgramError('');
     setProgramPreviewHtml('');
+    setStatusBanner({ kind: 'hidden', message: '' });
+    setJudgeCompilerError('');
+    setRunningAction('');
   };
 
   const handleCloseDetail = async () => {
@@ -1315,6 +1335,9 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     setSnippetTestCases([]);
     setJudgeResults([]);
     setEarnedScore(0);
+    setStatusBanner({ kind: 'hidden', message: '' });
+    setJudgeCompilerError('');
+    setRunningAction('');
   };
 
   const handleDelete = async (snippetId) => {
@@ -1335,6 +1358,9 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
       setSnippetTestCases([]);
       setJudgeResults([]);
       setEarnedScore(0);
+      setStatusBanner({ kind: 'hidden', message: '' });
+      setJudgeCompilerError('');
+      setRunningAction('');
     }
     toast.success('Đã xóa card code');
   };
@@ -1373,132 +1399,190 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     URL.revokeObjectURL(url);
   };
 
-  const runSingleInputMode = async (source) => {
-    if (LOCAL_RUN_LANGUAGES.has(editorLanguage)) {
-      const localResult = runLocalLanguage({
-        language: editorLanguage,
-        code: source,
-        input: programInput,
-      });
-      setProgramOutput(String(localResult.output || '(Không có output)'));
-      setProgramPreviewHtml(String(localResult.previewHtml || ''));
-      toast.success('Chạy code thành công');
-      return;
-    }
+  const runSingleInputMode = useCallback(
+    async (source) => {
+      if (LOCAL_RUN_LANGUAGES.has(editorLanguage)) {
+        const localResult = runLocalLanguage({
+          language: editorLanguage,
+          code: source,
+          input: programInput,
+        });
+        return {
+          success: true,
+          output: String(localResult.output || '(Không có output)'),
+          previewHtml: String(localResult.previewHtml || ''),
+        };
+      }
 
-    if (editorLanguage === 'javascript') {
-      const remoteResult = await codeSnippetService.runSnippet({
+      if (editorLanguage === 'javascript') {
+        const remoteResult = await codeSnippetService.runSnippet({
+          language: editorLanguage,
+          code: source,
+          input: String(programInput || ''),
+        });
+
+        if (remoteResult?.success) {
+          return {
+            success: true,
+            output: String(remoteResult.output || '(Không có output)'),
+            previewHtml: '',
+          };
+        }
+
+        const remoteError = String(remoteResult?.error || remoteResult?.message || '').trim();
+        const canFallbackToLocalWorker = /lỗi kết nối server/i.test(remoteError);
+        if (!canFallbackToLocalWorker) {
+          return {
+            success: false,
+            error: remoteError || 'Lỗi chạy code',
+            errorType: String(remoteResult?.errorType || ''),
+          };
+        }
+
+        const jsOutput = await runJavaScriptInWorker({
+          code: source,
+          input: String(programInput || ''),
+        });
+        return {
+          success: true,
+          output: jsOutput,
+          previewHtml: '',
+        };
+      }
+
+      if (!REMOTE_RUN_LANGUAGES.has(editorLanguage)) {
+        return {
+          success: false,
+          error: 'Ngôn ngữ này hiện chưa hỗ trợ chạy.',
+        };
+      }
+
+      const result = await codeSnippetService.runSnippet({
         language: editorLanguage,
         code: source,
         input: String(programInput || ''),
       });
-
-      if (remoteResult?.success) {
-        setProgramOutput(String(remoteResult.output || '(Không có output)'));
-        setProgramPreviewHtml('');
-        toast.success('Chạy code thành công');
-        return;
+      if (!result?.success) {
+        return {
+          success: false,
+          error: String(result?.error || result?.message || 'Lỗi chạy code'),
+          errorType: String(result?.errorType || ''),
+        };
       }
 
-      const remoteError = String(remoteResult?.error || remoteResult?.message || '').trim();
-      const canFallbackToLocalWorker = /lỗi kết nối server/i.test(remoteError);
+      return {
+        success: true,
+        output: String(result.output || '(Không có output)'),
+        previewHtml: String(result.previewHtml || ''),
+      };
+    },
+    [editorLanguage, programInput]
+  );
 
-      if (!canFallbackToLocalWorker) {
-        setProgramError(remoteError || 'Lỗi chạy code');
-        setProgramOutput('');
-        setProgramPreviewHtml('');
-        toast.error('Chạy code thất bại');
-        return;
-      }
+  const handleRunCode = useCallback(async () => {
+    if (runningCode) return;
 
-      // Offline fallback only when backend connection fails.
-      const jsOutput = await runJavaScriptInWorker({
-        code: source,
-        input: String(programInput || ''),
-      });
-      setProgramOutput(jsOutput);
-      setProgramPreviewHtml('');
-      toast.success('Chạy code thành công');
-      return;
-    }
-
-    if (!REMOTE_RUN_LANGUAGES.has(editorLanguage)) {
-      const unsupportedMessage = 'Ngôn ngữ này hiện chưa hỗ trợ chạy.';
-      setProgramError(unsupportedMessage);
-      setProgramOutput('');
-      setProgramPreviewHtml('');
-      toast.error(unsupportedMessage);
-      return;
-    }
-
-    const result = await codeSnippetService.runSnippet({
-      language: editorLanguage,
-      code: source,
-      input: String(programInput || ''),
-    });
-
-    if (!result?.success) {
-      const message = String(result?.error || result?.message || 'Lỗi chạy code');
-      setProgramError(message);
-      setProgramOutput('');
-      setProgramPreviewHtml('');
-      toast.error('Chạy code thất bại');
-      return;
-    }
-
-    setProgramOutput(String(result.output || '(Không có output)'));
-    setProgramPreviewHtml(String(result.previewHtml || ''));
-    toast.success('Chạy code thành công');
-  };
-
-  const handleRunCode = async () => {
     const source = String(editorCode || '');
     if (!source.trim()) {
       toast.error('Vui lòng nhập code trước khi chạy');
       return;
     }
 
-    if (editorLanguage !== 'plaintext') {
+    if (LOCAL_RUN_LANGUAGES.has(editorLanguage) && editorLanguage !== 'plaintext') {
       const issues = collectCodeIssues(source, editorLanguage);
       if (issues.length > 0) {
-        const issueText = issues.join('\n');
-        setProgramError(issueText);
+        setProgramError(issues.join('\n'));
         setProgramOutput('');
         setProgramPreviewHtml('');
+        setStatusBanner({ kind: 'hidden', message: '' });
         toast.error('Code đang có lỗi cú pháp');
         return;
       }
     }
 
-    const normalizedTestCases = Array.isArray(snippetTestCases) ? snippetTestCases : [];
-
     setRunningCode(true);
+    setRunningAction('run');
     setProgramError('');
     setProgramPreviewHtml('');
+    setJudgeCompilerError('');
 
     try {
-      if (normalizedTestCases.length === 0) {
-        setProgramOutput('Không có test case, chạy theo chế độ input thủ công...');
-        await runSingleInputMode(source);
-        return;
-      }
-
-      if (!REMOTE_RUN_LANGUAGES.has(editorLanguage)) {
-        const unsupportedMessage = 'Ngôn ngữ này chưa hỗ trợ auto judge qua Wandbox.';
-        setProgramError(unsupportedMessage);
+      const runResult = await runSingleInputMode(source);
+      if (!runResult?.success) {
+        const message = String(runResult?.error || 'Lỗi chạy code');
+        setProgramError(message);
         setProgramOutput('');
-        toast.error(unsupportedMessage);
+        setProgramPreviewHtml('');
+        setStatusBanner({ kind: 'hidden', message: '' });
+        toast.error('Chạy code thất bại');
         return;
       }
 
-      const runToken = Date.now();
-      judgeAnimationRunRef.current = runToken;
-      setProgramOutput(
-        `Đang gửi đồng thời ${normalizedTestCases.length} test cases lên Wandbox (Promise.all)...`
+      const outputText = String(runResult.output || '(Không có output)');
+      const hasOutput =
+        Boolean(String(runResult.output || '').trim()) &&
+        String(runResult.output || '').trim() !== '(Không có output)';
+      setProgramOutput(outputText);
+      setProgramPreviewHtml(String(runResult.previewHtml || ''));
+      setStatusBanner(
+        hasOutput
+          ? { kind: 'run-output', message: 'Có kết quả output' }
+          : { kind: 'hidden', message: '' }
       );
-      setEarnedScore(0);
-      setJudgeResults(buildPendingJudgeResults(normalizedTestCases));
+      toast.success('Chạy code thành công');
+    } catch (error) {
+      const message = String(error?.message || 'Lỗi runtime');
+      setProgramError(message);
+      setProgramOutput('');
+      setProgramPreviewHtml('');
+      setStatusBanner({ kind: 'hidden', message: '' });
+      toast.error('Chạy code thất bại');
+    } finally {
+      setRunningCode(false);
+      setRunningAction('');
+    }
+  }, [editorCode, editorLanguage, runSingleInputMode, runningCode]);
 
+  const handleJudge = useCallback(async () => {
+    if (runningCode) return;
+
+    const source = String(editorCode || '');
+    if (!source.trim()) {
+      toast.error('Vui lòng nhập code trước khi chấm bài');
+      return;
+    }
+
+    const normalizedTestCases = Array.isArray(snippetTestCases) ? snippetTestCases : [];
+    if (normalizedTestCases.length === 0) {
+      toast.error('Bài này chưa có test case để chấm');
+      return;
+    }
+
+    if (!REMOTE_RUN_LANGUAGES.has(editorLanguage)) {
+      const unsupportedMessage = 'Ngôn ngữ này chưa hỗ trợ chấm bài qua Wandbox.';
+      setProgramError(unsupportedMessage);
+      setProgramOutput('');
+      setStatusBanner({ kind: 'hidden', message: '' });
+      toast.error(unsupportedMessage);
+      return;
+    }
+
+    const runToken = Date.now();
+    judgeAnimationRunRef.current = runToken;
+    setRunningCode(true);
+    setRunningAction('judge');
+    setProgramError('');
+    setProgramPreviewHtml('');
+    setProgramOutput('');
+    setJudgeCompilerError('');
+    setEarnedScore(0);
+    setJudgeResults(buildPendingJudgeResults(normalizedTestCases));
+    setStatusBanner({
+      kind: 'judging',
+      message: `Đang chấm ${normalizedTestCases.length} test cases...`,
+    });
+
+    try {
       const rawResults = await Promise.all(
         normalizedTestCases.map(async (testCase, index) => {
           const startedAt = performance.now();
@@ -1515,7 +1599,20 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
               const errorMessage = String(
                 result?.error || result?.message || 'Không thể chạy test case'
               ).trim();
-              if (isTimeLimitError(errorMessage)) {
+              if (isCompilerErrorResult(result)) {
+                return {
+                  ...testCase,
+                  index,
+                  status: 'compiler_error',
+                  gotOutput: '',
+                  errorMessage: errorMessage || 'Compiler Error',
+                  executionTimeMs,
+                };
+              }
+              if (
+                String(result?.errorType || '').toLowerCase() === 'time_limit' ||
+                isTimeLimitError(errorMessage)
+              ) {
                 return {
                   ...testCase,
                   index,
@@ -1542,7 +1639,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
               index,
               status: passed ? 'passed' : 'failed',
               gotOutput,
-              errorMessage: passed ? '' : '',
+              errorMessage: passed ? '' : 'Wrong Answer',
               executionTimeMs,
             };
           } catch (error) {
@@ -1561,6 +1658,17 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
       );
 
       if (judgeAnimationRunRef.current !== runToken) return;
+
+      const compilerErrorCase = rawResults.find((item) => item.status === 'compiler_error');
+      if (compilerErrorCase) {
+        setJudgeResults([]);
+        setEarnedScore(0);
+        setJudgeCompilerError(String(compilerErrorCase.errorMessage || 'Compiler Error'));
+        setStatusBanner({ kind: 'hidden', message: '' });
+        setProgramOutput('');
+        toast.error('Code bị lỗi biên dịch, không thể chấm test case');
+        return;
+      }
 
       let nextEarnedScore = 0;
       await wait(AUTO_JUDGE_REVEAL_INITIAL_MS);
@@ -1583,42 +1691,58 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
         await wait(AUTO_JUDGE_REVEAL_STEP_MS);
       }
 
-      const passedCount = rawResults.filter((item) => item.status === 'passed').length;
-      const tleCount = rawResults.filter((item) => item.status === 'tle').length;
-      const failedCount = rawResults.length - passedCount - tleCount;
-      setProgramOutput(
-        `Đạt ${formatJudgeScore(nextEarnedScore)}/${formatJudgeScore(totalJudgeScore)} điểm - ` +
-          `${passedCount} đúng, ${failedCount} sai, ${tleCount} quá thời gian.`
-      );
+      const scoreMessage = `${formatJudgeScore(nextEarnedScore)}/${formatJudgeScore(totalJudgeScore)}`;
+      setStatusBanner({ kind: 'judged', message: scoreMessage });
+      setProgramOutput(`Tổng điểm: ${scoreMessage}`);
       toast.success('Đã chấm xong toàn bộ test case');
     } catch (error) {
       const message = String(error?.message || 'Lỗi runtime');
       setProgramError(message);
       setProgramOutput('');
       setProgramPreviewHtml('');
-      toast.error('Chạy code thất bại');
+      setStatusBanner({ kind: 'hidden', message: '' });
+      toast.error('Chấm bài thất bại');
     } finally {
       setRunningCode(false);
+      setRunningAction('');
     }
-  };
+  }, [editorCode, editorLanguage, snippetTestCases, totalJudgeScore, runningCode]);
 
-  const handleClearConsole = () => {
+  const handleClearConsole = useCallback(() => {
     judgeAnimationRunRef.current = Date.now();
     setProgramOutput('');
     setProgramError('');
     setProgramPreviewHtml('');
-    setEarnedScore(0);
-    setJudgeResults(buildPendingJudgeResults(snippetTestCases));
-  };
+    setStatusBanner({ kind: 'hidden', message: '' });
+    setJudgeCompilerError('');
+  }, []);
+
+  useEffect(() => {
+    if (!selectedSnippet) return undefined;
+
+    const handleEditorShortcuts = (event) => {
+      if (event.key !== 'Enter' || !event.ctrlKey) return;
+      if (runningCode) return;
+      event.preventDefault();
+      if (event.shiftKey) {
+        void handleJudge();
+        return;
+      }
+      void handleRunCode();
+    };
+
+    window.addEventListener('keydown', handleEditorShortcuts);
+    return () => window.removeEventListener('keydown', handleEditorShortcuts);
+  }, [handleJudge, handleRunCode, runningCode, selectedSnippet]);
 
   const filteredSnippets = useMemo(() => {
     const keyword = String(searchQuery || '').trim().toLowerCase();
     if (!keyword) return snippets;
 
     return snippets.filter((snippet) => {
-      const cardTitle = String(snippet.cardTitle || '').toLowerCase();
+      const cardTitle = String(snippet.cardTitle || snippet.title || '').toLowerCase();
       const subjectName = String(snippet.subjectName || '').toLowerCase();
-      const assignmentName = String(snippet.assignmentName || '').toLowerCase();
+      const assignmentName = String(snippet.assignmentName || snippet.exerciseName || '').toLowerCase();
 
       return (
         cardTitle.includes(keyword) ||
@@ -1834,7 +1958,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   Tên bài tập
                 </p>
                 <p className="mt-1 text-sm font-bold text-gray-900 dark:text-gray-100">
-                  {selectedSnippet.assignmentName || selectedSnippet.cardTitle || 'Chưa cập nhật'}
+                  {selectedSnippet.assignmentName || selectedSnippet.exerciseName || selectedSnippet.cardTitle || selectedSnippet.title || 'Chưa cập nhật'}
                 </p>
               </div>
               </div>
@@ -1865,35 +1989,68 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                       ),
                     }}
                   >
-                    {selectedSnippet.assignmentDescription || 'Chưa có mô tả'}
+                    {selectedSnippet.assignmentDescription || selectedSnippet.formattedDescription || 'Chưa có mô tả'}
                   </ReactMarkdown>
                 </div>
               </div>
             </div>
 
             <div className="px-4 pt-3">
-              <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-cyan-50 to-sky-50 p-4 shadow-sm dark:border-emerald-700/60 dark:from-emerald-900/20 dark:via-cyan-900/20 dark:to-sky-900/20">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-                      Điểm tự động
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-                      Chấm theo test case AI tạo sẵn
-                    </p>
+              {statusBanner.kind !== 'hidden' && (
+                <div
+                  className={`rounded-2xl border px-4 py-3 text-sm font-semibold shadow-sm ${
+                    statusBanner.kind === 'run-output'
+                      ? 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800/70 dark:bg-blue-900/20 dark:text-blue-300'
+                      : statusBanner.kind === 'judging'
+                        ? 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700/80 dark:bg-slate-800/40 dark:text-slate-200'
+                        : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/70 dark:bg-emerald-900/20 dark:text-emerald-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {statusBanner.kind === 'judging' && (
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-400 border-t-transparent dark:border-slate-300 dark:border-t-transparent" />
+                    )}
+                    {statusBanner.kind === 'run-output' && <span>Có kết quả output</span>}
+                    {statusBanner.kind === 'judging' && <span>{statusBanner.message || 'Đang chấm bài...'}</span>}
+                    {statusBanner.kind === 'judged' && (
+                      <span>Điểm tổng kết: {statusBanner.message}</span>
+                    )}
                   </div>
-                  <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300">
-                    {formatJudgeScore(earnedScore)}/{formatJudgeScore(totalJudgeScore)}
-                  </p>
                 </div>
-                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-900/50">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 transition-all duration-500"
-                    style={{
-                      width: `${Math.max(0, Math.min(100, (earnedScore / Math.max(totalJudgeScore, 1)) * 100))}%`,
-                    }}
-                  />
-                </div>
+              )}
+
+              <div className="mt-3 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-cyan-50 to-sky-50 p-4 shadow-sm dark:border-emerald-700/60 dark:from-emerald-900/20 dark:via-cyan-900/20 dark:to-sky-900/20">
+                {runningAction === 'judge' ? (
+                  <div className="animate-pulse">
+                    <div className="h-3 w-28 rounded bg-emerald-200/90 dark:bg-emerald-700/70" />
+                    <div className="mt-2 h-6 w-24 rounded bg-emerald-200/90 dark:bg-emerald-700/70" />
+                    <div className="mt-3 h-2.5 rounded-full bg-emerald-200/80 dark:bg-emerald-700/60" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                          Điểm tự động
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                          Chấm theo test case AI tạo sẵn
+                        </p>
+                      </div>
+                      <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300">
+                        {formatJudgeScore(earnedScore)}/{formatJudgeScore(totalJudgeScore)}
+                      </p>
+                    </div>
+                    <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-900/50">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 transition-all duration-500"
+                        style={{
+                          width: `${Math.max(0, Math.min(100, (earnedScore / Math.max(totalJudgeScore, 1)) * 100))}%`,
+                        }}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -1916,7 +2073,17 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                     title="Chạy code"
                   >
                     <Play size={16} />
-                    {runningCode ? 'Đang chạy...' : 'Run'}
+                    {runningAction === 'run' ? 'Đang chạy...' : 'Run'}
+                  </button>
+
+                  <button
+                    onClick={handleJudge}
+                    disabled={runningCode}
+                    className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    title="Chấm bài"
+                  >
+                    <Sparkles size={16} />
+                    {runningAction === 'judge' ? 'Đang chấm...' : 'Chấm bài'}
                   </button>
 
                   <button
@@ -1927,6 +2094,9 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                     Xóa output
                   </button>
                 </div>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Ctrl + Enter: Run | Ctrl + Shift + Enter: Chấm bài
+                </p>
 
                 <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-50/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] dark:border-slate-700/90 dark:bg-slate-900/40">
                   <div className="border-b border-slate-200/90 bg-white/60 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-500 dark:border-slate-700/90 dark:bg-slate-900/60 dark:text-slate-400">
@@ -1945,9 +2115,20 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   <div className="border-b border-slate-200/90 bg-white/60 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-500 dark:border-slate-700/90 dark:bg-slate-900/60 dark:text-slate-400">
                     Output
                   </div>
-                  <pre className="h-36 overflow-auto whitespace-pre-wrap p-3 font-mono text-sm leading-6 text-slate-800 dark:text-slate-100 xl:h-[190px]">
-                    {programOutput || '(Chưa có output)'}
-                  </pre>
+                  {runningCode ? (
+                    <div className="h-36 space-y-2 p-3 xl:h-[190px]">
+                      <div className="h-4 w-full animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                      <div className="h-4 w-11/12 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                      <div className="h-4 w-9/12 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                    </div>
+                  ) : (
+                    <pre
+                      ref={terminalOutputRef}
+                      className="h-36 overflow-auto whitespace-pre-wrap p-3 font-mono text-sm leading-6 text-slate-800 dark:text-slate-100 xl:h-[190px]"
+                    >
+                      {programOutput || '(Chưa có output)'}
+                    </pre>
+                  )}
                   {programPreviewHtml && (
                     <div className="border-t border-slate-200/90 p-2 dark:border-slate-700/90">
                       <iframe
@@ -1962,103 +2143,79 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
               </div>
             </div>
 
-            <div className="mx-4 mb-3 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm dark:border-slate-700/90 dark:bg-slate-900/50">
-              <div className="border-b border-slate-200/90 bg-slate-50/80 px-4 py-3 dark:border-slate-700/90 dark:bg-slate-900/70">
-                <p className="text-sm font-black text-slate-800 dark:text-slate-100">Kết quả test case</p>
-                <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-slate-400">
-                  Hiệu ứng suspense: trạng thái được mở dần sau khi nhận đủ kết quả.
-                </p>
+            {judgeCompilerError && (
+              <div className="mx-4 mb-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 shadow-sm dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+                <p className="text-sm font-black">Lỗi biên dịch (compiler_error)</p>
+                <pre className="mt-2 whitespace-pre-wrap font-mono text-xs">
+                  {judgeCompilerError}
+                </pre>
               </div>
-              <div className="space-y-3 p-4">
-                {judgeResults.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-5 text-sm font-medium text-slate-500 dark:border-slate-600 dark:bg-slate-800/40 dark:text-slate-400">
-                    Chưa có test case. Hãy cập nhật mô tả bài tập để AI tạo test case tự động.
-                  </div>
-                )}
+            )}
 
-                {judgeResults.map((item, index) => {
-                  const isPassed = item.status === 'passed';
-                  const isFailed = item.status === 'failed';
-                  const isTle = item.status === 'tle';
-
-                  return (
-                    <div
-                      key={`${index}-${item.input}-${item.expectedOutput}`}
-                      className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 dark:border-slate-700 dark:bg-slate-800/40"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <AutoJudgeStatusIcon status={item.status} />
-                          <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                            Test {index + 1}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs font-semibold">
-                          <span
-                            className={`rounded-full px-2 py-0.5 ${
-                              isPassed
-                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                                : isFailed
-                                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                                  : isTle
-                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                                    : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
-                            }`}
-                          >
-                            {isPassed
-                              ? 'Thành công'
-                              : isFailed
-                                ? 'Sai kết quả'
-                                : isTle
-                                  ? 'Time Limit Exceeded'
-                                  : 'Đang chờ'}
-                          </span>
-                          <span className="text-slate-500 dark:text-slate-400">
-                            {formatExecutionTime(item.executionTimeMs)}
-                          </span>
-                          <span className="text-slate-700 dark:text-slate-200">
-                            +{isPassed ? formatJudgeScore(item.score) : '0'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {isFailed && (
-                        <div className="mt-3 grid gap-2 lg:grid-cols-2">
-                          <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2 dark:border-emerald-800/60 dark:bg-emerald-900/20">
-                            <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-                              Expected
-                            </p>
-                            <pre className="mt-1 whitespace-pre-wrap font-mono text-xs text-emerald-900 dark:text-emerald-100">
-                              {item.expectedOutput || '(trống)'}
-                            </pre>
-                          </div>
-                          <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-2 dark:border-rose-800/60 dark:bg-rose-900/20">
-                            <p className="text-[11px] font-bold uppercase tracking-wide text-rose-700 dark:text-rose-300">
-                              Got
-                            </p>
-                            <pre className="mt-1 whitespace-pre-wrap font-mono text-xs text-rose-900 dark:text-rose-100">
-                              {item.gotOutput || '(trống)'}
-                            </pre>
-                          </div>
-                        </div>
-                      )}
-
-                      {isTle && (
-                        <p className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
-                          ⚠️ Time Limit Exceeded: chương trình vượt quá thời gian xử lý cho test này.
-                        </p>
-                      )}
-
-                      {item.errorMessage && item.status !== 'pending' && (
-                        <p className="mt-2 whitespace-pre-wrap text-xs font-medium text-slate-600 dark:text-slate-300">
-                          {item.errorMessage}
-                        </p>
-                      )}
+            {!judgeCompilerError && (
+              <div className="mx-4 mb-3 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm dark:border-slate-700/90 dark:bg-slate-900/50">
+                <div className="border-b border-slate-200/90 bg-slate-50/80 px-4 py-3 dark:border-slate-700/90 dark:bg-slate-900/70">
+                  <p className="text-sm font-black text-slate-800 dark:text-slate-100">Kết quả test case</p>
+                  <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Trạng thái sẽ mở dần sau khi nhận đủ kết quả từ Promise.all.
+                  </p>
+                </div>
+                <div className="space-y-3 p-4">
+                  {judgeResults.length === 0 && (
+                    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-5 text-sm font-medium text-slate-500 dark:border-slate-600 dark:bg-slate-800/40 dark:text-slate-400">
+                      Nhấn Chấm bài để chạy toàn bộ test case.
                     </div>
-                  );
-                })}
+                  )}
+
+                  {judgeResults.map((item, index) => {
+                    const isPassed = item.status === 'passed';
+                    const isFailed = item.status === 'failed';
+                    const isTle = item.status === 'tle';
+                    const isPending = item.status === 'pending';
+
+                    return (
+                      <div
+                        key={`${index}-${item.input}-${item.expectedOutput}`}
+                        className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 dark:border-slate-700 dark:bg-slate-800/40"
+                      >
+                        <div className="flex items-start gap-2">
+                          <AutoJudgeStatusIcon status={item.status} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                              {isPending && `Test ${index + 1}: Đang chờ...`}
+                              {isPassed && `Test ${index + 1}: ${formatExecutionTime(item.executionTimeMs)}`}
+                              {isTle && `Test ${index + 1}: Time Limit Exceeded`}
+                              {isFailed && `Test ${index + 1}: Wrong Answer`}
+                            </p>
+                          </div>
+                        </div>
+
+                        {isFailed && (
+                          <div className="mt-3 grid gap-2 lg:grid-cols-2">
+                            <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2 dark:border-emerald-800/60 dark:bg-emerald-900/20">
+                              <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                                Expected
+                              </p>
+                              <pre className="mt-1 whitespace-pre-wrap font-mono text-xs text-emerald-900 dark:text-emerald-100">
+                                {item.expectedOutput || '(trống)'}
+                              </pre>
+                            </div>
+                            <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-2 dark:border-rose-800/60 dark:bg-rose-900/20">
+                              <p className="text-[11px] font-bold uppercase tracking-wide text-rose-700 dark:text-rose-300">
+                                Got
+                              </p>
+                              <pre className="mt-1 whitespace-pre-wrap font-mono text-xs text-rose-900 dark:text-rose-100">
+                                {item.gotOutput || '(trống)'}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="px-4 pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
               Hỗ trợ chạy: Plain Text, C++, JavaScript, TypeScript, Python, Java, HTML, CSS, SQL, JSON.
