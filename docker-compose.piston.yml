@@ -1,0 +1,22 @@
+services:
+  piston-api:
+    image: ghcr.io/engineer-man/piston
+    container_name: studyweb-piston
+    restart: unless-stopped
+    ports:
+      - "2000:2000"
+    volumes:
+      - piston-packages:/piston/packages
+      - piston-jobs:/piston/jobs
+    tmpfs:
+      - /tmp:exec,size=256m
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:2000/api/v2/runtimes').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  piston-packages:
+  piston-jobs:

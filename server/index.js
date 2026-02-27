@@ -4604,10 +4604,140 @@ app.post('/api/code-snippets', async (req, res) => {
     }
 });
 
-const CODE_RUNNER_API_URL = 'https://emkc.org/api/v2/piston/execute';
-const CODE_RUNNER_TIMEOUT_MS = 15000;
+const DEFAULT_LOCAL_CODE_RUNNER_API_URL = 'http://127.0.0.1:2000/api/v2/execute';
+const CODE_RUNNER_TIMEOUT_MS = parsePositiveInt(process.env.CODE_RUNNER_TIMEOUT_MS, 15000);
+const CODE_RUNNER_API_URLS = (() => {
+    const rawValue = String(
+        process.env.CODE_RUNNER_API_URLS ||
+        process.env.CODE_RUNNER_API_URL ||
+        DEFAULT_LOCAL_CODE_RUNNER_API_URL
+    ).trim();
+
+    if (!rawValue) return [DEFAULT_LOCAL_CODE_RUNNER_API_URL];
+
+    const urls = rawValue
+        .split(/[\n,;]+/)
+        .map((item) => String(item || '').trim())
+        .filter((item) => item.startsWith('http://') || item.startsWith('https://'));
+
+    const deduplicated = Array.from(new Set(urls));
+    return deduplicated.length > 0 ? deduplicated : [DEFAULT_LOCAL_CODE_RUNNER_API_URL];
+})();
+const LOCAL_PISTON_URL_PATTERN = /^https?:\/\/(127\.0\.0\.1|localhost):2000/i;
+
+console.log(`🧪 Code runner endpoints: ${CODE_RUNNER_API_URLS.join(', ')}`);
 
 const sanitizeRunnerText = (value, limit = 20000) => String(value || '').slice(0, limit);
+const toRunnerRuntimesUrl = (executeUrl) =>
+    String(executeUrl || '').replace(/\/execute\/?$/i, '/runtimes');
+
+const executeRunnerRequest = async (payload) => {
+    const attempts = [];
+
+    for (const runnerUrl of CODE_RUNNER_API_URLS) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), CODE_RUNNER_TIMEOUT_MS);
+
+        let response = null;
+        try {
+            response = await fetch(runnerUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+            });
+        } catch (error) {
+            attempts.push({
+                url: runnerUrl,
+                status: 0,
+                networkError: true,
+                message: error?.name === 'AbortError'
+                    ? `Runner timeout sau ${CODE_RUNNER_TIMEOUT_MS}ms`
+                    : String(error?.message || 'Không thể kết nối runner')
+            });
+            clearTimeout(timeoutId);
+            continue;
+        }
+        clearTimeout(timeoutId);
+
+        let body = null;
+        try {
+            body = await response.json();
+        } catch {
+            body = null;
+        }
+
+        if (response.ok) {
+            return {
+                success: true,
+                runnerUrl,
+                runnerData: body,
+                attempts
+            };
+        }
+
+        attempts.push({
+            url: runnerUrl,
+            status: response.status,
+            networkError: false,
+            message: String(body?.message || `Runner service lỗi HTTP ${response.status}`).trim()
+        });
+    }
+
+    return {
+        success: false,
+        attempts
+    };
+};
+
+const checkRunnerHealth = async () => {
+    const results = [];
+
+    for (const runnerUrl of CODE_RUNNER_API_URLS) {
+        const runtimesUrl = toRunnerRuntimesUrl(runnerUrl);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), Math.min(CODE_RUNNER_TIMEOUT_MS, 7000));
+
+        try {
+            const response = await fetch(runtimesUrl, {
+                method: 'GET',
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            let runtimes = [];
+            try {
+                const body = await response.json();
+                if (Array.isArray(body)) {
+                    runtimes = body.map((item) => String(item?.language || '').trim()).filter(Boolean);
+                }
+            } catch {
+                // Ignore parse errors and keep runtimes empty.
+            }
+
+            results.push({
+                url: runnerUrl,
+                status: response.status,
+                ok: response.ok,
+                runtimes: Array.from(new Set(runtimes)).sort()
+            });
+            continue;
+        } catch (error) {
+            clearTimeout(timeoutId);
+            results.push({
+                url: runnerUrl,
+                status: 0,
+                ok: false,
+                runtimes: [],
+                message: error?.name === 'AbortError'
+                    ? `Timeout sau ${Math.min(CODE_RUNNER_TIMEOUT_MS, 7000)}ms`
+                    : String(error?.message || 'Không thể kết nối')
+            });
+        }
+    }
+
+    return results;
+};
 
 const buildRunnerPayload = ({ language, code, input }) => {
     const normalizedLanguage = String(language || '').trim().toLowerCase();
@@ -4727,41 +4857,38 @@ app.post('/api/code-snippets/run', async (req, res) => {
             });
         }
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), CODE_RUNNER_TIMEOUT_MS);
+        const runnerResult = await executeRunnerRequest(payload);
+        if (!runnerResult.success) {
+            const attempts = Array.isArray(runnerResult.attempts) ? runnerResult.attempts : [];
+            const whitelistAttempt = attempts.find((item) =>
+                Number(item?.status) === 401 && /whitelist/i.test(String(item?.message || ''))
+            );
+            const localUnavailableAttempt = attempts.find((item) =>
+                Boolean(item?.networkError) && LOCAL_PISTON_URL_PATTERN.test(String(item?.url || ''))
+            );
+            const firstAttempt = attempts[0] || null;
 
-        let runnerResponse;
-        try {
-            runnerResponse = await fetch(CODE_RUNNER_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                signal: controller.signal
-            });
-        } finally {
-            clearTimeout(timeoutId);
-        }
-
-        let runnerData = null;
-        try {
-            runnerData = await runnerResponse.json();
-        } catch {
-            runnerData = null;
-        }
-
-        if (!runnerResponse.ok) {
-            const remoteMessage = String(runnerData?.message || '').trim();
-            const message = remoteMessage || `Runner service lỗi HTTP ${runnerResponse.status}`;
-            const isWhitelistPolicy = runnerResponse.status === 401 && /whitelist/i.test(message);
+            let message = 'Không thể chạy code lúc này.';
+            if (localUnavailableAttempt) {
+                message = 'Không kết nối được local Piston tại http://127.0.0.1:2000. Hãy chạy `docker compose -f docker-compose.piston.yml up -d`.';
+            } else if (whitelistAttempt) {
+                message = 'Runner public đã chuyển sang whitelist từ 15/02/2026. Hãy dùng local Piston hoặc runner có API key.';
+            } else if (firstAttempt?.message) {
+                message = firstAttempt.message;
+            }
 
             return res.status(502).json({
                 success: false,
-                message: isWhitelistPolicy
-                    ? 'Runner public đã chuyển sang chế độ whitelist từ 15/02/2026. Cần tự host Piston hoặc dùng runner khác.'
-                    : message,
-                runnerStatus: runnerResponse.status
+                message,
+                diagnostics: attempts.map((item) => ({
+                    url: item.url,
+                    status: item.status,
+                    message: item.message
+                }))
             });
         }
+
+        const runnerData = runnerResult.runnerData || {};
 
         const compileStdout = sanitizeRunnerText(runnerData?.compile?.stdout || '');
         const compileStderr = sanitizeRunnerText(runnerData?.compile?.stderr || '');
@@ -4780,24 +4907,41 @@ app.post('/api/code-snippets/run', async (req, res) => {
                 success: false,
                 output,
                 error: errorText || 'Code chạy thất bại',
-                language
+                language,
+                runner: runnerResult.runnerUrl
             });
         }
 
         return res.json({
             success: true,
             output,
-            language
+            language,
+            runner: runnerResult.runnerUrl
         });
     } catch (err) {
-        if (err.name === 'AbortError') {
-            return res.status(504).json({
-                success: false,
-                message: 'Runner timeout, code chạy quá lâu'
-            });
-        }
         console.error('Run code snippet error:', err);
         return res.status(500).json({ success: false, message: 'Lỗi server khi chạy code' });
+    }
+});
+
+app.get('/api/code-snippets/runner-health', async (req, res) => {
+    try {
+        const checks = await checkRunnerHealth();
+        const online = checks.some((item) => item.ok);
+
+        return res.json({
+            success: online,
+            online,
+            checks
+        });
+    } catch (err) {
+        console.error('Runner health check error:', err);
+        return res.status(500).json({
+            success: false,
+            online: false,
+            checks: [],
+            message: 'Không thể kiểm tra trạng thái runner'
+        });
     }
 });
 
