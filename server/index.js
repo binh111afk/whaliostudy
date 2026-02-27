@@ -4742,14 +4742,26 @@ app.post('/api/code-snippets/run', async (req, res) => {
             clearTimeout(timeoutId);
         }
 
-        if (!runnerResponse.ok) {
-            return res.status(502).json({
-                success: false,
-                message: `Runner service lỗi HTTP ${runnerResponse.status}`
-            });
+        let runnerData = null;
+        try {
+            runnerData = await runnerResponse.json();
+        } catch {
+            runnerData = null;
         }
 
-        const runnerData = await runnerResponse.json();
+        if (!runnerResponse.ok) {
+            const remoteMessage = String(runnerData?.message || '').trim();
+            const message = remoteMessage || `Runner service lỗi HTTP ${runnerResponse.status}`;
+            const isWhitelistPolicy = runnerResponse.status === 401 && /whitelist/i.test(message);
+
+            return res.status(502).json({
+                success: false,
+                message: isWhitelistPolicy
+                    ? 'Runner public đã chuyển sang chế độ whitelist từ 15/02/2026. Cần tự host Piston hoặc dùng runner khác.'
+                    : message,
+                runnerStatus: runnerResponse.status
+            });
+        }
 
         const compileStdout = sanitizeRunnerText(runnerData?.compile?.stdout || '');
         const compileStderr = sanitizeRunnerText(runnerData?.compile?.stderr || '');
