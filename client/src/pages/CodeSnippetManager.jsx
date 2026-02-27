@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import {
   CalendarDays,
   ChevronLeft,
@@ -1846,23 +1847,30 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                 <div className="prose prose-sm mt-2 max-w-none dark:prose-invert">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeRaw]}
                     components={{
                       table: (props) => (
-                        <div className="my-3 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-600">
-                          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700" {...props} />
+                        <div className="my-4 overflow-x-auto rounded-lg border border-gray-300 shadow-sm dark:border-gray-600">
+                          <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-600" {...props} />
                         </div>
                       ),
                       thead: (props) => (
-                        <thead className="bg-gray-50 dark:bg-gray-700/60" {...props} />
+                        <thead className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:bg-gradient-to-r dark:from-gray-700 dark:to-gray-700/80" {...props} />
                       ),
                       th: (props) => (
                         <th
-                          className="px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300"
+                          className="border-b-2 border-blue-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-blue-700 dark:border-gray-600 dark:text-blue-300"
                           {...props}
                         />
                       ),
+                      tbody: (props) => (
+                        <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800" {...props} />
+                      ),
+                      tr: (props) => (
+                        <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50" {...props} />
+                      ),
                       td: (props) => (
-                        <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-200" {...props} />
+                        <td className="whitespace-pre-wrap px-4 py-3 text-sm text-gray-700 dark:text-gray-200" {...props} />
                       ),
                     }}
                   >
