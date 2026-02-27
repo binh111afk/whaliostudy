@@ -1913,19 +1913,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   </div>
                 ) : (
                   <>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-                          Điểm tự động
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-                          Chấm theo test case AI tạo sẵn
-                        </p>
-                      </div>
-                      <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300">
-                        {formatJudgeScore(earnedScore)}/{formatJudgeScore(totalJudgeScore)}
-                      </p>
-                    </div>
+                    
                     <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-900/50">
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 transition-all duration-500"
