@@ -70,4 +70,18 @@ export const codeSnippetService = {
       return { success: false, message: 'Lỗi kết nối server' };
     }
   },
+
+  async runSnippet(payload) {
+    try {
+      const res = await fetch(getFullApiUrl('/api/code-snippets/run'), {
+        method: 'POST',
+        headers: JSON_HEADERS,
+        body: JSON.stringify(payload || {}),
+      });
+      return await res.json();
+    } catch (error) {
+      console.error('Run code snippet error:', error);
+      return { success: false, message: 'Lỗi kết nối server khi chạy code' };
+    }
+  },
 };

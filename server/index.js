@@ -4604,6 +4604,191 @@ app.post('/api/code-snippets', async (req, res) => {
     }
 });
 
+const CODE_RUNNER_API_URL = 'https://emkc.org/api/v2/piston/execute';
+const CODE_RUNNER_TIMEOUT_MS = 15000;
+
+const sanitizeRunnerText = (value, limit = 20000) => String(value || '').slice(0, limit);
+
+const buildRunnerPayload = ({ language, code, input }) => {
+    const normalizedLanguage = String(language || '').trim().toLowerCase();
+    const source = String(code || '');
+    const stdin = String(input || '');
+
+    const basePayload = {
+        version: '*',
+        files: [{ content: source }],
+        stdin
+    };
+
+    if (normalizedLanguage === 'cpp') {
+        return {
+            ...basePayload,
+            language: 'c++',
+            files: [{ name: 'main.cpp', content: source }]
+        };
+    }
+
+    if (normalizedLanguage === 'javascript') {
+        return {
+            ...basePayload,
+            language: 'javascript',
+            files: [{ name: 'main.js', content: source }]
+        };
+    }
+
+    if (normalizedLanguage === 'typescript') {
+        return {
+            ...basePayload,
+            language: 'typescript',
+            files: [{ name: 'main.ts', content: source }]
+        };
+    }
+
+    if (normalizedLanguage === 'python') {
+        return {
+            ...basePayload,
+            language: 'python',
+            files: [{ name: 'main.py', content: source }]
+        };
+    }
+
+    if (normalizedLanguage === 'java') {
+        return {
+            ...basePayload,
+            language: 'java',
+            files: [{ name: 'Main.java', content: source }]
+        };
+    }
+
+    if (normalizedLanguage === 'sql') {
+        const sqlRunnerScript = `
+import json
+import sqlite3
+import sys
+
+payload_text = sys.stdin.read() or "{}"
+payload = json.loads(payload_text)
+sql_code = str(payload.get("code", ""))
+seed_sql = str(payload.get("input", ""))
+
+conn = sqlite3.connect(":memory:")
+cur = conn.cursor()
+outputs = []
+
+if seed_sql.strip():
+    cur.executescript(seed_sql)
+
+statements = [stmt.strip() for stmt in sql_code.split(";") if stmt.strip()]
+for statement in statements:
+    cur.execute(statement)
+    if cur.description:
+        columns = [col[0] for col in cur.description]
+        rows = cur.fetchall()
+        outputs.append(json.dumps({"columns": columns, "rows": rows}, ensure_ascii=False))
+    else:
+        conn.commit()
+        outputs.append(f"OK ({cur.rowcount} rows affected)")
+
+if not outputs:
+    outputs.append("(Không có output)")
+
+print("\\n".join(outputs))
+`;
+
+        return {
+            version: '*',
+            language: 'python',
+            files: [{ name: 'main.py', content: sqlRunnerScript }],
+            stdin: JSON.stringify({ code: source, input: stdin })
+        };
+    }
+
+    return null;
+};
+
+app.post('/api/code-snippets/run', async (req, res) => {
+    try {
+        const language = String(req.body?.language || '').trim().toLowerCase();
+        const code = String(req.body?.code || '');
+        const input = String(req.body?.input || '');
+
+        if (!language) {
+            return res.status(400).json({ success: false, message: 'Thiếu language' });
+        }
+        if (!code.trim()) {
+            return res.status(400).json({ success: false, message: 'Thiếu code để chạy' });
+        }
+
+        const payload = buildRunnerPayload({ language, code, input });
+        if (!payload) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ngôn ngữ chưa hỗ trợ chạy từ server runner'
+            });
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), CODE_RUNNER_TIMEOUT_MS);
+
+        let runnerResponse;
+        try {
+            runnerResponse = await fetch(CODE_RUNNER_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+            });
+        } finally {
+            clearTimeout(timeoutId);
+        }
+
+        if (!runnerResponse.ok) {
+            return res.status(502).json({
+                success: false,
+                message: `Runner service lỗi HTTP ${runnerResponse.status}`
+            });
+        }
+
+        const runnerData = await runnerResponse.json();
+
+        const compileStdout = sanitizeRunnerText(runnerData?.compile?.stdout || '');
+        const compileStderr = sanitizeRunnerText(runnerData?.compile?.stderr || '');
+        const runStdout = sanitizeRunnerText(runnerData?.run?.stdout || '');
+        const runStderr = sanitizeRunnerText(runnerData?.run?.stderr || '');
+        const runCode = Number(runnerData?.run?.code);
+        const compileCode = Number(runnerData?.compile?.code);
+
+        const outputParts = [compileStdout, runStdout].filter(Boolean);
+        const output = outputParts.join('\n').trim() || '(Không có output)';
+        const errorParts = [compileStderr, runStderr].filter(Boolean);
+        const errorText = errorParts.join('\n').trim();
+
+        if (compileCode !== 0 || runCode !== 0 || errorText) {
+            return res.json({
+                success: false,
+                output,
+                error: errorText || 'Code chạy thất bại',
+                language
+            });
+        }
+
+        return res.json({
+            success: true,
+            output,
+            language
+        });
+    } catch (err) {
+        if (err.name === 'AbortError') {
+            return res.status(504).json({
+                success: false,
+                message: 'Runner timeout, code chạy quá lâu'
+            });
+        }
+        console.error('Run code snippet error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server khi chạy code' });
+    }
+});
+
 app.post('/api/code-snippets/format-assignment', async (req, res) => {
     try {
         const rawText = String(req.body?.text || '').trim();

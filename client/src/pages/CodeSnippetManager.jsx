@@ -182,7 +182,8 @@ const AUTO_PAIR_MAP = {
 const OPENING_CHARS = new Set(Object.keys(AUTO_PAIR_MAP));
 const CLOSING_CHARS = new Set(Object.values(AUTO_PAIR_MAP));
 const JS_LIKE_LANGUAGES = new Set(['javascript', 'typescript', 'cpp', 'java']);
-const DIRECT_RUN_LANGUAGES = new Set(['javascript']);
+const LOCAL_RUN_LANGUAGES = new Set(['plaintext', 'json', 'html', 'css']);
+const REMOTE_RUN_LANGUAGES = new Set(['cpp', 'javascript', 'typescript', 'python', 'java', 'sql']);
 
 const collectCodeIssues = (code, language) => {
   const issues = [];
@@ -401,6 +402,55 @@ self.onmessage = async (event) => {
       input: String(input || ''),
     });
   });
+};
+
+const runLocalLanguage = ({ language, code, input }) => {
+  const normalizedLanguage = String(language || 'plaintext');
+  const source = String(code || '');
+  const rawInput = String(input || '');
+
+  if (normalizedLanguage === 'plaintext') {
+    return {
+      output: source || rawInput || '(Không có output)',
+      previewHtml: '',
+    };
+  }
+
+  if (normalizedLanguage === 'json') {
+    const parsed = JSON.parse(source || '{}');
+    return {
+      output: JSON.stringify(parsed, null, 2),
+      previewHtml: '',
+    };
+  }
+
+  if (normalizedLanguage === 'html') {
+    return {
+      output: 'Đã render preview HTML ở khung bên dưới.',
+      previewHtml: source || '<!doctype html><html><body><p>Trống</p></body></html>',
+    };
+  }
+
+  if (normalizedLanguage === 'css') {
+    const previewBody = rawInput.trim() || '<div class="preview-box">CSS Preview</div>';
+    const previewHtml = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>${source}</style>
+  </head>
+  <body>${previewBody}</body>
+</html>`;
+    return {
+      output: 'Đã render preview CSS ở khung bên dưới. Bạn có thể nhập HTML mẫu vào ô Input.',
+      previewHtml,
+    };
+  }
+
+  return {
+    output: '(Không hỗ trợ local runner cho ngôn ngữ này)',
+    previewHtml: '',
+  };
 };
 
 const HighlightCodeEditor = ({ value, onChange, language, theme }) => {
@@ -772,6 +822,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   const [programInput, setProgramInput] = useState('');
   const [programOutput, setProgramOutput] = useState('');
   const [programError, setProgramError] = useState('');
+  const [programPreviewHtml, setProgramPreviewHtml] = useState('');
   const [runningCode, setRunningCode] = useState(false);
 
   const username = useMemo(() => resolveUsername(user), [user]);
@@ -1035,6 +1086,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     setProgramInput('');
     setProgramOutput('');
     setProgramError('');
+    setProgramPreviewHtml('');
   };
 
   const handleCloseDetail = async () => {
@@ -1103,39 +1155,97 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
       return;
     }
 
-    const issues = collectCodeIssues(source, editorLanguage);
-    if (issues.length > 0) {
-      const issueText = issues.join('\n');
-      setProgramError(issueText);
-      setProgramOutput('');
-      toast.error('Code đang có lỗi cú pháp');
-      return;
-    }
-
-    if (!DIRECT_RUN_LANGUAGES.has(editorLanguage)) {
-      const message =
-        'Hiện chỉ chạy trực tiếp JavaScript trong trình duyệt. Các ngôn ngữ khác vẫn được lưu và highlight.';
-      setProgramError(message);
-      setProgramOutput('');
-      toast.error('Ngôn ngữ này chưa hỗ trợ chạy trực tiếp');
-      return;
+    if (editorLanguage !== 'plaintext') {
+      const issues = collectCodeIssues(source, editorLanguage);
+      if (issues.length > 0) {
+        const issueText = issues.join('\n');
+        setProgramError(issueText);
+        setProgramOutput('');
+        setProgramPreviewHtml('');
+        toast.error('Code đang có lỗi cú pháp');
+        return;
+      }
     }
 
     setRunningCode(true);
     setProgramError('');
     setProgramOutput('Đang chạy...');
+    setProgramPreviewHtml('');
 
     try {
-      const output = await runJavaScriptInWorker({
+      if (LOCAL_RUN_LANGUAGES.has(editorLanguage)) {
+        const localResult = runLocalLanguage({
+          language: editorLanguage,
+          code: source,
+          input: programInput,
+        });
+        setProgramOutput(String(localResult.output || '(Không có output)'));
+        setProgramPreviewHtml(String(localResult.previewHtml || ''));
+        toast.success('Chạy code thành công');
+        return;
+      }
+
+      if (editorLanguage === 'javascript') {
+        // Fallback local JS runner if server runner fails.
+        try {
+          const remoteResult = await codeSnippetService.runSnippet({
+            language: editorLanguage,
+            code: source,
+            input: String(programInput || ''),
+          });
+
+          if (remoteResult?.success) {
+            setProgramOutput(String(remoteResult.output || '(Không có output)'));
+            setProgramPreviewHtml('');
+            toast.success('Chạy code thành công');
+            return;
+          }
+        } catch {
+          // Ignore here and fallback to worker below.
+        }
+
+        const jsOutput = await runJavaScriptInWorker({
+          code: source,
+          input: String(programInput || ''),
+        });
+        setProgramOutput(jsOutput);
+        setProgramPreviewHtml('');
+        toast.success('Chạy code thành công');
+        return;
+      }
+
+      if (!REMOTE_RUN_LANGUAGES.has(editorLanguage)) {
+        const unsupportedMessage = 'Ngôn ngữ này hiện chưa hỗ trợ chạy.';
+        setProgramError(unsupportedMessage);
+        setProgramOutput('');
+        setProgramPreviewHtml('');
+        toast.error(unsupportedMessage);
+        return;
+      }
+
+      const result = await codeSnippetService.runSnippet({
+        language: editorLanguage,
         code: source,
         input: String(programInput || ''),
       });
-      setProgramOutput(output);
+
+      if (!result?.success) {
+        const message = String(result?.error || result?.message || 'Lỗi chạy code');
+        setProgramError(message);
+        setProgramOutput('');
+        setProgramPreviewHtml('');
+        toast.error('Chạy code thất bại');
+        return;
+      }
+
+      setProgramOutput(String(result.output || '(Không có output)'));
+      setProgramPreviewHtml(String(result.previewHtml || ''));
       toast.success('Chạy code thành công');
     } catch (error) {
       const message = String(error?.message || 'Lỗi runtime');
       setProgramError(message);
       setProgramOutput('');
+      setProgramPreviewHtml('');
       toast.error('Chạy code thất bại');
     } finally {
       setRunningCode(false);
@@ -1145,6 +1255,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   const handleClearConsole = () => {
     setProgramOutput('');
     setProgramError('');
+    setProgramPreviewHtml('');
   };
 
   const filteredSnippets = useMemo(() => {
@@ -1338,24 +1449,6 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                 </button>
 
                 <button
-                  onClick={handleRunCode}
-                  disabled={runningCode}
-                  className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  title="Chạy code"
-                >
-                  <Play size={16} />
-                  {runningCode ? 'Đang chạy...' : 'Run'}
-                </button>
-
-                <button
-                  onClick={handleClearConsole}
-                  className="inline-flex items-center gap-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
-                >
-                  <RotateCcw size={16} />
-                  Xóa output
-                </button>
-
-                <button
                   onClick={handleCopyCode}
                   className="inline-flex items-center gap-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
                 >
@@ -1435,7 +1528,27 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                 />
               </div>
 
-              <div className="grid gap-3 xl:h-full xl:min-h-0 xl:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="flex min-h-0 flex-col gap-3 xl:h-full">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleRunCode}
+                    disabled={runningCode}
+                    className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    title="Chạy code"
+                  >
+                    <Play size={16} />
+                    {runningCode ? 'Đang chạy...' : 'Run'}
+                  </button>
+
+                  <button
+                    onClick={handleClearConsole}
+                    className="inline-flex items-center gap-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                  >
+                    <RotateCcw size={16} />
+                    Xóa output
+                  </button>
+                </div>
+
                 <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
                   <div className="border-b border-gray-200 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400">
                     Input
@@ -1445,7 +1558,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                     onChange={(event) => setProgramInput(event.target.value)}
                     spellCheck={false}
                     placeholder="Nhập input, mỗi dòng là 1 giá trị..."
-                    className="h-40 w-full resize-none bg-transparent p-3 font-mono text-sm text-gray-800 outline-none dark:text-gray-100 xl:h-full"
+                    className="h-36 w-full resize-none bg-transparent p-3 font-mono text-sm text-gray-800 outline-none dark:text-gray-100 xl:h-[220px]"
                   />
                 </div>
 
@@ -1453,15 +1566,25 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   <div className="border-b border-gray-200 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400">
                     Output
                   </div>
-                  <pre className="h-40 overflow-auto whitespace-pre-wrap p-3 font-mono text-sm text-gray-800 dark:text-gray-100 xl:h-[calc(100%-38px)]">
+                  <pre className="h-36 overflow-auto whitespace-pre-wrap p-3 font-mono text-sm text-gray-800 dark:text-gray-100 xl:h-[190px]">
                     {programOutput || '(Chưa có output)'}
                   </pre>
+                  {programPreviewHtml && (
+                    <div className="border-t border-gray-200 p-2 dark:border-gray-700">
+                      <iframe
+                        title="Code preview"
+                        sandbox="allow-scripts"
+                        srcDoc={programPreviewHtml}
+                        className="h-44 w-full rounded-lg border border-gray-200 bg-white dark:border-gray-600"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="px-4 pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-              Chạy trực tiếp: JavaScript. Hỗ trợ `input()` / `readLine()` / `prompt()` để đọc dữ liệu từ ô Input.
+              Hỗ trợ chạy: Plain Text, C++, JavaScript, TypeScript, Python, Java, HTML, CSS, SQL, JSON.
             </div>
 
             {programError && (
