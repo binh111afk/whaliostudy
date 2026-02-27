@@ -4604,77 +4604,92 @@ app.post('/api/code-snippets', async (req, res) => {
     }
 });
 
-const DEFAULT_LOCAL_CODE_RUNNER_API_URL = 'http://127.0.0.1:2000/api/v2/execute';
-const IS_PRODUCTION_RUNTIME = String(process.env.NODE_ENV || '').trim().toLowerCase() === 'production';
-const CODE_RUNNER_TIMEOUT_MS = parsePositiveInt(process.env.CODE_RUNNER_TIMEOUT_MS, 15000);
-const CODE_RUNNER_API_URLS = (() => {
-    const rawValue = String(
-        process.env.CODE_RUNNER_API_URLS ||
-        process.env.CODE_RUNNER_API_URL ||
-        ''
-    ).trim();
+const ONE_COMPILER_API_URL =
+    String(process.env.ONE_COMPILER_API_URL || 'https://api.onecompiler.com/v1/run').trim() ||
+    'https://api.onecompiler.com/v1/run';
+const ONE_COMPILER_LANGUAGES_URL =
+    String(process.env.ONE_COMPILER_LANGUAGES_URL || 'https://api.onecompiler.com/v1/languages').trim() ||
+    'https://api.onecompiler.com/v1/languages';
+const ONE_COMPILER_TIMEOUT_MS = parsePositiveInt(process.env.ONE_COMPILER_TIMEOUT_MS, 20000);
+const ONE_COMPILER_API_KEY = String(process.env.ONE_COMPILER_API_KEY || '').trim();
 
-    if (!rawValue) {
-        return IS_PRODUCTION_RUNTIME ? [] : [DEFAULT_LOCAL_CODE_RUNNER_API_URL];
-    }
-
-    const urls = rawValue
-        .split(/[\n,;]+/)
-        .map((item) => String(item || '').trim())
-        .filter((item) => item.startsWith('http://') || item.startsWith('https://'));
-
-    const deduplicated = Array.from(new Set(urls));
-    if (deduplicated.length > 0) return deduplicated;
-    return IS_PRODUCTION_RUNTIME ? [] : [DEFAULT_LOCAL_CODE_RUNNER_API_URL];
-})();
-const LOCAL_PISTON_URL_PATTERN = /^https?:\/\/(127\.0\.0\.1|localhost):2000/i;
-
-if (CODE_RUNNER_API_URLS.length === 0) {
-    console.warn('⚠️ Code runner is not configured. Set CODE_RUNNER_API_URL for production.');
-} else {
-    console.log(`🧪 Code runner endpoints: ${CODE_RUNNER_API_URLS.join(', ')}`);
+if (!ONE_COMPILER_API_KEY) {
+    console.warn('⚠️ ONE_COMPILER_API_KEY is missing. /api/code-snippets/run will return 503 until configured.');
 }
 
 const sanitizeRunnerText = (value, limit = 20000) => String(value || '').slice(0, limit);
-const toRunnerRuntimesUrl = (executeUrl) =>
-    String(executeUrl || '').replace(/\/execute\/?$/i, '/runtimes');
 
-const executeRunnerRequest = async (payload) => {
-    if (CODE_RUNNER_API_URLS.length === 0) {
+const mapToOneCompilerLanguage = (language) => {
+    const normalized = String(language || '').trim().toLowerCase();
+    const map = {
+        cpp: 'cpp',
+        javascript: 'javascript',
+        typescript: 'typescript',
+        python: 'python',
+        java: 'java',
+        sql: 'sqlite'
+    };
+    return map[normalized] || '';
+};
+
+const buildOneCompilerPayload = ({ language, code, input }) => {
+    const normalizedLanguage = String(language || '').trim().toLowerCase();
+    const source = String(code || '');
+    const stdin = String(input || '');
+    const oneCompilerLanguage = mapToOneCompilerLanguage(normalizedLanguage);
+
+    if (!oneCompilerLanguage) return null;
+
+    const files = [];
+    let finalStdin = stdin;
+
+    if (oneCompilerLanguage === 'cpp') {
+        files.push({ name: 'main.cpp', content: source });
+    } else if (oneCompilerLanguage === 'javascript') {
+        files.push({ name: 'main.js', content: source });
+    } else if (oneCompilerLanguage === 'typescript') {
+        files.push({ name: 'main.ts', content: source });
+    } else if (oneCompilerLanguage === 'python') {
+        files.push({ name: 'main.py', content: source });
+    } else if (oneCompilerLanguage === 'java') {
+        files.push({ name: 'Main.java', content: source });
+    } else if (oneCompilerLanguage === 'sqlite') {
+        // Input box acts as seed SQL, then execute main query/script from editor.
+        const mergedSql = [stdin, source].filter(Boolean).join('\n');
+        files.push({ name: 'main.sql', content: mergedSql });
+        finalStdin = '';
+    }
+
+    return {
+        language: oneCompilerLanguage,
+        stdin: finalStdin,
+        files
+    };
+};
+
+const executeOneCompilerRun = async (payload) => {
+    if (!ONE_COMPILER_API_KEY) {
         return {
             success: false,
             configError: true,
-            attempts: []
+            status: 0,
+            message: 'Thiếu ONE_COMPILER_API_KEY trên server.'
         };
     }
 
-    const attempts = [];
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), ONE_COMPILER_TIMEOUT_MS);
 
-    for (const runnerUrl of CODE_RUNNER_API_URLS) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), CODE_RUNNER_TIMEOUT_MS);
-
-        let response = null;
-        try {
-            response = await fetch(runnerUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                signal: controller.signal
-            });
-        } catch (error) {
-            attempts.push({
-                url: runnerUrl,
-                status: 0,
-                networkError: true,
-                message: error?.name === 'AbortError'
-                    ? `Runner timeout sau ${CODE_RUNNER_TIMEOUT_MS}ms`
-                    : String(error?.message || 'Không thể kết nối runner')
-            });
-            clearTimeout(timeoutId);
-            continue;
-        }
-        clearTimeout(timeoutId);
+    try {
+        const response = await fetch(ONE_COMPILER_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': ONE_COMPILER_API_KEY
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        });
 
         let body = null;
         try {
@@ -4683,173 +4698,96 @@ const executeRunnerRequest = async (payload) => {
             body = null;
         }
 
-        if (response.ok) {
+        if (!response.ok) {
+            const message = String(
+                body?.message ||
+                body?.error ||
+                `OneCompiler lỗi HTTP ${response.status}`
+            ).trim();
             return {
-                success: true,
-                runnerUrl,
-                runnerData: body,
-                attempts
+                success: false,
+                status: response.status,
+                message,
+                data: body
             };
         }
 
-        attempts.push({
-            url: runnerUrl,
+        return {
+            success: true,
             status: response.status,
-            networkError: false,
-            message: String(body?.message || `Runner service lỗi HTTP ${response.status}`).trim()
+            data: body
+        };
+    } catch (error) {
+        return {
+            success: false,
+            status: 0,
+            message: error?.name === 'AbortError'
+                ? `OneCompiler timeout sau ${ONE_COMPILER_TIMEOUT_MS}ms`
+                : String(error?.message || 'Không thể kết nối OneCompiler')
+        };
+    } finally {
+        clearTimeout(timeoutId);
+    }
+};
+
+const checkOneCompilerHealth = async () => {
+    if (!ONE_COMPILER_API_KEY) {
+        return [{
+            provider: 'onecompiler',
+            url: ONE_COMPILER_LANGUAGES_URL,
+            ok: false,
+            status: 0,
+            languages: [],
+            message: 'Thiếu ONE_COMPILER_API_KEY'
+        }];
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), Math.min(ONE_COMPILER_TIMEOUT_MS, 10000));
+
+    try {
+        const response = await fetch(ONE_COMPILER_LANGUAGES_URL, {
+            method: 'GET',
+            headers: {
+                'X-API-Key': ONE_COMPILER_API_KEY
+            },
+            signal: controller.signal
         });
-    }
 
-    return {
-        success: false,
-        attempts
-    };
-};
-
-const checkRunnerHealth = async () => {
-    const results = [];
-
-    for (const runnerUrl of CODE_RUNNER_API_URLS) {
-        const runtimesUrl = toRunnerRuntimesUrl(runnerUrl);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), Math.min(CODE_RUNNER_TIMEOUT_MS, 7000));
-
+        let body = [];
         try {
-            const response = await fetch(runtimesUrl, {
-                method: 'GET',
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-
-            let runtimes = [];
-            try {
-                const body = await response.json();
-                if (Array.isArray(body)) {
-                    runtimes = body.map((item) => String(item?.language || '').trim()).filter(Boolean);
-                }
-            } catch {
-                // Ignore parse errors and keep runtimes empty.
-            }
-
-            results.push({
-                url: runnerUrl,
-                status: response.status,
-                ok: response.ok,
-                runtimes: Array.from(new Set(runtimes)).sort()
-            });
-            continue;
-        } catch (error) {
-            clearTimeout(timeoutId);
-            results.push({
-                url: runnerUrl,
-                status: 0,
-                ok: false,
-                runtimes: [],
-                message: error?.name === 'AbortError'
-                    ? `Timeout sau ${Math.min(CODE_RUNNER_TIMEOUT_MS, 7000)}ms`
-                    : String(error?.message || 'Không thể kết nối')
-            });
+            const parsed = await response.json();
+            body = Array.isArray(parsed) ? parsed : [];
+        } catch {
+            body = [];
         }
+
+        const languages = body
+            .map((item) => String(item?.id || item?.language || '').trim())
+            .filter(Boolean);
+
+        return [{
+            provider: 'onecompiler',
+            url: ONE_COMPILER_LANGUAGES_URL,
+            ok: response.ok,
+            status: response.status,
+            languages: Array.from(new Set(languages)).sort(),
+            message: response.ok ? '' : `OneCompiler languages lỗi HTTP ${response.status}`
+        }];
+    } catch (error) {
+        return [{
+            provider: 'onecompiler',
+            url: ONE_COMPILER_LANGUAGES_URL,
+            ok: false,
+            status: 0,
+            languages: [],
+            message: error?.name === 'AbortError'
+                ? `OneCompiler health timeout sau ${Math.min(ONE_COMPILER_TIMEOUT_MS, 10000)}ms`
+                : String(error?.message || 'Không thể kết nối OneCompiler')
+        }];
+    } finally {
+        clearTimeout(timeoutId);
     }
-
-    return results;
-};
-
-const buildRunnerPayload = ({ language, code, input }) => {
-    const normalizedLanguage = String(language || '').trim().toLowerCase();
-    const source = String(code || '');
-    const stdin = String(input || '');
-
-    const basePayload = {
-        version: '*',
-        files: [{ content: source }],
-        stdin
-    };
-
-    if (normalizedLanguage === 'cpp') {
-        return {
-            ...basePayload,
-            language: 'c++',
-            files: [{ name: 'main.cpp', content: source }]
-        };
-    }
-
-    if (normalizedLanguage === 'javascript') {
-        return {
-            ...basePayload,
-            language: 'javascript',
-            files: [{ name: 'main.js', content: source }]
-        };
-    }
-
-    if (normalizedLanguage === 'typescript') {
-        return {
-            ...basePayload,
-            language: 'typescript',
-            files: [{ name: 'main.ts', content: source }]
-        };
-    }
-
-    if (normalizedLanguage === 'python') {
-        return {
-            ...basePayload,
-            language: 'python',
-            files: [{ name: 'main.py', content: source }]
-        };
-    }
-
-    if (normalizedLanguage === 'java') {
-        return {
-            ...basePayload,
-            language: 'java',
-            files: [{ name: 'Main.java', content: source }]
-        };
-    }
-
-    if (normalizedLanguage === 'sql') {
-        const sqlRunnerScript = `
-import json
-import sqlite3
-import sys
-
-payload_text = sys.stdin.read() or "{}"
-payload = json.loads(payload_text)
-sql_code = str(payload.get("code", ""))
-seed_sql = str(payload.get("input", ""))
-
-conn = sqlite3.connect(":memory:")
-cur = conn.cursor()
-outputs = []
-
-if seed_sql.strip():
-    cur.executescript(seed_sql)
-
-statements = [stmt.strip() for stmt in sql_code.split(";") if stmt.strip()]
-for statement in statements:
-    cur.execute(statement)
-    if cur.description:
-        columns = [col[0] for col in cur.description]
-        rows = cur.fetchall()
-        outputs.append(json.dumps({"columns": columns, "rows": rows}, ensure_ascii=False))
-    else:
-        conn.commit()
-        outputs.append(f"OK ({cur.rowcount} rows affected)")
-
-if not outputs:
-    outputs.append("(Không có output)")
-
-print("\\n".join(outputs))
-`;
-
-        return {
-            version: '*',
-            language: 'python',
-            files: [{ name: 'main.py', content: sqlRunnerScript }],
-            stdin: JSON.stringify({ code: source, input: stdin })
-        };
-    }
-
-    return null;
 };
 
 app.post('/api/code-snippets/run', async (req, res) => {
@@ -4865,87 +4803,61 @@ app.post('/api/code-snippets/run', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Thiếu code để chạy' });
         }
 
-        const payload = buildRunnerPayload({ language, code, input });
+        const payload = buildOneCompilerPayload({ language, code, input });
         if (!payload) {
             return res.status(400).json({
                 success: false,
-                message: 'Ngôn ngữ chưa hỗ trợ chạy từ server runner'
+                message: 'Ngôn ngữ chưa hỗ trợ chạy qua OneCompiler'
             });
         }
 
-        const requestHost = String(req.get('host') || '').trim().toLowerCase();
-        const isPublicHost = Boolean(requestHost) && !/(^|\.)localhost(:\d+)?$/.test(requestHost) && !/^127\.0\.0\.1(:\d+)?$/.test(requestHost);
-
-        const runnerResult = await executeRunnerRequest(payload);
-        if (!runnerResult.success) {
-            if (runnerResult.configError) {
+        const runResult = await executeOneCompilerRun(payload);
+        if (!runResult.success) {
+            if (runResult.configError) {
                 return res.status(503).json({
                     success: false,
-                    message: 'Chưa cấu hình code runner cho production. Vui lòng set CODE_RUNNER_API_URL tới dịch vụ Piston public của bạn.',
-                    diagnostics: []
+                    message: runResult.message
                 });
             }
 
-            const attempts = Array.isArray(runnerResult.attempts) ? runnerResult.attempts : [];
-            const whitelistAttempt = attempts.find((item) =>
-                Number(item?.status) === 401 && /whitelist/i.test(String(item?.message || ''))
-            );
-            const localUnavailableAttempt = attempts.find((item) =>
-                Boolean(item?.networkError) && LOCAL_PISTON_URL_PATTERN.test(String(item?.url || ''))
-            );
-            const firstAttempt = attempts[0] || null;
-
-            let message = 'Không thể chạy code lúc này.';
-            if (localUnavailableAttempt) {
-                message = isPublicHost
-                    ? 'Server đang chạy public nên không thể dùng local Piston (127.0.0.1). Hãy cấu hình CODE_RUNNER_API_URL tới một Piston service public.'
-                    : 'Không kết nối được local Piston tại http://127.0.0.1:2000. Hãy chạy `docker compose -f docker-compose.piston.yml up -d`.';
-            } else if (whitelistAttempt) {
-                message = 'Runner public đã chuyển sang whitelist từ 15/02/2026. Hãy dùng local Piston hoặc runner có API key.';
-            } else if (firstAttempt?.message) {
-                message = firstAttempt.message;
-            }
-
-            return res.status(502).json({
+            return res.status(runResult.status >= 400 ? runResult.status : 502).json({
                 success: false,
-                message,
-                diagnostics: attempts.map((item) => ({
-                    url: item.url,
-                    status: item.status,
-                    message: item.message
-                }))
+                message: runResult.message || 'Không thể chạy code với OneCompiler',
+                provider: 'onecompiler',
+                status: runResult.status || 0
             });
         }
 
-        const runnerData = runnerResult.runnerData || {};
+        const data = runResult.data || {};
+        const stdout = sanitizeRunnerText(data?.stdout || '');
+        const stderr = sanitizeRunnerText(data?.stderr || '');
+        const exceptionText = data?.exception
+            ? sanitizeRunnerText(typeof data.exception === 'string' ? data.exception : JSON.stringify(data.exception))
+            : '';
+        const errorText = [stderr, exceptionText].filter(Boolean).join('\n').trim();
 
-        const compileStdout = sanitizeRunnerText(runnerData?.compile?.stdout || '');
-        const compileStderr = sanitizeRunnerText(runnerData?.compile?.stderr || '');
-        const runStdout = sanitizeRunnerText(runnerData?.run?.stdout || '');
-        const runStderr = sanitizeRunnerText(runnerData?.run?.stderr || '');
-        const runCode = Number(runnerData?.run?.code);
-        const compileCode = Number(runnerData?.compile?.code);
-
-        const outputParts = [compileStdout, runStdout].filter(Boolean);
-        const output = outputParts.join('\n').trim() || '(Không có output)';
-        const errorParts = [compileStderr, runStderr].filter(Boolean);
-        const errorText = errorParts.join('\n').trim();
-
-        if (compileCode !== 0 || runCode !== 0 || errorText) {
+        if (errorText) {
             return res.json({
                 success: false,
-                output,
-                error: errorText || 'Code chạy thất bại',
+                output: stdout || '(Không có output)',
+                error: errorText,
                 language,
-                runner: runnerResult.runnerUrl
+                provider: 'onecompiler',
+                executionTime: data?.executionTime,
+                compilationTime: data?.compilationTime,
+                memoryUsed: data?.memoryUsed
             });
         }
 
         return res.json({
             success: true,
-            output,
+            output: stdout || '(Không có output)',
             language,
-            runner: runnerResult.runnerUrl
+            provider: 'onecompiler',
+            executionTime: data?.executionTime,
+            compilationTime: data?.compilationTime,
+            memoryUsed: data?.memoryUsed,
+            creditsRemaining: data?.creditsRemaining
         });
     } catch (err) {
         console.error('Run code snippet error:', err);
@@ -4955,12 +4867,13 @@ app.post('/api/code-snippets/run', async (req, res) => {
 
 app.get('/api/code-snippets/runner-health', async (req, res) => {
     try {
-        const checks = await checkRunnerHealth();
+        const checks = await checkOneCompilerHealth();
         const online = checks.some((item) => item.ok);
 
         return res.json({
             success: online,
             online,
+            provider: 'onecompiler',
             checks
         });
     } catch (err) {
@@ -4968,6 +4881,7 @@ app.get('/api/code-snippets/runner-health', async (req, res) => {
         return res.status(500).json({
             success: false,
             online: false,
+            provider: 'onecompiler',
             checks: [],
             message: 'Không thể kiểm tra trạng thái runner'
         });

@@ -1186,24 +1186,31 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
       }
 
       if (editorLanguage === 'javascript') {
-        // Fallback local JS runner if server runner fails.
-        try {
-          const remoteResult = await codeSnippetService.runSnippet({
-            language: editorLanguage,
-            code: source,
-            input: String(programInput || ''),
-          });
+        const remoteResult = await codeSnippetService.runSnippet({
+          language: editorLanguage,
+          code: source,
+          input: String(programInput || ''),
+        });
 
-          if (remoteResult?.success) {
-            setProgramOutput(String(remoteResult.output || '(Không có output)'));
-            setProgramPreviewHtml('');
-            toast.success('Chạy code thành công');
-            return;
-          }
-        } catch {
-          // Ignore here and fallback to worker below.
+        if (remoteResult?.success) {
+          setProgramOutput(String(remoteResult.output || '(Không có output)'));
+          setProgramPreviewHtml('');
+          toast.success('Chạy code thành công');
+          return;
         }
 
+        const remoteError = String(remoteResult?.error || remoteResult?.message || '').trim();
+        const canFallbackToLocalWorker = /lỗi kết nối server/i.test(remoteError);
+
+        if (!canFallbackToLocalWorker) {
+          setProgramError(remoteError || 'Lỗi chạy code');
+          setProgramOutput('');
+          setProgramPreviewHtml('');
+          toast.error('Chạy code thất bại');
+          return;
+        }
+
+        // Offline fallback only when backend connection fails.
         const jsOutput = await runJavaScriptInWorker({
           code: source,
           input: String(programInput || ''),
