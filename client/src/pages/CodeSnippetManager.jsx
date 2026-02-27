@@ -1768,24 +1768,28 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
               </button>
 
               <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={editorLanguage}
-                  onChange={(event) => setEditorLanguage(event.target.value)}
-                  className="rounded-xl border border-gray-200 px-2.5 py-2 text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                  title="Chọn ngôn ngữ highlight"
-                >
-                  {LANGUAGE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative group">
+                  <select
+                    value={editorLanguage}
+                    onChange={(event) => setEditorLanguage(event.target.value)}
+                    className="appearance-none rounded-xl border-0 bg-gradient-to-br from-blue-50 to-indigo-50 py-2.5 pl-9 pr-9 text-sm font-semibold text-gray-800 shadow-sm outline-none ring-1 ring-blue-200/50 transition-all duration-300 hover:shadow-md hover:ring-blue-300/60 focus:shadow-lg focus:ring-2 focus:ring-blue-400/70 dark:from-blue-950/40 dark:to-indigo-950/40 dark:text-gray-100 dark:ring-blue-800/50 dark:hover:ring-blue-700/60 dark:focus:ring-blue-600/70"
+                    title="Chọn ngôn ngữ highlight"
+                  >
+                    {LANGUAGE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <FileCode2 size={15} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-blue-600 transition-colors duration-300 group-hover:text-blue-700 dark:text-blue-400 dark:group-hover:text-blue-300" />
+                  <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 transition-all duration-300 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-200" />
+                </div>
 
-                <div className="relative">
+                <div className="relative group">
                   <select
                     value={editorTheme}
                     onChange={(event) => setEditorTheme(event.target.value)}
-                    className="appearance-none rounded-xl border border-gray-200 py-2 pl-8 pr-8 text-sm font-semibold text-gray-700 outline-none focus:border-purple-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                    className="appearance-none rounded-xl border-0 bg-gradient-to-br from-purple-50 to-pink-50 py-2.5 pl-9 pr-9 text-sm font-semibold text-gray-800 shadow-sm outline-none ring-1 ring-purple-200/50 transition-all duration-300 hover:shadow-md hover:ring-purple-300/60 focus:shadow-lg focus:ring-2 focus:ring-purple-400/70 dark:from-purple-950/40 dark:to-pink-950/40 dark:text-gray-100 dark:ring-purple-800/50 dark:hover:ring-purple-700/60 dark:focus:ring-purple-600/70"
                     title="Chọn theme editor"
                   >
                     {CODE_EDITOR_THEME_OPTIONS.map((theme) => (
@@ -1794,8 +1798,8 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                       </option>
                     ))}
                   </select>
-                  <Palette size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-purple-500" />
-                  <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Palette size={15} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-purple-600 transition-colors duration-300 group-hover:text-purple-700 dark:text-purple-400 dark:group-hover:text-purple-300" />
+                  <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 transition-all duration-300 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-200" />
                 </div>
 
                 <button
