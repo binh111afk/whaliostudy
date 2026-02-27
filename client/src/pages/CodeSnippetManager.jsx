@@ -10,6 +10,7 @@ import {
   Download,
   FileCode2,
   Moon,
+  Pencil,
   Plus,
   Search,
   Sparkles,
@@ -27,6 +28,8 @@ const INITIAL_FORM = {
 };
 
 const CODE_EDITOR_THEME_STORAGE_KEY = 'whalio.code-editor-theme';
+
+const getSnippetId = (snippet) => String(snippet?.id || snippet?._id || '');
 
 const LANGUAGE_OPTIONS = [
   { value: 'plaintext', label: 'Plain Text' },
@@ -259,8 +262,11 @@ const CreateSnippetModal = ({
   creating,
   formattingDescription,
   onFormatWithAI,
+  mode = 'create',
 }) => {
   if (!isOpen) return null;
+
+  const isEditMode = mode === 'edit';
 
   return (
     <div
@@ -272,7 +278,9 @@ const CreateSnippetModal = ({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-black text-gray-900 dark:text-white">Thêm code</h2>
+          <h2 className="text-xl font-black text-gray-900 dark:text-white">
+            {isEditMode ? 'Sửa card code' : 'Thêm code'}
+          </h2>
           <button
             onClick={onClose}
             className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -356,7 +364,7 @@ const CreateSnippetModal = ({
             disabled={creating || formattingDescription}
             className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
           >
-            {creating ? 'Đang tạo...' : 'Lưu card'}
+            {creating ? 'Đang xử lý...' : isEditMode ? 'Lưu chỉnh sửa' : 'Lưu card'}
           </button>
         </div>
       </div>
@@ -370,6 +378,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState(INITIAL_FORM);
+  const [editingSnippet, setEditingSnippet] = useState(null);
   const [creating, setCreating] = useState(false);
   const [formattingDescription, setFormattingDescription] = useState(false);
   const [selectedSnippet, setSelectedSnippet] = useState(null);
@@ -429,7 +438,6 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   }, [username]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSnippets();
   }, [loadSnippets]);
 
@@ -521,6 +529,12 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     setCreateForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const resetSnippetModalState = () => {
+    setIsCreateOpen(false);
+    setCreateForm(INITIAL_FORM);
+    setEditingSnippet(null);
+  };
+
   const handleCreateSnippet = async () => {
     if (!username) {
       toast.error('Bạn cần đăng nhập để lưu code');
@@ -533,34 +547,76 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
       return;
     }
 
-    const payload = {
+    const basePayload = {
       username,
       cardTitle,
       subjectName: String(createForm.subjectName || '').trim(),
       assignmentName: String(createForm.assignmentName || '').trim(),
       assignmentDescription: String(createForm.assignmentDescription || '').trim(),
-      language: inferLanguageFromSubject(createForm.subjectName),
-      code: '',
     };
 
+    const isEditMode = Boolean(editingSnippet);
+
     setCreating(true);
-    const result = await codeSnippetService.createSnippet(payload);
-    setCreating(false);
+    try {
+      if (isEditMode) {
+        const editingSnippetId = getSnippetId(editingSnippet);
+        if (!editingSnippetId) {
+          toast.error('Không xác định được card cần sửa');
+          return;
+        }
 
-    if (!result.success) {
-      toast.error(result.message || 'Không thể tạo card code');
-      return;
+        const result = await codeSnippetService.updateSnippet(editingSnippetId, basePayload);
+        if (!result.success) {
+          toast.error(result.message || 'Không thể cập nhật card code');
+          return;
+        }
+
+        const updatedSnippet = result.snippet || {
+          ...editingSnippet,
+          ...basePayload,
+          updatedAt: new Date().toISOString(),
+        };
+        const normalizedUpdatedId = getSnippetId(updatedSnippet);
+
+        setSnippets((prev) =>
+          prev.map((item) =>
+            getSnippetId(item) === editingSnippetId
+              ? { ...updatedSnippet, id: normalizedUpdatedId || editingSnippetId }
+              : item
+          )
+        );
+        setSelectedSnippet((prev) =>
+          prev && getSnippetId(prev) === editingSnippetId
+            ? { ...prev, ...updatedSnippet, id: normalizedUpdatedId || editingSnippetId }
+            : prev
+        );
+        toast.success('Đã cập nhật card code');
+      } else {
+        const payload = {
+          ...basePayload,
+          language: inferLanguageFromSubject(createForm.subjectName),
+          code: '',
+        };
+        const result = await codeSnippetService.createSnippet(payload);
+
+        if (!result.success) {
+          toast.error(result.message || 'Không thể tạo card code');
+          return;
+        }
+
+        if (result.snippet) {
+          setSnippets((prev) => [result.snippet, ...prev]);
+        } else {
+          await loadSnippets();
+        }
+        toast.success('Đã tạo card code mới');
+      }
+
+      resetSnippetModalState();
+    } finally {
+      setCreating(false);
     }
-
-    if (result.snippet) {
-      setSnippets((prev) => [result.snippet, ...prev]);
-    } else {
-      await loadSnippets();
-    }
-
-    setCreateForm(INITIAL_FORM);
-    setIsCreateOpen(false);
-    toast.success('Đã tạo card code mới');
   };
 
   const handleFormatAssignmentWithAI = async () => {
@@ -623,6 +679,17 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     toast.success('Đã xóa card code');
   };
 
+  const handleEditSnippet = (snippet) => {
+    setEditingSnippet(snippet);
+    setCreateForm({
+      cardTitle: String(snippet?.cardTitle || ''),
+      subjectName: String(snippet?.subjectName || ''),
+      assignmentName: String(snippet?.assignmentName || ''),
+      assignmentDescription: String(snippet?.assignmentDescription || ''),
+    });
+    setIsCreateOpen(true);
+  };
+
   const handleCopyCode = async () => {
     try {
       await navigator.clipboard.writeText(editorCode || '');
@@ -672,7 +739,11 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
             Kho Code
           </div>
           <button
-            onClick={() => setIsCreateOpen(true)}
+            onClick={() => {
+              setEditingSnippet(null);
+              setCreateForm(INITIAL_FORM);
+              setIsCreateOpen(true);
+            }}
             className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white hover:bg-blue-700"
           >
             <Plus size={16} />
@@ -755,14 +826,24 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                       </p>
                     </div>
                   </button>
-                  <button
-                    onClick={() => handleDelete(snippetId)}
-                    className="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
-                    title="Xóa card code"
-                    aria-label="Xóa card code"
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleEditSnippet(snippet)}
+                      className="rounded-lg p-1.5 text-gray-400 transition hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20"
+                      title="Sửa card code"
+                      aria-label="Sửa card code"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(snippetId)}
+                      className="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                      title="Xóa card code"
+                      aria-label="Xóa card code"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-200">
@@ -779,12 +860,10 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
         isOpen={isCreateOpen}
         form={createForm}
         onChange={handleCreateFormChange}
+        mode={editingSnippet ? 'edit' : 'create'}
         formattingDescription={formattingDescription}
         onFormatWithAI={handleFormatAssignmentWithAI}
-        onClose={() => {
-          setIsCreateOpen(false);
-          setCreateForm(INITIAL_FORM);
-        }}
+        onClose={resetSnippetModalState}
         onCreate={handleCreateSnippet}
         creating={creating}
       />

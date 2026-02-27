@@ -48,6 +48,69 @@ const isScheduleOnlyEvent = (event) => {
   return false;
 };
 
+const bytesToHex = (bytes) =>
+  Array.from(bytes || [])
+    .map((value) => Number(value).toString(16).padStart(2, "0"))
+    .join("");
+
+const normalizeMongoId = (rawId) => {
+  if (!rawId) return "";
+
+  if (typeof rawId === "string") {
+    return rawId.trim();
+  }
+
+  if (typeof rawId === "object") {
+    if (typeof rawId.$oid === "string") {
+      return rawId.$oid.trim();
+    }
+
+    if (typeof rawId.toHexString === "function") {
+      try {
+        return String(rawId.toHexString()).trim();
+      } catch {
+        // Ignore conversion error and fallback below.
+      }
+    }
+
+    const rawBuffer = rawId.buffer;
+    if (rawBuffer) {
+      if (Array.isArray(rawBuffer)) {
+        return bytesToHex(rawBuffer);
+      }
+      if (rawBuffer instanceof Uint8Array) {
+        return bytesToHex(rawBuffer);
+      }
+      if (typeof rawBuffer === "object") {
+        const orderedBytes = Object.keys(rawBuffer)
+          .sort((a, b) => Number(a) - Number(b))
+          .map((key) => Number(rawBuffer[key]))
+          .filter((value) => Number.isFinite(value));
+        if (orderedBytes.length > 0) {
+          return bytesToHex(orderedBytes);
+        }
+      }
+    }
+  }
+
+  try {
+    const fallback = String(rawId).trim();
+    return fallback === "[object Object]" ? "" : fallback;
+  } catch {
+    return "";
+  }
+};
+
+const normalizeDeadlineEvent = (event = {}) => {
+  const normalizedId = normalizeMongoId(event?._id || event?.id);
+  if (!normalizedId) return event;
+  return {
+    ...event,
+    _id: normalizedId,
+    id: normalizedId,
+  };
+};
+
 // --- HELPER: Tính điểm hệ 4 từ hệ 10 ---
 const convertToGPA4 = (score10) => {
   if (score10 >= 8.5) return 4.0;
@@ -273,6 +336,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
     setTotalStudyMinutes(totalMinutes);
 
     const sortedDeadlines = (Array.isArray(payload?.events) ? payload.events : [])
+      .map((event) => normalizeDeadlineEvent(event))
       .filter((event) => !isScheduleOnlyEvent(event))
       .sort((a, b) => new Date(a.date) - new Date(b.date));
     setDeadlines(sortedDeadlines);
@@ -411,9 +475,17 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   };
 
   const handleDeleteDeadline = async (id) => {
+    const normalizedId = normalizeMongoId(id);
+    if (!normalizedId) {
+      toast.error("ID deadline không hợp lệ", {
+        position: isMobileViewport() ? "bottom-center" : "top-center",
+      });
+      return;
+    }
+
     try {
       const res = await fetch(
-        getFullApiUrl(`/api/events/${id}?username=${user.username}`),
+        getFullApiUrl(`/api/events/${normalizedId}?username=${user.username}`),
         {
           method: "DELETE",
         }
@@ -434,7 +506,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   };
 
   const handleToggleDeadline = async (task) => {
-    const taskId = String(task?._id || "");
+    const taskId = normalizeMongoId(task?._id || task?.id);
     if (!taskId) return;
 
     const activeUsername = resolveActiveUsername(task);
@@ -459,7 +531,9 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
 
     setDeadlines((prevDeadlines) =>
       prevDeadlines.map((d) =>
-        d._id === task._id ? { ...d, isDone: nextIsDone } : d
+        normalizeMongoId(d?._id || d?.id) === taskId
+          ? { ...normalizeDeadlineEvent(d), isDone: nextIsDone }
+          : d
       )
     );
 
@@ -468,7 +542,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
         "Sending toggle request payload:",
         JSON.stringify(
           {
-            id: task._id,
+            id: taskId,
             username: activeUsername,
             isDone: nextIsDone,
           },
@@ -481,7 +555,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: task._id,
+          id: taskId,
           username: activeUsername,
           isDone: nextIsDone,
         }),
@@ -496,7 +570,9 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
         console.log("API failed, rolling back. Message:", data?.message);
         setDeadlines((prevDeadlines) =>
           prevDeadlines.map((d) =>
-            d._id === task._id ? { ...d, isDone: previousIsDone } : d
+            normalizeMongoId(d?._id || d?.id) === taskId
+              ? { ...normalizeDeadlineEvent(d), isDone: previousIsDone }
+              : d
           )
         );
         toast.error(data?.message || "Không thể cập nhật trạng thái", {
@@ -509,7 +585,9 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
       console.error("Error toggling deadline:", error);
       setDeadlines((prevDeadlines) =>
         prevDeadlines.map((d) =>
-          d._id === task._id ? { ...d, isDone: previousIsDone } : d
+          normalizeMongoId(d?._id || d?.id) === taskId
+            ? { ...normalizeDeadlineEvent(d), isDone: previousIsDone }
+            : d
         )
       );
       toast.error("Lỗi kết nối", {
@@ -529,7 +607,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
   };
 
   const handleEditDeadline = (task) => {
-    setEditingDeadline(task);
+    setEditingDeadline(normalizeDeadlineEvent(task));
     setIsModalOpen(true);
   };
 

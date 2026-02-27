@@ -95,6 +95,60 @@ const deepCloneSafe = (value) => {
     }
 };
 
+const normalizeObjectIdInput = (rawId) => {
+    if (!rawId) return '';
+
+    if (typeof rawId === 'string') {
+        return rawId.trim();
+    }
+
+    if (typeof rawId === 'object') {
+        if (typeof rawId.$oid === 'string') {
+            return rawId.$oid.trim();
+        }
+
+        if (typeof rawId.toHexString === 'function') {
+            try {
+                return String(rawId.toHexString()).trim();
+            } catch (error) {
+                // Fallback below
+            }
+        }
+
+        const rawBuffer = rawId.buffer;
+        if (rawBuffer) {
+            const toHex = (items) => items
+                .map((value) => Number(value).toString(16).padStart(2, '0'))
+                .join('');
+
+            if (Array.isArray(rawBuffer)) {
+                return toHex(rawBuffer);
+            }
+
+            if (rawBuffer instanceof Uint8Array) {
+                return toHex(Array.from(rawBuffer));
+            }
+
+            if (typeof rawBuffer === 'object') {
+                const orderedBytes = Object.keys(rawBuffer)
+                    .sort((a, b) => Number(a) - Number(b))
+                    .map((key) => Number(rawBuffer[key]))
+                    .filter((value) => Number.isFinite(value));
+                if (orderedBytes.length > 0) {
+                    return toHex(orderedBytes);
+                }
+            }
+        }
+    }
+
+    try {
+        const fallback = String(rawId).trim();
+        return fallback === '[object Object]' ? '' : fallback;
+    } catch (error) {
+        return '';
+    }
+};
+
 const REQUEST_BODY_LIMIT = process.env.EXPRESS_BODY_LIMIT || '1mb';
 const API_COMPRESSION_THRESHOLD_BYTES = parsePositiveInt(process.env.API_COMPRESSION_THRESHOLD_BYTES, 1024);
 const RATE_LIMIT_REDIS_URL = String(
@@ -6611,18 +6665,19 @@ app.put('/api/events/:id', ensureAuthenticated, async (req, res, next) => {
 app.put('/api/events/toggle', ensureAuthenticated, async (req, res) => {
     try {
         const { id, isDone } = req.body;
+        const normalizedEventId = normalizeObjectIdInput(id);
         const username = resolveUsernameFromRequest(req);
         
-        console.log('[Toggle] Request received:', { id, username, isDone });
+        console.log('[Toggle] Request received:', { id: normalizedEventId || id, username, isDone });
 
-        if (!id || !username) {
+        if (!normalizedEventId || !username) {
             console.log('[Toggle] Missing required fields');
             return res.status(401).json({ success: false, authenticated: false, message: 'Missing required fields' });
         }
 
-        const event = await Event.findById(id);
+        const event = await Event.findById(normalizedEventId);
         if (!event) {
-            console.log('[Toggle] Event not found:', id);
+            console.log('[Toggle] Event not found:', normalizedEventId);
             return res.json({ success: false, message: 'Event not found' });
         }
 
@@ -6655,7 +6710,7 @@ app.put('/api/events/toggle', ensureAuthenticated, async (req, res) => {
         });
         
         console.log('[Toggle] Success:', { 
-            id, 
+            id: normalizedEventId, 
             previousIsDone, 
             newIsDone: event.isDone 
         });
