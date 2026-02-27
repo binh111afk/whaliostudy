@@ -6,21 +6,29 @@ import remarkGfm from 'remark-gfm';
 import {
   CalendarDays,
   ChevronLeft,
+  ChevronDown,
   Copy,
   Download,
   FileCode2,
-  Moon,
+  Palette,
   Play,
   Pencil,
   Plus,
   RotateCcw,
   Search,
   Sparkles,
-  Sun,
   Trash2,
   X,
 } from 'lucide-react';
 import { codeSnippetService } from '../services/codeSnippetService';
+import {
+  CODE_EDITOR_THEME_STORAGE_KEY,
+  CODE_EDITOR_THEME_OPTIONS,
+  DEFAULT_DARK_THEME_KEY,
+  getCodeEditorThemeConfig,
+  resolveInitialCodeEditorTheme,
+  ensureCodeEditorTheme,
+} from '../utils/codeEditorThemes';
 
 const INITIAL_FORM = {
   cardTitle: '',
@@ -28,8 +36,6 @@ const INITIAL_FORM = {
   assignmentName: '',
   assignmentDescription: '',
 };
-
-const CODE_EDITOR_THEME_STORAGE_KEY = 'whalio.code-editor-theme';
 
 const getSnippetId = (snippet) => String(snippet?.id || snippet?._id || '');
 
@@ -566,14 +572,29 @@ const toMonacoLanguage = (language) => {
   return map[normalized] || 'plaintext';
 };
 
-const MonacoCodeEditor = ({ value, onChange, language, theme }) => {
+const MonacoCodeEditor = ({ value, onChange, language, themeKey }) => {
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
   const languageRef = useRef(language);
+  const themeKeyRef = useRef(themeKey);
+  const [themeReady, setThemeReady] = useState(false);
 
   useEffect(() => {
     languageRef.current = language;
   }, [language]);
+
+  useEffect(() => {
+    themeKeyRef.current = themeKey;
+  }, [themeKey]);
+
+  // Apply theme when theme key changes or initially after mount
+  useEffect(() => {
+    if (!monacoRef.current) return;
+    
+    ensureCodeEditorTheme(monacoRef.current, themeKey).then(() => {
+      setThemeReady(true);
+    });
+  }, [themeKey]);
 
   useEffect(() => {
     if (!editorRef.current || !monacoRef.current) return;
@@ -619,9 +640,13 @@ const MonacoCodeEditor = ({ value, onChange, language, theme }) => {
   );
 
   const handleMount = useCallback(
-    (editor, monaco) => {
+    async (editor, monaco) => {
       editorRef.current = editor;
       monacoRef.current = monaco;
+
+      // Load and apply initial theme
+      await ensureCodeEditorTheme(monaco, themeKeyRef.current);
+      setThemeReady(true);
 
       const typedDisposable = editor.onDidType((text) => {
         if (text !== ';') return;
@@ -663,21 +688,58 @@ const MonacoCodeEditor = ({ value, onChange, language, theme }) => {
     []
   );
 
+  // Get theme config for initial theme (vs-dark as fallback before custom theme loads)
+  const themeConfig = getCodeEditorThemeConfig(themeKey);
+  const initialTheme = themeReady ? themeConfig.monacoTheme : (themeConfig.isDark ? 'vs-dark' : 'vs');
+  const hasNeonGlow = themeConfig.hasNeonGlow;
+
   return (
-    <Editor
-      height="100%"
-      language={toMonacoLanguage(language)}
-      theme={theme === 'dark' ? 'vs-dark' : 'vs'}
-      value={String(value || '')}
-      onChange={(nextValue) => onChange(String(nextValue || ''))}
-      onMount={handleMount}
-      options={options}
-      loading={
-        <div className="flex h-full items-center justify-center bg-slate-50 text-sm font-semibold text-slate-500 dark:bg-slate-950 dark:text-slate-300">
-          Đang tải Monaco Editor...
-        </div>
-      }
-    />
+    <div className={`h-full w-full ${hasNeonGlow ? 'synthwave-neon-glow' : ''}`}>
+      <style>
+        {hasNeonGlow ? `
+          .synthwave-neon-glow .monaco-editor .mtk3,
+          .synthwave-neon-glow .monaco-editor .mtk5,
+          .synthwave-neon-glow .monaco-editor .mtk6 {
+            text-shadow: 0 0 2px #ff7edb80, 0 0 5px #ff7edb60, 0 0 10px #ff7edb40;
+          }
+          .synthwave-neon-glow .monaco-editor .mtk12,
+          .synthwave-neon-glow .monaco-editor .mtk10 {
+            text-shadow: 0 0 2px #36f9f680, 0 0 5px #36f9f660, 0 0 10px #36f9f640;
+          }
+          .synthwave-neon-glow .monaco-editor .mtk8,
+          .synthwave-neon-glow .monaco-editor .mtk9 {
+            text-shadow: 0 0 2px #fede5d80, 0 0 5px #fede5d60, 0 0 10px #fede5d40;
+          }
+          .synthwave-neon-glow .monaco-editor .mtk4 {
+            text-shadow: 0 0 2px #fe445080, 0 0 5px #fe445060, 0 0 10px #fe445040;
+          }
+          .synthwave-neon-glow .monaco-editor .mtk7 {
+            text-shadow: 0 0 2px #72f1b880, 0 0 5px #72f1b860, 0 0 10px #72f1b840;
+          }
+          .synthwave-neon-glow .monaco-editor .mtk11 {
+            text-shadow: 0 0 2px #ff8b3980, 0 0 5px #ff8b3960, 0 0 10px #ff8b3940;
+          }
+          .synthwave-neon-glow .monaco-editor .cursor {
+            background-color: #ff7edb !important;
+            box-shadow: 0 0 8px #ff7edb, 0 0 16px #ff7edb80;
+          }
+        ` : ''}
+      </style>
+      <Editor
+        height="100%"
+        language={toMonacoLanguage(language)}
+        theme={initialTheme}
+        value={String(value || '')}
+        onChange={(nextValue) => onChange(String(nextValue || ''))}
+        onMount={handleMount}
+        options={options}
+        loading={
+          <div className="flex h-full items-center justify-center bg-slate-50 text-sm font-semibold text-slate-500 dark:bg-slate-950 dark:text-slate-300">
+            Đang tải Monaco Editor...
+          </div>
+        }
+      />
+    </div>
   );
 };
 
@@ -818,9 +880,9 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   const [editorTheme, setEditorTheme] = useState(() => {
     try {
       const savedTheme = localStorage.getItem(CODE_EDITOR_THEME_STORAGE_KEY);
-      return savedTheme === 'dark' ? 'dark' : 'light';
+      return resolveInitialCodeEditorTheme(savedTheme);
     } catch {
-      return 'light';
+      return DEFAULT_DARK_THEME_KEY;
     }
   });
   const [closingDetail, setClosingDetail] = useState(false);
@@ -1719,13 +1781,22 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   ))}
                 </select>
 
-                <button
-                  onClick={() => setEditorTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}
-                  className="inline-flex items-center gap-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
-                >
-                  {editorTheme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
-                  {editorTheme === 'light' ? 'Dark code' : 'Light code'}
-                </button>
+                <div className="relative">
+                  <select
+                    value={editorTheme}
+                    onChange={(event) => setEditorTheme(event.target.value)}
+                    className="appearance-none rounded-xl border border-gray-200 py-2 pl-8 pr-8 text-sm font-semibold text-gray-700 outline-none focus:border-purple-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                    title="Chọn theme editor"
+                  >
+                    {CODE_EDITOR_THEME_OPTIONS.map((theme) => (
+                      <option key={theme.key} value={theme.key}>
+                        {theme.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Palette size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-purple-500" />
+                  <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                </div>
 
                 <button
                   onClick={handleCopyCode}
@@ -1860,7 +1931,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
               <div className="h-[62vh] min-h-[420px] overflow-hidden rounded-2xl border border-gray-200 shadow-sm dark:border-gray-700 xl:h-full xl:min-h-0">
                 <MonacoCodeEditor
                   language={editorLanguage}
-                  theme={editorTheme}
+                  themeKey={editorTheme}
                   value={editorCode}
                   onChange={setEditorCode}
                 />
@@ -1900,48 +1971,104 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   Ctrl + Enter: Run | Ctrl + Shift + Enter: Chấm bài
                 </p>
 
-                <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-50/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] dark:border-slate-700/90 dark:bg-slate-900/40">
-                  <div className="border-b border-slate-200/90 bg-white/60 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-500 dark:border-slate-700/90 dark:bg-slate-900/60 dark:text-slate-400">
-                    Input
-                  </div>
-                  <textarea
-                    value={programInput}
-                    onChange={(event) => setProgramInput(event.target.value)}
-                    spellCheck={false}
-                    placeholder="Nhập input, mỗi dòng là 1 giá trị..."
-                    className="h-36 w-full resize-none bg-transparent p-3 font-mono text-sm leading-6 text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:bg-white/55 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-900/55 xl:h-[220px]"
-                  />
-                </div>
+                {(() => {
+                  const terminalTheme = getCodeEditorThemeConfig(editorTheme).terminal;
+                  return (
+                    <>
+                      <div
+                        className="overflow-hidden rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors duration-300"
+                        style={{
+                          backgroundColor: terminalTheme.panelBackground,
+                          borderColor: terminalTheme.border,
+                        }}
+                      >
+                        <div
+                          className="border-b px-3 py-2 text-xs font-bold uppercase tracking-wide transition-colors duration-300"
+                          style={{
+                            backgroundColor: terminalTheme.headerBackground,
+                            borderColor: terminalTheme.border,
+                            color: terminalTheme.mutedText,
+                          }}
+                        >
+                          Input
+                        </div>
+                        <textarea
+                          value={programInput}
+                          onChange={(event) => setProgramInput(event.target.value)}
+                          spellCheck={false}
+                          placeholder="Nhập input, mỗi dòng là 1 giá trị..."
+                          className="h-36 w-full resize-none bg-transparent p-3 font-mono text-sm leading-6 outline-none transition-colors duration-300 placeholder:opacity-50 xl:h-[220px]"
+                          style={{
+                            color: terminalTheme.text,
+                          }}
+                        />
+                      </div>
 
-                <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-50/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] dark:border-slate-700/90 dark:bg-slate-900/40">
-                  <div className="border-b border-slate-200/90 bg-white/60 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-500 dark:border-slate-700/90 dark:bg-slate-900/60 dark:text-slate-400">
-                    Output
-                  </div>
-                  {runningCode ? (
-                    <div className="h-36 space-y-2 p-3 xl:h-[190px]">
-                      <div className="h-4 w-full animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-                      <div className="h-4 w-11/12 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-                      <div className="h-4 w-9/12 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-                    </div>
-                  ) : (
-                    <pre
-                      ref={terminalOutputRef}
-                      className="h-36 overflow-auto whitespace-pre-wrap p-3 font-mono text-sm leading-6 text-slate-800 dark:text-slate-100 xl:h-[190px]"
-                    >
-                      {programOutput || '(Chưa có output)'}
-                    </pre>
-                  )}
-                  {programPreviewHtml && (
-                    <div className="border-t border-slate-200/90 p-2 dark:border-slate-700/90">
-                      <iframe
-                        title="Code preview"
-                        sandbox="allow-scripts"
-                        srcDoc={programPreviewHtml}
-                        className="h-44 w-full rounded-lg border border-slate-200 bg-white dark:border-slate-600"
-                      />
-                    </div>
-                  )}
-                </div>
+                      <div
+                        className="overflow-hidden rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors duration-300"
+                        style={{
+                          backgroundColor: terminalTheme.panelBackground,
+                          borderColor: terminalTheme.border,
+                        }}
+                      >
+                        <div
+                          className="border-b px-3 py-2 text-xs font-bold uppercase tracking-wide transition-colors duration-300"
+                          style={{
+                            backgroundColor: terminalTheme.headerBackground,
+                            borderColor: terminalTheme.border,
+                            color: terminalTheme.mutedText,
+                          }}
+                        >
+                          Output
+                        </div>
+                        {runningCode ? (
+                          <div
+                            className="h-36 space-y-2 p-3 xl:h-[190px]"
+                            style={{ backgroundColor: terminalTheme.bodyBackground }}
+                          >
+                            <div
+                              className="h-4 w-full animate-pulse rounded"
+                              style={{ backgroundColor: terminalTheme.border }}
+                            />
+                            <div
+                              className="h-4 w-11/12 animate-pulse rounded"
+                              style={{ backgroundColor: terminalTheme.border }}
+                            />
+                            <div
+                              className="h-4 w-9/12 animate-pulse rounded"
+                              style={{ backgroundColor: terminalTheme.border }}
+                            />
+                          </div>
+                        ) : (
+                          <pre
+                            ref={terminalOutputRef}
+                            className="h-36 overflow-auto whitespace-pre-wrap p-3 font-mono text-sm leading-6 transition-colors duration-300 xl:h-[190px]"
+                            style={{
+                              color: terminalTheme.text,
+                              backgroundColor: terminalTheme.bodyBackground,
+                            }}
+                          >
+                            {programOutput || '(Chưa có output)'}
+                          </pre>
+                        )}
+                        {programPreviewHtml && (
+                          <div
+                            className="border-t p-2 transition-colors duration-300"
+                            style={{ borderColor: terminalTheme.border }}
+                          >
+                            <iframe
+                              title="Code preview"
+                              sandbox="allow-scripts"
+                              srcDoc={programPreviewHtml}
+                              className="h-44 w-full rounded-lg border bg-white"
+                              style={{ borderColor: terminalTheme.border }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
