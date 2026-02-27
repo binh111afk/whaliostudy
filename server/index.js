@@ -4604,88 +4604,236 @@ app.post('/api/code-snippets', async (req, res) => {
     }
 });
 
-const ONE_COMPILER_API_URL =
-    String(process.env.ONE_COMPILER_API_URL || 'https://api.onecompiler.com/v1/run').trim() ||
-    'https://api.onecompiler.com/v1/run';
-const ONE_COMPILER_LANGUAGES_URL =
-    String(process.env.ONE_COMPILER_LANGUAGES_URL || 'https://api.onecompiler.com/v1/languages').trim() ||
-    'https://api.onecompiler.com/v1/languages';
-const ONE_COMPILER_TIMEOUT_MS = parsePositiveInt(process.env.ONE_COMPILER_TIMEOUT_MS, 20000);
-const ONE_COMPILER_API_KEY = String(process.env.ONE_COMPILER_API_KEY || '').trim();
-
-if (!ONE_COMPILER_API_KEY) {
-    console.warn('⚠️ ONE_COMPILER_API_KEY is missing. /api/code-snippets/run will return 503 until configured.');
-}
+const WANDBOX_API_URL =
+    String(process.env.WANDBOX_API_URL || 'https://wandbox.org/api/compile.json').trim() ||
+    'https://wandbox.org/api/compile.json';
+const WANDBOX_LIST_URL =
+    String(process.env.WANDBOX_LIST_URL || 'https://wandbox.org/api/list.json').trim() ||
+    'https://wandbox.org/api/list.json';
+const WANDBOX_TIMEOUT_MS = parsePositiveInt(process.env.WANDBOX_TIMEOUT_MS, 20000);
+const WANDBOX_LIST_CACHE_MS = parsePositiveInt(process.env.WANDBOX_LIST_CACHE_MS, 300000);
 
 const sanitizeRunnerText = (value, limit = 20000) => String(value || '').slice(0, limit);
 
-const mapToOneCompilerLanguage = (language) => {
+const mapToWandboxLanguage = (language) => {
     const normalized = String(language || '').trim().toLowerCase();
     const map = {
         cpp: 'cpp',
+        'c++': 'cpp',
+        cxx: 'cpp',
         javascript: 'javascript',
+        js: 'javascript',
         typescript: 'typescript',
+        ts: 'typescript',
         python: 'python',
+        py: 'python',
         java: 'java',
-        sql: 'sqlite'
+        sql: 'sql'
     };
     return map[normalized] || '';
 };
 
-const buildOneCompilerPayload = ({ language, code, input }) => {
-    const normalizedLanguage = String(language || '').trim().toLowerCase();
-    const source = String(code || '');
-    const stdin = String(input || '');
-    const oneCompilerLanguage = mapToOneCompilerLanguage(normalizedLanguage);
-
-    if (!oneCompilerLanguage) return null;
-
-    const files = [];
-    let finalStdin = stdin;
-
-    if (oneCompilerLanguage === 'cpp') {
-        files.push({ name: 'main.cpp', content: source });
-    } else if (oneCompilerLanguage === 'javascript') {
-        files.push({ name: 'main.js', content: source });
-    } else if (oneCompilerLanguage === 'typescript') {
-        files.push({ name: 'main.ts', content: source });
-    } else if (oneCompilerLanguage === 'python') {
-        files.push({ name: 'main.py', content: source });
-    } else if (oneCompilerLanguage === 'java') {
-        files.push({ name: 'Main.java', content: source });
-    } else if (oneCompilerLanguage === 'sqlite') {
-        // Input box acts as seed SQL, then execute main query/script from editor.
-        const mergedSql = [stdin, source].filter(Boolean).join('\n');
-        files.push({ name: 'main.sql', content: mergedSql });
-        finalStdin = '';
-    }
-
-    return {
-        language: oneCompilerLanguage,
-        stdin: finalStdin,
-        files
-    };
+const WANDBOX_LANGUAGE_TO_LABEL = {
+    cpp: 'C++',
+    javascript: 'JavaScript',
+    typescript: 'TypeScript',
+    python: 'Python',
+    java: 'Java',
+    sql: 'SQL'
 };
 
-const executeOneCompilerRun = async (payload) => {
-    if (!ONE_COMPILER_API_KEY) {
+const WANDBOX_COMPILER_PREFERENCES = {
+    cpp: ['gcc-head', 'clang-head'],
+    javascript: ['nodejs-20.17.0', 'nodejs-18.20.4'],
+    typescript: ['typescript-5.6.2'],
+    python: ['cpython-head', 'cpython-3.13.8', 'cpython-3.12.7'],
+    java: ['openjdk-jdk-22+36', 'openjdk-jdk-21+35'],
+    sql: ['sqlite-3.46.1', 'sqlite-3.35.5']
+};
+
+let wandboxListCache = {
+    fetchedAt: 0,
+    items: []
+};
+
+const normalizeWandboxListItem = (item) => {
+    const name = String(item?.name || '').trim();
+    const language = String(item?.language || '').trim();
+    if (!name || !language) return null;
+    return { name, language };
+};
+
+const fetchWandboxCompilerList = async ({ force = false } = {}) => {
+    const now = Date.now();
+    if (!force && now - wandboxListCache.fetchedAt <= WANDBOX_LIST_CACHE_MS && wandboxListCache.items.length > 0) {
         return {
-            success: false,
-            configError: true,
-            status: 0,
-            message: 'Thiếu ONE_COMPILER_API_KEY trên server.'
+            success: true,
+            status: 200,
+            source: 'cache',
+            items: wandboxListCache.items
         };
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), ONE_COMPILER_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), Math.min(WANDBOX_TIMEOUT_MS, 15000));
 
     try {
-        const response = await fetch(ONE_COMPILER_API_URL, {
+        const response = await fetch(WANDBOX_LIST_URL, {
+            method: 'GET',
+            signal: controller.signal
+        });
+
+        let body = [];
+        try {
+            const parsed = await response.json();
+            body = Array.isArray(parsed) ? parsed : [];
+        } catch {
+            body = [];
+        }
+
+        if (!response.ok) {
+            return {
+                success: false,
+                status: response.status,
+                message: `Wandbox list lỗi HTTP ${response.status}`,
+                items: []
+            };
+        }
+
+        const normalizedItems = body
+            .map((item) => normalizeWandboxListItem(item))
+            .filter(Boolean);
+
+        if (normalizedItems.length === 0) {
+            return {
+                success: false,
+                status: response.status,
+                message: 'Wandbox list không trả về compiler hợp lệ',
+                items: []
+            };
+        }
+
+        wandboxListCache = {
+            fetchedAt: now,
+            items: normalizedItems
+        };
+
+        return {
+            success: true,
+            status: response.status,
+            source: 'remote',
+            items: normalizedItems
+        };
+    } catch (error) {
+        return {
+            success: false,
+            status: 0,
+            message: error?.name === 'AbortError'
+                ? `Wandbox list timeout sau ${Math.min(WANDBOX_TIMEOUT_MS, 15000)}ms`
+                : String(error?.message || 'Không thể tải danh sách compiler từ Wandbox'),
+            items: []
+        };
+    } finally {
+        clearTimeout(timeoutId);
+    }
+};
+
+const selectWandboxCompiler = async (language) => {
+    const normalizedLanguage = mapToWandboxLanguage(language);
+    const label = WANDBOX_LANGUAGE_TO_LABEL[normalizedLanguage] || '';
+    if (!normalizedLanguage || !label) {
+        return {
+            success: false,
+            status: 400,
+            message: 'Ngôn ngữ chưa hỗ trợ chạy qua Wandbox'
+        };
+    }
+
+    const listResult = await fetchWandboxCompilerList();
+    const byLanguage = listResult.success
+        ? listResult.items.filter((item) => item.language === label).map((item) => item.name)
+        : [];
+
+    const availableCompilers = Array.from(new Set(byLanguage));
+    const preferredCompilers = WANDBOX_COMPILER_PREFERENCES[normalizedLanguage] || [];
+    const sortedAvailableCompilers = [...availableCompilers].sort((a, b) =>
+        a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+    );
+
+    let compiler = preferredCompilers.find((name) => availableCompilers.includes(name)) || '';
+    if (!compiler && availableCompilers.length > 0) {
+        const headCompiler = availableCompilers.find((name) => /-head(?:-[a-z]+)?$/i.test(name));
+        compiler = headCompiler || sortedAvailableCompilers[sortedAvailableCompilers.length - 1];
+    }
+    if (!compiler && preferredCompilers.length > 0) {
+        compiler = preferredCompilers[0];
+    }
+
+    if (!compiler) {
+        return {
+            success: false,
+            status: 503,
+            message: 'Không tìm được compiler phù hợp trên Wandbox'
+        };
+    }
+
+    return {
+        success: true,
+        language: normalizedLanguage,
+        compiler,
+        listSource: listResult.success ? listResult.source : 'fallback',
+        listMessage: listResult.success ? '' : String(listResult.message || '').trim()
+    };
+};
+
+const buildWandboxPayload = async ({ language, code, input }) => {
+    const selected = await selectWandboxCompiler(language);
+    if (!selected.success) {
+        return selected;
+    }
+
+    const source = String(code || '');
+    const stdin = String(input || '');
+    const normalizedLanguage = selected.language;
+    let finalCode = source;
+    let finalStdin = stdin;
+
+    if (normalizedLanguage === 'java') {
+        // Wandbox compiles/runs Java as prog.java/prog by default.
+        finalCode = finalCode.replace(/\bpublic\s+class\s+[A-Za-z_]\w*\b/, 'public class prog');
+        finalCode = finalCode.replace(/\bclass\s+[A-Za-z_]\w*\b/, 'class prog');
+    }
+
+    if (normalizedLanguage === 'sql') {
+        // Input box acts as seed SQL, then execute main query/script from editor.
+        finalCode = [stdin, source].filter(Boolean).join('\n');
+        finalStdin = '';
+    }
+
+    return {
+        success: true,
+        language: normalizedLanguage,
+        compiler: selected.compiler,
+        listSource: selected.listSource,
+        listMessage: selected.listMessage,
+        payload: {
+            code: finalCode,
+            compiler: selected.compiler,
+            stdin: finalStdin,
+            save: false
+        }
+    };
+};
+
+const executeWandboxRun = async (payload) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), WANDBOX_TIMEOUT_MS);
+
+    try {
+        const response = await fetch(WANDBOX_API_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-API-Key': ONE_COMPILER_API_KEY
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload),
             signal: controller.signal
@@ -4702,7 +4850,7 @@ const executeOneCompilerRun = async (payload) => {
             const message = String(
                 body?.message ||
                 body?.error ||
-                `OneCompiler lỗi HTTP ${response.status}`
+                `Wandbox lỗi HTTP ${response.status}`
             ).trim();
             return {
                 success: false,
@@ -4722,72 +4870,28 @@ const executeOneCompilerRun = async (payload) => {
             success: false,
             status: 0,
             message: error?.name === 'AbortError'
-                ? `OneCompiler timeout sau ${ONE_COMPILER_TIMEOUT_MS}ms`
-                : String(error?.message || 'Không thể kết nối OneCompiler')
+                ? `Wandbox timeout sau ${WANDBOX_TIMEOUT_MS}ms`
+                : String(error?.message || 'Không thể kết nối Wandbox')
         };
     } finally {
         clearTimeout(timeoutId);
     }
 };
 
-const checkOneCompilerHealth = async () => {
-    if (!ONE_COMPILER_API_KEY) {
-        return [{
-            provider: 'onecompiler',
-            url: ONE_COMPILER_LANGUAGES_URL,
-            ok: false,
-            status: 0,
-            languages: [],
-            message: 'Thiếu ONE_COMPILER_API_KEY'
-        }];
-    }
+const checkWandboxHealth = async () => {
+    const listResult = await fetchWandboxCompilerList({ force: true });
+    const languages = listResult.success
+        ? Array.from(new Set(listResult.items.map((item) => item.language))).sort()
+        : [];
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), Math.min(ONE_COMPILER_TIMEOUT_MS, 10000));
-
-    try {
-        const response = await fetch(ONE_COMPILER_LANGUAGES_URL, {
-            method: 'GET',
-            headers: {
-                'X-API-Key': ONE_COMPILER_API_KEY
-            },
-            signal: controller.signal
-        });
-
-        let body = [];
-        try {
-            const parsed = await response.json();
-            body = Array.isArray(parsed) ? parsed : [];
-        } catch {
-            body = [];
-        }
-
-        const languages = body
-            .map((item) => String(item?.id || item?.language || '').trim())
-            .filter(Boolean);
-
-        return [{
-            provider: 'onecompiler',
-            url: ONE_COMPILER_LANGUAGES_URL,
-            ok: response.ok,
-            status: response.status,
-            languages: Array.from(new Set(languages)).sort(),
-            message: response.ok ? '' : `OneCompiler languages lỗi HTTP ${response.status}`
-        }];
-    } catch (error) {
-        return [{
-            provider: 'onecompiler',
-            url: ONE_COMPILER_LANGUAGES_URL,
-            ok: false,
-            status: 0,
-            languages: [],
-            message: error?.name === 'AbortError'
-                ? `OneCompiler health timeout sau ${Math.min(ONE_COMPILER_TIMEOUT_MS, 10000)}ms`
-                : String(error?.message || 'Không thể kết nối OneCompiler')
-        }];
-    } finally {
-        clearTimeout(timeoutId);
-    }
+    return [{
+        provider: 'wandbox',
+        url: WANDBOX_LIST_URL,
+        ok: listResult.success,
+        status: listResult.status || 0,
+        languages,
+        message: listResult.success ? '' : String(listResult.message || 'Không thể kiểm tra trạng thái Wandbox')
+    }];
 };
 
 app.post('/api/code-snippets/run', async (req, res) => {
@@ -4803,61 +4907,65 @@ app.post('/api/code-snippets/run', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Thiếu code để chạy' });
         }
 
-        const payload = buildOneCompilerPayload({ language, code, input });
-        if (!payload) {
-            return res.status(400).json({
+        const payloadResult = await buildWandboxPayload({ language, code, input });
+        if (!payloadResult.success) {
+            const status = payloadResult.status >= 400 ? payloadResult.status : 400;
+            return res.status(status).json({
                 success: false,
-                message: 'Ngôn ngữ chưa hỗ trợ chạy qua OneCompiler'
+                message: payloadResult.message || 'Không thể chuẩn bị payload chạy code',
+                provider: 'wandbox'
             });
         }
 
-        const runResult = await executeOneCompilerRun(payload);
+        const runResult = await executeWandboxRun(payloadResult.payload);
         if (!runResult.success) {
-            if (runResult.configError) {
-                return res.status(503).json({
-                    success: false,
-                    message: runResult.message
-                });
-            }
-
             return res.status(runResult.status >= 400 ? runResult.status : 502).json({
                 success: false,
-                message: runResult.message || 'Không thể chạy code với OneCompiler',
-                provider: 'onecompiler',
+                message: runResult.message || 'Không thể chạy code với Wandbox',
+                provider: 'wandbox',
                 status: runResult.status || 0
             });
         }
 
         const data = runResult.data || {};
-        const stdout = sanitizeRunnerText(data?.stdout || '');
-        const stderr = sanitizeRunnerText(data?.stderr || '');
-        const exceptionText = data?.exception
-            ? sanitizeRunnerText(typeof data.exception === 'string' ? data.exception : JSON.stringify(data.exception))
-            : '';
-        const errorText = [stderr, exceptionText].filter(Boolean).join('\n').trim();
+        const status = String(data?.status || '');
+        const stdout = sanitizeRunnerText(data?.program_output || '');
+        const compilerError = sanitizeRunnerText(data?.compiler_error || '');
+        const programError = sanitizeRunnerText(data?.program_error || '');
+        const compilerMessage = sanitizeRunnerText(data?.compiler_message || '');
+        const programMessage = sanitizeRunnerText(data?.program_message || '');
+        const nonZeroStatus = status && status !== '0';
+        let errorText = [compilerError, programError].filter(Boolean).join('\n').trim();
+
+        if (!errorText && nonZeroStatus && programMessage && programMessage !== stdout) {
+            errorText = programMessage;
+        }
+        if (!errorText && nonZeroStatus && compilerMessage) {
+            errorText = compilerMessage;
+        }
+        if (!errorText && nonZeroStatus) {
+            errorText = `Wandbox trả về status ${status}`;
+        }
 
         if (errorText) {
             return res.json({
                 success: false,
                 output: stdout || '(Không có output)',
                 error: errorText,
-                language,
-                provider: 'onecompiler',
-                executionTime: data?.executionTime,
-                compilationTime: data?.compilationTime,
-                memoryUsed: data?.memoryUsed
+                language: payloadResult.language,
+                provider: 'wandbox',
+                compiler: payloadResult.compiler,
+                signal: String(data?.signal || '')
             });
         }
 
         return res.json({
             success: true,
             output: stdout || '(Không có output)',
-            language,
-            provider: 'onecompiler',
-            executionTime: data?.executionTime,
-            compilationTime: data?.compilationTime,
-            memoryUsed: data?.memoryUsed,
-            creditsRemaining: data?.creditsRemaining
+            language: payloadResult.language,
+            provider: 'wandbox',
+            compiler: payloadResult.compiler,
+            signal: String(data?.signal || '')
         });
     } catch (err) {
         console.error('Run code snippet error:', err);
@@ -4867,13 +4975,13 @@ app.post('/api/code-snippets/run', async (req, res) => {
 
 app.get('/api/code-snippets/runner-health', async (req, res) => {
     try {
-        const checks = await checkOneCompilerHealth();
+        const checks = await checkWandboxHealth();
         const online = checks.some((item) => item.ok);
 
         return res.json({
             success: online,
             online,
-            provider: 'onecompiler',
+            provider: 'wandbox',
             checks
         });
     } catch (err) {
@@ -4881,7 +4989,7 @@ app.get('/api/code-snippets/runner-health', async (req, res) => {
         return res.status(500).json({
             success: false,
             online: false,
-            provider: 'onecompiler',
+            provider: 'wandbox',
             checks: [],
             message: 'Không thể kiểm tra trạng thái runner'
         });
