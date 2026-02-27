@@ -182,8 +182,66 @@ const AUTO_PAIR_MAP = {
 const OPENING_CHARS = new Set(Object.keys(AUTO_PAIR_MAP));
 const CLOSING_CHARS = new Set(Object.values(AUTO_PAIR_MAP));
 const JS_LIKE_LANGUAGES = new Set(['javascript', 'typescript', 'cpp', 'java']);
+const AUTO_FORMAT_LINE_LANGUAGES = new Set(['javascript', 'typescript', 'cpp', 'java']);
 const LOCAL_RUN_LANGUAGES = new Set(['plaintext', 'json', 'html', 'css']);
 const REMOTE_RUN_LANGUAGES = new Set(['cpp', 'javascript', 'typescript', 'python', 'java', 'sql']);
+
+const formatOperatorsInLine = (line) => {
+  let nextLine = String(line || '');
+
+  nextLine = nextLine.replace(/\s*(===|!==|==|!=|<=|>=|\+=|-=|\*=|\/=|%=|&&|\|\|)\s*/g, ' $1 ');
+  nextLine = nextLine.replace(/([A-Za-z0-9_)])\s*=\s*([A-Za-z0-9_(])/g, '$1 = $2');
+  nextLine = nextLine.replace(/([A-Za-z0-9_)])\s*([%*/+-])\s*([A-Za-z0-9_(])/g, '$1 $2 $3');
+
+  return nextLine.replace(/\s{2,}/g, ' ').trim();
+};
+
+const shouldKeepLineWithoutSemicolon = (line) => {
+  const normalizedLine = String(line || '').trim();
+  if (!normalizedLine) return true;
+  if (/[;{}:,]$/.test(normalizedLine)) return true;
+  if (normalizedLine.startsWith('#')) return true;
+  if (/^(if|for|while|switch|catch)\b/.test(normalizedLine)) return true;
+  if (/^(else|try|do)\b/.test(normalizedLine)) return true;
+  if (/^(class|struct|enum|interface|namespace)\b/.test(normalizedLine)) return true;
+  if (/^(public|private|protected)\s*:/.test(normalizedLine)) return true;
+  return false;
+};
+
+const shouldAppendSemicolon = (line) => {
+  const normalizedLine = String(line || '').trim();
+  if (!normalizedLine || shouldKeepLineWithoutSemicolon(normalizedLine)) return false;
+  if (/^(return|throw|break|continue)\b/.test(normalizedLine)) return true;
+  return /(%|=|\+=|-=|\*=|\/=|%=)/.test(normalizedLine);
+};
+
+const autoFormatCommittedLine = (line, language) => {
+  if (!AUTO_FORMAT_LINE_LANGUAGES.has(String(language || ''))) {
+    return String(line || '');
+  }
+
+  const rawLine = String(line || '');
+  const leadingIndent = (rawLine.match(/^\s*/) || [''])[0];
+  const content = rawLine.slice(leadingIndent.length);
+  if (!content.trim()) return rawLine;
+
+  const lineHasQuotes = /["'`]/.test(content);
+  const commentIndex = content.indexOf('//');
+  const codePart = commentIndex >= 0 ? content.slice(0, commentIndex) : content;
+  const commentPart = commentIndex >= 0 ? content.slice(commentIndex).trimStart() : '';
+
+  let formattedCode = codePart.trim();
+  if (!lineHasQuotes) {
+    formattedCode = formatOperatorsInLine(formattedCode);
+  }
+  if (shouldAppendSemicolon(formattedCode)) {
+    formattedCode = `${formattedCode};`;
+  }
+
+  if (!formattedCode) return rawLine;
+  if (!commentPart) return `${leadingIndent}${formattedCode}`;
+  return `${leadingIndent}${formattedCode} ${commentPart}`;
+};
 
 const collectCodeIssues = (code, language) => {
   const issues = [];
@@ -563,9 +621,9 @@ const HighlightCodeEditor = ({ value, onChange, language, theme }) => {
 
       const lineStart = value.lastIndexOf('\n', start - 1) + 1;
       const lineBeforeCursor = value.slice(lineStart, start);
-      const trimmedLineBeforeCursor = lineBeforeCursor.replace(/[ \t]+$/g, '');
-      const currentIndent = (trimmedLineBeforeCursor.match(/^\s*/) || [''])[0];
-      const previousChar = trimmedLineBeforeCursor.trimEnd().slice(-1);
+      const formattedLineBeforeCursor = autoFormatCommittedLine(lineBeforeCursor, language).replace(/[ \t]+$/g, '');
+      const currentIndent = (formattedLineBeforeCursor.match(/^\s*/) || [''])[0];
+      const previousChar = formattedLineBeforeCursor.trimEnd().slice(-1);
       const nextChar = value.slice(end, end + 1);
       const shouldIndent = previousChar === '{' || previousChar === '[' || previousChar === '(';
 
@@ -577,14 +635,14 @@ const HighlightCodeEditor = ({ value, onChange, language, theme }) => {
           (previousChar === '[' && nextChar === ']') ||
           (previousChar === '(' && nextChar === ')'))
       ) {
-        const linePrefix = `${value.slice(0, lineStart)}${trimmedLineBeforeCursor}`;
+        const linePrefix = `${value.slice(0, lineStart)}${formattedLineBeforeCursor}`;
         const nextValue = `${linePrefix}\n${currentIndent}${INDENT_UNIT}\n${currentIndent}${value.slice(end)}`;
         const nextCaret = linePrefix.length + 1 + currentIndent.length + INDENT_UNIT.length;
         applyEditorMutation(target, nextValue, nextCaret);
         return;
       }
 
-      const normalizedBefore = `${value.slice(0, lineStart)}${trimmedLineBeforeCursor}`;
+      const normalizedBefore = `${value.slice(0, lineStart)}${formattedLineBeforeCursor}`;
       const nextIndent = shouldIndent ? `${currentIndent}${INDENT_UNIT}` : currentIndent;
       const nextValue = `${normalizedBefore}\n${nextIndent}${value.slice(end)}`;
       const nextCaret = normalizedBefore.length + 1 + nextIndent.length;
@@ -1556,8 +1614,8 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   </button>
                 </div>
 
-                <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                  <div className="border-b border-gray-200 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-50/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] dark:border-slate-700/90 dark:bg-slate-900/40">
+                  <div className="border-b border-slate-200/90 bg-white/60 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-500 dark:border-slate-700/90 dark:bg-slate-900/60 dark:text-slate-400">
                     Input
                   </div>
                   <textarea
@@ -1565,24 +1623,24 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                     onChange={(event) => setProgramInput(event.target.value)}
                     spellCheck={false}
                     placeholder="Nhập input, mỗi dòng là 1 giá trị..."
-                    className="h-36 w-full resize-none bg-transparent p-3 font-mono text-sm text-gray-800 outline-none dark:text-gray-100 xl:h-[220px]"
+                    className="h-36 w-full resize-none bg-transparent p-3 font-mono text-sm leading-6 text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:bg-white/55 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-900/55 xl:h-[220px]"
                   />
                 </div>
 
-                <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                  <div className="border-b border-gray-200 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-50/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] dark:border-slate-700/90 dark:bg-slate-900/40">
+                  <div className="border-b border-slate-200/90 bg-white/60 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-500 dark:border-slate-700/90 dark:bg-slate-900/60 dark:text-slate-400">
                     Output
                   </div>
-                  <pre className="h-36 overflow-auto whitespace-pre-wrap p-3 font-mono text-sm text-gray-800 dark:text-gray-100 xl:h-[190px]">
+                  <pre className="h-36 overflow-auto whitespace-pre-wrap p-3 font-mono text-sm leading-6 text-slate-800 dark:text-slate-100 xl:h-[190px]">
                     {programOutput || '(Chưa có output)'}
                   </pre>
                   {programPreviewHtml && (
-                    <div className="border-t border-gray-200 p-2 dark:border-gray-700">
+                    <div className="border-t border-slate-200/90 p-2 dark:border-slate-700/90">
                       <iframe
                         title="Code preview"
                         sandbox="allow-scripts"
                         srcDoc={programPreviewHtml}
-                        className="h-44 w-full rounded-lg border border-gray-200 bg-white dark:border-gray-600"
+                        className="h-44 w-full rounded-lg border border-slate-200 bg-white dark:border-slate-600"
                       />
                     </div>
                   )}
