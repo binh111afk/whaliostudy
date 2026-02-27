@@ -1772,34 +1772,34 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   <select
                     value={editorLanguage}
                     onChange={(event) => setEditorLanguage(event.target.value)}
-                    className="h-10 cursor-pointer appearance-none rounded-xl border-0 bg-gradient-to-r from-blue-100 via-cyan-50 to-blue-100 py-2 pl-10 pr-10 text-sm font-bold text-slate-700 shadow-[0_2px_12px_rgba(59,130,246,0.15)] outline-none ring-2 ring-blue-300/40 backdrop-blur-sm transition-all duration-300 hover:shadow-[0_4px_16px_rgba(59,130,246,0.25)] hover:ring-blue-400/60 focus:shadow-[0_6px_20px_rgba(59,130,246,0.35)] focus:ring-2 focus:ring-blue-500/70 dark:from-blue-900/50 dark:via-cyan-900/30 dark:to-blue-900/50 dark:text-slate-100 dark:shadow-[0_2px_12px_rgba(59,130,246,0.25)] dark:ring-blue-600/40 dark:hover:ring-blue-500/60 dark:focus:ring-blue-400/70"
+                    className="h-10 cursor-pointer appearance-none rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-10 text-sm font-semibold text-gray-700 shadow-sm outline-none transition-all duration-200 hover:border-blue-300 hover:bg-blue-50/50 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-blue-500 dark:hover:bg-gray-700 dark:focus:border-blue-400 dark:focus:ring-blue-900/30"
                     title="Chọn ngôn ngữ highlight"
                   >
                     {LANGUAGE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
+                      <option key={option.value} value={option.value} className="bg-white py-2 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
                         {option.label}
                       </option>
                     ))}
                   </select>
-                  <FileCode2 size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-blue-600 drop-shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:text-blue-700 dark:text-blue-400 dark:group-hover:text-blue-300" />
-                  <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition-all duration-300 group-hover:translate-y-[-0.4rem] group-hover:text-blue-600 dark:text-slate-400 dark:group-hover:text-blue-400" />
+                  <FileCode2 size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 transition-colors duration-200 group-hover:text-blue-600 dark:text-gray-400 dark:group-hover:text-blue-400" />
+                  <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300" />
                 </div>
 
                 <div className="relative group">
                   <select
                     value={editorTheme}
                     onChange={(event) => setEditorTheme(event.target.value)}
-                    className="h-10 cursor-pointer appearance-none rounded-xl border-0 bg-gradient-to-r from-purple-100 via-pink-50 to-purple-100 py-2 pl-10 pr-10 text-sm font-bold text-slate-700 shadow-[0_2px_12px_rgba(168,85,247,0.15)] outline-none ring-2 ring-purple-300/40 backdrop-blur-sm transition-all duration-300 hover:shadow-[0_4px_16px_rgba(168,85,247,0.25)] hover:ring-purple-400/60 focus:shadow-[0_6px_20px_rgba(168,85,247,0.35)] focus:ring-2 focus:ring-purple-500/70 dark:from-purple-900/50 dark:via-pink-900/30 dark:to-purple-900/50 dark:text-slate-100 dark:shadow-[0_2px_12px_rgba(168,85,247,0.25)] dark:ring-purple-600/40 dark:hover:ring-purple-500/60 dark:focus:ring-purple-400/70"
+                    className="h-10 cursor-pointer appearance-none rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-10 text-sm font-semibold text-gray-700 shadow-sm outline-none transition-all duration-200 hover:border-purple-300 hover:bg-purple-50/50 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-purple-500 dark:hover:bg-gray-700 dark:focus:border-purple-400 dark:focus:ring-purple-900/30"
                     title="Chọn theme editor"
                   >
                     {CODE_EDITOR_THEME_OPTIONS.map((theme) => (
-                      <option key={theme.key} value={theme.key}>
+                      <option key={theme.key} value={theme.key} className="bg-white py-2 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
                         {theme.label}
                       </option>
                     ))}
                   </select>
-                  <Palette size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-purple-600 drop-shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:text-purple-700 dark:text-purple-400 dark:group-hover:text-purple-300" />
-                  <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition-all duration-300 group-hover:translate-y-[-0.4rem] group-hover:text-purple-600 dark:text-slate-400 dark:group-hover:text-purple-400" />
+                  <Palette size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 transition-colors duration-200 group-hover:text-purple-600 dark:text-gray-400 dark:group-hover:text-purple-400" />
+                  <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300" />
                 </div>
 
                 <button
