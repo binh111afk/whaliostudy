@@ -119,41 +119,89 @@ const HIGHLIGHT_EDITOR_CSS = `
 }
 .code-editor-light .hljs-keyword,
 .code-editor-light .hljs-selector-tag,
+.code-editor-light .hljs-meta .hljs-keyword,
+.code-editor-light .hljs-doctag {
+  color: #0f4ec7;
+  font-weight: 700;
+}
 .code-editor-light .hljs-title,
-.code-editor-light .hljs-section {
-  color: #1d4ed8;
+.code-editor-light .hljs-title.function_,
+.code-editor-light .hljs-title.class_ {
+  color: #c2410c;
+  font-weight: 700;
+}
+.code-editor-light .hljs-built_in,
+.code-editor-light .hljs-type,
+.code-editor-light .hljs-literal {
+  color: #7c3aed;
 }
 .code-editor-light .hljs-string,
-.code-editor-light .hljs-attr {
-  color: #065f46;
+.code-editor-light .hljs-regexp,
+.code-editor-light .hljs-attr,
+.code-editor-light .hljs-attribute {
+  color: #047857;
 }
 .code-editor-light .hljs-number,
-.code-editor-light .hljs-literal,
-.code-editor-light .hljs-symbol {
+.code-editor-light .hljs-symbol,
+.code-editor-light .hljs-bullet,
+.code-editor-light .hljs-link {
   color: #b45309;
+}
+.code-editor-light .hljs-variable,
+.code-editor-light .hljs-template-variable {
+  color: #be123c;
 }
 .code-editor-light .hljs-comment,
 .code-editor-light .hljs-quote {
   color: #6b7280;
+  font-style: italic;
 }
 .code-editor-dark .hljs-keyword,
 .code-editor-dark .hljs-selector-tag,
+.code-editor-dark .hljs-meta .hljs-keyword,
+.code-editor-dark .hljs-doctag {
+  color: #7dd3fc;
+  font-weight: 700;
+}
 .code-editor-dark .hljs-title,
-.code-editor-dark .hljs-section {
-  color: #93c5fd;
+.code-editor-dark .hljs-title.function_,
+.code-editor-dark .hljs-title.class_ {
+  color: #fb923c;
+  font-weight: 700;
+}
+.code-editor-dark .hljs-built_in,
+.code-editor-dark .hljs-type,
+.code-editor-dark .hljs-literal {
+  color: #c4b5fd;
 }
 .code-editor-dark .hljs-string,
-.code-editor-dark .hljs-attr {
-  color: #86efac;
+.code-editor-dark .hljs-regexp,
+.code-editor-dark .hljs-attr,
+.code-editor-dark .hljs-attribute {
+  color: #6ee7b7;
 }
 .code-editor-dark .hljs-number,
-.code-editor-dark .hljs-literal,
-.code-editor-dark .hljs-symbol {
+.code-editor-dark .hljs-symbol,
+.code-editor-dark .hljs-bullet,
+.code-editor-dark .hljs-link {
   color: #fbbf24;
+}
+.code-editor-dark .hljs-variable,
+.code-editor-dark .hljs-template-variable {
+  color: #fda4af;
 }
 .code-editor-dark .hljs-comment,
 .code-editor-dark .hljs-quote {
   color: #94a3b8;
+  font-style: italic;
+}
+.code-editor-light .hljs-operator,
+.code-editor-light .hljs-punctuation {
+  color: #475569;
+}
+.code-editor-dark .hljs-operator,
+.code-editor-dark .hljs-punctuation {
+  color: #cbd5e1;
 }
 `;
 
