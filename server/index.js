@@ -1974,6 +1974,12 @@ const quickNoteSchema = new mongoose.Schema({
 quickNoteSchema.index({ username: 1, createdAt: -1 });
 
 // Code Snippet Schema (Kho Code)
+const codeSnippetTestCaseSchema = new mongoose.Schema({
+    input: { type: String, default: '' },
+    expectedOutput: { type: String, required: true, trim: true, maxlength: 12000 },
+    score: { type: Number, required: true, min: 0 }
+}, { _id: false });
+
 const codeSnippetSchema = new mongoose.Schema({
     username: { type: String, required: true, index: true },
     cardTitle: { type: String, required: true, trim: true, maxlength: 200 },
@@ -1982,6 +1988,7 @@ const codeSnippetSchema = new mongoose.Schema({
     assignmentDescription: { type: String, default: '', trim: true, maxlength: 12000 },
     code: { type: String, default: '' },
     language: { type: String, default: 'plaintext', trim: true, maxlength: 60 },
+    testCases: { type: [codeSnippetTestCaseSchema], default: [] },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
@@ -4531,6 +4538,195 @@ app.delete('/api/announcements/:id', async (req, res) => {
 });
 
 // 4.3 Code Snippet APIs (MongoDB)
+const CODE_SNIPPET_TOTAL_SCORE = 10;
+const CODE_SNIPPET_DEFAULT_TEST_CASE_COUNT = 5;
+const CODE_SNIPPET_MAX_TEST_CASES = Math.min(
+    12,
+    Math.max(1, parsePositiveInt(process.env.CODE_SNIPPET_MAX_TEST_CASES, CODE_SNIPPET_DEFAULT_TEST_CASE_COUNT))
+);
+
+const sanitizeSnippetTestCaseText = (value, limit = 8000) =>
+    String(value === undefined || value === null ? '' : value)
+        .replace(/\r\n/g, '\n')
+        .trim()
+        .slice(0, limit);
+
+const roundSnippetScore = (value) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return 0;
+    return Number(parsed.toFixed(2));
+};
+
+const distributeScoreEvenly = (count, totalScore = CODE_SNIPPET_TOTAL_SCORE) => {
+    const normalizedCount = Math.max(0, Number(count) || 0);
+    if (normalizedCount <= 0) return [];
+
+    const baseScore = roundSnippetScore(totalScore / normalizedCount);
+    const scores = Array.from({ length: normalizedCount }, () => baseScore);
+    const subtotal = roundSnippetScore(baseScore * Math.max(0, normalizedCount - 1));
+    scores[normalizedCount - 1] = roundSnippetScore(totalScore - subtotal);
+    return scores;
+};
+
+const tryParseJsonCandidate = (rawText) => {
+    const candidate = String(rawText || '').trim();
+    if (!candidate) return null;
+    try {
+        return JSON.parse(candidate);
+    } catch {
+        return null;
+    }
+};
+
+const extractAiJsonPayload = (rawText) => {
+    const text = String(rawText || '').trim();
+    if (!text) return null;
+
+    const directParsed = tryParseJsonCandidate(text);
+    if (directParsed) return directParsed;
+
+    const fencedMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fencedMatch?.[1]) {
+        const fencedParsed = tryParseJsonCandidate(fencedMatch[1]);
+        if (fencedParsed) return fencedParsed;
+    }
+
+    const arrayMatch = text.match(/\[[\s\S]*\]/);
+    if (arrayMatch?.[0]) {
+        const arrayParsed = tryParseJsonCandidate(arrayMatch[0]);
+        if (arrayParsed) return arrayParsed;
+    }
+
+    const objectMatch = text.match(/\{[\s\S]*\}/);
+    if (objectMatch?.[0]) {
+        const objectParsed = tryParseJsonCandidate(objectMatch[0]);
+        if (objectParsed) return objectParsed;
+    }
+
+    return null;
+};
+
+const readExpectedOutputFromRawTestCase = (rawCase) => {
+    if (!rawCase || typeof rawCase !== 'object') return undefined;
+    const expectedKeys = ['expectedOutput', 'expected', 'output', 'expected_output'];
+    for (const key of expectedKeys) {
+        if (Object.prototype.hasOwnProperty.call(rawCase, key)) {
+            return rawCase[key];
+        }
+    }
+    return undefined;
+};
+
+const readInputFromRawTestCase = (rawCase) => {
+    if (!rawCase || typeof rawCase !== 'object') return '';
+    const inputKeys = ['input', 'stdin', 'in'];
+    for (const key of inputKeys) {
+        if (Object.prototype.hasOwnProperty.call(rawCase, key)) {
+            return rawCase[key];
+        }
+    }
+    return '';
+};
+
+const normalizeAiTestCases = (rawCases) => {
+    if (!Array.isArray(rawCases) || rawCases.length === 0) return [];
+
+    const normalizedCases = [];
+    const uniqueSet = new Set();
+
+    for (const rawCase of rawCases) {
+        if (!rawCase || typeof rawCase !== 'object') continue;
+
+        const expectedRaw = readExpectedOutputFromRawTestCase(rawCase);
+        if (expectedRaw === undefined || expectedRaw === null) continue;
+
+        const input = sanitizeSnippetTestCaseText(readInputFromRawTestCase(rawCase), 4000);
+        const expectedOutput = sanitizeSnippetTestCaseText(expectedRaw, 4000);
+        const signature = `${input}__${expectedOutput}`;
+        if (uniqueSet.has(signature)) continue;
+
+        uniqueSet.add(signature);
+        normalizedCases.push({ input, expectedOutput });
+        if (normalizedCases.length >= CODE_SNIPPET_MAX_TEST_CASES) break;
+    }
+
+    const distributedScores = distributeScoreEvenly(normalizedCases.length, CODE_SNIPPET_TOTAL_SCORE);
+    return normalizedCases.map((item, index) => ({
+        ...item,
+        score: distributedScores[index] || 0
+    }));
+};
+
+const generateCodeSnippetTestCases = async ({
+    cardTitle,
+    subjectName,
+    assignmentName,
+    assignmentDescription
+}) => {
+    const normalizedDescription = sanitizeSnippetTestCaseText(assignmentDescription, 12000);
+    if (!normalizedDescription) {
+        return {
+            success: true,
+            testCases: [],
+            modelUsed: '',
+            generated: false
+        };
+    }
+
+    const prompt = [
+        'Bạn là chuyên gia tạo test case cho bài tập lập trình.',
+        'Nhiệm vụ:',
+        `1) Phân tích đề và tự suy luận logic đúng của bài.`,
+        `2) Tạo ${CODE_SNIPPET_DEFAULT_TEST_CASE_COUNT} test case đại diện (bao gồm cả edge case).`,
+        '3) Chỉ trả về JSON hợp lệ, không giải thích thêm, không dùng markdown code fence.',
+        '',
+        'Định dạng JSON bắt buộc:',
+        '{"testCases":[{"input":"...","expectedOutput":"..."}]}',
+        '',
+        'Quy tắc dữ liệu:',
+        '- input: chuỗi input gửi vào stdin, có thể rỗng.',
+        '- expectedOutput: output mong đợi chính xác (bao gồm xuống dòng nếu cần).',
+        '- Không thêm thuộc tính khác ngoài input, expectedOutput.',
+        '',
+        `Tên card: ${sanitizeSnippetTestCaseText(cardTitle, 200) || '(trống)'}`,
+        `Môn học: ${sanitizeSnippetTestCaseText(subjectName, 120) || '(trống)'}`,
+        `Tên bài tập: ${sanitizeSnippetTestCaseText(assignmentName, 220) || '(trống)'}`,
+        'Nội dung đề bài:',
+        normalizedDescription
+    ].join('\n');
+
+    const aiResult = await generateAIResponse(prompt);
+    if (!aiResult?.success) {
+        return {
+            success: false,
+            message: aiResult?.message || 'Không thể tạo test case bằng AI'
+        };
+    }
+
+    const parsedPayload = extractAiJsonPayload(aiResult.message || '');
+    const rawCases = Array.isArray(parsedPayload)
+        ? parsedPayload
+        : Array.isArray(parsedPayload?.testCases)
+            ? parsedPayload.testCases
+            : [];
+
+    const normalizedCases = normalizeAiTestCases(rawCases);
+    if (normalizedCases.length === 0) {
+        return {
+            success: false,
+            message: 'AI không trả về test case hợp lệ để lưu bài tập',
+            modelUsed: aiResult.model || ''
+        };
+    }
+
+    return {
+        success: true,
+        generated: true,
+        testCases: normalizedCases,
+        modelUsed: aiResult.model || ''
+    };
+};
+
 app.get('/api/code-snippets', async (req, res) => {
     try {
         const normalizedUsername = String(req.query.username || '').trim();
@@ -4569,6 +4765,9 @@ app.post('/api/code-snippets', async (req, res) => {
 
         const normalizedUsername = String(username || '').trim();
         const normalizedCardTitle = String(cardTitle || '').trim();
+        const normalizedSubjectName = String(subjectName || '').trim();
+        const normalizedAssignmentName = String(assignmentName || '').trim();
+        const normalizedAssignmentDescription = String(assignmentDescription || '').trim();
 
         if (!normalizedUsername) {
             return res.status(400).json({ success: false, message: 'Thiếu username' });
@@ -4577,15 +4776,29 @@ app.post('/api/code-snippets', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Tên card là bắt buộc' });
         }
 
+        const testCaseResult = await generateCodeSnippetTestCases({
+            cardTitle: normalizedCardTitle,
+            subjectName: normalizedSubjectName,
+            assignmentName: normalizedAssignmentName,
+            assignmentDescription: normalizedAssignmentDescription
+        });
+        if (!testCaseResult.success) {
+            return res.status(502).json({
+                success: false,
+                message: testCaseResult.message || 'Không thể tạo test case tự động cho bài tập'
+            });
+        }
+
         const now = new Date();
         const snippet = new CodeSnippet({
             username: normalizedUsername,
             cardTitle: normalizedCardTitle,
-            subjectName: String(subjectName || '').trim(),
-            assignmentName: String(assignmentName || '').trim(),
-            assignmentDescription: String(assignmentDescription || '').trim(),
+            subjectName: normalizedSubjectName,
+            assignmentName: normalizedAssignmentName,
+            assignmentDescription: normalizedAssignmentDescription,
             code: String(code || ''),
             language: String(language || 'plaintext').trim() || 'plaintext',
+            testCases: testCaseResult.testCases,
             createdAt: now,
             updatedAt: now
         });
@@ -4596,6 +4809,12 @@ app.post('/api/code-snippets', async (req, res) => {
             snippet: {
                 ...snippet.toObject(),
                 id: snippet._id.toString()
+            },
+            testCaseGeneration: {
+                generated: Boolean(testCaseResult.generated),
+                count: Array.isArray(testCaseResult.testCases) ? testCaseResult.testCases.length : 0,
+                totalScore: CODE_SNIPPET_TOTAL_SCORE,
+                modelUsed: String(testCaseResult.modelUsed || '')
             }
         });
     } catch (err) {

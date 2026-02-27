@@ -233,6 +233,95 @@ const JS_LIKE_LANGUAGES = new Set(['javascript', 'typescript', 'cpp', 'java']);
 const AUTO_FORMAT_LINE_LANGUAGES = new Set(['javascript', 'typescript', 'cpp', 'java']);
 const LOCAL_RUN_LANGUAGES = new Set(['plaintext', 'json', 'html', 'css']);
 const REMOTE_RUN_LANGUAGES = new Set(['cpp', 'javascript', 'typescript', 'python', 'java', 'sql']);
+const AUTO_JUDGE_TOTAL_SCORE = 10;
+const AUTO_JUDGE_REVEAL_INITIAL_MS = 450;
+const AUTO_JUDGE_REVEAL_STEP_MS = 300;
+
+const roundJudgeScore = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Number(parsed.toFixed(2));
+};
+
+const formatJudgeScore = (value) => roundJudgeScore(value).toFixed(2).replace(/\.00$/, '');
+
+const normalizeOutputForJudge = (value) => {
+  return String(value || '')
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .join('\n')
+    .trim();
+};
+
+const isExpectedOutputMatched = (actualOutput, expectedOutput) =>
+  normalizeOutputForJudge(actualOutput) === normalizeOutputForJudge(expectedOutput);
+
+const isTimeLimitError = (errorText) =>
+  /(timeout|time limit|timed out|quá lâu|tle)/i.test(String(errorText || ''));
+
+const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+const toSnippetTestCaseList = (snippet) => {
+  const rawCases = Array.isArray(snippet?.testCases) ? snippet.testCases : [];
+  return rawCases.map((item) => ({
+    input: String(item?.input || ''),
+    expectedOutput: String(item?.expectedOutput || ''),
+    score: roundJudgeScore(item?.score),
+  }));
+};
+
+const buildPendingJudgeResults = (testCases) =>
+  (Array.isArray(testCases) ? testCases : []).map((testCase, index) => ({
+    ...testCase,
+    index,
+    status: 'pending',
+    gotOutput: '',
+    errorMessage: '',
+    executionTimeMs: 0,
+  }));
+
+const formatExecutionTime = (ms) => {
+  const numericMs = Number(ms);
+  if (!Number.isFinite(numericMs) || numericMs <= 0) return '--';
+  if (numericMs >= 1000) return `${(numericMs / 1000).toFixed(2)}s`;
+  return `${(numericMs / 1000).toFixed(3)}s`;
+};
+
+const AutoJudgeStatusIcon = ({ status }) => {
+  if (status === 'passed') {
+    return (
+      <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" fill="#22c55e" />
+        <circle cx="17.4" cy="6.8" r="2.2" fill="#14b8a6" />
+        <path d="M7 12.5l3.1 3.1L17.5 8.2" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
+  if (status === 'failed') {
+    return (
+      <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" fill="#ef4444" />
+        <circle cx="17.2" cy="7.1" r="2.1" fill="#f97316" />
+        <path d="M8.2 8.2l7.6 7.6M15.8 8.2l-7.6 7.6" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (status === 'tle') {
+    return (
+      <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" fill="#f59e0b" />
+        <circle cx="17.1" cy="7.1" r="2.1" fill="#f97316" />
+        <path d="M12 7v6l3.2 1.8" fill="none" stroke="#fff" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="12" cy="12" r="1.2" fill="#fff" />
+      </svg>
+    );
+  }
+
+  return <span className="inline-block h-3.5 w-3.5 animate-pulse rounded-full bg-slate-300 dark:bg-slate-600" />;
+};
 
 const formatOperatorsInLine = (line) => {
   let nextLine = String(line || '');
@@ -881,6 +970,9 @@ const CreateSnippetModal = ({
               placeholder="Mô tả ngắn nội dung yêu cầu của bài tập"
               className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             />
+            <p className="mt-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+              Khi lưu card, AI sẽ tự tạo test case và chia điểm tự động theo từng case.
+            </p>
           </div>
         </div>
 
@@ -930,13 +1022,23 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   const [programError, setProgramError] = useState('');
   const [programPreviewHtml, setProgramPreviewHtml] = useState('');
   const [runningCode, setRunningCode] = useState(false);
+  const [snippetTestCases, setSnippetTestCases] = useState([]);
+  const [judgeResults, setJudgeResults] = useState([]);
+  const [earnedScore, setEarnedScore] = useState(0);
 
   const username = useMemo(() => resolveUsername(user), [user]);
+  const totalJudgeScore = useMemo(() => {
+    const detectedTotal = roundJudgeScore(
+      snippetTestCases.reduce((sum, testCase) => sum + Number(testCase?.score || 0), 0)
+    );
+    return detectedTotal > 0 ? detectedTotal : AUTO_JUDGE_TOTAL_SCORE;
+  }, [snippetTestCases]);
 
   const usernameRef = useRef(username);
   const snippetRef = useRef(selectedSnippet);
   const codeRef = useRef(editorCode);
   const languageRef = useRef(editorLanguage);
+  const judgeAnimationRunRef = useRef(0);
 
   useEffect(() => {
     usernameRef.current = username;
@@ -1147,7 +1249,12 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
         } else {
           await loadSnippets();
         }
-        toast.success('Đã tạo card code mới');
+        const generatedCaseCount = Number(result?.testCaseGeneration?.count || 0);
+        if (generatedCaseCount > 0) {
+          toast.success(`Đã tạo card và sinh ${generatedCaseCount} test case tự động`);
+        } else {
+          toast.success('Đã tạo card code mới');
+        }
       }
 
       resetSnippetModalState();
@@ -1186,9 +1293,13 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   };
 
   const handleOpenDetail = (snippet) => {
+    const normalizedTestCases = toSnippetTestCaseList(snippet);
     setSelectedSnippet(snippet);
     setEditorCode(String(snippet.code || ''));
     setEditorLanguage(String(snippet.language || inferLanguageFromSubject(snippet.subjectName)));
+    setSnippetTestCases(normalizedTestCases);
+    setJudgeResults(buildPendingJudgeResults(normalizedTestCases));
+    setEarnedScore(0);
     setProgramInput('');
     setProgramOutput('');
     setProgramError('');
@@ -1196,10 +1307,14 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   };
 
   const handleCloseDetail = async () => {
+    judgeAnimationRunRef.current = Date.now();
     setClosingDetail(true);
     await persistDraft({ silent: false });
     setClosingDetail(false);
     setSelectedSnippet(null);
+    setSnippetTestCases([]);
+    setJudgeResults([]);
+    setEarnedScore(0);
   };
 
   const handleDelete = async (snippetId) => {
@@ -1215,7 +1330,11 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
 
     setSnippets((prev) => prev.filter((item) => (item.id || item._id) !== snippetId));
     if ((selectedSnippet?.id || selectedSnippet?._id) === snippetId) {
+      judgeAnimationRunRef.current = Date.now();
       setSelectedSnippet(null);
+      setSnippetTestCases([]);
+      setJudgeResults([]);
+      setEarnedScore(0);
     }
     toast.success('Đã xóa card code');
   };
@@ -1254,6 +1373,84 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     URL.revokeObjectURL(url);
   };
 
+  const runSingleInputMode = async (source) => {
+    if (LOCAL_RUN_LANGUAGES.has(editorLanguage)) {
+      const localResult = runLocalLanguage({
+        language: editorLanguage,
+        code: source,
+        input: programInput,
+      });
+      setProgramOutput(String(localResult.output || '(Không có output)'));
+      setProgramPreviewHtml(String(localResult.previewHtml || ''));
+      toast.success('Chạy code thành công');
+      return;
+    }
+
+    if (editorLanguage === 'javascript') {
+      const remoteResult = await codeSnippetService.runSnippet({
+        language: editorLanguage,
+        code: source,
+        input: String(programInput || ''),
+      });
+
+      if (remoteResult?.success) {
+        setProgramOutput(String(remoteResult.output || '(Không có output)'));
+        setProgramPreviewHtml('');
+        toast.success('Chạy code thành công');
+        return;
+      }
+
+      const remoteError = String(remoteResult?.error || remoteResult?.message || '').trim();
+      const canFallbackToLocalWorker = /lỗi kết nối server/i.test(remoteError);
+
+      if (!canFallbackToLocalWorker) {
+        setProgramError(remoteError || 'Lỗi chạy code');
+        setProgramOutput('');
+        setProgramPreviewHtml('');
+        toast.error('Chạy code thất bại');
+        return;
+      }
+
+      // Offline fallback only when backend connection fails.
+      const jsOutput = await runJavaScriptInWorker({
+        code: source,
+        input: String(programInput || ''),
+      });
+      setProgramOutput(jsOutput);
+      setProgramPreviewHtml('');
+      toast.success('Chạy code thành công');
+      return;
+    }
+
+    if (!REMOTE_RUN_LANGUAGES.has(editorLanguage)) {
+      const unsupportedMessage = 'Ngôn ngữ này hiện chưa hỗ trợ chạy.';
+      setProgramError(unsupportedMessage);
+      setProgramOutput('');
+      setProgramPreviewHtml('');
+      toast.error(unsupportedMessage);
+      return;
+    }
+
+    const result = await codeSnippetService.runSnippet({
+      language: editorLanguage,
+      code: source,
+      input: String(programInput || ''),
+    });
+
+    if (!result?.success) {
+      const message = String(result?.error || result?.message || 'Lỗi chạy code');
+      setProgramError(message);
+      setProgramOutput('');
+      setProgramPreviewHtml('');
+      toast.error('Chạy code thất bại');
+      return;
+    }
+
+    setProgramOutput(String(result.output || '(Không có output)'));
+    setProgramPreviewHtml(String(result.previewHtml || ''));
+    toast.success('Chạy code thành công');
+  };
+
   const handleRunCode = async () => {
     const source = String(editorCode || '');
     if (!source.trim()) {
@@ -1273,87 +1470,127 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
       }
     }
 
+    const normalizedTestCases = Array.isArray(snippetTestCases) ? snippetTestCases : [];
+
     setRunningCode(true);
     setProgramError('');
-    setProgramOutput('Đang chạy...');
     setProgramPreviewHtml('');
 
     try {
-      if (LOCAL_RUN_LANGUAGES.has(editorLanguage)) {
-        const localResult = runLocalLanguage({
-          language: editorLanguage,
-          code: source,
-          input: programInput,
-        });
-        setProgramOutput(String(localResult.output || '(Không có output)'));
-        setProgramPreviewHtml(String(localResult.previewHtml || ''));
-        toast.success('Chạy code thành công');
-        return;
-      }
-
-      if (editorLanguage === 'javascript') {
-        const remoteResult = await codeSnippetService.runSnippet({
-          language: editorLanguage,
-          code: source,
-          input: String(programInput || ''),
-        });
-
-        if (remoteResult?.success) {
-          setProgramOutput(String(remoteResult.output || '(Không có output)'));
-          setProgramPreviewHtml('');
-          toast.success('Chạy code thành công');
-          return;
-        }
-
-        const remoteError = String(remoteResult?.error || remoteResult?.message || '').trim();
-        const canFallbackToLocalWorker = /lỗi kết nối server/i.test(remoteError);
-
-        if (!canFallbackToLocalWorker) {
-          setProgramError(remoteError || 'Lỗi chạy code');
-          setProgramOutput('');
-          setProgramPreviewHtml('');
-          toast.error('Chạy code thất bại');
-          return;
-        }
-
-        // Offline fallback only when backend connection fails.
-        const jsOutput = await runJavaScriptInWorker({
-          code: source,
-          input: String(programInput || ''),
-        });
-        setProgramOutput(jsOutput);
-        setProgramPreviewHtml('');
-        toast.success('Chạy code thành công');
+      if (normalizedTestCases.length === 0) {
+        setProgramOutput('Không có test case, chạy theo chế độ input thủ công...');
+        await runSingleInputMode(source);
         return;
       }
 
       if (!REMOTE_RUN_LANGUAGES.has(editorLanguage)) {
-        const unsupportedMessage = 'Ngôn ngữ này hiện chưa hỗ trợ chạy.';
+        const unsupportedMessage = 'Ngôn ngữ này chưa hỗ trợ auto judge qua Wandbox.';
         setProgramError(unsupportedMessage);
         setProgramOutput('');
-        setProgramPreviewHtml('');
         toast.error(unsupportedMessage);
         return;
       }
 
-      const result = await codeSnippetService.runSnippet({
-        language: editorLanguage,
-        code: source,
-        input: String(programInput || ''),
-      });
+      const runToken = Date.now();
+      judgeAnimationRunRef.current = runToken;
+      setProgramOutput(
+        `Đang gửi đồng thời ${normalizedTestCases.length} test cases lên Wandbox (Promise.all)...`
+      );
+      setEarnedScore(0);
+      setJudgeResults(buildPendingJudgeResults(normalizedTestCases));
 
-      if (!result?.success) {
-        const message = String(result?.error || result?.message || 'Lỗi chạy code');
-        setProgramError(message);
-        setProgramOutput('');
-        setProgramPreviewHtml('');
-        toast.error('Chạy code thất bại');
-        return;
+      const rawResults = await Promise.all(
+        normalizedTestCases.map(async (testCase, index) => {
+          const startedAt = performance.now();
+          try {
+            const result = await codeSnippetService.runSnippet({
+              language: editorLanguage,
+              code: source,
+              input: String(testCase.input || ''),
+            });
+            const executionTimeMs = Math.max(0, performance.now() - startedAt);
+            const gotOutput = String(result?.output || '').replace(/\r\n/g, '\n');
+
+            if (!result?.success) {
+              const errorMessage = String(
+                result?.error || result?.message || 'Không thể chạy test case'
+              ).trim();
+              if (isTimeLimitError(errorMessage)) {
+                return {
+                  ...testCase,
+                  index,
+                  status: 'tle',
+                  gotOutput,
+                  errorMessage: errorMessage || 'Time Limit Exceeded',
+                  executionTimeMs,
+                };
+              }
+
+              return {
+                ...testCase,
+                index,
+                status: 'failed',
+                gotOutput,
+                errorMessage: errorMessage || 'Runtime Error',
+                executionTimeMs,
+              };
+            }
+
+            const passed = isExpectedOutputMatched(gotOutput, testCase.expectedOutput);
+            return {
+              ...testCase,
+              index,
+              status: passed ? 'passed' : 'failed',
+              gotOutput,
+              errorMessage: passed ? '' : '',
+              executionTimeMs,
+            };
+          } catch (error) {
+            const executionTimeMs = Math.max(0, performance.now() - startedAt);
+            const errorMessage = String(error?.message || 'Runtime Error');
+            return {
+              ...testCase,
+              index,
+              status: isTimeLimitError(errorMessage) ? 'tle' : 'failed',
+              gotOutput: '',
+              errorMessage,
+              executionTimeMs,
+            };
+          }
+        })
+      );
+
+      if (judgeAnimationRunRef.current !== runToken) return;
+
+      let nextEarnedScore = 0;
+      await wait(AUTO_JUDGE_REVEAL_INITIAL_MS);
+
+      for (let index = 0; index < rawResults.length; index += 1) {
+        if (judgeAnimationRunRef.current !== runToken) return;
+
+        const caseResult = rawResults[index];
+        setJudgeResults((prev) => {
+          const next = [...prev];
+          next[index] = caseResult;
+          return next;
+        });
+
+        if (caseResult.status === 'passed') {
+          nextEarnedScore = roundJudgeScore(nextEarnedScore + Number(caseResult.score || 0));
+          setEarnedScore(nextEarnedScore);
+        }
+
+        await wait(AUTO_JUDGE_REVEAL_STEP_MS);
       }
 
-      setProgramOutput(String(result.output || '(Không có output)'));
-      setProgramPreviewHtml(String(result.previewHtml || ''));
-      toast.success('Chạy code thành công');
+      const passedCount = rawResults.filter((item) => item.status === 'passed').length;
+      const tleCount = rawResults.filter((item) => item.status === 'tle').length;
+      const failedCount = rawResults.length - passedCount - tleCount;
+      setProgramOutput(
+        `Đạt ${formatJudgeScore(nextEarnedScore)}/${formatJudgeScore(totalJudgeScore)} điểm - ` +
+          `${passedCount} đúng, ${failedCount} sai, ${tleCount} quá thời gian.`
+      );
+      toast.success('Đã chấm xong toàn bộ test case');
     } catch (error) {
       const message = String(error?.message || 'Lỗi runtime');
       setProgramError(message);
@@ -1366,9 +1603,12 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   };
 
   const handleClearConsole = () => {
+    judgeAnimationRunRef.current = Date.now();
     setProgramOutput('');
     setProgramError('');
     setProgramPreviewHtml('');
+    setEarnedScore(0);
+    setJudgeResults(buildPendingJudgeResults(snippetTestCases));
   };
 
   const filteredSnippets = useMemo(() => {
@@ -1631,6 +1871,32 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
               </div>
             </div>
 
+            <div className="px-4 pt-3">
+              <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-cyan-50 to-sky-50 p-4 shadow-sm dark:border-emerald-700/60 dark:from-emerald-900/20 dark:via-cyan-900/20 dark:to-sky-900/20">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                      Điểm tự động
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                      Chấm theo test case AI tạo sẵn
+                    </p>
+                  </div>
+                  <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300">
+                    {formatJudgeScore(earnedScore)}/{formatJudgeScore(totalJudgeScore)}
+                  </p>
+                </div>
+                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-900/50">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 transition-all duration-500"
+                    style={{
+                      width: `${Math.max(0, Math.min(100, (earnedScore / Math.max(totalJudgeScore, 1)) * 100))}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="grid gap-3 p-4 xl:h-[75vh] xl:min-h-[75vh] xl:grid-cols-[minmax(0,1fr)_360px]">
               <div className="h-[62vh] min-h-[420px] overflow-hidden rounded-2xl border border-gray-200 shadow-sm dark:border-gray-700 xl:h-full xl:min-h-0">
                 <HighlightCodeEditor
@@ -1693,6 +1959,104 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+
+            <div className="mx-4 mb-3 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm dark:border-slate-700/90 dark:bg-slate-900/50">
+              <div className="border-b border-slate-200/90 bg-slate-50/80 px-4 py-3 dark:border-slate-700/90 dark:bg-slate-900/70">
+                <p className="text-sm font-black text-slate-800 dark:text-slate-100">Kết quả test case</p>
+                <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Hiệu ứng suspense: trạng thái được mở dần sau khi nhận đủ kết quả.
+                </p>
+              </div>
+              <div className="space-y-3 p-4">
+                {judgeResults.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-5 text-sm font-medium text-slate-500 dark:border-slate-600 dark:bg-slate-800/40 dark:text-slate-400">
+                    Chưa có test case. Hãy cập nhật mô tả bài tập để AI tạo test case tự động.
+                  </div>
+                )}
+
+                {judgeResults.map((item, index) => {
+                  const isPassed = item.status === 'passed';
+                  const isFailed = item.status === 'failed';
+                  const isTle = item.status === 'tle';
+
+                  return (
+                    <div
+                      key={`${index}-${item.input}-${item.expectedOutput}`}
+                      className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 dark:border-slate-700 dark:bg-slate-800/40"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <AutoJudgeStatusIcon status={item.status} />
+                          <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                            Test {index + 1}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs font-semibold">
+                          <span
+                            className={`rounded-full px-2 py-0.5 ${
+                              isPassed
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                                : isFailed
+                                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                  : isTle
+                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                    : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                            }`}
+                          >
+                            {isPassed
+                              ? 'Thành công'
+                              : isFailed
+                                ? 'Sai kết quả'
+                                : isTle
+                                  ? 'Time Limit Exceeded'
+                                  : 'Đang chờ'}
+                          </span>
+                          <span className="text-slate-500 dark:text-slate-400">
+                            {formatExecutionTime(item.executionTimeMs)}
+                          </span>
+                          <span className="text-slate-700 dark:text-slate-200">
+                            +{isPassed ? formatJudgeScore(item.score) : '0'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {isFailed && (
+                        <div className="mt-3 grid gap-2 lg:grid-cols-2">
+                          <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2 dark:border-emerald-800/60 dark:bg-emerald-900/20">
+                            <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                              Expected
+                            </p>
+                            <pre className="mt-1 whitespace-pre-wrap font-mono text-xs text-emerald-900 dark:text-emerald-100">
+                              {item.expectedOutput || '(trống)'}
+                            </pre>
+                          </div>
+                          <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-2 dark:border-rose-800/60 dark:bg-rose-900/20">
+                            <p className="text-[11px] font-bold uppercase tracking-wide text-rose-700 dark:text-rose-300">
+                              Got
+                            </p>
+                            <pre className="mt-1 whitespace-pre-wrap font-mono text-xs text-rose-900 dark:text-rose-100">
+                              {item.gotOutput || '(trống)'}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
+
+                      {isTle && (
+                        <p className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                          ⚠️ Time Limit Exceeded: chương trình vượt quá thời gian xử lý cho test này.
+                        </p>
+                      )}
+
+                      {item.errorMessage && item.status !== 'pending' && (
+                        <p className="mt-2 whitespace-pre-wrap text-xs font-medium text-slate-600 dark:text-slate-300">
+                          {item.errorMessage}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
