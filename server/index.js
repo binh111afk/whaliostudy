@@ -4846,7 +4846,7 @@ const WANDBOX_API_URL =
 const WANDBOX_LIST_URL =
     String(process.env.WANDBOX_LIST_URL || 'https://wandbox.org/api/list.json').trim() ||
     'https://wandbox.org/api/list.json';
-const WANDBOX_TIMEOUT_MS = parsePositiveInt(process.env.WANDBOX_TIMEOUT_MS, 20000);
+const WANDBOX_TIMEOUT_MS = parsePositiveInt(process.env.WANDBOX_TIMEOUT_MS, 60000);
 const WANDBOX_LIST_CACHE_MS = parsePositiveInt(process.env.WANDBOX_LIST_CACHE_MS, 300000);
 
 const sanitizeRunnerText = (value, limit = 20000) => String(value || '').slice(0, limit);

@@ -407,7 +407,7 @@ const collectCodeIssues = (code, language) => {
   return issues;
 };
 
-const runJavaScriptInWorker = ({ code, input, timeoutMs = 5000 }) => {
+const runJavaScriptInWorker = ({ code, input, timeoutMs = 60000 }) => {
   const workerSource = `
 self.onmessage = async (event) => {
   const payload = event.data || {};
@@ -470,7 +470,7 @@ self.onmessage = async (event) => {
       if (finished) return;
       finished = true;
       cleanup();
-      reject(new Error('Code chạy quá lâu (>5 giây). Hãy kiểm tra vòng lặp vô hạn.'));
+      reject(new Error('Code chạy quá lâu (>60 giây). Hãy kiểm tra vòng lặp vô hạn.'));
     }, timeoutMs);
 
     worker.onmessage = (event) => {
