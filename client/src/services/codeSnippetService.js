@@ -56,5 +56,18 @@ export const codeSnippetService = {
       return { success: false, message: 'Lỗi kết nối server' };
     }
   },
-};
 
+  async formatAssignmentDescription(rawText) {
+    try {
+      const res = await fetch(getFullApiUrl('/api/code-snippets/format-assignment'), {
+        method: 'POST',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ text: rawText || '' }),
+      });
+      return await res.json();
+    } catch (error) {
+      console.error('Format assignment description error:', error);
+      return { success: false, message: 'Lỗi kết nối server' };
+    }
+  },
+};

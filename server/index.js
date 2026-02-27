@@ -4550,6 +4550,48 @@ app.post('/api/code-snippets', async (req, res) => {
     }
 });
 
+app.post('/api/code-snippets/format-assignment', async (req, res) => {
+    try {
+        const rawText = String(req.body?.text || '').trim();
+        if (!rawText) {
+            return res.status(400).json({ success: false, message: 'Thiếu nội dung cần format' });
+        }
+
+        const prompt = [
+            'Bạn là trợ lý format đề bài lập trình.',
+            'Hãy chuyển đoạn văn bản thô sau thành Markdown rõ ràng, dễ đọc.',
+            '- Giữ nguyên ý nghĩa gốc, không bịa thêm dữ liệu.',
+            '- Dùng heading/list hợp lý.',
+            '- Các phần Input/Output/Ví dụ phải ưu tiên biểu diễn bằng bảng Markdown nếu có thể.',
+            '- Chỉ trả về nội dung Markdown, không thêm giải thích ngoài lề, không dùng khung ```.',
+            '',
+            'Nội dung gốc:',
+            rawText
+        ].join('\n');
+
+        const aiResult = await generateAIResponse(prompt);
+        if (!aiResult?.success) {
+            return res.status(500).json({
+                success: false,
+                message: aiResult?.message || 'Không thể format nội dung bằng AI'
+            });
+        }
+
+        let formattedText = String(aiResult.message || '').trim();
+        formattedText = formattedText.replace(/^```(?:markdown|md)?\s*/i, '');
+        formattedText = formattedText.replace(/\s*```$/i, '').trim();
+
+        return res.json({
+            success: true,
+            formattedText,
+            modelUsed: aiResult.model || ''
+        });
+    } catch (err) {
+        console.error('Format assignment by AI error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
 app.patch('/api/code-snippets/:id', async (req, res) => {
     try {
         const { id } = req.params;

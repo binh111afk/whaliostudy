@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import hljs from 'highlight.js';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   CalendarDays,
   ChevronLeft,
@@ -9,6 +11,8 @@ import {
   FileCode2,
   Moon,
   Plus,
+  Search,
+  Sparkles,
   Sun,
   Trash2,
   X,
@@ -21,6 +25,8 @@ const INITIAL_FORM = {
   assignmentName: '',
   assignmentDescription: '',
 };
+
+const CODE_EDITOR_THEME_STORAGE_KEY = 'whalio.code-editor-theme';
 
 const LANGUAGE_OPTIONS = [
   { value: 'plaintext', label: 'Plain Text' },
@@ -244,7 +250,16 @@ const HighlightCodeEditor = ({ value, onChange, language, theme }) => {
   );
 };
 
-const CreateSnippetModal = ({ isOpen, form, onChange, onClose, onCreate, creating }) => {
+const CreateSnippetModal = ({
+  isOpen,
+  form,
+  onChange,
+  onClose,
+  onCreate,
+  creating,
+  formattingDescription,
+  onFormatWithAI,
+}) => {
   if (!isOpen) return null;
 
   return (
@@ -305,9 +320,20 @@ const CreateSnippetModal = ({ isOpen, form, onChange, onClose, onCreate, creatin
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              Nội dung / Mô tả bài tập
-            </label>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <label className="block text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Nội dung / Mô tả bài tập
+              </label>
+              <button
+                type="button"
+                onClick={onFormatWithAI}
+                disabled={formattingDescription}
+                className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-70 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40"
+              >
+                <Sparkles size={12} />
+                {formattingDescription ? 'Đang format...' : 'Format bằng AI'}
+              </button>
+            </div>
             <textarea
               value={form.assignmentDescription}
               onChange={(event) => onChange('assignmentDescription', event.target.value)}
@@ -327,7 +353,7 @@ const CreateSnippetModal = ({ isOpen, form, onChange, onClose, onCreate, creatin
           </button>
           <button
             onClick={onCreate}
-            disabled={creating}
+            disabled={creating || formattingDescription}
             className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
           >
             {creating ? 'Đang tạo...' : 'Lưu card'}
@@ -341,13 +367,22 @@ const CreateSnippetModal = ({ isOpen, form, onChange, onClose, onCreate, creatin
 const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   const [snippets, setSnippets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState(INITIAL_FORM);
   const [creating, setCreating] = useState(false);
+  const [formattingDescription, setFormattingDescription] = useState(false);
   const [selectedSnippet, setSelectedSnippet] = useState(null);
   const [editorCode, setEditorCode] = useState('');
   const [editorLanguage, setEditorLanguage] = useState('plaintext');
-  const [editorTheme, setEditorTheme] = useState('light');
+  const [editorTheme, setEditorTheme] = useState(() => {
+    try {
+      const savedTheme = localStorage.getItem(CODE_EDITOR_THEME_STORAGE_KEY);
+      return savedTheme === 'dark' ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  });
   const [closingDetail, setClosingDetail] = useState(false);
 
   const username = useMemo(() => resolveUsername(user), [user]);
@@ -401,6 +436,14 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   useEffect(() => {
     onFullscreenChange(Boolean(selectedSnippet));
   }, [selectedSnippet, onFullscreenChange]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CODE_EDITOR_THEME_STORAGE_KEY, editorTheme);
+    } catch {
+      // Ignore localStorage write errors
+    }
+  }, [editorTheme]);
 
   const hasDraftChanged = useCallback((snippet, draftCode, draftLanguage) => {
     if (!snippet) return false;
@@ -520,6 +563,35 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     toast.success('Đã tạo card code mới');
   };
 
+  const handleFormatAssignmentWithAI = async () => {
+    const rawDescription = String(createForm.assignmentDescription || '').trim();
+    if (!rawDescription) {
+      toast.error('Vui lòng nhập nội dung bài tập trước khi format');
+      return;
+    }
+
+    setFormattingDescription(true);
+    const result = await codeSnippetService.formatAssignmentDescription(rawDescription);
+    setFormattingDescription(false);
+
+    if (!result.success) {
+      toast.error(result.message || 'Không thể format bằng AI');
+      return;
+    }
+
+    const formattedText = String(result.formattedText || '').trim();
+    if (!formattedText) {
+      toast.error('AI không trả về nội dung hợp lệ');
+      return;
+    }
+
+    setCreateForm((prev) => ({
+      ...prev,
+      assignmentDescription: formattedText,
+    }));
+    toast.success('Đã format nội dung bằng AI');
+  };
+
   const handleOpenDetail = (snippet) => {
     setSelectedSnippet(snippet);
     setEditorCode(String(snippet.code || ''));
@@ -574,6 +646,23 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     URL.revokeObjectURL(url);
   };
 
+  const filteredSnippets = useMemo(() => {
+    const keyword = String(searchQuery || '').trim().toLowerCase();
+    if (!keyword) return snippets;
+
+    return snippets.filter((snippet) => {
+      const cardTitle = String(snippet.cardTitle || '').toLowerCase();
+      const subjectName = String(snippet.subjectName || '').toLowerCase();
+      const assignmentName = String(snippet.assignmentName || '').toLowerCase();
+
+      return (
+        cardTitle.includes(keyword) ||
+        subjectName.includes(keyword) ||
+        assignmentName.includes(keyword)
+      );
+    });
+  }, [snippets, searchQuery]);
+
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4">
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -604,15 +693,39 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
         </div>
       )}
 
+      {!loading && username && (
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="relative">
+            <Search
+              size={16}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Tìm theo tên card, môn học hoặc tên bài tập..."
+              className="w-full rounded-xl border border-gray-200 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            />
+          </div>
+        </div>
+      )}
+
       {!loading && username && snippets.length === 0 && (
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-800">
           Chưa có card code nào. Hãy bấm "Thêm code" để bắt đầu.
         </div>
       )}
 
-      {!loading && username && snippets.length > 0 && (
+      {!loading && username && snippets.length > 0 && filteredSnippets.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-800">
+          Không tìm thấy card phù hợp với từ khóa "{searchQuery}".
+        </div>
+      )}
+
+      {!loading && username && filteredSnippets.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {snippets.map((snippet) => {
+          {filteredSnippets.map((snippet) => {
             const snippetId = snippet.id || snippet._id;
             return (
               <div
@@ -634,10 +747,11 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                       <h3 className="mt-1 truncate text-base font-black text-gray-900 dark:text-gray-100">
                         {snippet.cardTitle}
                       </h3>
-                      <p className="mt-1 truncate text-sm text-gray-600 dark:text-gray-300">
-                        {snippet.assignmentDescription ||
-                          snippet.assignmentName ||
-                          'Chưa có mô tả bài tập'}
+                      <p className="mt-1 truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
+                        {snippet.assignmentName || 'Chưa có tên bài tập'}
+                      </p>
+                      <p className="mt-1 line-clamp-2 text-sm text-gray-600 dark:text-gray-300">
+                        {snippet.assignmentDescription || 'Chưa có mô tả bài tập'}
                       </p>
                     </div>
                   </button>
@@ -665,6 +779,8 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
         isOpen={isCreateOpen}
         form={createForm}
         onChange={handleCreateFormChange}
+        formattingDescription={formattingDescription}
+        onFormatWithAI={handleFormatAssignmentWithAI}
         onClose={() => {
           setIsCreateOpen(false);
           setCreateForm(INITIAL_FORM);
@@ -749,9 +865,32 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Nội dung bài tập
                 </p>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200">
-                  {selectedSnippet.assignmentDescription || 'Chưa có mô tả'}
-                </p>
+                <div className="prose prose-sm mt-2 max-w-none dark:prose-invert">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      table: (props) => (
+                        <div className="my-3 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-600">
+                          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700" {...props} />
+                        </div>
+                      ),
+                      thead: (props) => (
+                        <thead className="bg-gray-50 dark:bg-gray-700/60" {...props} />
+                      ),
+                      th: (props) => (
+                        <th
+                          className="px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300"
+                          {...props}
+                        />
+                      ),
+                      td: (props) => (
+                        <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-200" {...props} />
+                      ),
+                    }}
+                  >
+                    {selectedSnippet.assignmentDescription || 'Chưa có mô tả'}
+                  </ReactMarkdown>
+                </div>
               </div>
             </div>
 
