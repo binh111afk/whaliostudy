@@ -1997,8 +1997,9 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                           onChange={(event) => setProgramInput(event.target.value)}
                           spellCheck={false}
                           placeholder="Nhập input, mỗi dòng là 1 giá trị..."
-                          className="h-36 w-full resize-none bg-transparent p-3 font-mono text-sm leading-6 outline-none transition-colors duration-300 placeholder:opacity-50 xl:h-[220px]"
+                          className="h-36 w-full resize-none p-3 font-mono text-sm leading-6 outline-none transition-colors duration-300 placeholder:opacity-50 xl:h-[220px]"
                           style={{
+                            backgroundColor: terminalTheme.bodyBackground,
                             color: terminalTheme.text,
                           }}
                         />
@@ -2060,8 +2061,11 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                               title="Code preview"
                               sandbox="allow-scripts"
                               srcDoc={programPreviewHtml}
-                              className="h-44 w-full rounded-lg border bg-white"
-                              style={{ borderColor: terminalTheme.border }}
+                              className="h-44 w-full rounded-lg border"
+                              style={{ 
+                                borderColor: terminalTheme.border,
+                                backgroundColor: '#ffffff'
+                              }}
                             />
                           </div>
                         )}
