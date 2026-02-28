@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
@@ -762,10 +763,9 @@ const CreateSnippetModal = ({
   if (!isOpen) return null;
 
   const isEditMode = mode === 'edit';
-
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 z-[75] flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-[140] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
@@ -868,6 +868,9 @@ const CreateSnippetModal = ({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return modalContent;
+  return createPortal(modalContent, document.body);
 };
 
 const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {

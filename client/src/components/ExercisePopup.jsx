@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, FileCode2, Search, X } from 'lucide-react';
 
 const ExercisePopup = ({
@@ -23,9 +24,9 @@ const ExercisePopup = ({
     return () => window.removeEventListener('keydown', handleEsc);
   }, [isOpen, onClose]);
 
-  return (
+  const popupContent = (
     <div
-      className={`fixed inset-0 z-[95] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm transition-opacity duration-200 ${
+      className={`fixed inset-0 z-[145] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm transition-opacity duration-200 ${
         isOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
       }`}
       onClick={onClose}
@@ -136,6 +137,9 @@ const ExercisePopup = ({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return popupContent;
+  return createPortal(popupContent, document.body);
 };
 
 export default ExercisePopup;
