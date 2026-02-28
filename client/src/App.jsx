@@ -209,7 +209,10 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSplashVisible, setIsSplashVisible] = useState(true);
   const [isSplashFadingOut, setIsSplashFadingOut] = useState(false);
+  const [splashError, setSplashError] = useState(null);
   const splashRetryTimeoutRef = useRef(null);
+  const splashRetryCountRef = useRef(0);
+  const MAX_SPLASH_RETRIES = 5;
 
   // 2. Dark Mode State (Mặc định Light Mode)
   const [darkMode, setDarkMode] = useState(() => {
@@ -272,7 +275,16 @@ function App() {
           localStorage.setItem('token', response.data.token);
         }
       } catch (error) {
-        if (error?.response?.status !== 401) {
+        if (error?.response?.status === 401) {
+          // Session hết hạn hoặc token không hợp lệ
+          console.warn('Session expired or invalid token');
+          setSplashError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+          // Xóa dữ liệu cũ
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('accessToken');
+        } else {
           console.error('Failed to fetch session user:', error);
         }
       }
@@ -381,6 +393,21 @@ function App() {
         }
       } catch (error) {
         console.warn('Dashboard batch warmup failed, retrying...', error);
+        
+        // Kiểm tra nếu là lỗi 401
+        if (error?.response?.status === 401 || error?.status === 401) {
+          setSplashError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+          return;
+        }
+      }
+
+      // Tăng số lần retry
+      splashRetryCountRef.current += 1;
+      
+      // Nếu retry quá nhiều lần, hiện lỗi
+      if (splashRetryCountRef.current >= MAX_SPLASH_RETRIES) {
+        setSplashError('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
+        return;
       }
 
       clearRetryTimer();
@@ -454,7 +481,18 @@ function App() {
     <Router>
       <RouteTitleManager />
       <MusicProvider>
-        <SplashScreen isVisible={isSplashVisible} isFadingOut={isSplashFadingOut} />
+        <SplashScreen 
+          isVisible={isSplashVisible} 
+          isFadingOut={isSplashFadingOut}
+          error={splashError}
+          onRetryLogin={() => {
+            // Reset states và mở modal đăng nhập
+            setSplashError(null);
+            setIsSplashVisible(false);
+            setUser(null);
+            setIsModalOpen(true);
+          }}
+        />
         <div className="flex h-screen w-full max-w-full overflow-hidden bg-gray-50 dark:bg-gray-900">
           {!isFullscreenLayout && (
             <div className="hidden min-[1025px]:block">

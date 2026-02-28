@@ -81,6 +81,33 @@ axios.interceptors.request.use((config) => {
   return nextConfig;
 });
 
+/**
+ * Xóa sạch localStorage và cookies liên quan đến authentication
+ */
+const clearAuthData = () => {
+  // Xóa tất cả token và user data từ localStorage
+  localStorage.removeItem('user');
+  localStorage.removeItem('token');
+  localStorage.removeItem('adminToken');
+  localStorage.removeItem('accessToken');
+  
+  // Xóa cookies (nếu có)
+  document.cookie.split(';').forEach((cookie) => {
+    const name = cookie.split('=')[0].trim();
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+  });
+};
+
+/**
+ * Chuyển hướng về trang login
+ */
+const redirectToLogin = () => {
+  // Tránh redirect loop nếu đang ở trang login
+  if (!window.location.pathname.includes('/login')) {
+    window.location.href = '/login';
+  }
+};
+
 axios.interceptors.response.use(
   (response) => {
     const requestKey = response?.config?.__adminSecurityRequestKey;
@@ -95,7 +122,20 @@ axios.interceptors.response.use(
     }
     return response;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    // Xử lý lỗi 401 Unauthorized
+    if (error?.response?.status === 401) {
+      console.warn('401 Unauthorized - Session expired or invalid token');
+      
+      // Xóa sạch auth data
+      clearAuthData();
+      
+      // Chuyển hướng về login
+      redirectToLogin();
+    }
+    
+    return Promise.reject(error);
+  }
 );
 
 export default axios;
