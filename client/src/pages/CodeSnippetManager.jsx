@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import { codeSnippetService } from '../services/codeSnippetService';
+import ExercisePopup from '../components/ExercisePopup';
 import {
   CODE_EDITOR_THEME_STORAGE_KEY,
   CODE_EDITOR_THEME_OPTIONS,
@@ -52,6 +53,9 @@ const LANGUAGE_OPTIONS = [
   { value: 'sql', label: 'SQL' },
   { value: 'json', label: 'JSON' },
 ];
+
+const MAIN_PAGE_SIZE = 9;
+const POPUP_PAGE_SIZE = 6;
 
 const resolveUsername = (user) => {
   if (user?.username) return String(user.username).trim();
@@ -898,6 +902,10 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   const [snippetTestCases, setSnippetTestCases] = useState([]);
   const [judgeResults, setJudgeResults] = useState([]);
   const [earnedScore, setEarnedScore] = useState(0);
+  const [mainPage, setMainPage] = useState(1);
+  const [popupPage, setPopupPage] = useState(1);
+  const [popupSearchQuery, setPopupSearchQuery] = useState('');
+  const [isExercisePopupOpen, setIsExercisePopupOpen] = useState(false);
 
   const username = useMemo(() => resolveUsername(user), [user]);
   const totalJudgeScore = useMemo(() => {
@@ -1174,7 +1182,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     toast.success('Đã format nội dung bằng AI');
   };
 
-  const handleOpenDetail = (snippet) => {
+  const handleOpenDetail = useCallback((snippet) => {
     const normalizedTestCases = toSnippetTestCaseList(snippet);
     setSelectedSnippet(snippet);
     setEditorCode(String(snippet.code || ''));
@@ -1189,13 +1197,14 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     setStatusBanner({ kind: 'hidden', message: '' });
     setJudgeCompilerError('');
     setRunningAction('');
-  };
+  }, []);
 
   const handleCloseDetail = async () => {
     judgeAnimationRunRef.current = Date.now();
     setClosingDetail(true);
     await persistDraft({ silent: false });
     setClosingDetail(false);
+    setIsExercisePopupOpen(false);
     setSelectedSnippet(null);
     setSnippetTestCases([]);
     setJudgeResults([]);
@@ -1219,6 +1228,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     setSnippets((prev) => prev.filter((item) => (item.id || item._id) !== snippetId));
     if ((selectedSnippet?.id || selectedSnippet?._id) === snippetId) {
       judgeAnimationRunRef.current = Date.now();
+      setIsExercisePopupOpen(false);
       setSelectedSnippet(null);
       setSnippetTestCases([]);
       setJudgeResults([]);
@@ -1229,6 +1239,28 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     }
     toast.success('Đã xóa card code');
   };
+
+  const handleSelectSnippetFromPopup = useCallback(
+    async (snippet) => {
+      if (!snippet) return;
+      if (runningCode) {
+        toast.error('Vui lòng chờ tác vụ chạy/chấm hiện tại hoàn tất');
+        return;
+      }
+
+      const nextSnippetId = getSnippetId(snippet);
+      const currentSnippetId = getSnippetId(selectedSnippet);
+      if (currentSnippetId && nextSnippetId && currentSnippetId !== nextSnippetId) {
+        const saved = await persistDraft({ silent: true });
+        if (!saved) return;
+      }
+
+      handleOpenDetail(snippet);
+      setPopupPage(1);
+      setIsExercisePopupOpen(false);
+    },
+    [handleOpenDetail, persistDraft, runningCode, selectedSnippet]
+  );
 
   const handleEditSnippet = (snippet) => {
     setEditingSnippet(snippet);
@@ -1617,6 +1649,86 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     });
   }, [snippets, searchQuery]);
 
+  const popupFilteredSnippets = useMemo(() => {
+    const keyword = String(popupSearchQuery || '').trim().toLowerCase();
+    if (!keyword) return snippets;
+
+    return snippets.filter((snippet) => {
+      const cardTitle = String(snippet.cardTitle || snippet.title || '').toLowerCase();
+      const subjectName = String(snippet.subjectName || '').toLowerCase();
+      const assignmentName = String(snippet.assignmentName || snippet.exerciseName || '').toLowerCase();
+
+      return (
+        cardTitle.includes(keyword) ||
+        subjectName.includes(keyword) ||
+        assignmentName.includes(keyword)
+      );
+    });
+  }, [popupSearchQuery, snippets]);
+
+  const mainTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredSnippets.length / MAIN_PAGE_SIZE)),
+    [filteredSnippets.length]
+  );
+  const popupTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(popupFilteredSnippets.length / POPUP_PAGE_SIZE)),
+    [popupFilteredSnippets.length]
+  );
+
+  const paginatedSnippets = useMemo(() => {
+    const start = (mainPage - 1) * MAIN_PAGE_SIZE;
+    return filteredSnippets.slice(start, start + MAIN_PAGE_SIZE);
+  }, [filteredSnippets, mainPage]);
+
+  const paginatedPopupSnippets = useMemo(() => {
+    const start = (popupPage - 1) * POPUP_PAGE_SIZE;
+    return popupFilteredSnippets.slice(start, start + POPUP_PAGE_SIZE);
+  }, [popupFilteredSnippets, popupPage]);
+
+  const isDetailView = Boolean(selectedSnippet);
+  const showMainPagination = filteredSnippets.length > MAIN_PAGE_SIZE;
+
+  const handlePageChange = useCallback(
+    (nextPage, target = 'main') => {
+      const totalPages = target === 'popup' ? popupTotalPages : mainTotalPages;
+      const normalizedPage = Number(nextPage);
+      const safePage = Math.min(
+        totalPages,
+        Math.max(1, Number.isFinite(normalizedPage) ? Math.floor(normalizedPage) : 1)
+      );
+
+      if (target === 'popup') {
+        setPopupPage(safePage);
+        return;
+      }
+      setMainPage(safePage);
+    },
+    [mainTotalPages, popupTotalPages]
+  );
+
+  useEffect(() => {
+    setMainPage(1);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setPopupPage(1);
+  }, [popupSearchQuery]);
+
+  useEffect(() => {
+    setMainPage((prev) => Math.min(prev, mainTotalPages));
+  }, [mainTotalPages]);
+
+  useEffect(() => {
+    setPopupPage((prev) => Math.min(prev, popupTotalPages));
+  }, [popupTotalPages]);
+
+  useEffect(() => {
+    if (!isExercisePopupOpen) {
+      setPopupSearchQuery('');
+      setPopupPage(1);
+    }
+  }, [isExercisePopupOpen]);
+
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4">
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -1651,7 +1763,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
         </div>
       )}
 
-      {!loading && username && (
+      {!loading && username && !isDetailView && (
         <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <div className="relative">
             <Search
@@ -1669,21 +1781,21 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
         </div>
       )}
 
-      {!loading && username && snippets.length === 0 && (
+      {!loading && username && !isDetailView && snippets.length === 0 && (
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-800">
           Chưa có card code nào. Hãy bấm "Thêm code" để bắt đầu.
         </div>
       )}
 
-      {!loading && username && snippets.length > 0 && filteredSnippets.length === 0 && (
+      {!loading && username && !isDetailView && snippets.length > 0 && filteredSnippets.length === 0 && (
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-800">
           Không tìm thấy card phù hợp với từ khóa "{searchQuery}".
         </div>
       )}
 
-      {!loading && username && filteredSnippets.length > 0 && (
+      {!loading && username && !isDetailView && filteredSnippets.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filteredSnippets.map((snippet) => {
+          {paginatedSnippets.map((snippet) => {
             const snippetId = snippet.id || snippet._id;
             return (
               <div
@@ -1743,6 +1855,30 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
         </div>
       )}
 
+      {!loading && username && !isDetailView && showMainPagination && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+            Trang {mainPage}/{mainTotalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handlePageChange(mainPage - 1, 'main')}
+              disabled={mainPage <= 1}
+              className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+            >
+              Trang trước
+            </button>
+            <button
+              onClick={() => handlePageChange(mainPage + 1, 'main')}
+              disabled={mainPage >= mainTotalPages}
+              className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+            >
+              Trang sau
+            </button>
+          </div>
+        </div>
+      )}
+
       <CreateSnippetModal
         isOpen={isCreateOpen}
         form={createForm}
@@ -1753,6 +1889,22 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
         onClose={resetSnippetModalState}
         onCreate={handleCreateSnippet}
         creating={creating}
+      />
+
+      <ExercisePopup
+        isOpen={isDetailView && isExercisePopupOpen}
+        searchQuery={popupSearchQuery}
+        onSearchChange={setPopupSearchQuery}
+        snippets={paginatedPopupSnippets}
+        selectedSnippetId={getSnippetId(selectedSnippet)}
+        currentPage={popupPage}
+        totalPages={popupFilteredSnippets.length > 0 ? popupTotalPages : 0}
+        totalItems={popupFilteredSnippets.length}
+        onPageChange={(nextPage) => handlePageChange(nextPage, 'popup')}
+        onSelectSnippet={(snippet) => {
+          void handleSelectSnippetFromPopup(snippet);
+        }}
+        onClose={() => setIsExercisePopupOpen(false)}
       />
 
       {selectedSnippet && (
@@ -1785,6 +1937,14 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   <FileCode2 size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 transition-colors duration-200 group-hover:text-blue-600 dark:text-gray-400 dark:group-hover:text-blue-400" />
                   <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300" />
                 </div>
+
+                <button
+                  onClick={() => setIsExercisePopupOpen(true)}
+                  className="inline-flex h-10 items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:border-blue-300 hover:bg-blue-50/60 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-blue-500 dark:hover:bg-gray-700"
+                >
+                  <FileCode2 size={15} />
+                  Danh sách bài tập
+                </button>
 
                 <div className="relative group">
                   <select
