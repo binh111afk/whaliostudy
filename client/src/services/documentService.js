@@ -14,7 +14,16 @@ export const documentService = {
               method: 'POST',
               body: formData // Tự động set Content-Type
           });
-          return await res.json();
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            return await res.json();
+          }
+
+          const text = await res.text();
+          return {
+            success: false,
+            message: text || `Upload thất bại (HTTP ${res.status})`
+          };
       } catch (error) {
           console.error("Upload error:", error);
           return { success: false, message: "Lỗi kết nối server" };

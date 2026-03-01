@@ -5513,6 +5513,29 @@ app.post('/api/upload-document', (req, res, next) => {
         // Return status 200 with success
         return res.status(200).json({ success: true, document: docResponse });
     } catch (error) {
+        const errorMessage = String(
+            error?.message ||
+            error?.error?.message ||
+            error?.response?.data?.error?.message ||
+            ''
+        );
+
+        // Cloudinary báo lỗi kích thước/thao tác upload -> trả 400 để client hiển thị rõ nguyên nhân
+        if (/file size too large|max file size|payload too large/i.test(errorMessage)) {
+            return res.status(400).json({
+                success: false,
+                message: 'File vượt giới hạn upload của hệ thống lưu trữ. Vui lòng thử file nhỏ hơn.'
+            });
+        }
+
+        // Lỗi cấu hình Cloudinary trên môi trường deploy
+        if (/must supply api_key|invalid cloud_name|unknown api_key|api secret/i.test(errorMessage)) {
+            return res.status(500).json({
+                success: false,
+                message: 'Máy chủ đang lỗi cấu hình lưu trữ file. Vui lòng liên hệ quản trị viên.'
+            });
+        }
+
         // 🛡️ [ENTERPRISE] Log đầy đủ server-side, ẨN chi tiết client-side
         console.error("UPLOAD ERROR:", JSON.stringify(error, null, 2));
         console.error("UPLOAD ERROR STACK:", error.stack);
