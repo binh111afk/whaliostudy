@@ -57,6 +57,8 @@ const LANGUAGE_OPTIONS = [
 
 const MAIN_PAGE_SIZE = 9;
 const POPUP_PAGE_SIZE = 6;
+const CODE_DRAFT_STORAGE_PREFIX = 'whalio.code-vault.draft';
+const LOCAL_DRAFT_AUTOSAVE_INTERVAL_MS = 5000;
 
 const resolveUsername = (user) => {
   if (user?.username) return String(user.username).trim();
@@ -79,6 +81,71 @@ const formatDate = (value) => {
     month: '2-digit',
     year: 'numeric',
   });
+};
+
+const formatDateTime = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'không rõ thời gian';
+  return date.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+};
+
+const buildLocalDraftStorageKey = (username, snippetId) => {
+  const normalizedUsername = String(username || '').trim().toLowerCase();
+  const normalizedSnippetId = String(snippetId || '').trim();
+  if (!normalizedUsername || !normalizedSnippetId) return '';
+  return `${CODE_DRAFT_STORAGE_PREFIX}.${normalizedUsername}.${normalizedSnippetId}`;
+};
+
+const readLocalDraft = (username, snippetId) => {
+  try {
+    const key = buildLocalDraftStorageKey(username, snippetId);
+    if (!key) return null;
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return {
+      code: String(parsed?.code || ''),
+      language: String(parsed?.language || 'plaintext'),
+      updatedAt: String(parsed?.updatedAt || ''),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const writeLocalDraft = ({ username, snippetId, code, language }) => {
+  try {
+    const key = buildLocalDraftStorageKey(username, snippetId);
+    if (!key) return false;
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        code: String(code || ''),
+        language: String(language || 'plaintext'),
+        updatedAt: new Date().toISOString(),
+      })
+    );
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const removeLocalDraft = (username, snippetId) => {
+  try {
+    const key = buildLocalDraftStorageKey(username, snippetId);
+    if (!key) return;
+    localStorage.removeItem(key);
+  } catch {
+    // Ignore localStorage errors
+  }
 };
 
 const inferLanguageFromSubject = (subjectName = '') => {
@@ -924,6 +991,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   const languageRef = useRef(editorLanguage);
   const judgeAnimationRunRef = useRef(0);
   const terminalOutputRef = useRef(null);
+  const latestLocalDraftSignatureRef = useRef('');
 
   useEffect(() => {
     usernameRef.current = username;
@@ -990,6 +1058,39 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     );
   }, []);
 
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      const activeSnippet = snippetRef.current;
+      const activeUsername = usernameRef.current;
+      const draftCode = codeRef.current;
+      const draftLanguage = languageRef.current;
+      if (!activeSnippet || !activeUsername) return;
+
+      const snippetId = getSnippetId(activeSnippet);
+      if (!snippetId) return;
+
+      if (!hasDraftChanged(activeSnippet, draftCode, draftLanguage)) {
+        removeLocalDraft(activeUsername, snippetId);
+        latestLocalDraftSignatureRef.current = '';
+        return;
+      }
+
+      const signature = `${draftLanguage}\n${draftCode}`;
+      if (latestLocalDraftSignatureRef.current === signature) return;
+      const saved = writeLocalDraft({
+        username: activeUsername,
+        snippetId,
+        code: draftCode,
+        language: draftLanguage,
+      });
+      if (saved) {
+        latestLocalDraftSignatureRef.current = signature;
+      }
+    }, LOCAL_DRAFT_AUTOSAVE_INTERVAL_MS);
+
+    return () => window.clearInterval(timerId);
+  }, [hasDraftChanged]);
+
   const persistDraft = useCallback(
     async ({ silent = false, keepalive = false, skipStateSync = false } = {}) => {
       const activeSnippet = snippetRef.current;
@@ -1038,6 +1139,9 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
           return prevId === snippetId ? nextSnippet : prev;
         });
       }
+
+      removeLocalDraft(activeUsername, snippetId);
+      latestLocalDraftSignatureRef.current = '';
 
       if (!silent) {
         toast.success('Đã auto-save phiên bản mới nhất');
@@ -1186,10 +1290,40 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   };
 
   const handleOpenDetail = useCallback((snippet) => {
+    const snippetId = getSnippetId(snippet);
+    const fallbackCode = String(snippet.code || '');
+    const fallbackLanguage = String(snippet.language || inferLanguageFromSubject(snippet.subjectName));
+    let nextCode = fallbackCode;
+    let nextLanguage = fallbackLanguage;
+
+    if (username && snippetId) {
+      const localDraft = readLocalDraft(username, snippetId);
+      const canRestoreDraft =
+        localDraft &&
+        hasDraftChanged(snippet, localDraft.code, localDraft.language);
+      if (canRestoreDraft) {
+        const restoreMessage = `Phát hiện bản nháp lưu lúc ${formatDateTime(localDraft.updatedAt)}.\n\nBạn có muốn tiếp tục bản nháp gần nhất không?`;
+        const shouldRestore = window.confirm(restoreMessage);
+        if (shouldRestore) {
+          nextCode = localDraft.code;
+          nextLanguage = localDraft.language;
+          latestLocalDraftSignatureRef.current = `${nextLanguage}\n${nextCode}`;
+          toast.success('Đã khôi phục bản nháp gần nhất');
+        } else {
+          removeLocalDraft(username, snippetId);
+          latestLocalDraftSignatureRef.current = '';
+        }
+      } else {
+        latestLocalDraftSignatureRef.current = '';
+      }
+    } else {
+      latestLocalDraftSignatureRef.current = '';
+    }
+
     const normalizedTestCases = toSnippetTestCaseList(snippet);
     setSelectedSnippet(snippet);
-    setEditorCode(String(snippet.code || ''));
-    setEditorLanguage(String(snippet.language || inferLanguageFromSubject(snippet.subjectName)));
+    setEditorCode(nextCode);
+    setEditorLanguage(nextLanguage);
     setSnippetTestCases(normalizedTestCases);
     setJudgeResults([]);
     setEarnedScore(0);
@@ -1200,7 +1334,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     setStatusBanner({ kind: 'hidden', message: '' });
     setJudgeCompilerError('');
     setRunningAction('');
-  }, []);
+  }, [hasDraftChanged, username]);
 
   const handleCloseDetail = async () => {
     judgeAnimationRunRef.current = Date.now();
@@ -2117,6 +2251,9 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                 </div>
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                   Ctrl + Enter: Run | Ctrl + Shift + Enter: Chấm bài
+                </p>
+                <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  Auto-save bản nháp local mỗi 5 giây.
                 </p>
 
                 {(() => {
