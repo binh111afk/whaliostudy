@@ -34,12 +34,15 @@ const getFileIconProps = (fileName) => {
 
 // --- MODAL TẢI LÊN (GIAO DIỆN CHUYÊN NGHIỆP) ---
 export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
+  const MAX_FILE_SIZE_MB = 30;
+  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
   const [file, setFile] = useState(null);
   const [name, setName] = useState('');
   const [course, setCourse] = useState('');
   const [visibility, setVisibility] = useState('public');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [oversizeMessage, setOversizeMessage] = useState('');
   const fileInputRef = useRef(null);
 
   // Reset form khi mở modal
@@ -50,17 +53,18 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
         setCourse('');
         setVisibility('public');
         setDragActive(false);
+        setOversizeMessage('');
     }
   }, [isOpen]);
 
   // Xử lý file được chọn
   const handleFile = (selectedFile) => {
       if (selectedFile) {
-          // Validate size (ví dụ giới hạn 20MB)
-          if (selectedFile.size > 20 * 1024 * 1024) {
-              alert("File quá lớn! Vui lòng chọn file dưới 20MB.");
+          if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
+              setOversizeMessage(`File vượt quá ${MAX_FILE_SIZE_MB}MB. Vui lòng chọn file nhỏ hơn hoặc bằng ${MAX_FILE_SIZE_MB}MB.`);
               return;
           }
+          setOversizeMessage('');
           setFile(selectedFile);
           // Tự động điền tên file (bỏ đuôi mở rộng)
           const fileName = selectedFile.name.split('.').slice(0, -1).join('.');
@@ -128,21 +132,21 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col border border-gray-100 dark:border-gray-700">
         {/* Header */}
-        <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+        <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/60">
             <div>
-                <h3 className="font-bold text-xl text-gray-800">Tải tài liệu lên</h3>
-                <p className="text-sm text-gray-500">Chia sẻ kiến thức với cộng đồng</p>
+                <h3 className="font-bold text-xl text-gray-800 dark:text-white">Tải tài liệu lên</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Chia sẻ kiến thức với cộng đồng</p>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X className="text-gray-500" size={20}/></button>
+            <button onClick={onClose} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"><X className="text-gray-500 dark:text-gray-300" size={20}/></button>
         </div>
-        
+
         <div className="p-6 space-y-5">
             {/* Vùng Drag & Drop */}
             {!file ? (
                 <div 
-                    className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer relative group ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'}`}
+                    className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer relative group ${dragActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                     onDragEnter={handleDrag}
                     onDragLeave={handleDrag}
                     onDragOver={handleDrag}
@@ -155,25 +159,25 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
                         onChange={handleFileChange} 
                         className="hidden" 
                     />
-                    <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                         <CloudUpload size={32}/>
                     </div>
-                    <p className="font-bold text-gray-700">Nhấn để chọn hoặc kéo thả file vào đây</p>
-                    <p className="text-xs text-gray-400 mt-2">Hỗ trợ PDF, Word, Excel, PowerPoint, Ảnh (Max 20MB)</p>
+                    <p className="font-bold text-gray-700 dark:text-gray-200">Nhấn để chọn hoặc kéo thả file vào đây</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Hỗ trợ PDF, Word, Excel, PowerPoint, Ảnh (Max 30MB)</p>
                 </div>
             ) : (
                 // Giao diện khi đã chọn file
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-center gap-4 relative animate-fade-in-up">
-                    <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-blue-600 shadow-sm shrink-0">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-xl p-4 flex items-center gap-4 relative animate-fade-in-up">
+                    <div className="w-12 h-12 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-300 shadow-sm shrink-0">
                         <FileText size={24}/>
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-gray-800 truncate">{file.name}</p>
-                        <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB • Sẵn sàng tải lên</p>
+                        <p className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">{file.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB • Sẵn sàng tải lên</p>
                     </div>
                     <button 
                         onClick={() => setFile(null)} 
-                        className="p-2 bg-white text-red-500 hover:bg-red-50 rounded-lg shadow-sm transition-colors border border-gray-100"
+                        className="p-2 bg-white dark:bg-gray-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg shadow-sm transition-colors border border-gray-100 dark:border-gray-700"
                         title="Hủy chọn file"
                     >
                         <Trash2 size={18}/>
@@ -185,33 +189,33 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
             {file && (
                 <div className="space-y-4 animate-fade-in-up">
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1.5">Tên hiển thị</label>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">Tên hiển thị</label>
                         <input 
                             value={name} 
                             onChange={(e) => setName(e.target.value)} 
-                            className="w-full p-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
+                            className="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
                             placeholder="Ví dụ: Đề thi cuối kỳ Giải tích 1..." 
                         />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1.5">Môn học</label>
+                            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">Môn học</label>
                             <select 
                                 value={course} 
                                 onChange={(e) => setCourse(e.target.value)} 
-                                className="w-full p-3 border border-gray-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
                             >
                                 <option value="">-- Chọn môn --</option>
                                 {SUBJECTS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1.5">Quyền hạn</label>
+                            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">Quyền hạn</label>
                             <select 
                                 value={visibility} 
                                 onChange={(e) => setVisibility(e.target.value)} 
-                                className="w-full p-3 border border-gray-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
                             >
                                 <option value="public">🌐 Công khai (Mọi người)</option>
                                 <option value="private">🔒 Riêng tư (Chỉ mình tôi)</option>
@@ -223,10 +227,10 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+        <div className="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-end gap-3">
             <button 
                 onClick={onClose} 
-                className="px-5 py-2.5 text-gray-600 font-bold text-sm hover:bg-gray-200 rounded-xl transition-colors"
+                className="px-5 py-2.5 text-gray-600 dark:text-gray-300 font-bold text-sm hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors"
             >
                 Hủy bỏ
             </button>
@@ -243,6 +247,28 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
             </button>
         </div>
       </div>
+
+      {oversizeMessage && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-red-200 dark:border-red-900/50 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
+            <div className="p-4 border-b border-red-100 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 flex items-center gap-2">
+              <AlertCircle size={18} className="text-red-600 dark:text-red-400 shrink-0" />
+              <h4 className="font-bold text-red-700 dark:text-red-300">File vượt giới hạn</h4>
+            </div>
+            <div className="p-4">
+              <p className="text-sm text-gray-700 dark:text-gray-200">{oversizeMessage}</p>
+            </div>
+            <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-end">
+              <button
+                onClick={() => setOversizeMessage('')}
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors"
+              >
+                Đã hiểu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

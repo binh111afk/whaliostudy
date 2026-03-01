@@ -3264,7 +3264,7 @@ const upload = multer({
 // 🛡️ [ENTERPRISE] Áp dụng bảo mật tương tự upload chính
 const documentUpload = multer({
     storage: tempDiskStorage,
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+    limits: { fileSize: 30 * 1024 * 1024 }, // 30MB
     fileFilter: (req, file, cb) => {
         const ext = path.extname(file.originalname).toLowerCase();
         
@@ -5445,7 +5445,7 @@ app.post('/api/upload-document', (req, res, next) => {
             if (err.code === 'LIMIT_FILE_SIZE') {
                 return res.status(400).json({
                     success: false,
-                    message: 'File quá lớn! Kích thước tối đa là 50MB.'
+                    message: 'File quá lớn! Kích thước tối đa là 30MB.'
                 });
             }
             // 🛡️ [ENTERPRISE] Error Cloaking - ẨN lỗi chi tiết upload

@@ -23,6 +23,8 @@ const SUBJECTS = [
   "Kinh tế chính trị",
 ];
 
+const EXAMS_PER_PAGE = 9;
+
 const Exams = () => {
   const [user, setUser] = useState(null);
 
@@ -30,6 +32,7 @@ const Exams = () => {
   const [exams, setExams] = useState([]);
   const [filterSubject, setFilterSubject] = useState("Tất cả");
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // View Management
   const [activeExam, setActiveExam] = useState(null); // Exam object selected
@@ -125,6 +128,20 @@ const Exams = () => {
     });
   }, [exams, filterSubject, searchTerm]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredExams.length / EXAMS_PER_PAGE));
+  const paginatedExams = useMemo(() => {
+    const start = (currentPage - 1) * EXAMS_PER_PAGE;
+    return filteredExams.slice(start, start + EXAMS_PER_PAGE);
+  }, [filteredExams, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterSubject, searchTerm]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
   // --- RENDER: EXAM RUNNER ---
   if (activeExam && examMode) {
     return (
@@ -199,7 +216,7 @@ const Exams = () => {
 
       {/* Exam Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredExams.map((exam) => {
+        {paginatedExams.map((exam) => {
           // 👇 LOGIC PHÂN QUYỀN MỚI
           const isAdmin = user?.role === "admin";
           const isOwner = user?.username && exam.createdBy === user.username;
@@ -211,7 +228,7 @@ const Exams = () => {
 
           return (
             <div
-              key={exam.id}
+              key={exam.examId || exam.id}
               className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all flex flex-col h-full group relative"
             >
               {/* 👇 CHỈ HIỆN KHI CÓ QUYỀN (canDelete) */}
@@ -273,6 +290,28 @@ const Exams = () => {
           );
         })}
       </div>
+
+      {filteredExams.length > EXAMS_PER_PAGE && (
+        <div className="mt-8 flex items-center justify-center gap-3">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            Trước
+          </button>
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+            Trang {currentPage} / {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            Sau
+          </button>
+        </div>
+      )}
 
       {/* --- MODAL CHỌN CHẾ ĐỘ (GIỐNG ẢNH) --- */}
       {showModeModal && activeExam && (
