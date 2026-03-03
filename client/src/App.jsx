@@ -49,6 +49,7 @@ const ROUTE_TITLES = {
   '/portal': 'Tiện ích',
   '/announcements': 'Thông báo',
   '/code-vault': 'Kho Code',
+  '/code-vault/free': 'CodePad',
 };
 
 const AUTH_USER_ENDPOINT = 'https://whaliostudy.onrender.com/auth/user';
@@ -609,6 +610,16 @@ function App() {
                     <CodeSnippetManager
                       user={user}
                       onFullscreenChange={handleCodeVaultFullscreenChange}
+                    />
+                  }
+                />
+                <Route
+                  path="/code-vault/free"
+                  element={
+                    <CodeSnippetManager
+                      user={user}
+                      onFullscreenChange={handleCodeVaultFullscreenChange}
+                      initialFreeMode
                     />
                   }
                 />

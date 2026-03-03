@@ -5,18 +5,22 @@ import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   CalendarDays,
   ChevronLeft,
   ChevronDown,
   Copy,
   Download,
+  Eraser,
   FileCode2,
+  Link2,
   Palette,
   Play,
   Pencil,
   Plus,
   RotateCcw,
+  Save,
   Search,
   Sparkles,
   Trash2,
@@ -59,6 +63,120 @@ const MAIN_PAGE_SIZE = 9;
 const POPUP_PAGE_SIZE = 6;
 const CODE_DRAFT_STORAGE_PREFIX = 'whalio.code-vault.draft';
 const LOCAL_DRAFT_AUTOSAVE_INTERVAL_MS = 5000;
+const FREE_SESSION_STORAGE_PREFIX = 'whalio.code-vault.free-session';
+const FREE_SESSION_ID = '__free-session__';
+const FREE_SESSION_DEFAULT_LANGUAGE = 'cpp';
+const FREE_SESSION_SHARE_QUERY = 'share';
+const FREE_SESSION_TEMPLATE_CPP = `#include <iostream>
+using namespace std;
+
+int main() {
+  ios::sync_with_stdio(false);
+  cin.tie(nullptr);
+
+  // Write your code here.
+
+  return 0;
+}
+`;
+
+const buildFreeSessionTitle = (value = new Date()) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Bản nháp';
+  const datePart = date.toLocaleDateString('vi-VN');
+  const timePart = date.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return `Bản nháp ${datePart} - ${timePart}`;
+};
+
+const buildFreeSessionStorageKey = (username) => {
+  const normalizedUsername = String(username || '').trim().toLowerCase() || 'guest';
+  return `${FREE_SESSION_STORAGE_PREFIX}.${normalizedUsername}`;
+};
+
+const readFreeSessionDraft = (username) => {
+  try {
+    const key = buildFreeSessionStorageKey(username);
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return {
+      title: String(parsed?.title || ''),
+      code: String(parsed?.code || ''),
+      language: String(parsed?.language || FREE_SESSION_DEFAULT_LANGUAGE),
+      updatedAt: String(parsed?.updatedAt || ''),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const writeFreeSessionDraft = ({ username, title, code, language }) => {
+  try {
+    const key = buildFreeSessionStorageKey(username);
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        title: String(title || ''),
+        code: String(code || ''),
+        language: String(language || FREE_SESSION_DEFAULT_LANGUAGE),
+        updatedAt: new Date().toISOString(),
+      })
+    );
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const removeFreeSessionDraft = (username) => {
+  try {
+    const key = buildFreeSessionStorageKey(username);
+    localStorage.removeItem(key);
+  } catch {
+    // Ignore localStorage errors
+  }
+};
+
+const encodeFreeSessionSharePayload = (payload) => {
+  try {
+    const json = JSON.stringify(payload || {});
+    return window.btoa(unescape(encodeURIComponent(json)));
+  } catch {
+    return '';
+  }
+};
+
+const decodeFreeSessionSharePayload = (encodedValue) => {
+  try {
+    const decodedJson = decodeURIComponent(escape(window.atob(String(encodedValue || ''))));
+    const parsed = JSON.parse(decodedJson);
+    return {
+      title: String(parsed?.title || ''),
+      code: String(parsed?.code || ''),
+      language: String(parsed?.language || FREE_SESSION_DEFAULT_LANGUAGE),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const buildFreeSessionSnippet = ({ title, code, language }) => ({
+  id: FREE_SESSION_ID,
+  _id: FREE_SESSION_ID,
+  cardTitle: String(title || buildFreeSessionTitle()),
+  title: String(title || buildFreeSessionTitle()),
+  subjectName: '',
+  assignmentName: '',
+  assignmentDescription: '',
+  formattedDescription: '',
+  code: String(code || FREE_SESSION_TEMPLATE_CPP),
+  language: String(language || FREE_SESSION_DEFAULT_LANGUAGE),
+  createdAt: new Date().toISOString(),
+  isFreeMode: true,
+});
 
 const resolveUsername = (user) => {
   if (user?.username) return String(user.username).trim();
@@ -645,7 +763,7 @@ const toMonacoLanguage = (language) => {
   return map[normalized] || 'plaintext';
 };
 
-const MonacoCodeEditor = ({ value, onChange, language, themeKey }) => {
+const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = false }) => {
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
   const languageRef = useRef(language);
@@ -808,7 +926,7 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey }) => {
         options={options}
         loading={
           <div className="flex h-full items-center justify-center bg-slate-50 text-sm font-semibold text-slate-500 dark:bg-slate-950 dark:text-slate-300">
-            Đang tải Monaco Editor...
+            {isFreeMode ? 'Đang mở CodePad...' : 'Đang tải Monaco Editor...'}
           </div>
         }
       />
@@ -830,6 +948,7 @@ const CreateSnippetModal = ({
   if (!isOpen) return null;
 
   const isEditMode = mode === 'edit';
+  const isFreeSaveMode = mode === 'free-save';
   const modalContent = (
     <div
       className="fixed inset-0 z-[140] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
@@ -841,7 +960,7 @@ const CreateSnippetModal = ({
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-black text-gray-900 dark:text-white">
-            {isEditMode ? 'Sửa card code' : 'Thêm code'}
+            {isEditMode ? 'Sửa card code' : isFreeSaveMode ? 'Lưu vào kho bài tập' : 'Thêm code'}
           </h2>
           <button
             onClick={onClose}
@@ -912,7 +1031,9 @@ const CreateSnippetModal = ({
               className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             />
             <p className="mt-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-              Khi lưu card, AI sẽ tự tạo test case và chia điểm tự động theo từng case.
+              {isFreeSaveMode
+                ? 'Để lưu phiên CodePad, hãy điền tên môn học và tên bài tập trước khi bấm lưu.'
+                : 'Khi lưu card, AI sẽ tự tạo test case và chia điểm tự động theo từng case.'}
             </p>
           </div>
         </div>
@@ -929,7 +1050,7 @@ const CreateSnippetModal = ({
             disabled={creating || formattingDescription}
             className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
           >
-            {creating ? 'Đang xử lý...' : isEditMode ? 'Lưu chỉnh sửa' : 'Lưu card'}
+            {creating ? 'Đang xử lý...' : isEditMode ? 'Lưu chỉnh sửa' : isFreeSaveMode ? 'Lưu vào kho' : 'Lưu card'}
           </button>
         </div>
       </div>
@@ -940,7 +1061,9 @@ const CreateSnippetModal = ({
   return createPortal(modalContent, document.body);
 };
 
-const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
+const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMode = false }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [snippets, setSnippets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -976,6 +1099,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   const [popupPage, setPopupPage] = useState(1);
   const [popupSearchQuery, setPopupSearchQuery] = useState('');
   const [isExercisePopupOpen, setIsExercisePopupOpen] = useState(false);
+  const [pendingFreeSave, setPendingFreeSave] = useState(false);
 
   const username = useMemo(() => resolveUsername(user), [user]);
   const totalJudgeScore = useMemo(() => {
@@ -992,6 +1116,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   const judgeAnimationRunRef = useRef(0);
   const terminalOutputRef = useRef(null);
   const latestLocalDraftSignatureRef = useRef('');
+  const latestFreeDraftSignatureRef = useRef('');
 
   useEffect(() => {
     usernameRef.current = username;
@@ -1064,7 +1189,26 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
       const activeUsername = usernameRef.current;
       const draftCode = codeRef.current;
       const draftLanguage = languageRef.current;
-      if (!activeSnippet || !activeUsername) return;
+      if (!activeSnippet) return;
+
+      if (activeSnippet?.isFreeMode) {
+        const draftTitle =
+          String(activeSnippet.cardTitle || '').trim() || buildFreeSessionTitle();
+        const signature = `${draftTitle}\n${draftLanguage}\n${draftCode}`;
+        if (latestFreeDraftSignatureRef.current === signature) return;
+        const saved = writeFreeSessionDraft({
+          username: activeUsername,
+          title: draftTitle,
+          code: draftCode,
+          language: draftLanguage,
+        });
+        if (saved) {
+          latestFreeDraftSignatureRef.current = signature;
+        }
+        return;
+      }
+
+      if (!activeUsername) return;
 
       const snippetId = getSnippetId(activeSnippet);
       if (!snippetId) return;
@@ -1098,6 +1242,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
       const draftCode = codeRef.current;
       const draftLanguage = languageRef.current;
 
+      if (activeSnippet?.isFreeMode) return true;
       if (!activeSnippet || !activeUsername) return true;
       if (!hasDraftChanged(activeSnippet, draftCode, draftLanguage)) return true;
 
@@ -1166,7 +1311,76 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     setIsCreateOpen(false);
     setCreateForm(INITIAL_FORM);
     setEditingSnippet(null);
+    setPendingFreeSave(false);
   };
+
+  const openFreeSession = useCallback(
+    ({ sharedPayload = null, notifyShared = false } = {}) => {
+      const activeUsername = usernameRef.current;
+      const restoredDraft = sharedPayload ? null : readFreeSessionDraft(activeUsername);
+      const nextTitle = String(
+        sharedPayload?.title || restoredDraft?.title || buildFreeSessionTitle()
+      ).trim() || buildFreeSessionTitle();
+      const nextLanguage = String(
+        sharedPayload?.language || restoredDraft?.language || FREE_SESSION_DEFAULT_LANGUAGE
+      ).trim() || FREE_SESSION_DEFAULT_LANGUAGE;
+      const nextCode = String(
+        sharedPayload?.code || restoredDraft?.code || FREE_SESSION_TEMPLATE_CPP
+      );
+      const freeSnippet = buildFreeSessionSnippet({
+        title: nextTitle,
+        code: nextCode,
+        language: nextLanguage,
+      });
+
+      setSelectedSnippet(freeSnippet);
+      setEditorCode(nextCode);
+      setEditorLanguage(nextLanguage);
+      setSnippetTestCases([]);
+      setJudgeResults([]);
+      setEarnedScore(0);
+      setProgramInput('');
+      setProgramOutput('');
+      setProgramError('');
+      setProgramPreviewHtml('');
+      setStatusBanner({ kind: 'hidden', message: '' });
+      setJudgeCompilerError('');
+      setRunningAction('');
+      setIsExercisePopupOpen(false);
+      setPendingFreeSave(false);
+      latestLocalDraftSignatureRef.current = '';
+      latestFreeDraftSignatureRef.current = `${nextTitle}\n${nextLanguage}\n${nextCode}`;
+
+      if (notifyShared) {
+        toast.success('Đã mở phiên CodePad từ link chia sẻ');
+      }
+    },
+    []
+  );
+
+  const handleStartFreeMode = useCallback(() => {
+    navigate('/code-vault/free');
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!initialFreeMode) return;
+
+    const searchParams = new URLSearchParams(location.search);
+    const sharedToken = String(searchParams.get(FREE_SESSION_SHARE_QUERY) || '').trim();
+    let sharedPayload = null;
+
+    if (sharedToken) {
+      sharedPayload = decodeFreeSessionSharePayload(sharedToken);
+      if (!sharedPayload) {
+        toast.error('Link chia sẻ không hợp lệ hoặc đã hỏng');
+      }
+    }
+
+    openFreeSession({
+      sharedPayload,
+      notifyShared: Boolean(sharedPayload),
+    });
+  }, [initialFreeMode, location.search, openFreeSession]);
 
   const handleCreateSnippet = async () => {
     if (!username) {
@@ -1175,8 +1389,18 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     }
 
     const cardTitle = String(createForm.cardTitle || '').trim();
+    const subjectName = String(createForm.subjectName || '').trim();
+    const assignmentName = String(createForm.assignmentName || '').trim();
+    const assignmentDescription = String(createForm.assignmentDescription || '').trim();
+    const isSaveFromFreeMode = pendingFreeSave && Boolean(selectedSnippet?.isFreeMode);
+
     if (!cardTitle) {
       toast.error('Tên card là bắt buộc');
+      return;
+    }
+
+    if (isSaveFromFreeMode && (!subjectName || !assignmentName)) {
+      toast.error('Vui lòng nhập tên môn học và tên bài tập trước khi lưu vào kho');
       return;
     }
 
@@ -1184,11 +1408,11 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
       username,
       cardTitle,
       title: cardTitle,
-      subjectName: String(createForm.subjectName || '').trim(),
-      assignmentName: String(createForm.assignmentName || '').trim(),
-      exerciseName: String(createForm.assignmentName || '').trim(),
-      assignmentDescription: String(createForm.assignmentDescription || '').trim(),
-      formattedDescription: String(createForm.assignmentDescription || '').trim(),
+      subjectName,
+      assignmentName,
+      exerciseName: assignmentName,
+      assignmentDescription,
+      formattedDescription: assignmentDescription,
     };
 
     const isEditMode = Boolean(editingSnippet);
@@ -1231,8 +1455,8 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
       } else {
         const payload = {
           ...basePayload,
-          language: inferLanguageFromSubject(createForm.subjectName),
-          code: '',
+          language: isSaveFromFreeMode ? editorLanguage : inferLanguageFromSubject(subjectName),
+          code: isSaveFromFreeMode ? String(editorCode || '') : '',
         };
         const result = await codeSnippetService.createSnippet(payload);
 
@@ -1247,6 +1471,14 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
           await loadSnippets();
         }
         const generatedCaseCount = Number(result?.testCaseGeneration?.count || 0);
+        if (isSaveFromFreeMode) {
+          removeFreeSessionDraft(usernameRef.current);
+          latestFreeDraftSignatureRef.current = '';
+          toast.success('Đã lưu phiên CodePad vào kho bài tập');
+          resetSnippetModalState();
+          navigate('/code-vault');
+          return;
+        }
         if (generatedCaseCount > 0) {
           toast.success(`Đã tạo card và sinh ${generatedCaseCount} test case tự động`);
         } else {
@@ -1334,12 +1566,24 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     setStatusBanner({ kind: 'hidden', message: '' });
     setJudgeCompilerError('');
     setRunningAction('');
+    setPendingFreeSave(false);
   }, [hasDraftChanged, username]);
 
   const handleCloseDetail = async () => {
+    const activeSnippet = snippetRef.current;
+    const isClosingFreeMode = Boolean(activeSnippet?.isFreeMode);
     judgeAnimationRunRef.current = Date.now();
     setClosingDetail(true);
-    await persistDraft({ silent: false });
+    if (isClosingFreeMode) {
+      writeFreeSessionDraft({
+        username: usernameRef.current,
+        title: String(activeSnippet?.cardTitle || buildFreeSessionTitle()),
+        code: codeRef.current,
+        language: languageRef.current,
+      });
+    } else {
+      await persistDraft({ silent: false });
+    }
     setClosingDetail(false);
     setIsExercisePopupOpen(false);
     setSelectedSnippet(null);
@@ -1349,6 +1593,10 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     setStatusBanner({ kind: 'hidden', message: '' });
     setJudgeCompilerError('');
     setRunningAction('');
+    setPendingFreeSave(false);
+    if (isClosingFreeMode) {
+      navigate('/code-vault');
+    }
   };
 
   const handleDelete = async (snippetId) => {
@@ -1400,6 +1648,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   );
 
   const handleEditSnippet = (snippet) => {
+    setPendingFreeSave(false);
     setEditingSnippet(snippet);
     setCreateForm({
       cardTitle: String(snippet?.cardTitle || ''),
@@ -1432,6 +1681,72 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
     anchor.click();
     URL.revokeObjectURL(url);
   };
+
+  const handleSaveFreeSessionToVault = useCallback(() => {
+    if (!selectedSnippet?.isFreeMode) return;
+    if (!username) {
+      toast.error('Bạn cần đăng nhập để lưu vào kho bài tập');
+      return;
+    }
+
+    if (!String(editorCode || '').trim()) {
+      toast.error('Vui lòng nhập code trước khi lưu vào kho');
+      return;
+    }
+
+    setEditingSnippet(null);
+    setPendingFreeSave(true);
+    setCreateForm({
+      cardTitle: String(selectedSnippet?.cardTitle || buildFreeSessionTitle()),
+      subjectName: '',
+      assignmentName: '',
+      assignmentDescription: '',
+    });
+    setIsCreateOpen(true);
+  }, [editorCode, selectedSnippet, username]);
+
+  const handleClearAllCode = useCallback(() => {
+    if (!selectedSnippet?.isFreeMode) return;
+    const confirmed = window.confirm('Xóa toàn bộ code hiện tại để bắt đầu ý tưởng mới?');
+    if (!confirmed) return;
+
+    setEditorCode('');
+    setProgramInput('');
+    setProgramOutput('');
+    setProgramError('');
+    setProgramPreviewHtml('');
+    setStatusBanner({ kind: 'hidden', message: '' });
+    toast.success('Đã dọn dẹp toàn bộ code');
+  }, [selectedSnippet]);
+
+  const handleGenerateShareLink = useCallback(async () => {
+    if (!selectedSnippet?.isFreeMode) return;
+
+    const encodedPayload = encodeFreeSessionSharePayload({
+      title: String(selectedSnippet.cardTitle || buildFreeSessionTitle()),
+      language: String(editorLanguage || FREE_SESSION_DEFAULT_LANGUAGE),
+      code: String(editorCode || ''),
+    });
+    if (!encodedPayload) {
+      toast.error('Không thể tạo link chia sẻ');
+      return;
+    }
+
+    const origin = window.location.origin || '';
+    const shareUrl = `${origin}/code-vault/free?${FREE_SESSION_SHARE_QUERY}=${encodeURIComponent(encodedPayload)}`;
+
+    if (shareUrl.length > 7000) {
+      toast.error('Đoạn code quá dài, chưa thể tạo link chia sẻ');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Đã tạo link chia sẻ và copy vào clipboard');
+    } catch {
+      toast.error('Không thể copy link chia sẻ');
+    }
+  }, [editorCode, editorLanguage, selectedSnippet]);
 
   const runSingleInputMode = useCallback(
     async (source) => {
@@ -1579,6 +1894,10 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
 
   const handleJudge = useCallback(async () => {
     if (runningCode) return;
+    if (snippetRef.current?.isFreeMode) {
+      toast.error('CodePad không có test case để chấm tự động');
+      return;
+    }
 
     const source = String(editorCode || '');
     if (!source.trim()) {
@@ -1759,6 +2078,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
       if (runningCode) return;
       event.preventDefault();
       if (event.shiftKey) {
+        if (snippetRef.current?.isFreeMode) return;
         void handleJudge();
         return;
       }
@@ -1823,6 +2143,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
   }, [popupFilteredSnippets, popupPage]);
 
   const isDetailView = Boolean(selectedSnippet);
+  const isFreeMode = Boolean(selectedSnippet?.isFreeMode);
   const showMainPagination = filteredSnippets.length > MAIN_PAGE_SIZE;
 
   const handlePageChange = useCallback(
@@ -1875,7 +2196,15 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
             Kho Code
           </div>
           <button
+            onClick={handleStartFreeMode}
+            className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50/70 px-3 py-2 text-sm font-bold text-emerald-700 backdrop-blur-md transition hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
+          >
+            <FileCode2 size={16} />
+            CodePad
+          </button>
+          <button
             onClick={() => {
+              setPendingFreeSave(false);
               setEditingSnippet(null);
               setCreateForm(INITIAL_FORM);
               setIsCreateOpen(true);
@@ -1888,7 +2217,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
         </div>
       </div>
 
-      {!username && (
+      {!username && !isDetailView && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
           Bạn cần đăng nhập để sử dụng Kho Code.
         </div>
@@ -2020,7 +2349,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
         isOpen={isCreateOpen}
         form={createForm}
         onChange={handleCreateFormChange}
-        mode={editingSnippet ? 'edit' : 'create'}
+        mode={editingSnippet ? 'edit' : pendingFreeSave ? 'free-save' : 'create'}
         formattingDescription={formattingDescription}
         onFormatWithAI={handleFormatAssignmentWithAI}
         onClose={resetSnippetModalState}
@@ -2029,7 +2358,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
       />
 
       <ExercisePopup
-        isOpen={isDetailView && isExercisePopupOpen}
+        isOpen={isDetailView && !isFreeMode && isExercisePopupOpen}
         searchQuery={popupSearchQuery}
         onSearchChange={setPopupSearchQuery}
         snippets={paginatedPopupSnippets}
@@ -2045,7 +2374,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
       />
 
       {selectedSnippet && (
-        <div className="w-full bg-white pb-6 dark:bg-gray-900">
+        <div className="w-full rounded-3xl border border-white/40 bg-white/70 pb-6 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70">
           <div className="flex min-h-0 flex-col">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
               <button
@@ -2054,8 +2383,19 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                 className="inline-flex items-center gap-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
               >
                 <ChevronLeft size={16} />
-                {closingDetail ? 'Đang auto-save...' : 'Ẩn sidebar'}
+                {closingDetail ? 'Đang xử lý...' : isFreeMode ? 'Quay lại kho code' : 'Ẩn sidebar'}
               </button>
+
+              {isFreeMode && (
+                <div className="min-w-[240px] flex-1 rounded-xl border border-sky-200 bg-sky-50/80 px-3 py-2 text-left dark:border-sky-800/70 dark:bg-sky-900/20">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-sky-600 dark:text-sky-300">
+                    CodePad
+                  </p>
+                  <p className="truncate text-sm font-black text-sky-800 dark:text-sky-100">
+                    {selectedSnippet.cardTitle || buildFreeSessionTitle()}
+                  </p>
+                </div>
+              )}
 
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative group">
@@ -2075,13 +2415,15 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300" />
                 </div>
 
-                <button
-                  onClick={() => setIsExercisePopupOpen(true)}
-                  className="inline-flex h-10 items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:border-blue-300 hover:bg-blue-50/60 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-blue-500 dark:hover:bg-gray-700"
-                >
-                  <FileCode2 size={15} />
-                  Danh sách bài tập
-                </button>
+                {!isFreeMode && (
+                  <button
+                    onClick={() => setIsExercisePopupOpen(true)}
+                    className="inline-flex h-10 items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:border-blue-300 hover:bg-blue-50/60 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-blue-500 dark:hover:bg-gray-700"
+                  >
+                    <FileCode2 size={15} />
+                    Danh sách bài tập
+                  </button>
+                )}
 
                 <div className="relative group">
                   <select
@@ -2115,10 +2457,39 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   <Download size={16} />
                   Tải về
                 </button>
+
+                {isFreeMode && (
+                  <>
+                    <button
+                      onClick={handleSaveFreeSessionToVault}
+                      className="inline-flex items-center gap-1 rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold text-white hover:bg-violet-700"
+                    >
+                      <Save size={16} />
+                      Lưu vào kho bài tập
+                    </button>
+
+                    <button
+                      onClick={handleClearAllCode}
+                      className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-900/70 dark:bg-rose-900/20 dark:text-rose-300 dark:hover:bg-rose-900/30"
+                    >
+                      <Eraser size={16} />
+                      Clear All
+                    </button>
+
+                    <button
+                      onClick={handleGenerateShareLink}
+                      className="inline-flex items-center gap-1 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-700 hover:bg-teal-100 dark:border-teal-900/70 dark:bg-teal-900/20 dark:text-teal-300 dark:hover:bg-teal-900/30"
+                    >
+                      <Link2 size={16} />
+                      Tạo link chia sẻ
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
-            <div className="space-y-3 border-b border-gray-200 bg-gray-50/80 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/60">
+            {!isFreeMode && (
+              <div className="space-y-3 border-b border-gray-200 bg-gray-50/80 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/60">
               <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
@@ -2175,7 +2546,8 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   </ReactMarkdown>
                 </div>
               </div>
-            </div>
+              </div>
+            )}
 
             <div className="px-4 pt-3">
               {statusBanner.kind !== 'hidden' && statusBanner.kind !== 'judged' && (
@@ -2198,7 +2570,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                 </div>
               )}
 
-              {runningAction === 'judge' && (
+              {!isFreeMode && runningAction === 'judge' && (
                 <div className="mt-3 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-cyan-50 to-sky-50 p-4 shadow-sm dark:border-emerald-700/60 dark:from-emerald-900/20 dark:via-cyan-900/20 dark:to-sky-900/20">
                   <div className="animate-pulse">
                     <div className="h-3 w-28 rounded bg-emerald-200/90 dark:bg-emerald-700/70" />
@@ -2216,6 +2588,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   themeKey={editorTheme}
                   value={editorCode}
                   onChange={setEditorCode}
+                  isFreeMode={isFreeMode}
                 />
               </div>
 
@@ -2231,15 +2604,17 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                     {runningAction === 'run' ? 'Đang chạy...' : 'Run'}
                   </button>
 
-                  <button
-                    onClick={handleJudge}
-                    disabled={runningCode}
-                    className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    title="Chấm bài"
-                  >
-                    <Sparkles size={16} />
-                    {runningAction === 'judge' ? 'Đang chấm...' : 'Chấm bài'}
-                  </button>
+                  {!isFreeMode && (
+                    <button
+                      onClick={handleJudge}
+                      disabled={runningCode}
+                      className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      title="Chấm bài"
+                    >
+                      <Sparkles size={16} />
+                      {runningAction === 'judge' ? 'Đang chấm...' : 'Chấm bài'}
+                    </button>
+                  )}
 
                   <button
                     onClick={handleClearConsole}
@@ -2250,10 +2625,14 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
                   </button>
                 </div>
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                  Ctrl + Enter: Run | Ctrl + Shift + Enter: Chấm bài
+                  {isFreeMode
+                    ? 'Ctrl + Enter: Run'
+                    : 'Ctrl + Enter: Run | Ctrl + Shift + Enter: Chấm bài'}
                 </p>
                 <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  Auto-save bản nháp local mỗi 5 giây.
+                  {isFreeMode
+                    ? 'CodePad tự lưu bản nháp cục bộ mỗi 5 giây.'
+                    : 'Auto-save bản nháp local mỗi 5 giây.'}
                 </p>
 
                 {(() => {
@@ -2361,7 +2740,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
               </div>
             </div>
 
-            {judgeCompilerError && (
+            {!isFreeMode && judgeCompilerError && (
               <div className="mx-4 mb-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 shadow-sm dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
                 <p className="text-sm font-black">Lỗi biên dịch (compiler_error)</p>
                 <pre className="mt-2 whitespace-pre-wrap font-mono text-xs">
@@ -2370,7 +2749,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {} }) => {
               </div>
             )}
 
-            {!judgeCompilerError && (
+            {!isFreeMode && !judgeCompilerError && (
               <div className="mx-4 mb-3 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm dark:border-slate-700/90 dark:bg-slate-900/50">
                 <div className="border-b border-slate-200/90 bg-slate-50/80 px-4 py-3 dark:border-slate-700/90 dark:bg-slate-900/70">
                   <p className="text-sm font-black text-slate-800 dark:text-slate-100">Kết quả test case</p>

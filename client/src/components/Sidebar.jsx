@@ -68,7 +68,7 @@ const Sidebar = ({ isMobile = false, onNavigate }) => {
           />
         )}
         {NAV_ITEMS.map((item) => {
-          const isActive = activePath === item.to;
+          const isActive = activePath === item.to || activePath.startsWith(`${item.to}/`);
           const Icon = item.icon;
           return (
             <NavLink
