@@ -81,6 +81,7 @@ const themeRegistry = [
     monacoTheme: 'whalio-synthwave-84',
     isDark: true,
     hasNeonGlow: true,
+    glowClass: 'synthwave-neon-glow',
     terminal: {
       panelBackground: '#251447',
       headerBackground: '#2f1858',
@@ -88,6 +89,36 @@ const themeRegistry = [
       border: '#6a3bbd',
       text: '#f6ecff',
       mutedText: '#f97e72',
+    },
+  },
+  {
+    key: 'catppuccin-mocha',
+    label: 'Catppuccin Mocha',
+    monacoTheme: 'whalio-catppuccin-mocha',
+    isDark: true,
+    terminal: {
+      panelBackground: '#1e1e2e',
+      headerBackground: '#181825',
+      bodyBackground: '#11111b',
+      border: '#45475a',
+      text: '#cdd6f4',
+      mutedText: '#89b4fa',
+    },
+  },
+  {
+    key: 'whalio-hyperwave',
+    label: 'Whalio Hyperwave',
+    monacoTheme: 'whalio-hyperwave',
+    isDark: true,
+    hasNeonGlow: true,
+    glowClass: 'hyperwave-neon-glow',
+    terminal: {
+      panelBackground: '#120321',
+      headerBackground: '#1a0530',
+      bodyBackground: '#0b0118',
+      border: '#2a1940',
+      text: '#f4ecff',
+      mutedText: '#00ffff',
     },
   },
 ];
@@ -102,6 +133,8 @@ const themeDefinitionLoaders = {
   'night-owl': () => import('../monacoThemes/nightOwl.js'),
   'one-dark-pro': () => import('../monacoThemes/oneDarkPro.js'),
   'synthwave-84': () => import('../monacoThemes/synthwave84.js'),
+  'catppuccin-mocha': () => import('../monacoThemes/catppuccinMocha.js'),
+  'whalio-hyperwave': () => import('../monacoThemes/whalioHyperwave.js'),
 };
 
 export const CODE_EDITOR_THEME_OPTIONS = themeRegistry;

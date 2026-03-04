@@ -1,0 +1,35 @@
+﻿{
+  "name": "whalio-aesthetic-pack",
+  "displayName": "Whalio Aesthetic Pack",
+  "description": "Official Catppuccin Mocha + Whalio Hyperwave neon theme for VS Code.",
+  "version": "0.1.0",
+  "publisher": "whalio",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.86.0"
+  },
+  "categories": [
+    "Themes"
+  ],
+  "keywords": [
+    "theme",
+    "catppuccin",
+    "mocha",
+    "neon",
+    "cpp"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "label": "Whalio Catppuccin Mocha",
+        "uiTheme": "vs-dark",
+        "path": "./themes/whalio-catppuccin-mocha.json"
+      },
+      {
+        "label": "Whalio Hyperwave",
+        "uiTheme": "vs-dark",
+        "path": "./themes/whalio-hyperwave.json"
+      }
+    ]
+  }
+}
