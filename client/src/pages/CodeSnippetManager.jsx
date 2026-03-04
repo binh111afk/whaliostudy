@@ -769,6 +769,11 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
   const languageRef = useRef(language);
   const themeKeyRef = useRef(themeKey);
   const [themeReady, setThemeReady] = useState(false);
+  const [isEditorFocused, setIsEditorFocused] = useState(false);
+  const [shootingStarSeed, setShootingStarSeed] = useState(0);
+  const [shootingStarStyle, setShootingStarStyle] = useState({});
+  const themeConfig = useMemo(() => getCodeEditorThemeConfig(themeKey), [themeKey]);
+  const isNightmareTheme = themeConfig.key === 'nightmare';
 
   useEffect(() => {
     languageRef.current = language;
@@ -793,6 +798,38 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
     if (!model) return;
     monacoRef.current.editor.setModelLanguage(model, toMonacoLanguage(language));
   }, [language]);
+
+  useEffect(() => {
+    if (!isNightmareTheme) return undefined;
+
+    let timeoutId = null;
+    let cancelled = false;
+
+    const scheduleShootingStar = () => {
+      const nextDelayMs = 15000 + Math.random() * 10000;
+      timeoutId = window.setTimeout(() => {
+        if (cancelled) return;
+
+        setShootingStarStyle({
+          '--nightmare-shooting-top': `${6 + Math.random() * 34}%`,
+          '--nightmare-shooting-left': `${Math.random() * 45}%`,
+          '--nightmare-shooting-duration': `${(1.35 + Math.random() * 1.35).toFixed(2)}s`,
+          '--nightmare-shooting-tail': `${Math.round(150 + Math.random() * 120)}px`,
+        });
+        setShootingStarSeed((prev) => prev + 1);
+        scheduleShootingStar();
+      }, nextDelayMs);
+    };
+
+    scheduleShootingStar();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [isNightmareTheme]);
 
   const options = useMemo(
     () => ({
@@ -839,6 +876,13 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
       await ensureCodeEditorTheme(monaco, themeKeyRef.current);
       setThemeReady(true);
 
+      const focusDisposable = editor.onDidFocusEditorText(() => {
+        setIsEditorFocused(true);
+      });
+      const blurDisposable = editor.onDidBlurEditorText(() => {
+        setIsEditorFocused(false);
+      });
+
       const typedDisposable = editor.onDidType((text) => {
         if (text !== ';') return;
         if (!AUTO_FORMAT_LINE_LANGUAGES.has(String(languageRef.current || ''))) return;
@@ -874,19 +918,27 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
 
       editor.onDidDispose(() => {
         typedDisposable.dispose();
+        focusDisposable.dispose();
+        blurDisposable.dispose();
       });
     },
     []
   );
 
-  // Get theme config for initial theme (vs-dark as fallback before custom theme loads)
-  const themeConfig = getCodeEditorThemeConfig(themeKey);
   const initialTheme = themeReady ? themeConfig.monacoTheme : (themeConfig.isDark ? 'vs-dark' : 'vs');
   const hasNeonGlow = themeConfig.hasNeonGlow;
   const neonGlowClass = hasNeonGlow ? (themeConfig.glowClass || 'synthwave-neon-glow') : '';
+  const wrapperClassName = [
+    'h-full',
+    'w-full',
+    neonGlowClass,
+    isNightmareTheme && isEditorFocused ? 'nightmare-focused' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <div className={`h-full w-full ${neonGlowClass}`}>
+    <div className={wrapperClassName}>
       <style>
         {hasNeonGlow ? `
           .synthwave-neon-glow .monaco-editor .mtk3,
@@ -916,125 +968,282 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
             box-shadow: 0 0 8px #ff7edb, 0 0 16px #ff7edb80;
           }
 
-          .hyperwave-neon-glow .monaco-editor .mtk3,
-          .hyperwave-neon-glow .monaco-editor .mtk5,
-          .hyperwave-neon-glow .monaco-editor .mtk6 {
-            text-shadow: 0 0 2px #ff00ff9a, 0 0 7px #ff00ff7a, 0 0 14px #ff00ff52;
-          }
-          .hyperwave-neon-glow .monaco-editor .mtk12,
-          .hyperwave-neon-glow .monaco-editor .mtk10 {
-            text-shadow: 0 0 2px #00ffff9a, 0 0 7px #00ffff7a, 0 0 14px #00ffff52;
-          }
-          .hyperwave-neon-glow .monaco-editor .mtk8,
-          .hyperwave-neon-glow .monaco-editor .mtk9 {
-            text-shadow: 0 0 2px #ffff00aa, 0 0 8px #ffff0088, 0 0 16px #ffff0060;
-          }
-          .hyperwave-neon-glow .monaco-editor .mtk4,
-          .hyperwave-neon-glow .monaco-editor .mtk11 {
-            text-shadow: 0 0 2px #89b4faaa, 0 0 7px #89b4fa7f, 0 0 14px #89b4fa55;
-          }
-          .hyperwave-neon-glow {
+          .nightmare-neon-glow {
             position: relative;
             overflow: hidden;
-            background:
-              radial-gradient(130% 90% at 5% -10%, #00ffff20 0%, #00ffff00 52%),
-              radial-gradient(120% 100% at 105% 110%, #ff00ff24 0%, #ff00ff00 58%),
-              linear-gradient(180deg, #1a0530 0%, #120321 65%, #0b0118 100%);
+            isolation: isolate;
+            background: linear-gradient(180deg, #0a0f1f 0%, #070812 62%, #06070f 100%);
           }
-          .hyperwave-neon-glow::before {
-            content: '';
-            position: absolute;
-            inset: -25%;
-            pointer-events: none;
-            background:
-              conic-gradient(
-                from 0deg,
-                #00ffff10 0deg,
-                #ff00ff16 130deg,
-                #ffff0012 230deg,
-                #00ffff10 360deg
-              );
-            filter: blur(36px);
-            animation: hyperwave-aurora-spin 10s linear infinite;
-          }
-          .hyperwave-neon-glow::after {
-            content: '';
+          .nightmare-neon-glow .nightmare-depth-base,
+          .nightmare-neon-glow .nightmare-stars,
+          .nightmare-neon-glow .nightmare-light-beams,
+          .nightmare-neon-glow .nightmare-city-glow,
+          .nightmare-neon-glow .nightmare-shooting-star {
             position: absolute;
             inset: 0;
             pointer-events: none;
-            background: repeating-linear-gradient(
-              180deg,
-              #ffffff00 0px,
-              #ffffff00 2px,
-              #00ffff10 3px
-            );
-            opacity: 0.18;
-            mix-blend-mode: screen;
-            animation: hyperwave-scanline 4s linear infinite;
           }
-          .hyperwave-neon-glow .monaco-editor,
-          .hyperwave-neon-glow .monaco-editor .margin,
-          .hyperwave-neon-glow .monaco-editor-background {
+          .nightmare-neon-glow .nightmare-depth-base {
+            z-index: 0;
+            background:
+              radial-gradient(135% 100% at 8% -12%, rgba(28, 60, 120, 0.26) 0%, rgba(28, 60, 120, 0) 60%),
+              radial-gradient(120% 95% at 100% 112%, rgba(67, 39, 117, 0.22) 0%, rgba(67, 39, 117, 0) 63%),
+              linear-gradient(180deg, #0a0f1f 0%, #070812 66%, #05060d 100%);
+            transition: filter 220ms ease;
+          }
+          .nightmare-neon-glow .nightmare-stars {
+            z-index: 1;
+            opacity: 0.29;
+            background:
+              radial-gradient(circle at 3% 9%, rgba(205, 234, 255, 0.34) 0 0.9px, transparent 1.7px),
+              radial-gradient(circle at 8% 36%, rgba(173, 214, 255, 0.3) 0 0.8px, transparent 1.6px),
+              radial-gradient(circle at 12% 70%, rgba(219, 232, 255, 0.24) 0 0.9px, transparent 1.8px),
+              radial-gradient(circle at 16% 21%, rgba(199, 212, 255, 0.22) 0 0.8px, transparent 1.7px),
+              radial-gradient(circle at 21% 48%, rgba(226, 236, 255, 0.24) 0 1px, transparent 1.8px),
+              radial-gradient(circle at 27% 78%, rgba(174, 213, 255, 0.29) 0 0.9px, transparent 1.8px),
+              radial-gradient(circle at 31% 14%, rgba(210, 220, 255, 0.26) 0 0.9px, transparent 1.7px),
+              radial-gradient(circle at 36% 61%, rgba(193, 209, 255, 0.25) 0 0.85px, transparent 1.7px),
+              radial-gradient(circle at 41% 31%, rgba(206, 227, 255, 0.23) 0 0.8px, transparent 1.6px),
+              radial-gradient(circle at 47% 83%, rgba(229, 239, 255, 0.24) 0 0.9px, transparent 1.8px),
+              radial-gradient(circle at 52% 10%, rgba(179, 211, 255, 0.31) 0 0.95px, transparent 1.8px),
+              radial-gradient(circle at 58% 42%, rgba(216, 230, 255, 0.25) 0 0.85px, transparent 1.7px),
+              radial-gradient(circle at 63% 74%, rgba(201, 219, 255, 0.26) 0 0.95px, transparent 1.9px),
+              radial-gradient(circle at 69% 23%, rgba(211, 233, 255, 0.24) 0 0.9px, transparent 1.8px),
+              radial-gradient(circle at 74% 56%, rgba(192, 207, 255, 0.22) 0 0.85px, transparent 1.7px),
+              radial-gradient(circle at 79% 87%, rgba(225, 235, 255, 0.26) 0 0.95px, transparent 1.8px),
+              radial-gradient(circle at 84% 16%, rgba(185, 217, 255, 0.29) 0 0.95px, transparent 1.9px),
+              radial-gradient(circle at 89% 45%, rgba(203, 219, 255, 0.23) 0 0.85px, transparent 1.7px),
+              radial-gradient(circle at 93% 72%, rgba(223, 236, 255, 0.25) 0 0.95px, transparent 1.8px),
+              radial-gradient(circle at 97% 28%, rgba(178, 210, 255, 0.28) 0 0.85px, transparent 1.7px);
+            animation: nightmare-stars-twinkle 13s ease-in-out infinite alternate;
+            transition: opacity 220ms ease, filter 220ms ease;
+          }
+          .nightmare-neon-glow .nightmare-light-beams {
+            z-index: 2;
+            opacity: 0.04;
+            background:
+              repeating-linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0) 11%,
+                rgba(126, 154, 255, 0.5) 11.8%,
+                rgba(255, 255, 255, 0) 14%
+              );
+            filter: blur(0.5px);
+            transform: translateZ(0);
+          }
+          .nightmare-neon-glow .nightmare-city-glow {
+            inset: auto 0 0 0;
+            height: 36%;
+            z-index: 3;
+            background:
+              linear-gradient(
+                180deg,
+                rgba(8, 10, 20, 0) 0%,
+                rgba(9, 11, 24, 0.14) 35%,
+                rgba(24, 20, 52, 0.3) 62%,
+                rgba(255, 0, 255, 0.11) 88%,
+                rgba(0, 247, 255, 0.15) 100%
+              );
+            filter: blur(12px) saturate(1.08);
+            animation: nightmare-city-drift 18s ease-in-out infinite alternate;
+            transition: filter 220ms ease;
+          }
+          .nightmare-neon-glow .nightmare-shooting-star {
+            z-index: 4;
+            top: var(--nightmare-shooting-top, 18%);
+            left: var(--nightmare-shooting-left, 12%);
+            width: var(--nightmare-shooting-tail, 190px);
+            height: 2px;
+            border-radius: 999px;
+            opacity: 0;
+            transform-origin: left center;
+            transform: translate3d(-32vw, -14vh, 0) rotate(-27deg);
+            background: linear-gradient(
+              90deg,
+              rgba(255, 255, 255, 0) 0%,
+              rgba(0, 247, 255, 0.95) 36%,
+              rgba(255, 0, 255, 0.55) 74%,
+              rgba(255, 255, 255, 0) 100%
+            );
+            filter: blur(0.45px) drop-shadow(0 0 10px rgba(0, 247, 255, 0.62)) drop-shadow(0 0 14px rgba(255, 0, 255, 0.38));
+            animation: nightmare-shooting var(--nightmare-shooting-duration, 2s) ease-out 1;
+          }
+          .nightmare-neon-glow .nightmare-shooting-star::after {
+            content: '';
+            position: absolute;
+            right: -4px;
+            top: 50%;
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            transform: translateY(-50%);
+            background: rgba(232, 249, 255, 0.84);
+            box-shadow: 0 0 10px rgba(0, 247, 255, 0.9), 0 0 14px rgba(255, 0, 255, 0.45);
+          }
+          .nightmare-neon-glow.nightmare-focused .nightmare-depth-base,
+          .nightmare-neon-glow.nightmare-focused .nightmare-stars,
+          .nightmare-neon-glow.nightmare-focused .nightmare-city-glow {
+            filter: brightness(1.05);
+          }
+          .nightmare-neon-glow.nightmare-focused .nightmare-stars {
+            opacity: 0.31;
+          }
+          .nightmare-neon-glow .monaco-editor,
+          .nightmare-neon-glow .monaco-editor .margin,
+          .nightmare-neon-glow .monaco-editor-background {
             background: transparent !important;
           }
-          .hyperwave-neon-glow .monaco-editor .view-lines {
-            filter: saturate(1.14) contrast(1.05);
+          .nightmare-neon-glow .monaco-editor .view-lines {
+            position: relative;
+            z-index: 5;
+            filter: saturate(1.03) contrast(1.03);
           }
-          .hyperwave-neon-glow .monaco-editor .current-line {
-            box-shadow: inset 0 0 0 1px #00ffff2b, inset 0 0 18px #00ffff14;
+          .nightmare-neon-glow .monaco-editor .current-line {
+            box-shadow: inset 0 0 0 1px rgba(108, 99, 255, 0.28), inset 0 0 18px rgba(0, 247, 255, 0.08);
+            border-radius: 4px;
           }
-          .hyperwave-neon-glow .monaco-editor .selected-text {
-            box-shadow: 0 0 12px #3b82f680, inset 0 0 6px #3b82f655;
+          .nightmare-neon-glow .monaco-editor .selected-text {
+            box-shadow: 0 0 12px rgba(108, 99, 255, 0.28), inset 0 0 7px rgba(229, 218, 255, 0.2);
+            border-radius: 4px;
           }
-          .hyperwave-neon-glow .monaco-editor .cursor {
-            background-color: #ffff00 !important;
-            box-shadow: 0 0 10px #ffff00, 0 0 22px #ffff0088;
-            animation: hyperwave-cursor-pulse 1.5s ease-in-out infinite;
+          .nightmare-neon-glow .monaco-editor .mtk3,
+          .nightmare-neon-glow .monaco-editor .mtk5,
+          .nightmare-neon-glow .monaco-editor .mtk6 {
+            text-shadow: 0 0 6px rgba(255, 0, 255, 0.6);
           }
-          @keyframes hyperwave-aurora-spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+          .nightmare-neon-glow .monaco-editor .mtk10,
+          .nightmare-neon-glow .monaco-editor .mtk12 {
+            text-shadow: 0 0 3px rgba(0, 247, 255, 0.8), 0 0 10px rgba(0, 247, 255, 0.5), 0 0 18px rgba(0, 247, 255, 0.26);
+            transition: text-shadow 160ms ease;
           }
-          @keyframes hyperwave-scanline {
-            0% { transform: translateY(-18px); }
-            100% { transform: translateY(18px); }
+          .nightmare-neon-glow .monaco-editor .mtk10:hover,
+          .nightmare-neon-glow .monaco-editor .mtk12:hover {
+            text-shadow: 0 0 4px rgba(0, 247, 255, 0.9), 0 0 13px rgba(0, 247, 255, 0.58), 0 0 24px rgba(0, 247, 255, 0.36);
           }
-          @keyframes hyperwave-cursor-pulse {
+          .nightmare-neon-glow .monaco-editor .mtk7 {
+            text-shadow: 0 0 5px rgba(57, 255, 20, 0.36);
+          }
+          .nightmare-neon-glow .monaco-editor .mtk8,
+          .nightmare-neon-glow .monaco-editor .mtk9 {
+            text-shadow: 0 0 5px rgba(255, 159, 28, 0.45);
+          }
+          .nightmare-neon-glow .monaco-editor .mtk4 {
+            opacity: 0.88;
+            text-shadow: 0 0 3px rgba(108, 99, 255, 0.2);
+          }
+          .nightmare-neon-glow .monaco-editor .cursor {
+            background-color: #00f7ff !important;
+            box-shadow: 0 0 9px rgba(0, 247, 255, 0.88), 0 0 17px rgba(0, 247, 255, 0.55);
+            animation: nightmare-caret-pulse 1.85s ease-in-out infinite;
+          }
+          .nightmare-editor-frame {
+            border-color: rgba(87, 84, 163, 0.52) !important;
+            box-shadow: 0 16px 36px rgba(36, 20, 83, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            background:
+              linear-gradient(180deg, rgba(11, 15, 30, 0.88), rgba(7, 9, 18, 0.9)) !important;
+          }
+          .nightmare-terminal-panel {
+            position: relative;
+            border: 1px solid transparent !important;
+            background:
+              linear-gradient(rgba(10, 15, 31, 0.72), rgba(9, 12, 24, 0.78)) padding-box,
+              linear-gradient(125deg, rgba(255, 0, 255, 0.72), rgba(0, 247, 255, 0.76)) border-box !important;
+            box-shadow: 0 14px 34px rgba(85, 64, 157, 0.27), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+          }
+          .nightmare-terminal-header {
+            background: linear-gradient(90deg, rgba(14, 20, 37, 0.82), rgba(13, 18, 36, 0.64)) !important;
+            border-color: rgba(135, 118, 220, 0.34) !important;
+            color: #b9b4ff !important;
+          }
+          .nightmare-terminal-body {
+            background-color: rgba(7, 10, 20, 0.82) !important;
+            color: #f4f6ff !important;
+          }
+          .nightmare-terminal-input::placeholder {
+            color: rgba(209, 205, 255, 0.55);
+          }
+          @keyframes nightmare-stars-twinkle {
+            0% {
+              opacity: 0.27;
+            }
+            100% {
+              opacity: 0.33;
+            }
+          }
+          @keyframes nightmare-city-drift {
+            0% {
+              transform: translateY(0);
+            }
+            100% {
+              transform: translateY(-4px);
+            }
+          }
+          @keyframes nightmare-shooting {
+            0% {
+              opacity: 0;
+              transform: translate3d(-34vw, -16vh, 0) rotate(-27deg);
+            }
+            14% {
+              opacity: 0.95;
+            }
+            100% {
+              opacity: 0;
+              transform: translate3d(120vw, 70vh, 0) rotate(-27deg);
+            }
+          }
+          @keyframes nightmare-caret-pulse {
             0%,
             100% {
-              box-shadow: 0 0 8px #ffff00, 0 0 16px #ffff0070;
-              opacity: 1;
+              box-shadow: 0 0 7px rgba(0, 247, 255, 0.84), 0 0 14px rgba(0, 247, 255, 0.48);
             }
             50% {
-              box-shadow: 0 0 14px #ffff00, 0 0 30px #ffff00aa;
-              opacity: 0.85;
+              box-shadow: 0 0 11px rgba(0, 247, 255, 0.94), 0 0 21px rgba(0, 247, 255, 0.68);
             }
           }
           @media (prefers-reduced-motion: reduce) {
-            .hyperwave-neon-glow::before,
-            .hyperwave-neon-glow::after {
-              animation: none;
-            }
-            .hyperwave-neon-glow .monaco-editor .cursor {
+            .nightmare-neon-glow .nightmare-stars,
+            .nightmare-neon-glow .nightmare-city-glow,
+            .nightmare-neon-glow .nightmare-shooting-star,
+            .nightmare-neon-glow .monaco-editor .cursor {
               animation: none;
             }
           }
         ` : ''}
       </style>
-      <Editor
-        height="100%"
-        language={toMonacoLanguage(language)}
-        theme={initialTheme}
-        value={String(value || '')}
-        onChange={(nextValue) => onChange(String(nextValue || ''))}
-        onMount={handleMount}
-        options={options}
-        loading={
-          <div className="flex h-full items-center justify-center bg-slate-50 text-sm font-semibold text-slate-500 dark:bg-slate-950 dark:text-slate-300">
-            {isFreeMode ? 'Đang mở CodePad...' : 'Đang tải Monaco Editor...'}
-          </div>
-        }
-      />
+      {isNightmareTheme && (
+        <>
+          <span className="nightmare-depth-base" aria-hidden="true" />
+          <span className="nightmare-stars" aria-hidden="true" />
+          <span className="nightmare-light-beams" aria-hidden="true" />
+          <span className="nightmare-city-glow" aria-hidden="true" />
+          {shootingStarSeed > 0 && (
+            <span
+              key={shootingStarSeed}
+              className="nightmare-shooting-star"
+              style={shootingStarStyle}
+              aria-hidden="true"
+            />
+          )}
+        </>
+      )}
+      <div className="relative z-[5] h-full w-full">
+        <Editor
+          height="100%"
+          language={toMonacoLanguage(language)}
+          theme={initialTheme}
+          value={String(value || '')}
+          onChange={(nextValue) => onChange(String(nextValue || ''))}
+          onMount={handleMount}
+          options={options}
+          loading={
+            <div className="flex h-full items-center justify-center bg-slate-50 text-sm font-semibold text-slate-500 dark:bg-slate-950 dark:text-slate-300">
+              {isFreeMode ? 'Đang mở CodePad...' : 'Đang tải Monaco Editor...'}
+            </div>
+          }
+        />
+      </div>
     </div>
   );
 };
@@ -2687,7 +2896,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
             </div>
 
             <div className="grid gap-3 p-4 xl:h-[75vh] xl:min-h-[75vh] xl:grid-cols-[minmax(0,1fr)_360px]">
-              <div className="h-[62vh] min-h-[420px] overflow-hidden rounded-2xl border border-gray-200 shadow-sm dark:border-gray-700 xl:h-full xl:min-h-0">
+              <div className={`h-[62vh] min-h-[420px] overflow-hidden rounded-2xl border border-gray-200 shadow-sm dark:border-gray-700 xl:h-full xl:min-h-0 ${editorTheme === 'nightmare' ? 'nightmare-editor-frame' : ''}`}>
                 <MonacoCodeEditor
                   language={editorLanguage}
                   themeKey={editorTheme}
@@ -2742,17 +2951,18 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
 
                 {(() => {
                   const terminalTheme = getCodeEditorThemeConfig(editorTheme).terminal;
+                  const isNightmareTerminal = editorTheme === 'nightmare';
                   return (
                     <>
                       <div
-                        className="overflow-hidden rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors duration-300"
+                        className={`overflow-hidden rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors duration-300 ${isNightmareTerminal ? 'nightmare-terminal-panel' : ''}`}
                         style={{
                           backgroundColor: terminalTheme.panelBackground,
                           borderColor: terminalTheme.border,
                         }}
                       >
                         <div
-                          className="border-b px-3 py-2 text-xs font-bold uppercase tracking-wide transition-colors duration-300"
+                          className={`border-b px-3 py-2 text-xs font-bold uppercase tracking-wide transition-colors duration-300 ${isNightmareTerminal ? 'nightmare-terminal-header' : ''}`}
                           style={{
                             backgroundColor: terminalTheme.headerBackground,
                             borderColor: terminalTheme.border,
@@ -2766,7 +2976,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
                           onChange={(event) => setProgramInput(event.target.value)}
                           spellCheck={false}
                           placeholder="Nhập input, mỗi dòng là 1 giá trị..."
-                          className="h-36 w-full resize-none p-3 font-mono text-sm leading-6 outline-none transition-colors duration-300 placeholder:opacity-50 xl:h-[220px]"
+                          className={`h-36 w-full resize-none p-3 font-mono text-sm leading-6 outline-none transition-colors duration-300 placeholder:opacity-50 xl:h-[220px] ${isNightmareTerminal ? 'nightmare-terminal-body nightmare-terminal-input' : ''}`}
                           style={{
                             backgroundColor: terminalTheme.bodyBackground,
                             color: terminalTheme.text,
@@ -2775,14 +2985,14 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
                       </div>
 
                       <div
-                        className="overflow-hidden rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors duration-300"
+                        className={`overflow-hidden rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors duration-300 ${isNightmareTerminal ? 'nightmare-terminal-panel' : ''}`}
                         style={{
                           backgroundColor: terminalTheme.panelBackground,
                           borderColor: terminalTheme.border,
                         }}
                       >
                         <div
-                          className="border-b px-3 py-2 text-xs font-bold uppercase tracking-wide transition-colors duration-300"
+                          className={`border-b px-3 py-2 text-xs font-bold uppercase tracking-wide transition-colors duration-300 ${isNightmareTerminal ? 'nightmare-terminal-header' : ''}`}
                           style={{
                             backgroundColor: terminalTheme.headerBackground,
                             borderColor: terminalTheme.border,
@@ -2812,7 +3022,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
                         ) : (
                           <pre
                             ref={terminalOutputRef}
-                            className="h-36 overflow-auto whitespace-pre-wrap p-3 font-mono text-sm leading-6 transition-colors duration-300 xl:h-[190px]"
+                            className={`h-36 overflow-auto whitespace-pre-wrap p-3 font-mono text-sm leading-6 transition-colors duration-300 xl:h-[190px] ${isNightmareTerminal ? 'nightmare-terminal-body' : ''}`}
                             style={{
                               color: terminalTheme.text,
                               backgroundColor: terminalTheme.bodyBackground,

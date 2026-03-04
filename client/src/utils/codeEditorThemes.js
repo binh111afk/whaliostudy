@@ -3,6 +3,7 @@ export const DEFAULT_DARK_THEME_KEY = 'one-dark-pro';
 export const DEFAULT_LIGHT_THEME_KEY = 'light-plus';
 const LEGACY_DARK_THEME_VALUE = 'dark';
 const LEGACY_LIGHT_THEME_VALUE = 'light';
+const LEGACY_HYPERWAVE_THEME_KEY = 'whalio-hyperwave';
 
 const themeRegistry = [
   {
@@ -106,19 +107,20 @@ const themeRegistry = [
     },
   },
   {
-    key: 'whalio-hyperwave',
-    label: 'Whalio Hyperwave',
-    monacoTheme: 'whalio-hyperwave',
+    key: 'nightmare',
+    label: 'Nightmare',
+    monacoTheme: 'whalio-nightmare',
     isDark: true,
     hasNeonGlow: true,
-    glowClass: 'hyperwave-neon-glow',
+    glowClass: 'nightmare-neon-glow',
+    tagline: 'Code under the falling stars.',
     terminal: {
-      panelBackground: '#120321',
-      headerBackground: '#1a0530',
-      bodyBackground: '#0b0118',
-      border: '#2a1940',
-      text: '#f4ecff',
-      mutedText: '#00ffff',
+      panelBackground: 'rgba(10, 15, 31, 0.74)',
+      headerBackground: 'rgba(12, 19, 37, 0.8)',
+      bodyBackground: 'rgba(7, 10, 20, 0.82)',
+      border: 'rgba(103, 92, 185, 0.38)',
+      text: '#f4f6ff',
+      mutedText: '#a9a5ff',
     },
   },
 ];
@@ -134,7 +136,7 @@ const themeDefinitionLoaders = {
   'one-dark-pro': () => import('../monacoThemes/oneDarkPro.js'),
   'synthwave-84': () => import('../monacoThemes/synthwave84.js'),
   'catppuccin-mocha': () => import('../monacoThemes/catppuccinMocha.js'),
-  'whalio-hyperwave': () => import('../monacoThemes/whalioHyperwave.js'),
+  nightmare: () => import('../monacoThemes/nightmare.js'),
 };
 
 export const CODE_EDITOR_THEME_OPTIONS = themeRegistry;
@@ -147,6 +149,7 @@ export const resolveInitialCodeEditorTheme = (rawValue) => {
   const normalizedValue = String(rawValue || '').trim();
   if (normalizedValue === LEGACY_DARK_THEME_VALUE) return DEFAULT_DARK_THEME_KEY;
   if (normalizedValue === LEGACY_LIGHT_THEME_VALUE) return DEFAULT_LIGHT_THEME_KEY;
+  if (normalizedValue === LEGACY_HYPERWAVE_THEME_KEY) return 'nightmare';
   if (themeByKey.has(normalizedValue)) return normalizedValue;
   return DEFAULT_DARK_THEME_KEY;
 };
