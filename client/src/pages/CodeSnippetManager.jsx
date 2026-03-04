@@ -763,6 +763,63 @@ const toMonacoLanguage = (language) => {
   return map[normalized] || 'plaintext';
 };
 
+const NIGHTMARE_STARFIELD_WIDTH = 2400;
+const NIGHTMARE_STARFIELD_HEIGHT = 1400;
+const NIGHTMARE_STAR_COLOR_PALETTE = ['222,236,255', '201,223,255', '244,231,255'];
+
+const randomInRange = (min, max) => min + Math.random() * (max - min);
+
+const buildNightmareStarShadowMap = ({ count }) => {
+  const shadows = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const x = Math.round(randomInRange(-120, NIGHTMARE_STARFIELD_WIDTH));
+    const y = Math.round(randomInRange(-120, NIGHTMARE_STARFIELD_HEIGHT));
+    const color = NIGHTMARE_STAR_COLOR_PALETTE[Math.floor(Math.random() * NIGHTMARE_STAR_COLOR_PALETTE.length)];
+    const alpha = randomInRange(0.2, 0.62).toFixed(2);
+    shadows.push(`${x}px ${y}px rgba(${color}, ${alpha})`);
+  }
+
+  return shadows.join(', ');
+};
+
+const buildNightmareStarLayerStyle = ({ size, count, opacity, twinkleMin, twinkleMax }) => {
+  const duration = randomInRange(twinkleMin, twinkleMax).toFixed(2);
+  const delay = (-1 * randomInRange(0, twinkleMax)).toFixed(2);
+
+  return {
+    '--nightmare-star-size': `${size}px`,
+    '--nightmare-star-opacity': opacity.toFixed(2),
+    '--nightmare-star-twinkle-duration': `${duration}s`,
+    '--nightmare-star-twinkle-delay': `${delay}s`,
+    '--nightmare-star-shadows': buildNightmareStarShadowMap({ count }),
+  };
+};
+
+const buildNightmareStarFieldStyles = () => ({
+  layerA: buildNightmareStarLayerStyle({
+    size: 1,
+    count: 85,
+    opacity: 0.24,
+    twinkleMin: 21,
+    twinkleMax: 32,
+  }),
+  layerB: buildNightmareStarLayerStyle({
+    size: 1.35,
+    count: 55,
+    opacity: 0.3,
+    twinkleMin: 24,
+    twinkleMax: 36,
+  }),
+  layerC: buildNightmareStarLayerStyle({
+    size: 2,
+    count: 28,
+    opacity: 0.34,
+    twinkleMin: 27,
+    twinkleMax: 40,
+  }),
+});
+
 const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = false }) => {
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
@@ -774,6 +831,10 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
   const [shootingStarStyle, setShootingStarStyle] = useState({});
   const themeConfig = useMemo(() => getCodeEditorThemeConfig(themeKey), [themeKey]);
   const isNightmareTheme = themeConfig.key === 'nightmare';
+  const nightmareStarLayers = useMemo(
+    () => (isNightmareTheme ? buildNightmareStarFieldStyles() : null),
+    [isNightmareTheme]
+  );
 
   useEffect(() => {
     languageRef.current = language;
@@ -806,15 +867,19 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
     let cancelled = false;
 
     const scheduleShootingStar = () => {
-      const nextDelayMs = 15000 + Math.random() * 10000;
+      const nextDelayMs = 20000 + Math.random() * 20000;
       timeoutId = window.setTimeout(() => {
         if (cancelled) return;
 
         setShootingStarStyle({
-          '--nightmare-shooting-top': `${6 + Math.random() * 34}%`,
-          '--nightmare-shooting-left': `${Math.random() * 45}%`,
-          '--nightmare-shooting-duration': `${(1.35 + Math.random() * 1.35).toFixed(2)}s`,
-          '--nightmare-shooting-tail': `${Math.round(150 + Math.random() * 120)}px`,
+          '--nightmare-shooting-top': `${6 + Math.random() * 38}%`,
+          '--nightmare-shooting-left': `${Math.random() * 42}%`,
+          '--nightmare-shooting-duration': `${(1.8 + Math.random() * 1.1).toFixed(2)}s`,
+          '--nightmare-shooting-tail': `${Math.round(90 + Math.random() * 70)}px`,
+          '--nightmare-shooting-tilt': `${(-18 - Math.random() * 16).toFixed(2)}deg`,
+          '--nightmare-shooting-start-x': `${(-28 - Math.random() * 20).toFixed(1)}vw`,
+          '--nightmare-shooting-end-x': `${(102 + Math.random() * 26).toFixed(1)}vw`,
+          '--nightmare-shooting-end-y': `${(40 + Math.random() * 34).toFixed(1)}vh`,
         });
         setShootingStarSeed((prev) => prev + 1);
         scheduleShootingStar();
@@ -972,122 +1037,111 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
             position: relative;
             overflow: hidden;
             isolation: isolate;
-            background: linear-gradient(180deg, #0a0f1f 0%, #070812 62%, #06070f 100%);
+            background: #05070d;
           }
           .nightmare-neon-glow .nightmare-depth-base,
+          .nightmare-neon-glow .nightmare-nebula,
           .nightmare-neon-glow .nightmare-stars,
           .nightmare-neon-glow .nightmare-light-beams,
           .nightmare-neon-glow .nightmare-city-glow,
           .nightmare-neon-glow .nightmare-shooting-star {
             position: absolute;
-            inset: 0;
             pointer-events: none;
           }
           .nightmare-neon-glow .nightmare-depth-base {
             z-index: 0;
+            inset: 0;
             background:
-              radial-gradient(135% 100% at 8% -12%, rgba(28, 60, 120, 0.26) 0%, rgba(28, 60, 120, 0) 60%),
-              radial-gradient(120% 95% at 100% 112%, rgba(67, 39, 117, 0.22) 0%, rgba(67, 39, 117, 0) 63%),
-              linear-gradient(180deg, #0a0f1f 0%, #070812 66%, #05060d 100%);
-            transition: filter 220ms ease;
+              radial-gradient(140% 110% at 12% -16%, rgba(19, 33, 69, 0.36) 0%, rgba(19, 33, 69, 0) 58%),
+              radial-gradient(128% 96% at 100% 115%, rgba(36, 24, 77, 0.32) 0%, rgba(36, 24, 77, 0) 60%),
+              linear-gradient(180deg, #070a14 0%, #05070d 64%, #04060b 100%);
+          }
+          .nightmare-neon-glow .nightmare-nebula {
+            z-index: 1;
+            inset: -18%;
+            opacity: 0.045;
+            background:
+              radial-gradient(circle at 24% 32%, rgba(143, 86, 255, 0.7) 0%, rgba(143, 86, 255, 0) 48%),
+              radial-gradient(circle at 71% 26%, rgba(70, 129, 255, 0.68) 0%, rgba(70, 129, 255, 0) 44%),
+              radial-gradient(circle at 62% 70%, rgba(137, 79, 214, 0.62) 0%, rgba(137, 79, 214, 0) 50%);
+            filter: blur(52px) saturate(1.1);
+            animation: nightmare-nebula-drift 48s ease-in-out infinite alternate;
           }
           .nightmare-neon-glow .nightmare-stars {
-            z-index: 1;
-            opacity: 0.29;
-            background:
-              radial-gradient(circle at 3% 9%, rgba(205, 234, 255, 0.34) 0 0.9px, transparent 1.7px),
-              radial-gradient(circle at 8% 36%, rgba(173, 214, 255, 0.3) 0 0.8px, transparent 1.6px),
-              radial-gradient(circle at 12% 70%, rgba(219, 232, 255, 0.24) 0 0.9px, transparent 1.8px),
-              radial-gradient(circle at 16% 21%, rgba(199, 212, 255, 0.22) 0 0.8px, transparent 1.7px),
-              radial-gradient(circle at 21% 48%, rgba(226, 236, 255, 0.24) 0 1px, transparent 1.8px),
-              radial-gradient(circle at 27% 78%, rgba(174, 213, 255, 0.29) 0 0.9px, transparent 1.8px),
-              radial-gradient(circle at 31% 14%, rgba(210, 220, 255, 0.26) 0 0.9px, transparent 1.7px),
-              radial-gradient(circle at 36% 61%, rgba(193, 209, 255, 0.25) 0 0.85px, transparent 1.7px),
-              radial-gradient(circle at 41% 31%, rgba(206, 227, 255, 0.23) 0 0.8px, transparent 1.6px),
-              radial-gradient(circle at 47% 83%, rgba(229, 239, 255, 0.24) 0 0.9px, transparent 1.8px),
-              radial-gradient(circle at 52% 10%, rgba(179, 211, 255, 0.31) 0 0.95px, transparent 1.8px),
-              radial-gradient(circle at 58% 42%, rgba(216, 230, 255, 0.25) 0 0.85px, transparent 1.7px),
-              radial-gradient(circle at 63% 74%, rgba(201, 219, 255, 0.26) 0 0.95px, transparent 1.9px),
-              radial-gradient(circle at 69% 23%, rgba(211, 233, 255, 0.24) 0 0.9px, transparent 1.8px),
-              radial-gradient(circle at 74% 56%, rgba(192, 207, 255, 0.22) 0 0.85px, transparent 1.7px),
-              radial-gradient(circle at 79% 87%, rgba(225, 235, 255, 0.26) 0 0.95px, transparent 1.8px),
-              radial-gradient(circle at 84% 16%, rgba(185, 217, 255, 0.29) 0 0.95px, transparent 1.9px),
-              radial-gradient(circle at 89% 45%, rgba(203, 219, 255, 0.23) 0 0.85px, transparent 1.7px),
-              radial-gradient(circle at 93% 72%, rgba(223, 236, 255, 0.25) 0 0.95px, transparent 1.8px),
-              radial-gradient(circle at 97% 28%, rgba(178, 210, 255, 0.28) 0 0.85px, transparent 1.7px);
-            animation: nightmare-stars-twinkle 13s ease-in-out infinite alternate;
-            transition: opacity 220ms ease, filter 220ms ease;
+            z-index: 2;
+            top: 0;
+            left: 0;
+            width: var(--nightmare-star-size, 1px);
+            height: var(--nightmare-star-size, 1px);
+            border-radius: 999px;
+            background: rgba(228, 239, 255, 0.95);
+            box-shadow: var(--nightmare-star-shadows);
+            opacity: var(--nightmare-star-opacity, 0.3);
+            filter: drop-shadow(0 0 2px rgba(169, 207, 255, 0.42));
+            animation: nightmare-stars-twinkle var(--nightmare-star-twinkle-duration, 24s) ease-in-out infinite;
+            animation-delay: var(--nightmare-star-twinkle-delay, 0s);
           }
           .nightmare-neon-glow .nightmare-light-beams {
-            z-index: 2;
-            opacity: 0.04;
+            z-index: 3;
+            inset: 0;
+            opacity: 0.03;
             background:
               repeating-linear-gradient(
                 90deg,
                 rgba(255, 255, 255, 0) 0%,
-                rgba(255, 255, 255, 0) 11%,
-                rgba(126, 154, 255, 0.5) 11.8%,
-                rgba(255, 255, 255, 0) 14%
+                rgba(255, 255, 255, 0) 12%,
+                rgba(138, 164, 255, 0.55) 12.6%,
+                rgba(255, 255, 255, 0) 16.2%
               );
             filter: blur(0.5px);
-            transform: translateZ(0);
           }
           .nightmare-neon-glow .nightmare-city-glow {
-            inset: auto 0 0 0;
-            height: 36%;
-            z-index: 3;
+            z-index: 4;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 34%;
             background:
-              linear-gradient(
-                180deg,
-                rgba(8, 10, 20, 0) 0%,
-                rgba(9, 11, 24, 0.14) 35%,
-                rgba(24, 20, 52, 0.3) 62%,
-                rgba(255, 0, 255, 0.11) 88%,
-                rgba(0, 247, 255, 0.15) 100%
-              );
-            filter: blur(12px) saturate(1.08);
-            animation: nightmare-city-drift 18s ease-in-out infinite alternate;
-            transition: filter 220ms ease;
+              radial-gradient(155% 100% at 50% 100%, rgba(126, 68, 201, 0.3) 0%, rgba(126, 68, 201, 0) 54%),
+              radial-gradient(124% 100% at 50% 110%, rgba(0, 247, 255, 0.16) 0%, rgba(0, 247, 255, 0) 62%),
+              linear-gradient(180deg, rgba(8, 10, 20, 0) 0%, rgba(14, 10, 28, 0.28) 62%, rgba(28, 15, 49, 0.34) 100%);
+            filter: blur(11px) saturate(1.05);
+            animation: nightmare-city-drift 23s ease-in-out infinite alternate;
           }
           .nightmare-neon-glow .nightmare-shooting-star {
-            z-index: 4;
+            z-index: 5;
             top: var(--nightmare-shooting-top, 18%);
             left: var(--nightmare-shooting-left, 12%);
-            width: var(--nightmare-shooting-tail, 190px);
+            width: var(--nightmare-shooting-tail, 120px);
             height: 2px;
             border-radius: 999px;
             opacity: 0;
             transform-origin: left center;
-            transform: translate3d(-32vw, -14vh, 0) rotate(-27deg);
+            transform: translate3d(var(--nightmare-shooting-start-x, -36vw), -14vh, 0) rotate(var(--nightmare-shooting-tilt, -26deg));
             background: linear-gradient(
               90deg,
               rgba(255, 255, 255, 0) 0%,
-              rgba(0, 247, 255, 0.95) 36%,
-              rgba(255, 0, 255, 0.55) 74%,
+              rgba(0, 247, 255, 0.76) 42%,
+              rgba(255, 0, 255, 0.44) 76%,
               rgba(255, 255, 255, 0) 100%
             );
-            filter: blur(0.45px) drop-shadow(0 0 10px rgba(0, 247, 255, 0.62)) drop-shadow(0 0 14px rgba(255, 0, 255, 0.38));
-            animation: nightmare-shooting var(--nightmare-shooting-duration, 2s) ease-out 1;
+            filter: blur(0.45px) drop-shadow(0 0 7px rgba(0, 247, 255, 0.55)) drop-shadow(0 0 10px rgba(255, 0, 255, 0.3));
+            animation: nightmare-shooting var(--nightmare-shooting-duration, 2.2s) cubic-bezier(0.15, 0.42, 0.35, 1) 1;
           }
           .nightmare-neon-glow .nightmare-shooting-star::after {
             content: '';
             position: absolute;
-            right: -4px;
+            right: -3px;
             top: 50%;
-            width: 7px;
-            height: 7px;
+            width: 6px;
+            height: 6px;
             border-radius: 999px;
             transform: translateY(-50%);
-            background: rgba(232, 249, 255, 0.84);
-            box-shadow: 0 0 10px rgba(0, 247, 255, 0.9), 0 0 14px rgba(255, 0, 255, 0.45);
-          }
-          .nightmare-neon-glow.nightmare-focused .nightmare-depth-base,
-          .nightmare-neon-glow.nightmare-focused .nightmare-stars,
-          .nightmare-neon-glow.nightmare-focused .nightmare-city-glow {
-            filter: brightness(1.05);
+            background: rgba(232, 250, 255, 0.76);
+            box-shadow: 0 0 8px rgba(0, 247, 255, 0.72), 0 0 11px rgba(255, 0, 255, 0.34);
           }
           .nightmare-neon-glow.nightmare-focused .nightmare-stars {
-            opacity: 0.31;
+            filter: brightness(1.05) drop-shadow(0 0 2px rgba(169, 207, 255, 0.42));
           }
           .nightmare-neon-glow .monaco-editor,
           .nightmare-neon-glow .monaco-editor .margin,
@@ -1096,80 +1150,93 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
           }
           .nightmare-neon-glow .monaco-editor .view-lines {
             position: relative;
-            z-index: 5;
-            filter: saturate(1.03) contrast(1.03);
+            z-index: 6;
+            filter: saturate(1.03) contrast(1.04);
           }
           .nightmare-neon-glow .monaco-editor .current-line {
-            box-shadow: inset 0 0 0 1px rgba(108, 99, 255, 0.28), inset 0 0 18px rgba(0, 247, 255, 0.08);
+            box-shadow: inset 0 0 0 1px rgba(100, 102, 227, 0.33), inset 0 0 20px rgba(0, 247, 255, 0.08);
             border-radius: 4px;
           }
           .nightmare-neon-glow .monaco-editor .selected-text {
-            box-shadow: 0 0 12px rgba(108, 99, 255, 0.28), inset 0 0 7px rgba(229, 218, 255, 0.2);
+            box-shadow: inset 0 0 0 1px rgba(199, 162, 255, 0.32), inset 0 0 12px rgba(136, 97, 255, 0.34), 0 0 12px rgba(110, 78, 218, 0.23);
             border-radius: 4px;
           }
           .nightmare-neon-glow .monaco-editor .mtk3,
           .nightmare-neon-glow .monaco-editor .mtk5,
           .nightmare-neon-glow .monaco-editor .mtk6 {
-            text-shadow: 0 0 6px rgba(255, 0, 255, 0.6);
+            text-shadow: 0 0 8px rgba(255, 0, 255, 0.7);
           }
           .nightmare-neon-glow .monaco-editor .mtk10,
           .nightmare-neon-glow .monaco-editor .mtk12 {
-            text-shadow: 0 0 3px rgba(0, 247, 255, 0.8), 0 0 10px rgba(0, 247, 255, 0.5), 0 0 18px rgba(0, 247, 255, 0.26);
+            text-shadow: 0 0 4px rgba(0, 247, 255, 0.9), 0 0 12px rgba(0, 247, 255, 0.62), 0 0 22px rgba(0, 247, 255, 0.35);
             transition: text-shadow 160ms ease;
           }
           .nightmare-neon-glow .monaco-editor .mtk10:hover,
           .nightmare-neon-glow .monaco-editor .mtk12:hover {
-            text-shadow: 0 0 4px rgba(0, 247, 255, 0.9), 0 0 13px rgba(0, 247, 255, 0.58), 0 0 24px rgba(0, 247, 255, 0.36);
+            text-shadow: 0 0 5px rgba(0, 247, 255, 0.92), 0 0 15px rgba(0, 247, 255, 0.66), 0 0 28px rgba(0, 247, 255, 0.42);
           }
           .nightmare-neon-glow .monaco-editor .mtk7 {
-            text-shadow: 0 0 5px rgba(57, 255, 20, 0.36);
+            text-shadow: 0 0 6px rgba(57, 255, 20, 0.42);
           }
           .nightmare-neon-glow .monaco-editor .mtk8,
           .nightmare-neon-glow .monaco-editor .mtk9 {
-            text-shadow: 0 0 5px rgba(255, 159, 28, 0.45);
+            text-shadow: 0 0 6px rgba(255, 159, 28, 0.46);
+          }
+          .nightmare-neon-glow .monaco-editor .mtk11 {
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.36);
           }
           .nightmare-neon-glow .monaco-editor .mtk4 {
-            opacity: 0.88;
-            text-shadow: 0 0 3px rgba(108, 99, 255, 0.2);
+            opacity: 0.76;
+            text-shadow: none;
           }
           .nightmare-neon-glow .monaco-editor .cursor {
             background-color: #00f7ff !important;
-            box-shadow: 0 0 9px rgba(0, 247, 255, 0.88), 0 0 17px rgba(0, 247, 255, 0.55);
-            animation: nightmare-caret-pulse 1.85s ease-in-out infinite;
+            box-shadow: 0 0 10px rgba(0, 247, 255, 0.86), 0 0 18px rgba(0, 247, 255, 0.56);
+            animation: nightmare-caret-pulse 3.6s ease-in-out infinite;
           }
           .nightmare-editor-frame {
-            border-color: rgba(87, 84, 163, 0.52) !important;
-            box-shadow: 0 16px 36px rgba(36, 20, 83, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            border-color: rgba(89, 86, 172, 0.52) !important;
+            box-shadow: 0 18px 40px rgba(26, 16, 62, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.04);
             background:
-              linear-gradient(180deg, rgba(11, 15, 30, 0.88), rgba(7, 9, 18, 0.9)) !important;
+              linear-gradient(180deg, rgba(7, 10, 18, 0.9), rgba(4, 6, 12, 0.94)) !important;
           }
           .nightmare-terminal-panel {
             position: relative;
             border: 1px solid transparent !important;
             background:
-              linear-gradient(rgba(10, 15, 31, 0.72), rgba(9, 12, 24, 0.78)) padding-box,
-              linear-gradient(125deg, rgba(255, 0, 255, 0.72), rgba(0, 247, 255, 0.76)) border-box !important;
-            box-shadow: 0 14px 34px rgba(85, 64, 157, 0.27), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
+              linear-gradient(rgba(7, 10, 18, 0.72), rgba(5, 7, 13, 0.82)) padding-box,
+              linear-gradient(126deg, rgba(255, 0, 255, 0.72), rgba(0, 247, 255, 0.74)) border-box !important;
+            box-shadow: 0 16px 34px rgba(76, 57, 150, 0.3), 0 0 20px rgba(113, 78, 212, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
           }
           .nightmare-terminal-header {
-            background: linear-gradient(90deg, rgba(14, 20, 37, 0.82), rgba(13, 18, 36, 0.64)) !important;
-            border-color: rgba(135, 118, 220, 0.34) !important;
-            color: #b9b4ff !important;
+            background: linear-gradient(90deg, rgba(11, 16, 31, 0.84), rgba(8, 13, 27, 0.72)) !important;
+            border-color: rgba(136, 118, 219, 0.36) !important;
+            color: #b8b2ff !important;
           }
           .nightmare-terminal-body {
-            background-color: rgba(7, 10, 20, 0.82) !important;
-            color: #f4f6ff !important;
+            background-color: rgba(4, 6, 12, 0.85) !important;
+            color: #f5f5ff !important;
           }
           .nightmare-terminal-input::placeholder {
-            color: rgba(209, 205, 255, 0.55);
+            color: rgba(209, 206, 255, 0.52);
           }
           @keyframes nightmare-stars-twinkle {
             0% {
-              opacity: 0.27;
+              opacity: var(--nightmare-star-opacity, 0.3);
+              filter: brightness(0.95) drop-shadow(0 0 2px rgba(169, 207, 255, 0.42));
             }
             100% {
-              opacity: 0.33;
+              opacity: calc(var(--nightmare-star-opacity, 0.3) + 0.08);
+              filter: brightness(1.04) drop-shadow(0 0 2px rgba(169, 207, 255, 0.42));
+            }
+          }
+          @keyframes nightmare-nebula-drift {
+            0% {
+              transform: translate3d(-1%, 0, 0) scale(1);
+            }
+            100% {
+              transform: translate3d(1%, -1.5%, 0) scale(1.03);
             }
           }
           @keyframes nightmare-city-drift {
@@ -1177,32 +1244,33 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
               transform: translateY(0);
             }
             100% {
-              transform: translateY(-4px);
+              transform: translateY(-3px);
             }
           }
           @keyframes nightmare-shooting {
             0% {
               opacity: 0;
-              transform: translate3d(-34vw, -16vh, 0) rotate(-27deg);
+              transform: translate3d(var(--nightmare-shooting-start-x, -36vw), -12vh, 0) rotate(var(--nightmare-shooting-tilt, -26deg));
             }
-            14% {
-              opacity: 0.95;
+            12% {
+              opacity: 0.72;
             }
             100% {
               opacity: 0;
-              transform: translate3d(120vw, 70vh, 0) rotate(-27deg);
+              transform: translate3d(var(--nightmare-shooting-end-x, 112vw), var(--nightmare-shooting-end-y, 58vh), 0) rotate(var(--nightmare-shooting-tilt, -26deg));
             }
           }
           @keyframes nightmare-caret-pulse {
             0%,
             100% {
-              box-shadow: 0 0 7px rgba(0, 247, 255, 0.84), 0 0 14px rgba(0, 247, 255, 0.48);
+              box-shadow: 0 0 8px rgba(0, 247, 255, 0.84), 0 0 15px rgba(0, 247, 255, 0.47);
             }
             50% {
-              box-shadow: 0 0 11px rgba(0, 247, 255, 0.94), 0 0 21px rgba(0, 247, 255, 0.68);
+              box-shadow: 0 0 12px rgba(0, 247, 255, 0.94), 0 0 24px rgba(0, 247, 255, 0.64);
             }
           }
           @media (prefers-reduced-motion: reduce) {
+            .nightmare-neon-glow .nightmare-nebula,
             .nightmare-neon-glow .nightmare-stars,
             .nightmare-neon-glow .nightmare-city-glow,
             .nightmare-neon-glow .nightmare-shooting-star,
@@ -1215,7 +1283,10 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
       {isNightmareTheme && (
         <>
           <span className="nightmare-depth-base" aria-hidden="true" />
-          <span className="nightmare-stars" aria-hidden="true" />
+          <span className="nightmare-nebula" aria-hidden="true" />
+          <span className="nightmare-stars" style={nightmareStarLayers?.layerA} aria-hidden="true" />
+          <span className="nightmare-stars" style={nightmareStarLayers?.layerB} aria-hidden="true" />
+          <span className="nightmare-stars" style={nightmareStarLayers?.layerC} aria-hidden="true" />
           <span className="nightmare-light-beams" aria-hidden="true" />
           <span className="nightmare-city-glow" aria-hidden="true" />
           {shootingStarSeed > 0 && (
