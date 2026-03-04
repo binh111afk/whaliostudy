@@ -919,24 +919,85 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
           .hyperwave-neon-glow .monaco-editor .mtk3,
           .hyperwave-neon-glow .monaco-editor .mtk5,
           .hyperwave-neon-glow .monaco-editor .mtk6 {
-            text-shadow: 0 0 2px #ff00ff80, 0 0 6px #ff00ff66, 0 0 12px #ff00ff40;
+            text-shadow: 0 0 2px #ff00ff9a, 0 0 7px #ff00ff7a, 0 0 14px #ff00ff52;
           }
           .hyperwave-neon-glow .monaco-editor .mtk12,
           .hyperwave-neon-glow .monaco-editor .mtk10 {
-            text-shadow: 0 0 2px #00ffff80, 0 0 6px #00ffff66, 0 0 12px #00ffff40;
+            text-shadow: 0 0 2px #00ffff9a, 0 0 7px #00ffff7a, 0 0 14px #00ffff52;
           }
           .hyperwave-neon-glow .monaco-editor .mtk8,
           .hyperwave-neon-glow .monaco-editor .mtk9 {
-            text-shadow: 0 0 2px #ffff0088, 0 0 6px #ffff006e, 0 0 12px #ffff0055;
+            text-shadow: 0 0 2px #ffff00aa, 0 0 8px #ffff0088, 0 0 16px #ffff0060;
           }
           .hyperwave-neon-glow .monaco-editor .mtk4,
           .hyperwave-neon-glow .monaco-editor .mtk11 {
-            text-shadow: 0 0 2px #89b4fa88, 0 0 6px #89b4fa66, 0 0 12px #89b4fa44;
+            text-shadow: 0 0 2px #89b4faaa, 0 0 7px #89b4fa7f, 0 0 14px #89b4fa55;
+          }
+          .hyperwave-neon-glow {
+            position: relative;
+            overflow: hidden;
+            background:
+              radial-gradient(130% 90% at 5% -10%, #00ffff20 0%, #00ffff00 52%),
+              radial-gradient(120% 100% at 105% 110%, #ff00ff24 0%, #ff00ff00 58%),
+              linear-gradient(180deg, #1a0530 0%, #120321 65%, #0b0118 100%);
+          }
+          .hyperwave-neon-glow::before {
+            content: '';
+            position: absolute;
+            inset: -25%;
+            pointer-events: none;
+            background:
+              conic-gradient(
+                from 0deg,
+                #00ffff10 0deg,
+                #ff00ff16 130deg,
+                #ffff0012 230deg,
+                #00ffff10 360deg
+              );
+            filter: blur(36px);
+            animation: hyperwave-aurora-spin 10s linear infinite;
+          }
+          .hyperwave-neon-glow::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+              180deg,
+              #ffffff00 0px,
+              #ffffff00 2px,
+              #00ffff10 3px
+            );
+            opacity: 0.18;
+            mix-blend-mode: screen;
+            animation: hyperwave-scanline 4s linear infinite;
+          }
+          .hyperwave-neon-glow .monaco-editor,
+          .hyperwave-neon-glow .monaco-editor .margin,
+          .hyperwave-neon-glow .monaco-editor-background {
+            background: transparent !important;
+          }
+          .hyperwave-neon-glow .monaco-editor .view-lines {
+            filter: saturate(1.14) contrast(1.05);
+          }
+          .hyperwave-neon-glow .monaco-editor .current-line {
+            box-shadow: inset 0 0 0 1px #00ffff2b, inset 0 0 18px #00ffff14;
+          }
+          .hyperwave-neon-glow .monaco-editor .selected-text {
+            box-shadow: 0 0 12px #3b82f680, inset 0 0 6px #3b82f655;
           }
           .hyperwave-neon-glow .monaco-editor .cursor {
             background-color: #ffff00 !important;
             box-shadow: 0 0 10px #ffff00, 0 0 22px #ffff0088;
             animation: hyperwave-cursor-pulse 1.5s ease-in-out infinite;
+          }
+          @keyframes hyperwave-aurora-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          @keyframes hyperwave-scanline {
+            0% { transform: translateY(-18px); }
+            100% { transform: translateY(18px); }
           }
           @keyframes hyperwave-cursor-pulse {
             0%,
@@ -950,6 +1011,10 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
             }
           }
           @media (prefers-reduced-motion: reduce) {
+            .hyperwave-neon-glow::before,
+            .hyperwave-neon-glow::after {
+              animation: none;
+            }
             .hyperwave-neon-glow .monaco-editor .cursor {
               animation: none;
             }
