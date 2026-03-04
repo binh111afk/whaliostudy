@@ -1,77 +1,163 @@
-// Nightmare - Tokyo cyberpunk night palette, tuned for long-session readability
+/**
+ * NIGHTMARE THEME
+ * "Code under falling stars"
+ * 
+ * A premium cinematic cyberpunk experience.
+ * Tokyo rooftop at 2AM under a living neon sky.
+ * 
+ * For full visual experience, companion CSS must be loaded:
+ * import './nightmareEffects.css'
+ */
+
 export default {
   base: 'vs-dark',
   inherit: true,
   rules: [
-    { token: '', foreground: 'f5f5ff', background: '05070d' },
-    { token: 'comment', foreground: '5f6cff', fontStyle: 'italic' },
-    { token: 'comment.line', foreground: '5f6cff', fontStyle: 'italic' },
-    { token: 'comment.block', foreground: '5f6cff', fontStyle: 'italic' },
+    // Base tokens
+    { token: '', foreground: 'e6f1ff', background: '05060a' },
+    
+    // Comments - Dimmed neon blue (#5c7cfa)
+    { token: 'comment', foreground: '5c7cfa', fontStyle: 'italic' },
+    { token: 'comment.line', foreground: '5c7cfa', fontStyle: 'italic' },
+    { token: 'comment.block', foreground: '5c7cfa', fontStyle: 'italic' },
+    { token: 'comment.doc', foreground: '5c7cfa', fontStyle: 'italic' },
 
-    { token: 'keyword', foreground: 'ff00ff' },
-    { token: 'keyword.control', foreground: 'ff00ff' },
-    { token: 'keyword.control.conditional', foreground: 'ff00ff' },
-    { token: 'keyword.control.loop', foreground: 'ff00ff' },
-    { token: 'keyword.control.flow', foreground: 'ff00ff' },
-    { token: 'keyword.control.return', foreground: 'ff00ff' },
-    { token: 'storage', foreground: 'ff00ff' },
-    { token: 'storage.type', foreground: 'ff00ff' },
-    { token: 'storage.modifier', foreground: 'ff00ff' },
-    { token: 'type', foreground: 'ff00ff' },
-    { token: 'type.identifier', foreground: 'ff00ff' },
-    { token: 'class', foreground: 'ff00ff' },
-    { token: 'interface', foreground: 'ff00ff' },
-    { token: 'struct', foreground: 'ff00ff' },
-    { token: 'enum', foreground: 'ff00ff' },
+    // Keywords - Neon magenta → pink gradient base (#ff00ff → #ff4dff)
+    // Using mid-point for gradient effect
+    { token: 'keyword', foreground: 'ff2aff' },
+    { token: 'keyword.control', foreground: 'ff2aff' },
+    { token: 'keyword.control.conditional', foreground: 'ff2aff' },
+    { token: 'keyword.control.loop', foreground: 'ff2aff' },
+    { token: 'keyword.control.flow', foreground: 'ff2aff' },
+    { token: 'keyword.control.return', foreground: 'ff2aff' },
+    { token: 'keyword.control.import', foreground: 'ff2aff' },
+    { token: 'keyword.control.export', foreground: 'ff2aff' },
+    { token: 'keyword.control.default', foreground: 'ff2aff' },
+    { token: 'keyword.other', foreground: 'ff2aff' },
+    { token: 'storage', foreground: 'ff2aff' },
+    { token: 'storage.modifier', foreground: 'ff2aff' },
 
-    { token: 'function', foreground: '00f7ff' },
-    { token: 'function.call', foreground: '00f7ff' },
-    { token: 'method', foreground: '00f7ff' },
+    // Types - Electric violet (#9d4edd)
+    { token: 'storage.type', foreground: '9d4edd' },
+    { token: 'type', foreground: '9d4edd' },
+    { token: 'type.identifier', foreground: '9d4edd' },
+    { token: 'entity.name.type', foreground: '9d4edd' },
+    { token: 'entity.name.class', foreground: '9d4edd' },
+    { token: 'support.type', foreground: '9d4edd' },
+    { token: 'support.class', foreground: '9d4edd' },
+
+    // Functions - Electric cyan (#00f7ff)
+    { token: 'entity.name.function', foreground: '00f7ff' },
     { token: 'support.function', foreground: '00f7ff' },
+    { token: 'meta.function-call', foreground: '00f7ff' },
 
-    { token: 'keyword.operator', foreground: 'ffffff' },
-    { token: 'operator', foreground: 'ffffff' },
-    { token: 'delimiter', foreground: 'ffffff' },
-    { token: 'delimiter.bracket', foreground: 'ffffff' },
+    // Strings - Toxic neon green (#00ff85)
+    { token: 'string', foreground: '00ff85' },
+    { token: 'string.quoted', foreground: '00ff85' },
+    { token: 'string.template', foreground: '00ff85' },
+    { token: 'string.escape', foreground: '00f7ff' },
+    { token: 'string.regexp', foreground: '00ff85' },
 
-    { token: 'variable', foreground: 'f5f5ff' },
-    { token: 'variable.parameter', foreground: 'f5f5ff' },
-    { token: 'identifier', foreground: 'f5f5ff' },
+    // Numbers - Neon orange (#ffae00)
+    { token: 'constant.numeric', foreground: 'ffae00' },
+    { token: 'constant.language', foreground: 'ffae00' },
+    { token: 'constant.character', foreground: 'ffae00' },
+    { token: 'keyword.constant', foreground: 'ffae00' },
 
-    { token: 'string', foreground: '39ff14' },
-    { token: 'string.escape', foreground: '39ff14' },
+    // Operators - Soft white (#f0f4ff)
+    { token: 'keyword.operator', foreground: 'f0f4ff' },
+    { token: 'punctuation', foreground: 'f0f4ff' },
+    { token: 'delimiter', foreground: 'f0f4ff' },
+    { token: 'delimiter.bracket', foreground: 'f0f4ff' },
+    { token: 'meta.brace', foreground: 'f0f4ff' },
 
-    { token: 'number', foreground: 'ff9f1c' },
-    { token: 'constant', foreground: 'ff9f1c' },
-    { token: 'constant.numeric', foreground: 'ff9f1c' },
-    { token: 'constant.language', foreground: 'ff9f1c' },
+    // Variables - Cool white (#e6f1ff)
+    { token: 'variable', foreground: 'e6f1ff' },
+    { token: 'variable.parameter', foreground: 'e6f1ff' },
+    { token: 'variable.other', foreground: 'e6f1ff' },
+    { token: 'entity.name.variable', foreground: 'e6f1ff' },
 
-    { token: 'tag', foreground: '00f7ff' },
-    { token: 'attribute.name', foreground: 'ff00ff' },
-    { token: 'attribute.value', foreground: '39ff14' },
-    { token: 'invalid', foreground: 'ff637d', fontStyle: 'underline' },
+    // HTML/JSX Tags
+    { token: 'entity.name.tag', foreground: '00f7ff' },
+    { token: 'entity.other.attribute-name', foreground: 'ff2aff' },
+
+    // Special
+    { token: 'invalid', foreground: 'ff5b86', fontStyle: 'underline' },
+    { token: 'invalid.deprecated', foreground: 'ff5b86', fontStyle: 'strikethrough' },
+    { token: 'markup.bold', foreground: 'ffae00', fontStyle: 'bold' },
+    { token: 'markup.italic', foreground: 'e6f1ff', fontStyle: 'italic' },
+    { token: 'markup.heading', foreground: '00f7ff', fontStyle: 'bold' },
   ],
   colors: {
-    'editor.foreground': '#f5f5ff',
-    'editor.background': '#05070d',
-    'editor.selectionBackground': '#7b5cff4d',
-    'editor.lineHighlightBackground': '#141b2f47',
+    // Editor base
+    'editor.foreground': '#e6f1ff',
+    'editor.background': '#05060a',
+    
+    // Selection - Translucent violet glass
+    'editor.selectionBackground': '#9d4edd33',
+    'editor.inactiveSelectionBackground': '#9d4edd1a',
+    'editor.selectionHighlightBackground': '#9d4edd26',
+    
+    // Active line - Subtle purple glass glow
+    'editor.lineHighlightBackground': '#1a0a2e26',
+    'editor.lineHighlightBorder': '#00000000',
+    
+    // Cursor - Neon cyan (pulse animation in CSS)
     'editorCursor.foreground': '#00f7ff',
-    'editorWhitespace.foreground': '#29314f',
-    'editorIndentGuide.background': '#1a2138',
-    'editorIndentGuide.activeBackground': '#375174',
-    'editor.selectionHighlightBackground': '#8661ff30',
-    'editor.wordHighlightBackground': '#ff00ff26',
-    'editor.wordHighlightStrongBackground': '#00f7ff33',
-    'editor.findMatchBackground': '#ff00ff66',
-    'editor.findMatchHighlightBackground': '#00f7ff55',
+    'editorCursor.background': '#05060a',
+    
+    // Find matches
+    'editor.findMatchBackground': '#ff2aff66',
+    'editor.findMatchHighlightBackground': '#ff2aff33',
+    'editor.findRangeHighlightBackground': '#00f7ff22',
+    
+    // Word highlights
+    'editor.wordHighlightBackground': '#00f7ff2a',
+    'editor.wordHighlightStrongBackground': '#00f7ff40',
+    
+    // Line numbers
     'editorLineNumber.foreground': '#4a5679',
-    'editorLineNumber.activeForeground': '#dce5ff',
-    'editorBracketMatch.background': '#202947',
+    'editorLineNumber.activeForeground': '#00f7ff',
+    
+    // Whitespace
+    'editorWhitespace.foreground': '#1a2138',
+    
+    // Indent guides
+    'editorIndentGuide.background': '#1a213826',
+    'editorIndentGuide.activeBackground': '#00f7ff40',
+    
+    // Brackets
+    'editorBracketMatch.background': '#00f7ff1a',
     'editorBracketMatch.border': '#00f7ff',
-    'editorGutter.background': '#05070d',
+    
+    // Gutter
+    'editorGutter.background': '#05060a',
     'editorGutter.modifiedBackground': '#00f7ff',
-    'editorGutter.addedBackground': '#39ff14',
+    'editorGutter.addedBackground': '#00ff85',
     'editorGutter.deletedBackground': '#ff5b86',
+    
+    // Scrollbar
+    'scrollbarSlider.background': '#9d4edd33',
+    'scrollbarSlider.hoverBackground': '#9d4edd55',
+    'scrollbarSlider.activeBackground': '#9d4edd77',
+    
+    // Overview ruler
+    'editorOverviewRuler.border': '#00000000',
+    'editorOverviewRuler.errorForeground': '#ff5b86',
+    'editorOverviewRuler.warningForeground': '#ffae00',
+    
+    // Minimap
+    'minimap.selectionHighlight': '#9d4edd66',
+    'minimap.findMatchHighlight': '#ff2aff55',
+    
+    // Widget (autocomplete, hover, etc.)
+    'editorWidget.background': '#0a0b1580',
+    'editorWidget.border': '#ff2aff66',
+    'editorWidget.foreground': '#e6f1ff',
+    'editorSuggestWidget.background': '#0a0b1599',
+    'editorSuggestWidget.border': '#ff2aff66',
+    'editorSuggestWidget.selectedBackground': '#9d4edd33',
+    'editorHoverWidget.background': '#0a0b1599',
+    'editorHoverWidget.border': '#00f7ff66',
   },
 };

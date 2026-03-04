@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nightmare Theme - Live Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #000;
+      color: #fff;
+      overflow: hidden;
+    }
+
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: rgba(5, 6, 10, 0.95);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 0, 255, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 1000;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #ff00ff, #00f7ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 2px;
+    }
+
+    .tagline {
+      font-size: 12px;
+      color: #9d4edd;
+      font-style: italic;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      background: rgba(157, 78, 221, 0.2);
+      border: 1px solid rgba(157, 78, 221, 0.5);
+      border-radius: 8px;
+      color: #e6f1ff;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+      background: rgba(157, 78, 221, 0.4);
+      border-color: rgba(157, 78, 221, 0.8);
+      box-shadow: 0 0 20px rgba(157, 78, 221, 0.4);
+    }
+
+    .btn.active {
+      background: rgba(0, 247, 255, 0.3);
+      border-color: rgba(0, 247, 255, 0.8);
+    }
+
+    #editor-container {
+      position: absolute;
+      top: 60px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+
+    .info-panel {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 16px 20px;
+      background: rgba(10, 11, 21, 0.9);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 247, 255, 0.4);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 40px rgba(0, 247, 255, 0.2);
+      font-size: 12px;
+      z-index: 999;
+      max-width: 280px;
+    }
+
+    .info-panel h3 {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #00f7ff;
+    }
+
+    .info-panel p {
+      color: #e6f1ff;
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+
+    .info-panel kbd {
+      background: rgba(157, 78, 221, 0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #ff00ff;
+      font-family: monospace;
+    }
+
+    .loading {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #05060a;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+    }
+
+    .loading.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .spinner {
+      width: 60px;
+      height: 60px;
+      border: 3px solid transparent;
+      border-top-color: #ff00ff;
+      border-right-color: #00f7ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/editor/editor.main.css">
+</head>
+<body>
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+  </div>
+
+  <div class="header">
+    <div>
+      <div class="logo">NIGHTMARE</div>
+      <div class="tagline">Code under falling stars</div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="shootStar">🌠 Shoot Star</button>
+      <button class="btn" id="togglePerf">⚡ Performance</button>
+      <button class="btn" id="toggleEffects" class="active">✨ Effects ON</button>
+    </div>
+  </div>
+
+  <div id="editor-container"></div>
+
+  <div class="info-panel">
+    <h3>🎮 Controls</h3>
+    <p>Press <kbd>Ctrl+Shift+S</kbd> to trigger shooting star</p>
+    <p>Shooting stars appear every 25-45 seconds automatically</p>
+    <p>Scroll to see parallax starfield effect</p>
+    <p>Stars twinkle at different rates for depth</p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+  <script type="module">
+    // Note: This demo uses CDN Monaco. For production, use proper imports.
+    // The theme files are imported below (adjust paths as needed)
+
+    const sampleCode = `/**
+ * NIGHTMARE THEME SHOWCASE
+ * Premium Cinematic Cyberpunk Experience
+ */
+
+// Keywords with neon magenta glow
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+
+// Types with electric violet
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+// Classes and functions
+class CyberpunkCity {
+  private lights: Array<string>;
+  private readonly name: string;
+
+  constructor(name: string) {
+    this.name = name;
+    this.lights = [];
+  }
+
+  // Functions with electric cyan glow
+  async fetchData(): Promise<User[]> {
+    try {
+      // Strings with toxic neon green
+      const response = await axios.get('/api/users');
+      return response.data;
+    } catch (error) {
+      // Comments with dimmed neon blue
+      console.error('Failed to fetch users:', error);
+      return [];
+    }
+  }
+
+  addNeonLight(color: string, intensity: number): void {
+    // Numbers with neon orange
+    if (intensity > 0 && intensity <= 100) {
+      this.lights.push(\`\${color}:\${intensity}%\`);
+    }
+  }
+
+  // Operators with soft white
+  calculateLuminance(r: number, g: number, b: number): number {
+    return 0.299 * r + 0.587 * g + 0.114 * b;
+  }
+}
+
+// Variables with cool white
+const tokyo = new CyberpunkCity('Tokyo');
+const neonColors = ['cyan', 'magenta', 'violet'];
+let totalIntensity = 0;
+
+// Control flow with keyword glow
+for (const color of neonColors) {
+  if (color === 'magenta') {
+    tokyo.addNeonLight(color, 95);
+  } else if (color === 'cyan') {
+    tokyo.addNeonLight(color, 90);
+  } else {
+    tokyo.addNeonLight(color, 85);
+  }
+}
+
+// Async operations
+async function initializeNightmare() {
+  const users = await tokyo.fetchData();
+  
+  users.forEach((user, index) => {
+    console.log(\`User \${index + 1}: \${user.name}\`);
+  });
+
+  return true;
+}
+
+// JSX/HTML with proper highlighting
+function NeonButton({ onClick, children }) {
+  return (
+    <button 
+      className="neon-button"
+      onClick={onClick}
+      style={{ 
+        color: '#00f7ff',
+        border: '1px solid #ff00ff'
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Regular expressions
+const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$/;
+
+// Constants and special values
+const MAX_BRIGHTNESS = 100;
+const MIN_BRIGHTNESS = 0;
+const DEFAULT_INTENSITY = 75;
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Complex nested structures
+const cityConfig = {
+  name: 'Neo-Tokyo',
+  coordinates: { lat: 35.6762, lng: 139.6503 },
+  atmosphere: {
+    skyColor: '#05060a',
+    neonColors: ['#ff00ff', '#00f7ff', '#9d4edd'],
+    starDensity: 0.8
+  },
+  features: [
+    'Multi-layer starfield',
+    'Shooting stars',
+    'Parallax depth',
+    'City glow horizon'
+  ]
+};
+
+// Export for module system
+export { CyberpunkCity, initializeNightmare, NeonButton };
+export default cityConfig;
+
+// End of showcase - Enjoy coding under the stars! 🌃✨
+`;
+
+    require.config({ 
+      paths: { 
+        vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' 
+      } 
+    });
+
+    require(['vs/editor/editor.main'], function() {
+      // Import theme (adjust path based on your setup)
+      // For this demo, we'll define it inline
+      const nightmareTheme = {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [
+          { token: '', foreground: 'e6f1ff', background: '05060a' },
+          { token: 'comment', foreground: '5c7cfa', fontStyle: 'italic' },
+          { token: 'keyword', foreground: 'ff2aff' },
+          { token: 'storage.type', foreground: '9d4edd' },
+          { token: 'entity.name.function', foreground: '00f7ff' },
+          { token: 'string', foreground: '00ff85' },
+          { token: 'constant.numeric', foreground: 'ffae00' },
+          { token: 'keyword.operator', foreground: 'f0f4ff' },
+          { token: 'variable', foreground: 'e6f1ff' },
+        ],
+        colors: {
+          'editor.foreground': '#e6f1ff',
+          'editor.background': '#05060a',
+          'editor.selectionBackground': '#9d4edd33',
+          'editor.lineHighlightBackground': '#1a0a2e26',
+          'editorCursor.foreground': '#00f7ff',
+          'editorLineNumber.foreground': '#4a5679',
+          'editorLineNumber.activeForeground': '#00f7ff',
+        }
+      };
+
+      monaco.editor.defineTheme('nightmare', nightmareTheme);
+
+      const editor = monaco.editor.create(document.getElementById('editor-container'), {
+        value: sampleCode,
+        language: 'typescript',
+        theme: 'nightmare',
+        fontSize: 14,
+        lineNumbers: 'on',
+        minimap: { enabled: true },
+        automaticLayout: true,
+        fontFamily: "'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace",
+        fontLigatures: true,
+        cursorBlinking: 'smooth',
+        cursorSmoothCaretAnimation: 'on',
+        smoothScrolling: true,
+      });
+
+      // Hide loading screen
+      document.getElementById('loading').classList.add('hidden');
+
+      // Button controls
+      document.getElementById('shootStar').addEventListener('click', () => {
+        alert('Shooting star triggered! (Effects JS needed for full implementation)');
+      });
+
+      document.getElementById('togglePerf').addEventListener('click', (e) => {
+        e.target.classList.toggle('active');
+        const isPerf = e.target.classList.contains('active');
+        e.target.textContent = isPerf ? '⚡ Performance ON' : '⚡ Performance OFF';
+      });
+
+      document.getElementById('toggleEffects').addEventListener('click', (e) => {
+        e.target.classList.toggle('active');
+        const isOn = e.target.classList.contains('active');
+        e.target.textContent = isOn ? '✨ Effects ON' : '✨ Effects OFF';
+      });
+
+      // Keyboard shortcut
+      document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+          e.preventDefault();
+          alert('🌠 Shooting star! (Full effects require nightmareEffects.js)');
+        }
+      });
+    });
+  </script>
+  
+  <!-- 
+    To enable full visual effects:
+    1. Link nightmareEffects.css
+    2. Import nightmareEffects.js
+    3. Call initNightmareEffects(container)
+    
+    See NIGHTMARE_README.md for complete integration guide
+  -->
+</body>
+</html>
