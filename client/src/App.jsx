@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import { Menu, X, Home, FileText, Users, LayoutGrid, Moon, Sun, Settings, LogOut, Save, User } from 'lucide-react';
@@ -623,6 +623,8 @@ function App() {
                     />
                   }
                 />
+                {/* Catch-all: redirect về trang chủ nếu không tìm thấy route */}
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>
 
