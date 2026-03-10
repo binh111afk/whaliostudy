@@ -236,8 +236,10 @@ function App() {
   const [isSplashFadingOut, setIsSplashFadingOut] = useState(false);
   const [splashError, setSplashError] = useState(null);
   const splashRetryTimeoutRef = useRef(null);
+  const splashAbsoluteTimeoutRef = useRef(null);
   const splashRetryCountRef = useRef(0);
-  const MAX_SPLASH_RETRIES = 5;
+  const MAX_SPLASH_RETRIES = 3;
+  const MAX_SPLASH_TIME = 3000; // 3 giây tuyệt đối
 
   // 2. Dark Mode State (Mặc định Light Mode)
   const [darkMode, setDarkMode] = useState(() => {
@@ -260,7 +262,17 @@ function App() {
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        console.error('Failed to parse saved user:', e);
+        localStorage.removeItem('user');
+      }
+    } else {
+      // Không có user, tắt splash ngay
+      setTimeout(() => {
+        setIsSplashVisible(false);
+      }, 500);
     }
   }, []);
 
@@ -377,6 +389,13 @@ function App() {
       }
     };
 
+    const clearAbsoluteTimer = () => {
+      if (splashAbsoluteTimeoutRef.current) {
+        clearTimeout(splashAbsoluteTimeoutRef.current);
+        splashAbsoluteTimeoutRef.current = null;
+      }
+    };
+
     const resolveActiveUsername = () => {
       if (user?.username) return user.username;
 
@@ -391,6 +410,7 @@ function App() {
     };
 
     const hideSplashWithFade = () => {
+      if (cancelled) return;
       setIsSplashFadingOut(true);
       window.setTimeout(() => {
         if (!cancelled) {
@@ -399,23 +419,36 @@ function App() {
       }, 520);
     };
 
+    // Timeout tuyệt đối - tắt splash sau MAX_SPLASH_TIME bất kể điều kiện gì
+    splashAbsoluteTimeoutRef.current = window.setTimeout(() => {
+      console.log('Absolute timeout reached, hiding splash');
+      hideSplashWithFade();
+    }, MAX_SPLASH_TIME);
+
+    // Kiểm tra có user không trước khi warmup
+    const activeUsername = resolveActiveUsername();
+    if (!activeUsername) {
+      console.log('No user detected at mount, skipping warmup');
+      clearAbsoluteTimer();
+      // Tắt splash nhanh nếu không có user
+      setTimeout(hideSplashWithFade, 100);
+      return () => {
+        cancelled = true;
+        clearRetryTimer();
+        clearAbsoluteTimer();
+      };
+    }
+
     const warmDashboardBatch = async () => {
       if (cancelled) return;
 
       const activeUsername = resolveActiveUsername();
       
-      // Nếu không có username sau 3 lần thử, tắt splash luôn
+      // Nếu không có username ngay từ đầu, tắt splash ngay
       if (!activeUsername) {
-        splashRetryCountRef.current += 1;
-        
-        if (splashRetryCountRef.current >= 3) {
-          console.log('No user found after retries, hiding splash');
-          hideSplashWithFade();
-          return;
-        }
-        
-        clearRetryTimer();
-        splashRetryTimeoutRef.current = window.setTimeout(warmDashboardBatch, 300);
+        console.log('No user found, hiding splash immediately');
+        clearAbsoluteTimer();
+        hideSplashWithFade();
         return;
       }
 
@@ -428,6 +461,7 @@ function App() {
         if (cancelled) return;
 
         if (response.ok && payload?.success) {
+          clearAbsoluteTimer();
           hideSplashWithFade();
           return;
         }
@@ -441,6 +475,7 @@ function App() {
         
         // Kiểm tra nếu là lỗi 401
         if (error?.response?.status === 401 || error?.status === 401) {
+          clearAbsoluteTimer();
           setSplashError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
           return;
         }
@@ -449,22 +484,25 @@ function App() {
       // Tăng số lần retry
       splashRetryCountRef.current += 1;
       
-      // Nếu retry quá nhiều lần, tắt splash luôn thay vì hiện lỗi
+      // Nếu retry quá nhiều lần, tắt splash luôn
       if (splashRetryCountRef.current >= MAX_SPLASH_RETRIES) {
-        console.warn('Max retries reached, hiding splash anyway');
+        console.warn('Max retries reached, hiding splash');
+        clearAbsoluteTimer();
         hideSplashWithFade();
         return;
       }
 
       clearRetryTimer();
-      splashRetryTimeoutRef.current = window.setTimeout(warmDashboardBatch, 1500);
+      splashRetryTimeoutRef.current = window.setTimeout(warmDashboardBatch, 800);
     };
 
+    // Bắt đầu warmup
     warmDashboardBatch();
 
     return () => {
       cancelled = true;
       clearRetryTimer();
+      clearAbsoluteTimer();
     };
   }, [user?.username, isSplashVisible]);
 
