@@ -731,7 +731,7 @@ const corsOptions = {
     optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 console.log(`✅  CORS enabled. Credentials: true. Origins: ${ALLOWED_CORS_ORIGINS.join(', ')}`);
 if (compression) {
     app.use('/api', compression({
