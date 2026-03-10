@@ -21,7 +21,7 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
 
   // Mặc định có 1 câu hỏi rỗng để không bị lỗi UI
   const [questions, setQuestions] = useState([
-    { question: "", type: "multiple_choice", options: ["", "", "", ""], correctAnswer: 0 },
+    { question: "", type: "multiple_choice", options: ["", "", "", ""], correctAnswer: 0, correctText: "" },
   ]);
 
   // Ref cho input file ẩn
@@ -189,6 +189,7 @@ const parseHtmlToQuestions = (htmlString) => {
             type: "multiple_choice",
             options: ["", "", "", ""],
             correctAnswer: 0,
+            correctText: "",
           };
         }
       
@@ -240,21 +241,26 @@ const parseHtmlToQuestions = (htmlString) => {
         if (rawQuestions.length === 0) return alert("File JSON rỗng!");
 
         const mappedQuestions = rawQuestions.map((q) => {
-          const normalizedType = q.type === "essay" ? "essay" : "multiple_choice";
+          const normalizedType = (q.type === "short_answer" || q.type === "essay")
+            ? "short_answer"
+            : "multiple_choice";
           return {
             question: q.question || "",
             type: normalizedType,
             options:
-              normalizedType === "essay"
+              normalizedType === "short_answer"
                 ? []
                 : Array.isArray(q.options)
                   ? [0, 1, 2, 3].map((i) => q.options[i] || "")
                   : ["", "", "", ""],
-            correctAnswer: normalizedType === "essay"
+            correctAnswer: normalizedType === "short_answer"
               ? -1
               : typeof q.answer === "number"
                 ? q.answer
                 : 0,
+            correctText: normalizedType === "short_answer"
+              ? String(q.answer ?? "").trim()
+              : "",
           };
         });
 
@@ -274,7 +280,7 @@ const parseHtmlToQuestions = (htmlString) => {
   const handleAddQuestion = () => {
     setQuestions([
       ...questions,
-      { question: "", type: "multiple_choice", options: ["", "", "", ""], correctAnswer: 0 },
+      { question: "", type: "multiple_choice", options: ["", "", "", ""], correctAnswer: 0, correctText: "" },
     ]);
     // Cuộn xuống cuối
     setTimeout(
@@ -312,12 +318,21 @@ const parseHtmlToQuestions = (htmlString) => {
     setQuestions(newQs);
   };
 
+  const handleShortAnswerChange = (qIndex, val) => {
+    const newQs = [...questions];
+    newQs[qIndex].correctText = val;
+    setQuestions(newQs);
+  };
+
   const handleQuestionTypeChange = (qIndex, nextType) => {
     const newQs = [...questions];
     newQs[qIndex].type = nextType;
-    if (nextType === "essay") {
+    if (nextType === "short_answer") {
       newQs[qIndex].options = [];
       newQs[qIndex].correctAnswer = -1;
+      if (typeof newQs[qIndex].correctText !== "string") {
+        newQs[qIndex].correctText = "";
+      }
     } else {
       if (!Array.isArray(newQs[qIndex].options) || newQs[qIndex].options.length !== 4) {
         newQs[qIndex].options = ["", "", "", ""];
@@ -325,6 +340,7 @@ const parseHtmlToQuestions = (htmlString) => {
       if (!Number.isInteger(newQs[qIndex].correctAnswer) || newQs[qIndex].correctAnswer < 0) {
         newQs[qIndex].correctAnswer = 0;
       }
+      newQs[qIndex].correctText = "";
     }
     setQuestions(newQs);
   };
@@ -338,7 +354,7 @@ const parseHtmlToQuestions = (htmlString) => {
     // Kiểm tra dữ liệu trống
     const hasEmpty = questions.some((q) => {
       if (!q.question.trim()) return true;
-      if (q.type === "essay") return false;
+      if (q.type === "short_answer") return !String(q.correctText || "").trim();
       return !Array.isArray(q.options) || q.options.some((o) => !o.trim());
     });
     if (hasEmpty) {
@@ -359,8 +375,8 @@ const parseHtmlToQuestions = (htmlString) => {
       questions: questions.map((q) => ({
         question: q.question,
         type: q.type || "multiple_choice",
-        options: q.type === "essay" ? [] : q.options,
-        answer: q.type === "essay" ? null : q.correctAnswer,
+        options: q.type === "short_answer" ? [] : q.options,
+        answer: q.type === "short_answer" ? String(q.correctText || "").trim() : q.correctAnswer,
       })),
       limit: questions.length,
       isStatic: false,
@@ -492,13 +508,13 @@ const parseHtmlToQuestions = (htmlString) => {
           </div>
 
           {/* HƯỚNG DẪN */}
-          <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 p-4 rounded-xl text-sm text-blue-800 dark:text-blue-200 flex items-start gap-3">
-            <div className="bg-blue-100 dark:bg-blue-900/60 p-2 rounded-lg shrink-0">
-              <AlertCircle size={18} />
-            </div>
-            <div>
-              <p className="font-bold mb-1">Mẹo nhập file Word:</p>
-              <ul className="list-disc pl-4 space-y-1 text-blue-700 dark:text-blue-300">
+            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 p-4 rounded-xl text-sm text-blue-800 dark:text-blue-200 flex items-start gap-3">
+              <div className="bg-blue-100 dark:bg-blue-900/60 p-2 rounded-lg shrink-0">
+                <AlertCircle size={18} />
+              </div>
+              <div>
+                <p className="font-bold mb-1">Mẹo nhập file Word:</p>
+                <ul className="list-disc pl-4 space-y-1 text-blue-700 dark:text-blue-300">
                 <li>
                   Hệ thống hỗ trợ cả định dạng <b>Mỗi câu 1 dòng</b> và{" "}
                   <b>Dính chùm (Câu 1... A... B...)</b>.
@@ -512,9 +528,12 @@ const parseHtmlToQuestions = (htmlString) => {
                   <b>Lưu ý quan trọng:</b> Chỉ bôi đậm nội dung đáp án, không
                   bôi đậm cả dòng chứa nhiều đáp án.
                 </li>
-              </ul>
+                </ul>
+                <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">
+                  Với câu trả lời ngắn, bạn có thể tạo thủ công trong danh sách câu hỏi và nhập đáp án mẫu.
+                </p>
+              </div>
             </div>
-          </div>
 
           {/* DANH SÁCH CÂU HỎI */}
           <div className="space-y-4">
@@ -548,7 +567,7 @@ const parseHtmlToQuestions = (htmlString) => {
                       title="Chọn loại câu hỏi"
                     >
                       <option value="multiple_choice">Trắc nghiệm</option>
-                      <option value="essay">Tự luận</option>
+                      <option value="short_answer">Trả lời ngắn</option>
                     </select>
                   </div>
                   <button
@@ -569,9 +588,20 @@ const parseHtmlToQuestions = (htmlString) => {
                 />
 
                 {/* 4 Đáp án */}
-                {q.type === "essay" ? (
-                  <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/60 p-4 text-sm text-gray-600 dark:text-gray-300">
-                    Câu tự luận không cần đáp án trắc nghiệm. Người học sẽ nhập câu trả lời khi làm bài.
+                {q.type === "short_answer" ? (
+                  <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/60 p-4 text-sm text-gray-600 dark:text-gray-300 space-y-3">
+                    <div>
+                      Trả lời ngắn: người tạo đề nhập đáp án mẫu. Khi làm bài, người học trả lời đúng nếu trùng chữ (không phân biệt hoa thường).
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Đáp án</label>
+                      <input
+                        value={q.correctText || ""}
+                        onChange={(e) => handleShortAnswerChange(qIdx, e.target.value)}
+                        className="w-full p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl outline-none text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+                        placeholder="Ví dụ: đạo đức học"
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -70,7 +70,11 @@ export const ExamRunner = ({ exam, mode, onExit }) => {
                     let currentOptions = [...safeOptions];
                     let newAnswerIndex = safeAnswer;
 
-                    if (q.type !== 'essay' && currentOptions.length > 0 && safeAnswer >= 0 && safeAnswer < currentOptions.length) {
+                    const normalizedType = (q.type === 'short_answer' || q.type === 'essay')
+                        ? 'short_answer'
+                        : 'multiple_choice';
+
+                    if (normalizedType === 'multiple_choice' && currentOptions.length > 0 && safeAnswer >= 0 && safeAnswer < currentOptions.length) {
                         const correctContent = currentOptions[safeAnswer];
                         currentOptions = currentOptions.sort(() => Math.random() - 0.5);
                         newAnswerIndex = currentOptions.indexOf(correctContent);
@@ -81,7 +85,8 @@ export const ExamRunner = ({ exam, mode, onExit }) => {
                         internalId: idx + 1,
                         options: currentOptions,
                         correctAnswer: newAnswerIndex,
-                        type: q.type || 'multiple_choice'
+                        type: normalizedType,
+                        correctText: typeof q.answer === 'string' ? q.answer : ''
                     };
                 });
 
@@ -137,27 +142,44 @@ export const ExamRunner = ({ exam, mode, onExit }) => {
         setAnswers(prev => ({ ...prev, [qId]: text }));
     };
 
-    const handleSubmit = (auto = false) => {
-        if (!auto && mode === 'real') {
-            const answeredCount = Object.keys(answers).length;
-            if (answeredCount < questions.length) {
-                if (!confirm(`Bạn mới làm ${answeredCount}/${questions.length} câu. Bạn có chắc muốn nộp bài?`)) return;
+        const normalizeShortAnswer = (value) => {
+            return String(value || '')
+                .toLowerCase()
+                .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        };
+
+        const handleSubmit = (auto = false) => {
+            if (!auto && mode === 'real') {
+                const answeredCount = Object.keys(answers).length;
+                if (answeredCount < questions.length) {
+                    if (!confirm(`Bạn mới làm ${answeredCount}/${questions.length} câu. Bạn có chắc muốn nộp bài?`)) return;
             } else {
                 if (!confirm("Xác nhận nộp bài thi?")) return;
             }
         }
 
         setIsSubmitted(true);
-        clearInterval(timerRef.current);
+            clearInterval(timerRef.current);
 
-        let correctCount = 0;
-        questions.forEach(q => {
-            if (q.type !== 'essay' && answers[q.internalId] === q.correctAnswer) {
-                correctCount++;
-            }
-        });
-        setScore(correctCount);
-    };
+            let correctCount = 0;
+            questions.forEach(q => {
+                if (q.type === 'short_answer') {
+                    const userText = normalizeShortAnswer(answers[q.internalId]);
+                    const expectedText = normalizeShortAnswer(q.correctText || q.answer);
+                    if (userText && expectedText && userText === expectedText) {
+                        correctCount++;
+                    }
+                    return;
+                }
+
+                if (answers[q.internalId] === q.correctAnswer) {
+                    correctCount++;
+                }
+            });
+            setScore(correctCount);
+        };
 
     const formatTime = (seconds) => {
         const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -171,17 +193,26 @@ export const ExamRunner = ({ exam, mode, onExit }) => {
 
         // --- LOGIC CHO CHẾ ĐỘ LUYỆN TẬP (Hiện màu ngay khi chọn) ---
         if (mode === 'practice' && userAns !== undefined) {
-            if (q.type === 'essay') return 'bg-yellow-100 border-yellow-300 text-yellow-800';
-            if (userAns === q.correctAnswer) return 'bg-green-500 text-white border-green-500'; // Đúng -> Xanh
-            return 'bg-red-500 text-white border-red-500'; // Sai -> Đỏ
+            if (q.type === 'short_answer') {
+                const isMatch = normalizeShortAnswer(userAns) === normalizeShortAnswer(q.correctText || q.answer);
+                return isMatch ? 'bg-green-500 text-white border-green-500' : 'bg-red-500 text-white border-red-500';
+            }
+            if (userAns === q.correctAnswer) return 'bg-green-500 text-white border-green-500';
+            return 'bg-red-500 text-white border-red-500';
         }
 
         // --- LOGIC KHI ĐÃ NỘP BÀI (Chế độ thi thật sau khi nộp) ---
         if (isSubmitted) {
-            if (q.type === 'essay') return 'bg-yellow-100 border-yellow-300 text-yellow-800';
+            if (q.type === 'short_answer') {
+                const isMatch = normalizeShortAnswer(userAns) === normalizeShortAnswer(q.correctText || q.answer);
+                if (userAns !== undefined && userAns !== '') {
+                    return isMatch ? 'bg-green-500 text-white border-green-500' : 'bg-red-500 text-white border-red-500';
+                }
+                return 'bg-white border-red-300 text-red-400';
+            }
             if (userAns === q.correctAnswer) return 'bg-green-500 text-white border-green-500';
             if (userAns !== undefined && userAns !== q.correctAnswer) return 'bg-red-500 text-white border-red-500';
-            return 'bg-white border-red-300 text-red-400'; // Chưa làm
+            return 'bg-white border-red-300 text-red-400';
         }
 
         // --- LOGIC KHI ĐANG LÀM BÀI (Chế độ thi thật) ---
@@ -255,15 +286,23 @@ export const ExamRunner = ({ exam, mode, onExit }) => {
                                     <div className="text-gray-800 font-medium text-lg leading-relaxed whitespace-pre-line">{q.question}</div>
                                 </div>
 
-                                {q.type === 'essay' ? (
-                                    <textarea
-                                        className="w-full p-4 border rounded-xl bg-gray-50 focus:bg-white transition-colors outline-none focus:ring-2 focus:ring-blue-200 text-sm md:text-base"
-                                        rows={5}
-                                        placeholder="Nhập câu trả lời..."
-                                        value={userAns || ''}
-                                        onChange={(e) => handleEssayAnswer(q.internalId, e.target.value)}
-                                        disabled={isSubmitted || (mode === 'practice' && userAns)} // Khóa nếu đã trả lời ở practice
-                                    />
+                                {q.type === 'short_answer' ? (
+                                    <div className="space-y-3">
+                                        <textarea
+                                            className="w-full p-4 border rounded-xl bg-gray-50 focus:bg-white transition-colors outline-none focus:ring-2 focus:ring-blue-200 text-sm md:text-base"
+                                            rows={4}
+                                            placeholder="Nhập câu trả lời..."
+                                            value={userAns || ''}
+                                            onChange={(e) => handleEssayAnswer(q.internalId, e.target.value)}
+                                            disabled={isSubmitted || (mode === 'practice' && userAns)} // Khóa nếu đã trả lời ở practice
+                                        />
+                                        {showResult && (
+                                            <div className="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-sm p-3">
+                                                <span className="font-bold">Đáp án mẫu:</span>{' '}
+                                                <span className="font-medium">{q.correctText || q.answer || 'Chưa có đáp án'}</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 ) : (
                                     <div className="space-y-3 pl-0 md:pl-12">
                                         {q.options && q.options.map((opt, optIdx) => {
