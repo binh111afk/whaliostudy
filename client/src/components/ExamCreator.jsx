@@ -107,12 +107,19 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(cleanHtml, "text/html");
     
-    // 3. Lấy tất cả text content và chia thành dòng
+    // 3. Lấy tất cả text content theo block để giữ cấu trúc dòng
+    const blockNodes = Array.from(doc.querySelectorAll("p, li"));
+    const blockLines = blockNodes
+      .map((node) => (node.innerText || node.textContent || "").trim())
+      .filter(Boolean);
+
     const textContent = doc.body.textContent || "";
-    const lines = textContent
+    const rawLines = textContent
       .split("\n")
       .map(line => line.trim())
       .filter(line => line.length > 0);
+
+    const lines = blockLines.length > 0 ? blockLines : rawLines;
   
     // 4. Xử lý các dòng dính nhau (Câu hỏi + đáp án trên 1 dòng)
     const processedLines = [];
@@ -180,6 +187,8 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
         /^\s*Câu\s*\d+[\.:)\-–—]\s*(.+?)\s*[:：]\s*(.+)$/i,
         /^\s*\d+[\.)-–—]\s*(.+?)\s*[:：]\s*(.+)$/,
         /^\s*\d+[\.)-–—]\s*(.+?)\s*[=≡→=>]\s*(.+)$/,
+        /^\s*Câu\s*\d+[\.:)\-–—]\s*(.+?)\s+là\s*[:：]?\s*(.+)$/i,
+        /^\s*\d+[\.)-–—]\s*(.+?)\s+là\s*[:：]?\s*(.+)$/i,
         /^(.+?)\s*[:：]\s*(.+)$/
       ];
 
