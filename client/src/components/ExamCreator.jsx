@@ -278,9 +278,12 @@ const parseHtmlToQuestions = (htmlString) => {
   // 3. CÁC HÀM TƯƠNG TÁC GIAO DIỆN (NHẬP TAY)
   // ============================================================
   const handleAddQuestion = () => {
+    const lastType = questions[questions.length - 1]?.type || "multiple_choice";
     setQuestions([
       ...questions,
-      { question: "", type: "multiple_choice", options: ["", "", "", ""], correctAnswer: 0, correctText: "" },
+      lastType === "short_answer"
+        ? { question: "", type: "short_answer", options: [], correctAnswer: -1, correctText: "" }
+        : { question: "", type: "multiple_choice", options: ["", "", "", ""], correctAnswer: 0, correctText: "" },
     ]);
     // Cuộn xuống cuối
     setTimeout(
