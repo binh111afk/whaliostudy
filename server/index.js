@@ -14,6 +14,7 @@ const geoip = require('geoip-lite');
 const UAParser = require('ua-parser-js');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const { createClient: createSupabaseClient } = require('@supabase/supabase-js');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const PQueue = require('p-queue').default;
 const { Worker } = require('worker_threads');
@@ -1457,6 +1458,27 @@ cloudinary.config({
 
 console.log('☁️  Cloudinary configured:', process.env.CLOUDINARY_CLOUD_NAME ? '✅' : '❌');
 
+// ==================== SUPABASE CONFIGURATION ====================
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_BUCKET_NAME = process.env.SUPABASE_BUCKET_NAME;
+
+const createSupabaseAdminClient = () => {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+        console.warn('🟨 Supabase admin client not configured (missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY).');
+        return null;
+    }
+    return createSupabaseClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false
+        }
+    });
+};
+
+const supabase = createSupabaseAdminClient();
+console.log('🟦 Supabase storage configured:', supabase && SUPABASE_BUCKET_NAME ? '✅' : '❌');
+
 // ==================== MONGODB CONNECTION ====================
 const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/whalio';
 
@@ -1817,13 +1839,17 @@ const gpaSchema = new mongoose.Schema({
 // Document Schema
 const documentSchema = new mongoose.Schema({
     name: { type: String, required: true },
+    title: { type: String },
     uploader: { type: String, required: true },
     uploaderUsername: { type: String, ref: 'User' },
     date: { type: String },
     time: { type: String },
     type: { type: String, default: 'other' },
     path: { type: String, required: true },
+    fileUrl: { type: String },
     size: { type: Number, default: 0 },
+    fileSize: { type: Number, default: 0 },
+    storageSource: { type: String, default: 'cloudinary', enum: ['cloudinary', 'supabase'] },
     downloadCount: { type: Number, default: 0 },
     course: { type: String, default: '' },
     visibility: { type: String, default: 'public', enum: ['public', 'private'] },
@@ -3259,12 +3285,15 @@ const upload = multer({
     }
 });
 
-// ==================== DOCUMENT UPLOAD WITH DIRECT CLOUDINARY SDK ====================
-// 🔥 Sử dụng temporary disk storage + Cloudinary SDK để tránh giữ file lớn trong RAM
+// ==================== DOCUMENT UPLOAD WITH CLOUDINARY/SUPABASE ====================
+const DOCUMENT_CLOUDINARY_MAX_BYTES = 20 * 1024 * 1024; // 20MB
+const DOCUMENT_SUPABASE_MAX_BYTES = 50 * 1024 * 1024; // 50MB
+
+// 🔥 Sử dụng memoryStorage để kiểm tra dung lượng và điều hướng lưu trữ
 // 🛡️ [ENTERPRISE] Áp dụng bảo mật tương tự upload chính
 const documentUpload = multer({
-    storage: tempDiskStorage,
-    limits: { fileSize: 30 * 1024 * 1024 }, // 30MB
+    storage: multer.memoryStorage(),
+    limits: { fileSize: DOCUMENT_SUPABASE_MAX_BYTES },
     fileFilter: (req, file, cb) => {
         const ext = path.extname(file.originalname).toLowerCase();
         
@@ -3288,6 +3317,31 @@ const documentUpload = multer({
         }
     }
 });
+
+function fixCloudinaryUrlForExtension(secureUrl, ext) {
+    const imageFormats = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
+    const videoFormats = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
+    const rawFormats = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.rar', '.zip', '.7z'];
+
+    let finalUrl = secureUrl;
+    let logMessage = '';
+
+    if (rawFormats.includes(ext)) {
+        finalUrl = finalUrl.replace('/image/upload/', '/raw/upload/');
+        logMessage = `   📄 Office/Archive file → Fixed to RAW: ${finalUrl}`;
+    } else if (ext === '.pdf') {
+        logMessage = `   📕 PDF file → Keep original: ${finalUrl}`;
+    } else if (imageFormats.includes(ext)) {
+        logMessage = `   🖼️ Image file → Keep original: ${finalUrl}`;
+    } else if (videoFormats.includes(ext)) {
+        logMessage = `   🎬 Video file → Keep original: ${finalUrl}`;
+    } else {
+        finalUrl = finalUrl.replace('/image/upload/', '/raw/upload/');
+        logMessage = `   📎 Other file → Fixed to RAW: ${finalUrl}`;
+    }
+
+    return { finalUrl, logMessage };
+}
 
 // Helper: Upload file path to Cloudinary with full control
 async function uploadToCloudinary(filePath, originalFilename) {
@@ -3323,32 +3377,10 @@ async function uploadToCloudinary(filePath, originalFilename) {
         console.log(`   → Resource type: ${result.resource_type}`);
         console.log(`   → Format: ${result.format}`);
 
-        // ==================== URL FIX LOGIC ====================
-        // 🔥 WHITELIST: Only these formats need /raw/upload/ for Microsoft Viewer
-        const rawFormats = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.rar', '.zip', '.7z'];
-
-        // Use 'let' to allow reassignment
-        let finalUrl = result.secure_url;
-
-        if (rawFormats.includes(ext)) {
-            // Office & Archive files: Force /raw/upload/ for Microsoft Office Viewer
-            finalUrl = finalUrl.replace('/image/upload/', '/raw/upload/');
-            console.log(`   📄 Office/Archive file → Fixed to RAW: ${finalUrl}`);
-        } else if (ext === '.pdf') {
-            // PDF: Keep original URL (/image/upload/) - Cloudinary allows PDF delivery
-            console.log(`   📕 PDF file → Keep original: ${finalUrl}`);
-        } else if (imageFormats.includes(ext)) {
-            // Images: Keep original URL
-            console.log(`   🖼️ Image file → Keep original: ${finalUrl}`);
-        } else if (videoFormats.includes(ext)) {
-            // Videos: Keep original URL
-            console.log(`   🎬 Video file → Keep original: ${finalUrl}`);
-        } else {
-            // Unknown files: Force /raw/upload/ to be safe
-            finalUrl = finalUrl.replace('/image/upload/', '/raw/upload/');
-            console.log(`   📎 Other file → Fixed to RAW: ${finalUrl}`);
+        const { finalUrl, logMessage } = fixCloudinaryUrlForExtension(result.secure_url, ext);
+        if (logMessage) {
+            console.log(logMessage);
         }
-        // ==================== END URL FIX LOGIC ====================
 
         return {
             ...result,
@@ -3358,6 +3390,124 @@ async function uploadToCloudinary(filePath, originalFilename) {
     } catch (error) {
         console.error('❌ Cloudinary upload error:', error);
         throw error;
+    }
+}
+
+async function uploadBufferToCloudinary(fileBuffer, originalFilename) {
+    const ext = path.extname(originalFilename).toLowerCase();
+    const decodedName = decodeFileName(originalFilename);
+    const safeName = normalizeFileName(decodedName);
+    const resourceType = 'auto';
+
+    console.log(`☁️ Uploading to Cloudinary (buffer): ${originalFilename}`);
+    console.log(`   → resource_type: ${resourceType}, extension: ${ext}`);
+
+    return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+            {
+                folder: 'whalio-documents',
+                resource_type: resourceType,
+                public_id: safeName,
+                access_mode: 'public',
+                type: 'upload'
+            },
+            (error, result) => {
+                if (error || !result) {
+                    console.error('❌ Cloudinary upload error:', error);
+                    return reject(error || new Error('Cloudinary upload failed'));
+                }
+
+                console.log(`✅ Cloudinary upload success!`);
+                console.log(`   → URL: ${result.secure_url}`);
+                console.log(`   → Resource type: ${result.resource_type}`);
+                console.log(`   → Format: ${result.format}`);
+
+                const { finalUrl, logMessage } = fixCloudinaryUrlForExtension(result.secure_url, ext);
+                if (logMessage) {
+                    console.log(logMessage);
+                }
+
+                resolve({
+                    ...result,
+                    secure_url: finalUrl,
+                    original_secure_url: result.secure_url
+                });
+            }
+        );
+
+        stream.end(fileBuffer);
+    });
+}
+
+async function uploadToSupabaseStorage(fileBuffer, originalFilename, mimeType) {
+    if (!supabase || !SUPABASE_BUCKET_NAME) {
+        throw new Error('Supabase Storage chưa được cấu hình đầy đủ');
+    }
+
+    const decodedName = decodeFileName(originalFilename);
+    const safeName = normalizeFileName(decodedName);
+    const objectPath = `whalio-documents/${safeName}`;
+
+    const { error: uploadError } = await supabase
+        .storage
+        .from(SUPABASE_BUCKET_NAME)
+        .upload(objectPath, fileBuffer, {
+            contentType: mimeType || 'application/octet-stream',
+            cacheControl: '3600',
+            upsert: false
+        });
+
+    if (uploadError) {
+        throw new Error(uploadError.message || 'Supabase upload failed');
+    }
+
+    const { data: publicData } = supabase
+        .storage
+        .from(SUPABASE_BUCKET_NAME)
+        .getPublicUrl(objectPath);
+
+    const publicUrl = publicData?.publicUrl || '';
+    if (!publicUrl) {
+        throw new Error('Không lấy được public URL từ Supabase');
+    }
+
+    return { publicUrl, objectPath };
+}
+
+function extractCloudinaryPublicIdFromUrl(fileUrl) {
+    if (!fileUrl) return '';
+    try {
+        const cleaned = fileUrl.split('?')[0];
+        const uploadMarker = '/upload/';
+        const markerIndex = cleaned.indexOf(uploadMarker);
+        if (markerIndex === -1) return '';
+        let afterUpload = cleaned.slice(markerIndex + uploadMarker.length);
+        // Remove version segment if present (v12345/)
+        afterUpload = afterUpload.replace(/^v[0-9]+\/+/i, '');
+        return afterUpload.replace(/^\/+/, '');
+    } catch (err) {
+        return '';
+    }
+}
+
+function detectCloudinaryResourceTypeFromUrl(fileUrl) {
+    if (!fileUrl) return 'raw';
+    if (fileUrl.includes('/image/upload/')) return 'image';
+    if (fileUrl.includes('/video/upload/')) return 'video';
+    if (fileUrl.includes('/raw/upload/')) return 'raw';
+    return 'raw';
+}
+
+function extractSupabaseObjectPathFromPublicUrl(publicUrl) {
+    if (!publicUrl || !SUPABASE_BUCKET_NAME) return '';
+    try {
+        const cleaned = publicUrl.split('?')[0];
+        const marker = `/storage/v1/object/public/${SUPABASE_BUCKET_NAME}/`;
+        const index = cleaned.indexOf(marker);
+        if (index === -1) return '';
+        return cleaned.slice(index + marker.length);
+    } catch (err) {
+        return '';
     }
 }
 
@@ -5437,15 +5587,14 @@ app.get('/document/:id', async (req, res) => {
 });
 
 app.post('/api/upload-document', (req, res, next) => {
-    // 🔥 SỬ DỤNG TEMP DISK STORAGE + CLOUDINARY SDK TRỰC TIẾP
+    // 🔥 SỬ DỤNG MEMORY STORAGE ĐỂ PHÂN LOẠI CLOUDINARY/SUPABASE
     documentUpload.single('file')(req, res, (err) => {
         if (err) {
-            void safeRemoveTempFile(req.file?.path);
             console.error('Multer error:', err);
             if (err.code === 'LIMIT_FILE_SIZE') {
                 return res.status(400).json({
                     success: false,
-                    message: 'File quá lớn! Kích thước tối đa là 30MB.'
+                    message: 'File quá lớn! Kích thước tối đa là 50MB.'
                 });
             }
             // 🛡️ [ENTERPRISE] Error Cloaking - ẨN lỗi chi tiết upload
@@ -5457,7 +5606,6 @@ app.post('/api/upload-document', (req, res, next) => {
         next();
     });
 }, async (req, res) => {
-    const tempFilePath = req.file?.path;
     try {
         const { name, type, uploader, course, username, visibility } = req.body;
         const file = req.file;
@@ -5469,27 +5617,58 @@ app.post('/api/upload-document', (req, res, next) => {
         }
 
         const decodedOriginalName = decodeFileName(file.originalname);
+        const fileSize = file.size || 0;
 
-        // 🔥 Upload trực tiếp từ file tạm (disk) lên Cloudinary để giảm RAM
-        const cloudinaryResult = await uploadToCloudinary(file.path, file.originalname);
-        let cloudinaryUrl = cloudinaryResult.secure_url;
+        if (!fileSize) {
+            return res.status(400).json({ success: false, message: 'File không hợp lệ hoặc rỗng!' });
+        }
 
-        console.log(`☁️ Cloudinary result:`, {
-            url: cloudinaryUrl,
-            resource_type: cloudinaryResult.resource_type,
-            format: cloudinaryResult.format,
-            public_id: cloudinaryResult.public_id
-        });
+        let fileUrl = '';
+        let storageSource = '';
+
+        if (fileSize <= DOCUMENT_CLOUDINARY_MAX_BYTES) {
+            const cloudinaryResult = await uploadBufferToCloudinary(file.buffer, file.originalname);
+            fileUrl = cloudinaryResult.secure_url;
+            storageSource = 'cloudinary';
+
+            console.log(`☁️ Cloudinary result:`, {
+                url: fileUrl,
+                resource_type: cloudinaryResult.resource_type,
+                format: cloudinaryResult.format,
+                public_id: cloudinaryResult.public_id
+            });
+        } else if (fileSize <= DOCUMENT_SUPABASE_MAX_BYTES) {
+            const supabaseResult = await uploadToSupabaseStorage(file.buffer, file.originalname, file.mimetype);
+            fileUrl = supabaseResult.publicUrl;
+            storageSource = 'supabase';
+
+            console.log(`🟦 Supabase upload:`, {
+                url: fileUrl,
+                objectPath: supabaseResult.objectPath,
+                bucket: SUPABASE_BUCKET_NAME
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: 'File quá lớn! Kích thước tối đa là 50MB.'
+            });
+        }
+
+        const docTitle = name || decodedOriginalName.replace(/\.[^/.]+$/, "");
 
         const newDoc = new Document({
-            name: name || decodedOriginalName.replace(/\.[^/.]+$/, ""),
+            name: docTitle,
+            title: docTitle,
             uploader: uploader || "Ẩn danh",
             uploaderUsername: username || null,
             date: new Date().toLocaleDateString('vi-VN'),
             time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
             type: type || "other",
-            path: cloudinaryUrl, // Store Cloudinary secure_url
-            size: file.size,
+            path: fileUrl,
+            fileUrl: fileUrl,
+            size: fileSize,
+            fileSize: fileSize,
+            storageSource: storageSource,
             downloadCount: 0,
             course: course || '',
             visibility: visibility || 'public'
@@ -5507,8 +5686,8 @@ app.post('/api/upload-document', (req, res, next) => {
             id: newDoc._id.toString()
         };
 
-        console.log(`✅ Document uploaded to Cloudinary: ${newDoc.name} (ID: ${newDoc._id})`);
-        console.log(`🔗 Cloudinary URL: ${cloudinaryUrl}`);
+        console.log(`✅ Document uploaded (${storageSource}): ${newDoc.name} (ID: ${newDoc._id})`);
+        console.log(`🔗 Document URL: ${fileUrl}`);
 
         // Return status 200 with success
         return res.status(200).json({ success: true, document: docResponse });
@@ -5596,15 +5775,79 @@ app.post('/api/delete-document', verifyToken, async (req, res) => {
             return res.status(403).json({ success: false, message: "⛔ Bạn không có quyền xóa tài liệu của người khác!" });
         }
 
-        // Delete file from Cloudinary
-        try {
-            const urlParts = doc.path.split('/');
-            const fileWithExt = urlParts[urlParts.length - 1];
-            const publicId = `whalio-documents/${fileWithExt.split('.')[0]}`;
-            await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
-            console.log(`✅ Deleted file from Cloudinary: ${publicId}`);
-        } catch (err) {
-            console.warn("Lỗi xóa file từ Cloudinary:", err.message);
+        const fileUrl = doc.fileUrl || doc.path || '';
+        const inferredSource = fileUrl.includes('/storage/v1/object/public/') ? 'supabase' : 'cloudinary';
+        const storageSource = doc.storageSource || inferredSource;
+
+        // Delete file from storage
+        if (storageSource === 'cloudinary') {
+            const publicId = extractCloudinaryPublicIdFromUrl(fileUrl);
+            if (!publicId) {
+                return res.status(500).json({
+                    success: false,
+                    message: 'Không thể xác định public_id để xóa trên Cloudinary.'
+                });
+            }
+
+            try {
+                const resourceType = detectCloudinaryResourceTypeFromUrl(fileUrl);
+                const deleteResult = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+
+                if (!deleteResult || deleteResult.result !== 'ok') {
+                    return res.status(502).json({
+                        success: false,
+                        message: `Xóa file Cloudinary thất bại: ${deleteResult?.result || 'unknown error'}`
+                    });
+                }
+
+                console.log(`✅ Deleted file from Cloudinary: ${publicId} (${resourceType})`);
+            } catch (storageError) {
+                return res.status(502).json({
+                    success: false,
+                    message: `Xóa file Cloudinary thất bại: ${storageError?.message || 'unknown error'}`
+                });
+            }
+        } else if (storageSource === 'supabase') {
+            if (!supabase || !SUPABASE_BUCKET_NAME) {
+                return res.status(500).json({
+                    success: false,
+                    message: 'Supabase chưa được cấu hình trên server.'
+                });
+            }
+
+            const objectPath = extractSupabaseObjectPathFromPublicUrl(fileUrl);
+            if (!objectPath) {
+                return res.status(500).json({
+                    success: false,
+                    message: 'Không thể tách đường dẫn file Supabase để xóa.'
+                });
+            }
+
+            try {
+                const { error: removeError } = await supabase
+                    .storage
+                    .from(SUPABASE_BUCKET_NAME)
+                    .remove([objectPath]);
+
+                if (removeError) {
+                    return res.status(502).json({
+                        success: false,
+                        message: `Xóa file Supabase thất bại: ${removeError.message || 'unknown error'}`
+                    });
+                }
+
+                console.log(`✅ Deleted file from Supabase: ${objectPath}`);
+            } catch (storageError) {
+                return res.status(502).json({
+                    success: false,
+                    message: `Xóa file Supabase thất bại: ${storageError?.message || 'unknown error'}`
+                });
+            }
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: `Nguồn lưu trữ không hợp lệ: ${storageSource}`
+            });
         }
 
         await Document.findByIdAndDelete(docId);

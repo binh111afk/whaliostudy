@@ -77,13 +77,17 @@ const gpaSchema = new mongoose.Schema({
 // ==================== Document Schema ====================
 const documentSchema = new mongoose.Schema({
     name: { type: String, required: true },
+    title: { type: String },
     uploader: { type: String, required: true },
     uploaderUsername: { type: String, ref: 'User' },
     date: { type: String },
     time: { type: String },
     type: { type: String, default: 'other' },
     path: { type: String, required: true },
+    fileUrl: { type: String },
     size: { type: Number, default: 0 },
+    fileSize: { type: Number, default: 0 },
+    storageSource: { type: String, default: 'cloudinary', enum: ['cloudinary', 'supabase'] },
     downloadCount: { type: Number, default: 0 },
     course: { type: String, default: '' },
     visibility: { type: String, default: 'public', enum: ['public', 'private'] },

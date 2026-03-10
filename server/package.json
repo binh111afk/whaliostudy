@@ -17,6 +17,7 @@
   "type": "commonjs",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.99.0",
     "@tailwindcss/postcss": "^4.1.18",
     "@upstash/redis": "^1.36.2",
     "bcrypt": "^6.0.0",
