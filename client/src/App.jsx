@@ -58,18 +58,22 @@ const AUTH_USER_ENDPOINT = 'https://whaliostudy.onrender.com/auth/user';
 const RedirectHandler = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const hasRedirectedRef = useRef(false);
 
   useEffect(() => {
-    // Chỉ chạy ở trang chủ
-    if (location.pathname === '/') {
+    // Chỉ chạy 1 lần khi component mount và ở trang chủ
+    if (location.pathname === '/' && !hasRedirectedRef.current) {
       const redirectPath = sessionStorage.getItem('redirectPath');
-      if (redirectPath) {
+      if (redirectPath && redirectPath !== '/') {
+        hasRedirectedRef.current = true;
         sessionStorage.removeItem('redirectPath');
         // Navigate đến path đã lưu
-        navigate(redirectPath, { replace: true });
+        setTimeout(() => {
+          navigate(redirectPath, { replace: true });
+        }, 100);
       }
     }
-  }, [location.pathname, navigate]);
+  }, []); // Empty deps - chỉ chạy 1 lần
 
   return null;
 };
@@ -299,12 +303,17 @@ function App() {
         if (error?.response?.status === 401) {
           // Session hết hạn hoặc token không hợp lệ
           console.warn('Session expired or invalid token');
-          setSplashError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
           // Xóa dữ liệu cũ
           localStorage.removeItem('user');
           localStorage.removeItem('token');
           localStorage.removeItem('adminToken');
           localStorage.removeItem('accessToken');
+          setUser(null);
+          // Tắt splash screen nếu đang hiện
+          if (isSplashVisible) {
+            setIsSplashVisible(false);
+            setIsSplashFadingOut(false);
+          }
         } else {
           console.error('Failed to fetch session user:', error);
         }
@@ -394,9 +403,19 @@ function App() {
       if (cancelled) return;
 
       const activeUsername = resolveActiveUsername();
+      
+      // Nếu không có username sau 3 lần thử, tắt splash luôn
       if (!activeUsername) {
+        splashRetryCountRef.current += 1;
+        
+        if (splashRetryCountRef.current >= 3) {
+          console.log('No user found after retries, hiding splash');
+          hideSplashWithFade();
+          return;
+        }
+        
         clearRetryTimer();
-        splashRetryTimeoutRef.current = window.setTimeout(warmDashboardBatch, 400);
+        splashRetryTimeoutRef.current = window.setTimeout(warmDashboardBatch, 300);
         return;
       }
 
@@ -412,8 +431,13 @@ function App() {
           hideSplashWithFade();
           return;
         }
+        
+        // Nếu response không ok (404, 500...)
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
       } catch (error) {
-        console.warn('Dashboard batch warmup failed, retrying...', error);
+        console.warn('Dashboard batch warmup failed:', error);
         
         // Kiểm tra nếu là lỗi 401
         if (error?.response?.status === 401 || error?.status === 401) {
@@ -425,14 +449,15 @@ function App() {
       // Tăng số lần retry
       splashRetryCountRef.current += 1;
       
-      // Nếu retry quá nhiều lần, hiện lỗi
+      // Nếu retry quá nhiều lần, tắt splash luôn thay vì hiện lỗi
       if (splashRetryCountRef.current >= MAX_SPLASH_RETRIES) {
-        setSplashError('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
+        console.warn('Max retries reached, hiding splash anyway');
+        hideSplashWithFade();
         return;
       }
 
       clearRetryTimer();
-      splashRetryTimeoutRef.current = window.setTimeout(warmDashboardBatch, 2000);
+      splashRetryTimeoutRef.current = window.setTimeout(warmDashboardBatch, 1500);
     };
 
     warmDashboardBatch();
