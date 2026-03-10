@@ -99,12 +99,12 @@ const clearAuthData = () => {
 };
 
 /**
- * Chuyển hướng về trang login
+ * Chuyển hướng về trang chủ (không redirect loop)
  */
-const redirectToLogin = () => {
-  // Tránh redirect loop nếu đang ở trang login
-  if (!window.location.pathname.includes('/login')) {
-    window.location.href = '/login';
+const redirectToHome = () => {
+  // Chỉ redirect nếu đang không ở trang chủ
+  if (window.location.pathname !== '/') {
+    window.location.href = '/';
   }
 };
 
@@ -130,8 +130,8 @@ axios.interceptors.response.use(
       // Xóa sạch auth data
       clearAuthData();
       
-      // Chuyển hướng về login
-      redirectToLogin();
+      // KHÔNG redirect - để app tự xử lý hiện modal login
+      // redirectToHome(); // Bỏ redirect để tránh loop
     }
     
     return Promise.reject(error);

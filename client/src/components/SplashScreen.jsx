@@ -16,11 +16,11 @@ const SplashScreen = ({ isVisible, isFadingOut = false, error = null, onRetryLog
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
     });
     
-    // Chuyển về trang login
+    // Chuyển về trang chủ (không dùng /login vì không có route)
     if (onRetryLogin) {
       onRetryLogin();
     } else {
-      window.location.href = '/login';
+      window.location.href = '/';
     }
   };
 
