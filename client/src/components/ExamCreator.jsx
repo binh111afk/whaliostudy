@@ -21,7 +21,7 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
 
   // Mặc định có 1 câu hỏi rỗng để không bị lỗi UI
   const [questions, setQuestions] = useState([
-    { question: "", options: ["", "", "", ""], correctAnswer: 0 },
+    { question: "", type: "multiple_choice", options: ["", "", "", ""], correctAnswer: 0 },
   ]);
 
   // Ref cho input file ẩn
@@ -179,17 +179,18 @@ const parseHtmlToQuestions = (htmlString) => {
       
       // PHÁT HIỆN CÂU HỎI MỚI
       const questionMatch = line.match(/^Câu\s*(\d+)[:.)]\s*(.+)/i);
-      if (questionMatch) {
-        if (currentQuestion) {
-          results.push(currentQuestion);
+        if (questionMatch) {
+          if (currentQuestion) {
+            results.push(currentQuestion);
+          }
+          
+          currentQuestion = {
+            question: questionMatch[2].trim(),
+            type: "multiple_choice",
+            options: ["", "", "", ""],
+            correctAnswer: 0,
+          };
         }
-        
-        currentQuestion = {
-          question: questionMatch[2].trim(),
-          options: ["", "", "", ""],
-          correctAnswer: 0,
-        };
-      }
       
       // PHÁT HIỆN ĐÁP ÁN
       else if (currentQuestion && /^[A-D][.)]\s*(.+)/i.test(line)) {
@@ -238,13 +239,24 @@ const parseHtmlToQuestions = (htmlString) => {
         const rawQuestions = Array.isArray(data) ? data : data.questions || [];
         if (rawQuestions.length === 0) return alert("File JSON rỗng!");
 
-        const mappedQuestions = rawQuestions.map((q) => ({
-          question: q.question || "",
-          options: Array.isArray(q.options)
-            ? [0, 1, 2, 3].map((i) => q.options[i] || "")
-            : ["", "", "", ""],
-          correctAnswer: typeof q.answer === "number" ? q.answer : 0,
-        }));
+        const mappedQuestions = rawQuestions.map((q) => {
+          const normalizedType = q.type === "essay" ? "essay" : "multiple_choice";
+          return {
+            question: q.question || "",
+            type: normalizedType,
+            options:
+              normalizedType === "essay"
+                ? []
+                : Array.isArray(q.options)
+                  ? [0, 1, 2, 3].map((i) => q.options[i] || "")
+                  : ["", "", "", ""],
+            correctAnswer: normalizedType === "essay"
+              ? -1
+              : typeof q.answer === "number"
+                ? q.answer
+                : 0,
+          };
+        });
 
         setQuestions(mappedQuestions);
         alert(`✅ Đã nhập ${mappedQuestions.length} câu hỏi từ JSON!`);
@@ -262,7 +274,7 @@ const parseHtmlToQuestions = (htmlString) => {
   const handleAddQuestion = () => {
     setQuestions([
       ...questions,
-      { question: "", options: ["", "", "", ""], correctAnswer: 0 },
+      { question: "", type: "multiple_choice", options: ["", "", "", ""], correctAnswer: 0 },
     ]);
     // Cuộn xuống cuối
     setTimeout(
@@ -287,6 +299,9 @@ const parseHtmlToQuestions = (htmlString) => {
 
   const handleOptionChange = (qIndex, optIndex, val) => {
     const newQs = [...questions];
+    if (!Array.isArray(newQs[qIndex].options) || newQs[qIndex].options.length !== 4) {
+      newQs[qIndex].options = ["", "", "", ""];
+    }
     newQs[qIndex].options[optIndex] = val;
     setQuestions(newQs);
   };
@@ -297,6 +312,23 @@ const parseHtmlToQuestions = (htmlString) => {
     setQuestions(newQs);
   };
 
+  const handleQuestionTypeChange = (qIndex, nextType) => {
+    const newQs = [...questions];
+    newQs[qIndex].type = nextType;
+    if (nextType === "essay") {
+      newQs[qIndex].options = [];
+      newQs[qIndex].correctAnswer = -1;
+    } else {
+      if (!Array.isArray(newQs[qIndex].options) || newQs[qIndex].options.length !== 4) {
+        newQs[qIndex].options = ["", "", "", ""];
+      }
+      if (!Number.isInteger(newQs[qIndex].correctAnswer) || newQs[qIndex].correctAnswer < 0) {
+        newQs[qIndex].correctAnswer = 0;
+      }
+    }
+    setQuestions(newQs);
+  };
+
   // ============================================================
   // 4. LƯU ĐỀ THI
   // ============================================================
@@ -304,9 +336,11 @@ const parseHtmlToQuestions = (htmlString) => {
     if (!title.trim()) return alert("Vui lòng nhập tên đề thi!");
 
     // Kiểm tra dữ liệu trống
-    const hasEmpty = questions.some(
-      (q) => !q.question.trim() || q.options.some((o) => !o.trim())
-    );
+    const hasEmpty = questions.some((q) => {
+      if (!q.question.trim()) return true;
+      if (q.type === "essay") return false;
+      return !Array.isArray(q.options) || q.options.some((o) => !o.trim());
+    });
     if (hasEmpty) {
       if (
         !confirm(
@@ -324,8 +358,9 @@ const parseHtmlToQuestions = (htmlString) => {
       time: parseInt(time),
       questions: questions.map((q) => ({
         question: q.question,
-        options: q.options,
-        answer: q.correctAnswer,
+        type: q.type || "multiple_choice",
+        options: q.type === "essay" ? [] : q.options,
+        answer: q.type === "essay" ? null : q.correctAnswer,
       })),
       limit: questions.length,
       isStatic: false,
@@ -338,11 +373,11 @@ const parseHtmlToQuestions = (htmlString) => {
   // RENDER GIAO DIỆN
   // ============================================================
   return (
-    <div className="fixed inset-0 bg-gray-100 z-50 flex flex-col animate-fade-in">
+    <div className="fixed inset-0 bg-gray-100 dark:bg-gray-900 z-50 flex flex-col animate-fade-in">
       {/* HEADER */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-sm shrink-0 gap-4">
-        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-          <FileText className="text-blue-600" /> Tạo đề thi
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-sm shrink-0 gap-4">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+          <FileText className="text-blue-600 dark:text-blue-400" /> Tạo đề thi
         </h2>
 
         <div className="flex flex-wrap gap-3 items-center justify-center">
@@ -365,7 +400,7 @@ const parseHtmlToQuestions = (htmlString) => {
           {/* BUTTONS */}
           <button
             onClick={() => jsonInputRef.current.click()}
-            className="px-3 py-2 text-gray-700 font-bold bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-2 text-sm transition-all"
+            className="px-3 py-2 text-gray-700 dark:text-gray-200 font-bold bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg flex items-center gap-2 text-sm transition-all"
             title="Nhập từ file JSON cũ"
           >
             <FileJson size={18} />{" "}
@@ -374,23 +409,23 @@ const parseHtmlToQuestions = (htmlString) => {
 
           <button
             onClick={() => wordInputRef.current.click()}
-            className="px-3 py-2 text-blue-700 font-bold bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg flex items-center gap-2 text-sm transition-all shadow-sm"
+            className="px-3 py-2 text-blue-700 dark:text-blue-300 font-bold bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-lg flex items-center gap-2 text-sm transition-all shadow-sm"
             title="Nhập từ file Word (.docx)"
           >
             <FileType size={18} /> Nhập Word
           </button>
 
-          <div className="h-8 w-[1px] bg-gray-300 mx-1 hidden sm:block"></div>
+          <div className="h-8 w-[1px] bg-gray-300 dark:bg-gray-600 mx-1 hidden sm:block"></div>
 
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg"
+            className="px-4 py-2 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
           >
             Hủy
           </button>
           <button
             onClick={handleSave}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 flex items-center gap-2"
+            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 dark:shadow-blue-900/30 flex items-center gap-2"
           >
             <Save size={18} /> Lưu đề
           </button>
@@ -398,33 +433,33 @@ const parseHtmlToQuestions = (htmlString) => {
       </div>
 
       {/* BODY */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* CẤU HÌNH CHUNG */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <h3 className="font-bold text-gray-800 mb-4 text-lg border-b pb-2">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4 text-lg border-b border-gray-200 dark:border-gray-700 pb-2">
               Cấu hình chung
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Tên đề thi
                 </label>
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full p-2.5 bg-gray-50 border rounded-xl font-bold focus:ring-2 focus:ring-blue-100 outline-none"
+                  className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl font-bold focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                   placeholder="VD: Kiểm tra 1 tiết..."
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Môn học
                 </label>
                 <select
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  className="w-full p-2.5 bg-gray-50 border rounded-xl outline-none"
+                  className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl outline-none text-gray-800 dark:text-gray-100"
                 >
                   {[
                     "Pháp luật",
@@ -443,27 +478,27 @@ const parseHtmlToQuestions = (htmlString) => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Thời gian (phút)
                 </label>
                 <input
                   type="number"
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
-                  className="w-full p-2.5 bg-gray-50 border rounded-xl outline-none"
+                  className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl outline-none text-gray-800 dark:text-gray-100"
                 />
               </div>
             </div>
           </div>
 
           {/* HƯỚNG DẪN */}
-          <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-sm text-blue-800 flex items-start gap-3">
-            <div className="bg-blue-100 p-2 rounded-lg shrink-0">
+          <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 p-4 rounded-xl text-sm text-blue-800 dark:text-blue-200 flex items-start gap-3">
+            <div className="bg-blue-100 dark:bg-blue-900/60 p-2 rounded-lg shrink-0">
               <AlertCircle size={18} />
             </div>
             <div>
               <p className="font-bold mb-1">Mẹo nhập file Word:</p>
-              <ul className="list-disc pl-4 space-y-1 text-blue-700">
+              <ul className="list-disc pl-4 space-y-1 text-blue-700 dark:text-blue-300">
                 <li>
                   Hệ thống hỗ trợ cả định dạng <b>Mỗi câu 1 dòng</b> và{" "}
                   <b>Dính chùm (Câu 1... A... B...)</b>.
@@ -483,13 +518,13 @@ const parseHtmlToQuestions = (htmlString) => {
 
           {/* DANH SÁCH CÂU HỎI */}
           <div className="space-y-4">
-            <div className="flex justify-between items-center sticky top-0 bg-gray-50 py-2 z-10 backdrop-blur-sm bg-opacity-90">
-              <h3 className="font-bold text-gray-700">
+            <div className="flex justify-between items-center sticky top-0 bg-gray-50 dark:bg-gray-900 py-2 z-10 backdrop-blur-sm bg-opacity-90">
+              <h3 className="font-bold text-gray-700 dark:text-gray-200">
                 Danh sách câu hỏi ({questions.length})
               </h3>
               <button
                 onClick={handleAddQuestion}
-                className="text-blue-600 font-bold text-sm bg-white border border-blue-200 hover:bg-blue-50 px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all"
+                className="text-blue-600 dark:text-blue-300 font-bold text-sm bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/40 px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all"
               >
                 <Plus size={16} /> Thêm câu
               </button>
@@ -498,16 +533,27 @@ const parseHtmlToQuestions = (htmlString) => {
             {questions.map((q, qIdx) => (
               <div
                 key={qIdx}
-                className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative group transition-all hover:shadow-md"
+                className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative group transition-all hover:shadow-md"
               >
                 {/* Header Question */}
-                <div className="flex justify-between items-start mb-3">
-                  <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded">
-                    Câu {qIdx + 1}
-                  </span>
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold px-2 py-1 rounded">
+                      Câu {qIdx + 1}
+                    </span>
+                    <select
+                      value={q.type || "multiple_choice"}
+                      onChange={(e) => handleQuestionTypeChange(qIdx, e.target.value)}
+                      className="text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 outline-none"
+                      title="Chọn loại câu hỏi"
+                    >
+                      <option value="multiple_choice">Trắc nghiệm</option>
+                      <option value="essay">Tự luận</option>
+                    </select>
+                  </div>
                   <button
                     onClick={() => handleDeleteQuestion(qIdx)}
-                    className="text-gray-300 hover:text-red-500 p-1 transition-colors"
+                    className="text-gray-300 dark:text-gray-500 hover:text-red-500 p-1 transition-colors"
                     title="Xóa câu này"
                   >
                     <Trash2 size={18} />
@@ -519,55 +565,61 @@ const parseHtmlToQuestions = (htmlString) => {
                   value={q.question}
                   onChange={(e) => handleQuestionChange(qIdx, e.target.value)}
                   placeholder="Nhập nội dung câu hỏi..."
-                  className="w-full p-3 bg-gray-50 border rounded-xl mb-4 font-medium min-h-[80px] focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                  className="w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl mb-4 font-medium min-h-[80px] focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                 />
 
                 {/* 4 Đáp án */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {q.options.map((opt, optIdx) => (
-                    <div
-                      key={optIdx}
-                      className={`flex items-center gap-3 p-2 rounded-xl border transition-all ${
-                        q.correctAnswer === optIdx
-                          ? "border-green-500 bg-green-50 ring-1 ring-green-200"
-                          : "border-gray-200 hover:border-blue-300"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name={`correct-${qIdx}`}
-                        checked={q.correctAnswer === optIdx}
-                        onChange={() => handleCorrectAnswerChange(qIdx, optIdx)}
-                        className="w-5 h-5 accent-green-600 cursor-pointer shrink-0"
-                        title="Chọn làm đáp án đúng"
-                      />
-                      <input
-                        value={opt}
-                        onChange={(e) =>
-                          handleOptionChange(qIdx, optIdx, e.target.value)
-                        }
-                        className={`flex-1 bg-transparent outline-none text-sm ${
+                {q.type === "essay" ? (
+                  <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/60 p-4 text-sm text-gray-600 dark:text-gray-300">
+                    Câu tự luận không cần đáp án trắc nghiệm. Người học sẽ nhập câu trả lời khi làm bài.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {q.options.map((opt, optIdx) => (
+                      <div
+                        key={optIdx}
+                        className={`flex items-center gap-3 p-2 rounded-xl border transition-all ${
                           q.correctAnswer === optIdx
-                            ? "text-green-800 font-bold"
-                            : "text-gray-700"
+                            ? "border-green-500 bg-green-50 ring-1 ring-green-200 dark:border-green-600 dark:bg-green-900/30 dark:ring-green-800/50"
+                            : "border-gray-200 hover:border-blue-300 dark:border-gray-600"
                         }`}
-                        placeholder={`Đáp án ${String.fromCharCode(
-                          65 + optIdx
-                        )}`}
-                      />
-                      <span className="text-xs font-bold text-gray-400 select-none w-5 text-center">
-                        {String.fromCharCode(65 + optIdx)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                      >
+                        <input
+                          type="radio"
+                          name={`correct-${qIdx}`}
+                          checked={q.correctAnswer === optIdx}
+                          onChange={() => handleCorrectAnswerChange(qIdx, optIdx)}
+                          className="w-5 h-5 accent-green-600 cursor-pointer shrink-0"
+                          title="Chọn làm đáp án đúng"
+                        />
+                        <input
+                          value={opt}
+                          onChange={(e) =>
+                            handleOptionChange(qIdx, optIdx, e.target.value)
+                          }
+                          className={`flex-1 bg-transparent outline-none text-sm ${
+                            q.correctAnswer === optIdx
+                              ? "text-green-800 dark:text-green-300 font-bold"
+                              : "text-gray-700 dark:text-gray-200"
+                          }`}
+                          placeholder={`Đáp án ${String.fromCharCode(
+                            65 + optIdx
+                          )}`}
+                        />
+                        <span className="text-xs font-bold text-gray-400 dark:text-gray-500 select-none w-5 text-center">
+                          {String.fromCharCode(65 + optIdx)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
 
             {/* Nút thêm câu hỏi lớn ở dưới */}
             <button
               onClick={handleAddQuestion}
-              className="w-full py-3 border-2 border-dashed border-gray-300 text-gray-500 rounded-xl font-bold hover:border-blue-500 hover:text-blue-600 transition-all flex justify-center items-center gap-2"
+              className="w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-300 rounded-xl font-bold hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-300 transition-all flex justify-center items-center gap-2"
               id="end-list"
             >
               <Plus size={20} /> Thêm câu hỏi tiếp theo

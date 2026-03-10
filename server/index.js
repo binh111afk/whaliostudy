@@ -706,18 +706,32 @@ const ALLOWED_CORS_ORIGINS = [
     'http://127.0.0.1:5174'
 ];
 
+const isAllowedCorsOrigin = (origin) => {
+    if (!origin) return true;
+    if (ALLOWED_CORS_ORIGINS.includes(origin)) return true;
+    try {
+        const parsed = new URL(origin);
+        if (parsed.hostname.endsWith('.whaliostudy.io.vn')) return true;
+    } catch (err) {
+        return false;
+    }
+    return false;
+};
+
 const corsOptions = {
     origin: (origin, callback) => {
-        if (!origin || ALLOWED_CORS_ORIGINS.includes(origin)) {
+        if (isAllowedCorsOrigin(origin)) {
             return callback(null, true);
         }
         return callback(new Error(`CORS blocked origin: ${origin}`));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 console.log(`✅  CORS enabled. Credentials: true. Origins: ${ALLOWED_CORS_ORIGINS.join(', ')}`);
 if (compression) {
     app.use('/api', compression({

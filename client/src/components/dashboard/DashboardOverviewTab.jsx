@@ -364,7 +364,7 @@ const DashboardOverviewTab = ({
                 {/* PHẦN 1: BIỂU ĐỒ TRÒN */}
                 <div className="relative h-44 w-44 sm:h-52 sm:w-52 min-[1025px]:h-56 min-[1025px]:w-56 flex-shrink-0 group">
                   {isLoaded ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minHeight={160} minWidth={0}>
                     <RadialBarChart
                       innerRadius="75%"
                       outerRadius="100%"
@@ -512,7 +512,7 @@ const DashboardOverviewTab = ({
             ) : (
               // --- BIỂU ĐỒ GIỜ HỌC ---
               isLoaded ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minHeight={240} minWidth={0}>
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient
