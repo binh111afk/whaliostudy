@@ -12,7 +12,6 @@ import { MusicProvider } from './context/MusicContext';
 import FloatingPlayer from './components/FloatingPlayer';
 import { authService } from './services/authService';
 import { getFullApiUrl } from './config/apiConfig';
-import SplashScreen from './components/SplashScreen';
 
 // Import các trang
 import GpaCalc from './pages/GpaCalc';
@@ -53,30 +52,6 @@ const ROUTE_TITLES = {
 };
 
 const AUTH_USER_ENDPOINT = 'https://whaliostudy.onrender.com/auth/user';
-
-// Component xử lý redirect từ 404 page
-const RedirectHandler = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const hasRedirectedRef = useRef(false);
-
-  useEffect(() => {
-    // Chỉ chạy 1 lần khi component mount và ở trang chủ
-    if (location.pathname === '/' && !hasRedirectedRef.current) {
-      const redirectPath = sessionStorage.getItem('redirectPath');
-      if (redirectPath && redirectPath !== '/') {
-        hasRedirectedRef.current = true;
-        sessionStorage.removeItem('redirectPath');
-        // Navigate đến path đã lưu
-        setTimeout(() => {
-          navigate(redirectPath, { replace: true });
-        }, 100);
-      }
-    }
-  }, []); // Empty deps - chỉ chạy 1 lần
-
-  return null;
-};
 
 const RouteTitleManager = () => {
   const location = useLocation();
@@ -232,14 +207,6 @@ function App() {
   // 1. Khai báo State quản lý User và Modal
   const [user, setUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSplashVisible, setIsSplashVisible] = useState(true);
-  const [isSplashFadingOut, setIsSplashFadingOut] = useState(false);
-  const [splashError, setSplashError] = useState(null);
-  const splashRetryTimeoutRef = useRef(null);
-  const splashAbsoluteTimeoutRef = useRef(null);
-  const splashRetryCountRef = useRef(0);
-  const MAX_SPLASH_RETRIES = 3;
-  const MAX_SPLASH_TIME = 3000; // 3 giây tuyệt đối
 
   // 2. Dark Mode State (Mặc định Light Mode)
   const [darkMode, setDarkMode] = useState(() => {
@@ -268,11 +235,6 @@ function App() {
         console.error('Failed to parse saved user:', e);
         localStorage.removeItem('user');
       }
-    } else {
-      // Không có user, tắt splash ngay
-      setTimeout(() => {
-        setIsSplashVisible(false);
-      }, 500);
     }
   }, []);
 
@@ -321,11 +283,6 @@ function App() {
           localStorage.removeItem('adminToken');
           localStorage.removeItem('accessToken');
           setUser(null);
-          // Tắt splash screen nếu đang hiện
-          if (isSplashVisible) {
-            setIsSplashVisible(false);
-            setIsSplashFadingOut(false);
-          }
         } else {
           console.error('Failed to fetch session user:', error);
         }
@@ -376,135 +333,6 @@ function App() {
     const cleanUrl = `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ''}${window.location.hash}`;
     window.history.replaceState({}, document.title, cleanUrl);
   }, []);
-
-  useEffect(() => {
-    if (!isSplashVisible) return undefined;
-
-    let cancelled = false;
-
-    const clearRetryTimer = () => {
-      if (splashRetryTimeoutRef.current) {
-        clearTimeout(splashRetryTimeoutRef.current);
-        splashRetryTimeoutRef.current = null;
-      }
-    };
-
-    const clearAbsoluteTimer = () => {
-      if (splashAbsoluteTimeoutRef.current) {
-        clearTimeout(splashAbsoluteTimeoutRef.current);
-        splashAbsoluteTimeoutRef.current = null;
-      }
-    };
-
-    const resolveActiveUsername = () => {
-      if (user?.username) return user.username;
-
-      try {
-        const rawUser = localStorage.getItem('user');
-        if (!rawUser) return '';
-        const parsed = JSON.parse(rawUser);
-        return String(parsed?.username || '').trim();
-      } catch {
-        return '';
-      }
-    };
-
-    const hideSplashWithFade = () => {
-      if (cancelled) return;
-      setIsSplashFadingOut(true);
-      window.setTimeout(() => {
-        if (!cancelled) {
-          setIsSplashVisible(false);
-        }
-      }, 520);
-    };
-
-    // Timeout tuyệt đối - tắt splash sau MAX_SPLASH_TIME bất kể điều kiện gì
-    splashAbsoluteTimeoutRef.current = window.setTimeout(() => {
-      console.log('Absolute timeout reached, hiding splash');
-      hideSplashWithFade();
-    }, MAX_SPLASH_TIME);
-
-    // Kiểm tra có user không trước khi warmup
-    const activeUsername = resolveActiveUsername();
-    if (!activeUsername) {
-      console.log('No user detected at mount, skipping warmup');
-      clearAbsoluteTimer();
-      // Tắt splash nhanh nếu không có user
-      setTimeout(hideSplashWithFade, 100);
-      return () => {
-        cancelled = true;
-        clearRetryTimer();
-        clearAbsoluteTimer();
-      };
-    }
-
-    const warmDashboardBatch = async () => {
-      if (cancelled) return;
-
-      const activeUsername = resolveActiveUsername();
-      
-      // Nếu không có username ngay từ đầu, tắt splash ngay
-      if (!activeUsername) {
-        console.log('No user found, hiding splash immediately');
-        clearAbsoluteTimer();
-        hideSplashWithFade();
-        return;
-      }
-
-      try {
-        const response = await fetch(
-          getFullApiUrl(`/api/user/dashboard-batch?username=${encodeURIComponent(activeUsername)}`)
-        );
-        const payload = await response.json().catch(() => null);
-
-        if (cancelled) return;
-
-        if (response.ok && payload?.success) {
-          clearAbsoluteTimer();
-          hideSplashWithFade();
-          return;
-        }
-        
-        // Nếu response không ok (404, 500...)
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-      } catch (error) {
-        console.warn('Dashboard batch warmup failed:', error);
-        
-        // Kiểm tra nếu là lỗi 401
-        if (error?.response?.status === 401 || error?.status === 401) {
-          clearAbsoluteTimer();
-          setSplashError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-          return;
-        }
-      }
-
-      // Tăng số lần retry
-      splashRetryCountRef.current += 1;
-      
-      // Nếu retry quá nhiều lần, tắt splash luôn
-      if (splashRetryCountRef.current >= MAX_SPLASH_RETRIES) {
-        console.warn('Max retries reached, hiding splash');
-        clearAbsoluteTimer();
-        hideSplashWithFade();
-        return;
-      }
-
-      clearRetryTimer();
-      splashRetryTimeoutRef.current = window.setTimeout(warmDashboardBatch, 800);
-    };
-
-    // Bắt đầu warmup
-    warmDashboardBatch();
-
-    return () => {
-      cancelled = true;
-      clearRetryTimer();
-      clearAbsoluteTimer();
-    };
-  }, [user?.username, isSplashVisible]);
 
   // 3. Hàm xử lý Đăng xuất
   const handleLogout = async () => {
@@ -564,20 +392,7 @@ function App() {
   return (
     <Router>
       <RouteTitleManager />
-      <RedirectHandler />
       <MusicProvider>
-        <SplashScreen 
-          isVisible={isSplashVisible} 
-          isFadingOut={isSplashFadingOut}
-          error={splashError}
-          onRetryLogin={() => {
-            // Reset states và mở modal đăng nhập
-            setSplashError(null);
-            setIsSplashVisible(false);
-            setUser(null);
-            setIsModalOpen(true);
-          }}
-        />
         <div className="flex h-screen w-full max-w-full overflow-hidden bg-gray-50 dark:bg-gray-900">
           {!isFullscreenLayout && (
             <div className="hidden min-[1025px]:block">
