@@ -87,7 +87,7 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
   };
 
   // --- HELPER 3: PHÂN TÍCH CÚ PHÁP - PHIÊN BẢN SỬA LỖI ---
-const parseHtmlToQuestions = (htmlString) => {
+  const parseHtmlToQuestions = (htmlString) => {
     // LƯU LẠI HTML GỐC để kiểm tra định dạng
     const originalHtml = htmlString;
     
@@ -170,6 +170,32 @@ const parseHtmlToQuestions = (htmlString) => {
       return false;
     };
   
+    const extractShortAnswerFromLine = (lineText) => {
+      if (!lineText) return null;
+      const line = String(lineText).trim();
+      if (!line) return null;
+      if (/[A-D][.)]\s*/i.test(line)) return null;
+
+      const patterns = [
+        /^\s*Câu\s*\d+[\.:)\-–—]\s*(.+?)\s*[:：]\s*(.+)$/i,
+        /^\s*\d+[\.)-–—]\s*(.+?)\s*[:：]\s*(.+)$/,
+        /^\s*\d+[\.)-–—]\s*(.+?)\s*[=≡→=>]\s*(.+)$/,
+        /^(.+?)\s*[:：]\s*(.+)$/
+      ];
+
+      for (const pattern of patterns) {
+        const match = line.match(pattern);
+        if (match) {
+          const questionText = String(match[1] || '').trim();
+          const answerText = String(match[2] || '').trim();
+          if (questionText && answerText) {
+            return { questionText, answerText };
+          }
+        }
+      }
+      return null;
+    };
+
     // 6. Phân tích các dòng đã xử lý
     const results = [];
     let currentQuestion = null;
@@ -177,6 +203,23 @@ const parseHtmlToQuestions = (htmlString) => {
     for (let i = 0; i < processedLines.length; i++) {
       const line = processedLines[i];
       
+      // PHÁT HIỆN CÂU TRẢ LỜI NGẮN (có đáp án sau dấu ":" hoặc "=")
+      const shortAnswer = extractShortAnswerFromLine(line);
+      if (shortAnswer && !/^[A-D][.)]\s*/i.test(line)) {
+        if (currentQuestion) {
+          results.push(currentQuestion);
+          currentQuestion = null;
+        }
+        results.push({
+          question: shortAnswer.questionText,
+          type: "short_answer",
+          options: [],
+          correctAnswer: -1,
+          correctText: shortAnswer.answerText
+        });
+        continue;
+      }
+
       // PHÁT HIỆN CÂU HỎI MỚI
       const questionMatch = line.match(/^Câu\s*(\d+)[:.)]\s*(.+)/i);
         if (questionMatch) {
@@ -191,6 +234,7 @@ const parseHtmlToQuestions = (htmlString) => {
             correctAnswer: 0,
             correctText: "",
           };
+          continue;
         }
       
       // PHÁT HIỆN ĐÁP ÁN
