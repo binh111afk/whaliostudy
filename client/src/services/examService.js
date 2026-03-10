@@ -42,12 +42,25 @@ export const examService = {
             }
         } 
         
-        // Logic cũ cho đề tự tạo (giữ nguyên)
+        // Đề từ MongoDB: ưu tiên endpoint detail để lấy questionBank
+        try {
+            const detailRes = await fetch(getFullApiUrl(`/api/exams/${examId}`));
+            if (detailRes.ok) {
+                const detailData = await detailRes.json();
+                const questions = detailData?.exam?.questionBank;
+                return Array.isArray(questions) ? questions : [];
+            }
+        } catch (e) {
+            // fallback below
+        }
+
+        // Fallback: lấy danh sách rồi tìm (tránh trả về number)
         try {
             const res = await fetch(getFullApiUrl('/api/exams'));
             const exams = await res.json();
-            const foundExam = exams.find(e => String(e.id) === String(examId));
-            return foundExam ? (foundExam.questions || foundExam.questionBank || []) : [];
+            const foundExam = exams.find(e => String(e.examId || e.id) === String(examId));
+            const questions = foundExam?.questionBank || [];
+            return Array.isArray(questions) ? questions : [];
         } catch (e) {
             return [];
         }
