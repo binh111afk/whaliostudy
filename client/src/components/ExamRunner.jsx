@@ -30,8 +30,9 @@ export const ExamRunner = ({ exam, mode, onExit }) => {
                     rawQuestions = exam.questions;
                 }
                 // Nếu không, phải đi tải từ JSON/API về
+                // 👇 FIX: Dùng examId hoặc id vì server trả về examId
                 else {
-                    rawQuestions = await examService.getQuestionsByExamId(exam.id, exam.isStatic);
+                    rawQuestions = await examService.getQuestionsByExamId(exam.examId || exam.id, exam.isStatic);
                 }
 
                 if (!rawQuestions || rawQuestions.length === 0) {

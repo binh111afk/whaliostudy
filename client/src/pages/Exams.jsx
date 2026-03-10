@@ -268,11 +268,11 @@ const Exams = () => {
                 </div>
                 <div className="flex items-center gap-1">
                   <FileText size={14} />
-                  {/* 👇 Ưu tiên hiển thị exam.limit trước */}
+                  {/* 👇 Ưu tiên hiển thị exam.limit trước, rồi đến exam.questions (là số từ API) */}
                   {exam.limit ||
                     (Array.isArray(exam.questions)
                       ? exam.questions.length
-                      : 0)}{" "}
+                      : exam.questions) || 0}{" "}
                   câu
                 </div>
               </div>
@@ -334,7 +334,7 @@ const Exams = () => {
                 <span className="w-1 h-1 bg-white rounded-full"></span>
                 <span>{activeExam.time}</span>
                 <span className="w-1 h-1 bg-white rounded-full"></span>
-                <span>{activeExam.limit || (Array.isArray(activeExam.questions) ? activeExam.questions.length : 0)} câu</span>
+<span>{activeExam.limit || (Array.isArray(activeExam.questions) ? activeExam.questions.length : activeExam.questions) || 0} câu</span>
               </div>
             </div>
 
