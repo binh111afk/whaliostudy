@@ -54,6 +54,26 @@ const ROUTE_TITLES = {
 
 const AUTH_USER_ENDPOINT = 'https://whaliostudy.onrender.com/auth/user';
 
+// Component xử lý redirect từ 404 page
+const RedirectHandler = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Chỉ chạy ở trang chủ
+    if (location.pathname === '/') {
+      const redirectPath = sessionStorage.getItem('redirectPath');
+      if (redirectPath) {
+        sessionStorage.removeItem('redirectPath');
+        // Navigate đến path đã lưu
+        navigate(redirectPath, { replace: true });
+      }
+    }
+  }, [location.pathname, navigate]);
+
+  return null;
+};
+
 const RouteTitleManager = () => {
   const location = useLocation();
 
@@ -481,6 +501,7 @@ function App() {
   return (
     <Router>
       <RouteTitleManager />
+      <RedirectHandler />
       <MusicProvider>
         <SplashScreen 
           isVisible={isSplashVisible} 

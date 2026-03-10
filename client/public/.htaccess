@@ -13,8 +13,8 @@
   RewriteRule ^(.*)$ /index.html [L,QSA]
 </IfModule>
 
-# Xử lý 404 - redirect về index.html để React Router xử lý
-ErrorDocument 404 /index.html
+# Xử lý 404 - dùng 404.html để redirect về trang chủ
+ErrorDocument 404 /404.html
 
 # Caching cho static assets
 <IfModule mod_expires.c>
