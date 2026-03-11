@@ -1,13 +1,23 @@
 /**
- * NIGHTMARE THEME EFFECTS CONTROLLER
- * "Code under falling stars"
+ * NIGHTMARE THEME EFFECTS CONTROLLER v2.0 - ULTRA NEON EDITION
+ * "Code under a holographic aurora"
  * 
  * Handles dynamic animations and interactive effects.
- * Companion script for Nightmare Monaco theme.
+ * Maximum visual impact. Full cinematic experience.
  * 
  * Usage:
  *   import { initNightmareEffects } from './nightmareEffects.js';
- *   initNightmareEffects(editorContainer);
+ *   const controller = initNightmareEffects(editorContainer, options);
+ * 
+ * Features:
+ * - Aurora borealis background
+ * - Multiple shooting star variants
+ * - Typing sparkle particles
+ * - Matrix digital rain (optional)
+ * - Holographic scanlines
+ * - Parallax starfield
+ * - Interactive cursor effects
+ * - Performance adaptive mode
  */
 
 /**
@@ -18,11 +28,29 @@
  */
 export function initNightmareEffects(container, options = {}) {
   const config = {
-    shootingStarInterval: { min: 25000, max: 45000 }, // 25-45 seconds
-    parallaxIntensity: 0.3,
-    performanceMode: false,
+    // Shooting stars
+    shootingStarInterval: { min: 15000, max: 30000 },
+    shootingStarColors: ['cyan', 'magenta', 'gold', 'rainbow'],
+    shootingStarWeights: [40, 35, 20, 5], // Percentage chance
+    
+    // Effects toggles
     enableShootingStars: true,
     enableParallax: true,
+    enableAurora: true,
+    enableScanlines: true,
+    enableTypingSparkles: true,
+    enableMatrixRain: false,
+    enableGlitchEffect: false,
+    
+    // Performance
+    performanceMode: false,
+    parallaxIntensity: 0.4,
+    sparkleIntensity: 0.6, // 0-1, chance per keystroke
+    
+    // Advanced
+    matrixRainColumns: 15,
+    matrixRainSpeed: 10000,
+    
     ...options
   };
 
@@ -31,21 +59,13 @@ export function initNightmareEffects(container, options = {}) {
   let parallaxRAF = null;
   let isActive = true;
   let lastScrollTop = 0;
+  let sparkleTimeout = null;
 
   // Create necessary DOM elements
   const elements = createEffectElements(container);
 
-  // Initialize effects
-  if (config.enableShootingStars && !config.performanceMode) {
-    startShootingStars();
-  }
-
-  if (config.enableParallax && !config.performanceMode) {
-    initParallax();
-  }
-
-  // Add focus handlers to enhance effects
-  initFocusHandlers(container);
+  // Initialize effects based on config
+  initializeEffects();
 
   /**
    * Create all effect DOM elements
@@ -56,12 +76,35 @@ export function initNightmareEffects(container, options = {}) {
     if (config.performanceMode) {
       container.classList.add('performance-mode');
     }
+    if (config.enableGlitchEffect) {
+      container.classList.add('glitch-enabled');
+    }
 
-    // Create starfield container
+    // Aurora container with waves
+    const aurora = document.createElement('div');
+    aurora.className = 'nightmare-aurora';
+    
+    const auroraWave1 = document.createElement('div');
+    auroraWave1.className = 'nightmare-aurora-wave nightmare-aurora-wave-1';
+    
+    const auroraWave2 = document.createElement('div');
+    auroraWave2.className = 'nightmare-aurora-wave nightmare-aurora-wave-2';
+    
+    const auroraWave3 = document.createElement('div');
+    auroraWave3.className = 'nightmare-aurora-wave nightmare-aurora-wave-3';
+    
+    aurora.appendChild(auroraWave1);
+    aurora.appendChild(auroraWave2);
+    aurora.appendChild(auroraWave3);
+
+    // Scanlines
+    const scanlines = document.createElement('div');
+    scanlines.className = 'nightmare-scanlines';
+
+    // Starfield container
     const starfield = document.createElement('div');
     starfield.className = 'nightmare-starfield';
 
-    // Create three starfield layers
     const layer1 = document.createElement('div');
     layer1.className = 'nightmare-starfield-layer-1';
     
@@ -75,48 +118,93 @@ export function initNightmareEffects(container, options = {}) {
     starfield.appendChild(layer2);
     starfield.appendChild(layer3);
 
-    // Create city glow
+    // City glow
     const cityGlow = document.createElement('div');
     cityGlow.className = 'nightmare-city-glow';
 
-    // Create light beams
+    // Light beams
     const lightBeams = document.createElement('div');
     lightBeams.className = 'nightmare-light-beams';
 
-    // Create noise texture
+    // Noise texture
     const noise = document.createElement('div');
     noise.className = 'nightmare-noise';
 
-    // Create vignette
+    // Vignette
     const vignette = document.createElement('div');
     vignette.className = 'nightmare-vignette';
 
-    // Create shooting star container
+    // Shooting star container
     const shootingStarContainer = document.createElement('div');
     shootingStarContainer.className = 'nightmare-shooting-star-container';
-    shootingStarContainer.style.cssText = 'position: absolute; inset: 0; z-index: -1; pointer-events: none;';
+    shootingStarContainer.style.cssText = 'position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;';
 
-    // Insert all elements
+    // Matrix rain container (hidden by default)
+    const matrixRain = document.createElement('div');
+    matrixRain.className = 'nightmare-matrix-rain';
+    matrixRain.style.display = config.enableMatrixRain ? 'block' : 'none';
+
+    // Sparkle container
+    const sparkleContainer = document.createElement('div');
+    sparkleContainer.className = 'nightmare-sparkle-container';
+    sparkleContainer.style.cssText = 'position: absolute; inset: 0; z-index: 100; pointer-events: none; overflow: hidden;';
+
+    // Insert all elements (order matters for z-index)
     container.insertBefore(vignette, container.firstChild);
     container.insertBefore(noise, container.firstChild);
     container.insertBefore(lightBeams, container.firstChild);
     container.insertBefore(cityGlow, container.firstChild);
     container.insertBefore(shootingStarContainer, container.firstChild);
+    container.insertBefore(matrixRain, container.firstChild);
     container.insertBefore(starfield, container.firstChild);
+    container.insertBefore(scanlines, container.firstChild);
+    container.insertBefore(aurora, container.firstChild);
+    container.appendChild(sparkleContainer);
 
     return {
+      aurora,
+      auroraWaves: [auroraWave1, auroraWave2, auroraWave3],
+      scanlines,
       starfield,
       starLayers: [layer1, layer2, layer3],
       cityGlow,
       lightBeams,
       noise,
       vignette,
-      shootingStarContainer
+      shootingStarContainer,
+      matrixRain,
+      sparkleContainer
     };
   }
 
   /**
-   * Shooting star animation system
+   * Initialize all effects based on config
+   */
+  function initializeEffects() {
+    if (!config.performanceMode) {
+      if (config.enableShootingStars) {
+        startShootingStars();
+      }
+
+      if (config.enableParallax) {
+        initParallax();
+      }
+
+      if (config.enableMatrixRain) {
+        initMatrixRain();
+      }
+
+      if (config.enableTypingSparkles) {
+        initTypingSparkles();
+      }
+    }
+
+    // Focus handlers always active
+    initFocusHandlers(container);
+  }
+
+  /**
+   * Shooting star system - Enhanced with multiple colors
    */
   function startShootingStars() {
     function scheduleNextShootingStar() {
@@ -135,13 +223,28 @@ export function initNightmareEffects(container, options = {}) {
     scheduleNextShootingStar();
   }
 
-  function createShootingStar() {
-    const star = document.createElement('div');
-    star.className = 'nightmare-shooting-star';
+  function getWeightedRandomColor() {
+    const total = config.shootingStarWeights.reduce((a, b) => a + b, 0);
+    let random = Math.random() * total;
+    
+    for (let i = 0; i < config.shootingStarColors.length; i++) {
+      random -= config.shootingStarWeights[i];
+      if (random <= 0) {
+        return config.shootingStarColors[i];
+      }
+    }
+    return config.shootingStarColors[0];
+  }
 
-    // Random starting position (upper portion of screen)
-    const startX = Math.random() * 0.3 * window.innerWidth; // Left 30%
-    const startY = Math.random() * 0.2 * window.innerHeight; // Top 20%
+  function createShootingStar(customColor = null) {
+    const star = document.createElement('div');
+    const color = customColor || getWeightedRandomColor();
+    star.className = `nightmare-shooting-star ${color}`;
+
+    // Random starting position (upper-left area)
+    const containerRect = container.getBoundingClientRect();
+    const startX = Math.random() * containerRect.width * 0.4;
+    const startY = Math.random() * containerRect.height * 0.3;
 
     star.style.left = `${startX}px`;
     star.style.top = `${startY}px`;
@@ -153,22 +256,25 @@ export function initNightmareEffects(container, options = {}) {
       star.classList.add('active');
     });
 
-    // Remove after animation completes
+    // Remove after animation
     setTimeout(() => {
       if (star.parentNode) {
         star.parentNode.removeChild(star);
       }
     }, 2500);
+
+    return star;
   }
 
   /**
-   * Parallax scrolling effect for starfield
+   * Parallax scrolling effect
    */
   function initParallax() {
     const editorScrollable = container.querySelector('.monaco-scrollable-element');
     
     if (!editorScrollable) {
-      console.warn('Nightmare: Could not find Monaco scrollable element for parallax');
+      // Retry after a short delay
+      setTimeout(() => initParallax(), 500);
       return;
     }
 
@@ -176,32 +282,36 @@ export function initNightmareEffects(container, options = {}) {
       if (!isActive) return;
 
       const scrollTop = editorScrollable.scrollTop || 0;
-      const delta = scrollTop - lastScrollTop;
       lastScrollTop = scrollTop;
 
-      // Apply different transform speeds to each layer for depth
+      // Apply different transform speeds to each layer
       if (elements.starLayers[0]) {
-        const offset1 = scrollTop * 0.1 * config.parallaxIntensity;
-        elements.starLayers[0].style.transform = `translateY(${offset1}px)`;
+        const offset1 = scrollTop * 0.08 * config.parallaxIntensity;
+        elements.starLayers[0].style.transform = `translateY(${offset1}px) translateZ(0)`;
       }
 
       if (elements.starLayers[1]) {
-        const offset2 = scrollTop * 0.15 * config.parallaxIntensity;
-        elements.starLayers[1].style.transform = `translateY(${offset2}px)`;
+        const offset2 = scrollTop * 0.12 * config.parallaxIntensity;
+        elements.starLayers[1].style.transform = `translateY(${offset2}px) translateZ(0)`;
       }
 
       if (elements.starLayers[2]) {
-        const offset3 = scrollTop * 0.2 * config.parallaxIntensity;
-        elements.starLayers[2].style.transform = `translateY(${offset3}px)`;
+        const offset3 = scrollTop * 0.18 * config.parallaxIntensity;
+        elements.starLayers[2].style.transform = `translateY(${offset3}px) translateZ(0)`;
+      }
+
+      // Aurora parallax
+      if (elements.aurora) {
+        const auroraOffset = scrollTop * 0.05 * config.parallaxIntensity;
+        elements.aurora.style.transform = `translateY(${auroraOffset}px) translateZ(0)`;
       }
 
       parallaxRAF = requestAnimationFrame(updateParallax);
     }
 
-    // Start parallax loop
     parallaxRAF = requestAnimationFrame(updateParallax);
 
-    // Also update on scroll events for immediate response
+    // Update on scroll for immediate response
     editorScrollable.addEventListener('scroll', () => {
       if (parallaxRAF) {
         cancelAnimationFrame(parallaxRAF);
@@ -211,10 +321,87 @@ export function initNightmareEffects(container, options = {}) {
   }
 
   /**
-   * Focus handlers to enhance effects when editor is active
+   * Matrix rain effect
+   */
+  function initMatrixRain() {
+    const containerRect = container.getBoundingClientRect();
+    const columnWidth = containerRect.width / config.matrixRainColumns;
+
+    for (let i = 0; i < config.matrixRainColumns; i++) {
+      const column = document.createElement('div');
+      column.className = 'nightmare-matrix-column';
+      column.style.left = `${i * columnWidth + Math.random() * columnWidth * 0.5}px`;
+      column.style.animationDelay = `${Math.random() * config.matrixRainSpeed}ms`;
+      column.style.animationDuration = `${config.matrixRainSpeed + Math.random() * 5000}ms`;
+      column.style.opacity = 0.1 + Math.random() * 0.2;
+      elements.matrixRain.appendChild(column);
+    }
+  }
+
+  /**
+   * Typing sparkle particles
+   */
+  function initTypingSparkles() {
+    const monacoEditor = container.querySelector('.monaco-editor');
+    if (!monacoEditor) {
+      setTimeout(() => initTypingSparkles(), 500);
+      return;
+    }
+
+    monacoEditor.addEventListener('keydown', (e) => {
+      if (!isActive || config.performanceMode) return;
+      
+      // Skip modifier keys
+      if (e.key.length > 1 && !['Enter', 'Tab', 'Backspace'].includes(e.key)) return;
+      
+      // Random chance based on intensity
+      if (Math.random() > config.sparkleIntensity) return;
+
+      // Get cursor position
+      const cursor = container.querySelector('.monaco-editor .cursor');
+      if (!cursor) return;
+
+      createSparkle(cursor);
+    });
+  }
+
+  function createSparkle(cursor) {
+    const rect = cursor.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    
+    const colors = ['cyan', 'magenta', 'green'];
+    const numSparkles = 2 + Math.floor(Math.random() * 3);
+
+    for (let i = 0; i < numSparkles; i++) {
+      const sparkle = document.createElement('div');
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      sparkle.className = `nightmare-sparkle ${color}`;
+      
+      // Position at cursor
+      sparkle.style.left = `${rect.left - containerRect.left + Math.random() * 10 - 5}px`;
+      sparkle.style.top = `${rect.top - containerRect.top + Math.random() * 10 - 5}px`;
+      
+      // Random direction
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 20 + Math.random() * 30;
+      sparkle.style.setProperty('--sparkle-x', `${Math.cos(angle) * distance}px`);
+      sparkle.style.setProperty('--sparkle-y', `${Math.sin(angle) * distance - 20}px`);
+
+      elements.sparkleContainer.appendChild(sparkle);
+
+      // Remove after animation
+      setTimeout(() => {
+        if (sparkle.parentNode) {
+          sparkle.parentNode.removeChild(sparkle);
+        }
+      }, 800);
+    }
+  }
+
+  /**
+   * Focus handlers
    */
   function initFocusHandlers(container) {
-    // These classes are already styled in CSS
     container.addEventListener('focusin', () => {
       container.classList.add('nightmare-focused');
     });
@@ -247,7 +434,12 @@ export function initNightmareEffects(container, options = {}) {
     });
 
     // Remove classes
-    container.classList.remove('nightmare-editor', 'performance-mode', 'nightmare-focused');
+    container.classList.remove(
+      'nightmare-editor', 
+      'performance-mode', 
+      'nightmare-focused',
+      'glitch-enabled'
+    );
   }
 
   /**
@@ -265,28 +457,65 @@ export function initNightmareEffects(container, options = {}) {
     
     resume: () => {
       isActive = true;
-      if (config.enableShootingStars && !config.performanceMode) {
-        startShootingStars();
-      }
-      if (config.enableParallax && !config.performanceMode) {
-        initParallax();
+      initializeEffects();
+    },
+
+    // Trigger shooting star manually with optional color
+    shootStar: (color = null) => {
+      createShootingStar(color);
+    },
+
+    // Burst of shooting stars (celebration effect)
+    shootStarBurst: (count = 5, delay = 200) => {
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => createShootingStar(), i * delay);
       }
     },
 
-    // Trigger shooting star manually
-    shootStar: () => {
-      createShootingStar();
+    // Toggle specific effects
+    toggleAurora: (enable) => {
+      if (elements.aurora) {
+        elements.aurora.style.display = enable ? 'block' : 'none';
+      }
+    },
+
+    toggleScanlines: (enable) => {
+      if (elements.scanlines) {
+        elements.scanlines.style.display = enable ? 'block' : 'none';
+      }
+    },
+
+    toggleMatrixRain: (enable) => {
+      if (elements.matrixRain) {
+        elements.matrixRain.style.display = enable ? 'block' : 'none';
+        if (enable && elements.matrixRain.children.length === 0) {
+          initMatrixRain();
+        }
+      }
+    },
+
+    toggleGlitch: (enable) => {
+      if (enable) {
+        container.classList.add('glitch-enabled');
+      } else {
+        container.classList.remove('glitch-enabled');
+      }
     },
 
     // Update configuration
     updateConfig: (newConfig) => {
       Object.assign(config, newConfig);
       
-      // Handle performance mode toggle
       if (config.performanceMode) {
         container.classList.add('performance-mode');
       } else {
         container.classList.remove('performance-mode');
+      }
+
+      if (config.enableGlitchEffect) {
+        container.classList.add('glitch-enabled');
+      } else {
+        container.classList.remove('glitch-enabled');
       }
     },
 
@@ -294,20 +523,44 @@ export function initNightmareEffects(container, options = {}) {
     getConfig: () => ({ ...config }),
 
     // Get elements for custom manipulation
-    getElements: () => elements
+    getElements: () => elements,
+
+    // Intensity controls
+    setGlowIntensity: (intensity) => {
+      container.style.setProperty('--nm-glow-intensity', intensity);
+    },
+
+    // Create sparkle at position (for custom effects)
+    createSparkleAt: (x, y, color = 'cyan') => {
+      const sparkle = document.createElement('div');
+      sparkle.className = `nightmare-sparkle ${color}`;
+      sparkle.style.left = `${x}px`;
+      sparkle.style.top = `${y}px`;
+      
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 20 + Math.random() * 30;
+      sparkle.style.setProperty('--sparkle-x', `${Math.cos(angle) * distance}px`);
+      sparkle.style.setProperty('--sparkle-y', `${Math.sin(angle) * distance - 20}px`);
+
+      elements.sparkleContainer.appendChild(sparkle);
+
+      setTimeout(() => {
+        if (sparkle.parentNode) {
+          sparkle.parentNode.removeChild(sparkle);
+        }
+      }, 800);
+    }
   };
 }
 
 /**
  * Auto-detect and apply Nightmare effects to Monaco editors
- * Call this after Monaco editor is initialized
  * @param {Object} options - Configuration options
- * @returns {Array} Array of controller objects for each editor found
+ * @returns {Array} Array of controller objects
  */
 export function autoInitNightmareEffects(options = {}) {
   const controllers = [];
   
-  // Find all Monaco editor containers
   const editors = document.querySelectorAll('.monaco-editor');
   
   editors.forEach(editor => {
@@ -319,9 +572,11 @@ export function autoInitNightmareEffects(options = {}) {
   });
 
   if (controllers.length === 0) {
-    console.warn('Nightmare: No Monaco editors found for auto-initialization');
+    console.warn('Nightmare: No Monaco editors found. Retrying in 1s...');
+    setTimeout(() => autoInitNightmareEffects(options), 1000);
   } else {
-    console.log(`Nightmare: Initialized effects for ${controllers.length} editor(s)`);
+    console.log(`%c🌃 Nightmare v2.0 Ultra Neon: ${controllers.length} editor(s) awakened`, 
+      'color: #ff00ff; font-weight: bold; text-shadow: 0 0 10px #ff00ff;');
   }
 
   return controllers;
@@ -331,14 +586,18 @@ export function autoInitNightmareEffects(options = {}) {
  * Performance monitoring utility
  * Automatically switches to performance mode if FPS drops
  * @param {Object} controller - Nightmare effects controller
- * @param {number} threshold - FPS threshold (default: 30)
+ * @param {number} threshold - FPS threshold (default: 35)
+ * @param {number} duration - Monitoring duration in ms (default: 8000)
  */
-export function enableAdaptivePerformance(controller, threshold = 30) {
+export function enableAdaptivePerformance(controller, threshold = 35, duration = 8000) {
   let lastTime = performance.now();
   let frames = 0;
-  let checkInterval;
+  let monitoring = true;
+  let lowFPSCount = 0;
 
   function checkFPS() {
+    if (!monitoring) return;
+
     const currentTime = performance.now();
     frames++;
 
@@ -346,9 +605,16 @@ export function enableAdaptivePerformance(controller, threshold = 30) {
       const fps = Math.round((frames * 1000) / (currentTime - lastTime));
       
       if (fps < threshold) {
-        console.warn(`Nightmare: Low FPS detected (${fps}). Enabling performance mode.`);
-        controller.updateConfig({ performanceMode: true });
-        clearInterval(checkInterval);
+        lowFPSCount++;
+        if (lowFPSCount >= 3) {
+          console.log(`%c🌃 Nightmare: Low FPS (${fps}). Enabling performance mode.`, 
+            'color: #ffaa00; font-weight: bold;');
+          controller.updateConfig({ performanceMode: true });
+          monitoring = false;
+          return;
+        }
+      } else {
+        lowFPSCount = 0;
       }
 
       frames = 0;
@@ -358,39 +624,34 @@ export function enableAdaptivePerformance(controller, threshold = 30) {
     requestAnimationFrame(checkFPS);
   }
 
-  // Check for 10 seconds
-  checkInterval = setTimeout(() => {
-    console.log('Nightmare: Performance monitoring complete');
-  }, 10000);
+  setTimeout(() => {
+    if (monitoring) {
+      monitoring = false;
+      console.log('%c🌃 Nightmare: Performance check passed ✓', 
+        'color: #00ff7f; font-weight: bold;');
+    }
+  }, duration);
 
   requestAnimationFrame(checkFPS);
 }
 
 /**
- * Utility: Create custom shooting star on demand
+ * Create custom shooting star on demand
  * @param {HTMLElement} container - Editor container
- * @param {Object} options - Start position and style options
+ * @param {Object} options - Star configuration
  */
 export function createCustomShootingStar(container, options = {}) {
   const {
     startX = 0,
     startY = 0,
-    color = 'rgba(0, 247, 255, 0.8)',
-    duration = 2000
+    color = 'cyan',
+    duration = 1800
   } = options;
 
   const star = document.createElement('div');
-  star.className = 'nightmare-shooting-star';
+  star.className = `nightmare-shooting-star ${color}`;
   star.style.left = `${startX}px`;
   star.style.top = `${startY}px`;
-  
-  if (color !== 'rgba(0, 247, 255, 0.8)') {
-    star.style.boxShadow = `
-      0 0 10px ${color},
-      0 0 20px ${color},
-      0 0 30px ${color}
-    `;
-  }
 
   const shootingContainer = container.querySelector('.nightmare-shooting-star-container');
   if (shootingContainer) {
@@ -398,7 +659,7 @@ export function createCustomShootingStar(container, options = {}) {
 
     requestAnimationFrame(() => {
       star.classList.add('active');
-      if (duration !== 2000) {
+      if (duration !== 1800) {
         star.style.animationDuration = `${duration}ms`;
       }
     });
@@ -411,10 +672,42 @@ export function createCustomShootingStar(container, options = {}) {
   }
 }
 
+/**
+ * Celebration effect - Multiple shooting stars
+ * @param {Object} controller - Nightmare controller
+ * @param {string} type - 'small', 'medium', 'epic'
+ */
+export function triggerCelebration(controller, type = 'medium') {
+  const configs = {
+    small: { count: 3, delay: 300 },
+    medium: { count: 6, delay: 200 },
+    epic: { count: 12, delay: 150 }
+  };
+
+  const config = configs[type] || configs.medium;
+  controller.shootStarBurst(config.count, config.delay);
+}
+
+/**
+ * Night mode transition - Smoothly increase darkness
+ * @param {HTMLElement} container 
+ * @param {number} duration - Transition duration in ms
+ */
+export function transitionToNight(container, duration = 2000) {
+  container.style.transition = `filter ${duration}ms ease`;
+  container.style.filter = 'brightness(0.9) saturate(1.1)';
+  
+  setTimeout(() => {
+    container.style.filter = '';
+  }, 100);
+}
+
 // Export default for convenience
 export default {
   initNightmareEffects,
   autoInitNightmareEffects,
   enableAdaptivePerformance,
-  createCustomShootingStar
+  createCustomShootingStar,
+  triggerCelebration,
+  transitionToNight
 };

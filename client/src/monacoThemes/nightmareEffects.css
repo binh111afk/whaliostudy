@@ -1,28 +1,43 @@
 /**
- * NIGHTMARE THEME EFFECTS
- * "Code under falling stars"
+ * NIGHTMARE THEME EFFECTS v2.0 - ULTRA NEON EDITION
+ * "Code under a holographic aurora"
  * 
- * Premium cinematic cyberpunk visual effects.
- * Companion styles for Nightmare Monaco theme.
+ * ULTIMATE cinematic cyberpunk visual effects.
+ * Maximum neon intensity. Holographic gradients. Aurora storms.
  * 
  * Apply to Monaco editor container with class: nightmare-editor
+ * 
+ * Features:
+ * - Aurora Borealis background animation
+ * - Holographic scanlines
+ * - Neon pulse effects on all elements
+ * - Glitch text effects on hover
+ * - Plasma border animations
+ * - Particle glow cursor trail
+ * - Matrix digital rain (optional)
+ * - Chromatic aberration effects
  */
 
 /* ============================
-   ROOT VARIABLES
+   ROOT VARIABLES - ULTRA NEON
    ============================ */
 :root {
-  --nightmare-bg-base: #05060a;
-  --nightmare-purple-deep: #14001f;
-  --nightmare-magenta: #ff00ff;
-  --nightmare-magenta-light: #ff4dff;
-  --nightmare-cyan: #00f7ff;
-  --nightmare-violet: #9d4edd;
-  --nightmare-green: #00ff85;
-  --nightmare-orange: #ffae00;
-  --nightmare-white: #f0f4ff;
-  --nightmare-cool-white: #e6f1ff;
-  --nightmare-blue: #5c7cfa;
+  --nm-bg-void: #030408;
+  --nm-bg-deep: #08081a;
+  --nm-magenta: #ff00ff;
+  --nm-magenta-hot: #ff40ff;
+  --nm-cyan: #00ffff;
+  --nm-cyan-bright: #40ffff;
+  --nm-violet: #c840ff;
+  --nm-violet-soft: #a060ff;
+  --nm-green: #00ff7f;
+  --nm-green-bright: #40ffa0;
+  --nm-orange: #ffaa00;
+  --nm-orange-hot: #ffcc40;
+  --nm-red: #ff3366;
+  --nm-blue: #6b8cff;
+  --nm-white: #f0f6ff;
+  --nm-glow-intensity: 1;
 }
 
 /* ============================
@@ -32,504 +47,1266 @@
   position: relative;
   overflow: hidden;
   isolation: isolate;
+  --nm-glow-intensity: 1;
 }
 
 /* ============================
-   LAYER 1: COSMIC GRADIENT BASE
+   LAYER 0: VOID GRADIENT BASE
+   Deep space with subtle color bleeding
    ============================ */
 .nightmare-editor::before {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: -5;
+  z-index: -10;
   background: 
-    radial-gradient(ellipse at 50% 100%, var(--nightmare-purple-deep) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 20%, rgba(157, 78, 221, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 20% 40%, rgba(0, 247, 255, 0.08) 0%, transparent 40%),
-    var(--nightmare-bg-base);
-  will-change: opacity;
+    radial-gradient(ellipse 150% 100% at 100% 100%, rgba(255, 0, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 150% 100% at 0% 0%, rgba(0, 255, 255, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 100% 150% at 50% 100%, rgba(200, 64, 255, 0.1) 0%, transparent 60%),
+    linear-gradient(180deg, var(--nm-bg-void) 0%, #050812 50%, var(--nm-bg-void) 100%);
+  animation: voidBreath 20s ease-in-out infinite;
+}
+
+@keyframes voidBreath {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  50% { opacity: 0.95; filter: brightness(1.05); }
 }
 
 /* ============================
-   LAYER 2: NEBULA FOG
+   LAYER 1: AURORA BOREALIS
+   Flowing northern lights effect
+   ============================ */
+.nightmare-aurora {
+  position: absolute;
+  inset: 0;
+  z-index: -9;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.nightmare-aurora::before,
+.nightmare-aurora::after {
+  content: '';
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  top: -50%;
+  left: -50%;
+  background: 
+    conic-gradient(
+      from 0deg at 50% 50%,
+      transparent 0deg,
+      rgba(0, 255, 255, 0.08) 60deg,
+      rgba(255, 0, 255, 0.1) 120deg,
+      rgba(200, 64, 255, 0.08) 180deg,
+      rgba(0, 255, 127, 0.06) 240deg,
+      rgba(0, 255, 255, 0.08) 300deg,
+      transparent 360deg
+    );
+  animation: auroraRotate 60s linear infinite;
+  filter: blur(80px);
+  opacity: 0.6;
+}
+
+.nightmare-aurora::after {
+  animation-direction: reverse;
+  animation-duration: 45s;
+  opacity: 0.4;
+  filter: blur(100px);
+}
+
+@keyframes auroraRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Aurora wave layers */
+.nightmare-aurora-wave {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+.nightmare-aurora-wave-1 {
+  background: linear-gradient(
+    45deg,
+    transparent 0%,
+    rgba(0, 255, 255, 0.05) 25%,
+    transparent 50%,
+    rgba(255, 0, 255, 0.05) 75%,
+    transparent 100%
+  );
+  background-size: 400% 400%;
+  animation: auroraWave1 8s ease-in-out infinite;
+}
+
+.nightmare-aurora-wave-2 {
+  background: linear-gradient(
+    -45deg,
+    transparent 0%,
+    rgba(200, 64, 255, 0.04) 30%,
+    transparent 50%,
+    rgba(0, 255, 127, 0.04) 70%,
+    transparent 100%
+  );
+  background-size: 400% 400%;
+  animation: auroraWave2 12s ease-in-out infinite;
+}
+
+.nightmare-aurora-wave-3 {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 0, 255, 0.03) 20%,
+    rgba(0, 255, 255, 0.03) 40%,
+    transparent 60%,
+    rgba(200, 64, 255, 0.03) 80%,
+    transparent 100%
+  );
+  background-size: 300% 100%;
+  animation: auroraWave3 15s linear infinite;
+}
+
+@keyframes auroraWave1 {
+  0%, 100% { background-position: 0% 0%; opacity: 0.6; }
+  50% { background-position: 100% 100%; opacity: 0.8; }
+}
+
+@keyframes auroraWave2 {
+  0%, 100% { background-position: 100% 0%; opacity: 0.5; }
+  50% { background-position: 0% 100%; opacity: 0.7; }
+}
+
+@keyframes auroraWave3 {
+  from { background-position: 0% 50%; }
+  to { background-position: 300% 50%; }
+}
+
+/* ============================
+   LAYER 2: NEBULA CLOUDS
+   Drifting cosmic fog
    ============================ */
 .nightmare-editor::after {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: -4;
+  z-index: -8;
   background: 
-    radial-gradient(ellipse 800px 400px at 30% 60%, rgba(157, 78, 221, 0.04) 0%, transparent 70%),
-    radial-gradient(ellipse 600px 500px at 70% 30%, rgba(0, 247, 255, 0.03) 0%, transparent 65%),
-    radial-gradient(ellipse 900px 600px at 50% 80%, rgba(255, 0, 255, 0.02) 0%, transparent 80%);
+    radial-gradient(ellipse 600px 400px at 20% 30%, rgba(200, 64, 255, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 500px 500px at 80% 60%, rgba(0, 255, 255, 0.05) 0%, transparent 55%),
+    radial-gradient(ellipse 700px 500px at 60% 20%, rgba(255, 0, 255, 0.04) 0%, transparent 65%),
+    radial-gradient(ellipse 400px 600px at 30% 80%, rgba(0, 255, 127, 0.03) 0%, transparent 50%);
   filter: blur(60px);
-  animation: nebulaDrift 180s ease-in-out infinite;
-  opacity: 0.6;
+  animation: nebulaDrift 120s ease-in-out infinite;
+  opacity: 0.8;
   pointer-events: none;
 }
 
 @keyframes nebulaDrift {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(20px, -30px) scale(1.05); }
-  66% { transform: translate(-30px, 20px) scale(0.95); }
+  0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  25% { transform: translate(30px, -20px) scale(1.05) rotate(2deg); }
+  50% { transform: translate(-20px, 30px) scale(0.95) rotate(-2deg); }
+  75% { transform: translate(-30px, -30px) scale(1.02) rotate(1deg); }
 }
 
 /* ============================
-   LAYER 3: STARFIELD CANVAS
+   LAYER 3: HOLOGRAPHIC SCANLINES
+   Retro-futuristic CRT effect
+   ============================ */
+.nightmare-scanlines {
+  position: absolute;
+  inset: 0;
+  z-index: -7;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 255, 255, 0.015) 2px,
+    rgba(0, 255, 255, 0.015) 4px
+  );
+  animation: scanlineScroll 10s linear infinite;
+  opacity: 0.5;
+}
+
+.nightmare-scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 1px,
+    rgba(255, 0, 255, 0.008) 1px,
+    rgba(255, 0, 255, 0.008) 2px
+  );
+}
+
+@keyframes scanlineScroll {
+  from { background-position: 0 0; }
+  to { background-position: 0 100px; }
+}
+
+/* ============================
+   LAYER 4: STARFIELD CANVAS
+   Deep space stars with parallax
    ============================ */
 .nightmare-starfield {
   position: absolute;
   inset: 0;
-  z-index: -3;
+  z-index: -6;
   pointer-events: none;
 }
 
-/* Tiny stars */
-.nightmare-starfield-layer-1,
-.nightmare-starfield-layer-2,
+/* Tiny distant stars */
+.nightmare-starfield-layer-1 {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(1px 1px at 30% 50%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 50% 30%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 70% 60%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(1px 1px at 15% 70%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 35% 90%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 55% 10%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 75% 80%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 95% 15%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 25% 25%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 45% 75%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 65% 45%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 85% 95%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 5% 85%, rgba(255,255,255,0.6), transparent);
+  background-size: 250px 250px;
+  opacity: 0.5;
+  animation: twinkleSlow 6s ease-in-out infinite, parallaxFloat1 30s ease-in-out infinite;
+}
+
+/* Medium colored stars */
+.nightmare-starfield-layer-2 {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(2px 2px at 20% 35%, rgba(0, 255, 255, 0.9), transparent),
+    radial-gradient(2px 2px at 45% 65%, rgba(255, 0, 255, 0.8), transparent),
+    radial-gradient(2px 2px at 70% 25%, rgba(200, 64, 255, 0.9), transparent),
+    radial-gradient(2px 2px at 90% 75%, rgba(0, 255, 127, 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 15% 55%, rgba(255, 170, 0, 0.8), transparent),
+    radial-gradient(2px 2px at 55% 85%, rgba(0, 255, 255, 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 80% 15%, rgba(255, 0, 255, 0.9), transparent),
+    radial-gradient(2px 2px at 35% 5%, rgba(107, 140, 255, 0.8), transparent);
+  background-size: 300px 300px;
+  opacity: 0.7;
+  animation: twinkleMedium 8s ease-in-out infinite, parallaxFloat2 25s ease-in-out infinite;
+}
+
+/* Bright glowing stars with halos */
 .nightmare-starfield-layer-3 {
   position: absolute;
   inset: 0;
-  background-repeat: repeat;
-  background-size: 200px 200px;
-  opacity: 0;
-  animation: starfieldFadeIn 2s ease-out forwards;
-}
-
-/* Layer 1: Distant tiny stars (1px) */
-.nightmare-starfield-layer-1 {
   background-image: 
-    radial-gradient(1px 1px at 20% 30%, white, transparent),
-    radial-gradient(1px 1px at 60% 70%, white, transparent),
-    radial-gradient(1px 1px at 50% 50%, white, transparent),
-    radial-gradient(1px 1px at 80% 10%, white, transparent),
-    radial-gradient(1px 1px at 90% 60%, white, transparent),
-    radial-gradient(1px 1px at 30% 80%, white, transparent),
-    radial-gradient(1px 1px at 15% 90%, white, transparent),
-    radial-gradient(1px 1px at 70% 40%, white, transparent);
-  opacity: 0.4;
-  animation: twinkleSlow 8s ease-in-out infinite, starfieldFadeIn 2s ease-out forwards;
-}
-
-/* Layer 2: Medium stars (2px) */
-.nightmare-starfield-layer-2 {
-  background-image: 
-    radial-gradient(2px 2px at 40% 20%, rgba(0, 247, 255, 0.8), transparent),
-    radial-gradient(1.5px 1.5px at 10% 50%, rgba(157, 78, 221, 0.7), transparent),
-    radial-gradient(2px 2px at 85% 30%, rgba(255, 255, 255, 0.8), transparent),
-    radial-gradient(1.5px 1.5px at 25% 65%, rgba(255, 0, 255, 0.6), transparent),
-    radial-gradient(2px 2px at 95% 85%, rgba(255, 255, 255, 0.7), transparent),
-    radial-gradient(1.5px 1.5px at 55% 15%, rgba(0, 247, 255, 0.6), transparent);
-  opacity: 0.6;
-  animation: twinkleMedium 12s ease-in-out infinite 1s, starfieldFadeIn 2s ease-out forwards;
-}
-
-/* Layer 3: Bright rare stars (3px with glow) */
-.nightmare-starfield-layer-3 {
-  background-image: 
-    radial-gradient(circle at 75% 55%, rgba(0, 247, 255, 1) 0%, rgba(0, 247, 255, 0.3) 3px, transparent 6px),
-    radial-gradient(circle at 35% 25%, rgba(255, 0, 255, 1) 0%, rgba(255, 0, 255, 0.3) 3px, transparent 6px),
-    radial-gradient(circle at 65% 85%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.3) 2.5px, transparent 5px);
-  opacity: 0.8;
-  animation: twinkleBright 6s ease-in-out infinite 0.5s, starfieldFadeIn 2s ease-out forwards;
-}
-
-@keyframes starfieldFadeIn {
-  from { opacity: 0; }
-  to { opacity: inherit; }
+    radial-gradient(circle at 25% 40%, rgba(0, 255, 255, 1) 0%, rgba(0, 255, 255, 0.5) 2px, rgba(0, 255, 255, 0.1) 4px, transparent 8px),
+    radial-gradient(circle at 65% 70%, rgba(255, 0, 255, 1) 0%, rgba(255, 0, 255, 0.5) 2px, rgba(255, 0, 255, 0.1) 4px, transparent 8px),
+    radial-gradient(circle at 85% 25%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.4) 3px, transparent 6px),
+    radial-gradient(circle at 40% 85%, rgba(200, 64, 255, 1) 0%, rgba(200, 64, 255, 0.4) 2px, transparent 6px),
+    radial-gradient(circle at 10% 60%, rgba(0, 255, 127, 1) 0%, rgba(0, 255, 127, 0.3) 2px, transparent 5px);
+  background-size: 350px 350px;
+  opacity: 0.9;
+  animation: twinkleBright 4s ease-in-out infinite, parallaxFloat3 20s ease-in-out infinite;
 }
 
 @keyframes twinkleSlow {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.5; }
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.6; }
 }
 
 @keyframes twinkleMedium {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 0.8; }
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.9; }
 }
 
 @keyframes twinkleBright {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: 0.8; filter: brightness(1); }
+  50% { opacity: 1; filter: brightness(1.3); }
+}
+
+@keyframes parallaxFloat1 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-5px, 10px); }
+}
+
+@keyframes parallaxFloat2 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(8px, -8px); }
+}
+
+@keyframes parallaxFloat3 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-3px, -5px); }
 }
 
 /* ============================
-   LAYER 4: PARALLAX EFFECT
-   ============================ */
-.nightmare-editor .monaco-scrollable-element {
-  /* Parallax effect applied via JS for smooth scroll */
-  will-change: transform;
-}
-
-/* ============================
-   LAYER 5: CITY GLOW HORIZON
+   LAYER 5: NEON CITY HORIZON
+   Cyberpunk skyline glow
    ============================ */
 .nightmare-city-glow {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 200px;
-  z-index: -2;
+  height: 250px;
+  z-index: -5;
   background: 
-    radial-gradient(ellipse 80% 100% at 20% 100%, rgba(255, 0, 255, 0.15) 0%, transparent 60%),
-    radial-gradient(ellipse 70% 90% at 60% 100%, rgba(0, 247, 255, 0.12) 0%, transparent 55%),
-    radial-gradient(ellipse 90% 80% at 85% 100%, rgba(157, 78, 221, 0.1) 0%, transparent 50%),
-    linear-gradient(to top, rgba(255, 0, 255, 0.08) 0%, transparent 100%);
-  filter: blur(40px);
-  opacity: 0.7;
-  animation: cityGlowPulse 8s ease-in-out infinite;
+    radial-gradient(ellipse 100% 150% at 10% 100%, rgba(255, 0, 255, 0.25) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 120% at 40% 100%, rgba(0, 255, 255, 0.2) 0%, transparent 45%),
+    radial-gradient(ellipse 90% 130% at 70% 100%, rgba(200, 64, 255, 0.22) 0%, transparent 48%),
+    radial-gradient(ellipse 70% 100% at 95% 100%, rgba(0, 255, 127, 0.15) 0%, transparent 40%),
+    linear-gradient(to top, rgba(255, 0, 255, 0.15) 0%, transparent 60%);
+  filter: blur(30px);
+  animation: cityPulse 6s ease-in-out infinite;
   pointer-events: none;
 }
 
-@keyframes cityGlowPulse {
-  0%, 100% { opacity: 0.6; transform: scaleY(1); }
-  50% { opacity: 0.8; transform: scaleY(1.1); }
+.nightmare-city-glow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse 60% 80% at 25% 100%, rgba(255, 170, 0, 0.1) 0%, transparent 40%),
+    radial-gradient(ellipse 50% 70% at 60% 100%, rgba(255, 51, 102, 0.08) 0%, transparent 35%);
+  filter: blur(40px);
+  animation: cityPulse 8s ease-in-out infinite reverse;
+}
+
+@keyframes cityPulse {
+  0%, 100% { opacity: 0.7; transform: scaleY(1) scaleX(1); }
+  25% { opacity: 0.85; transform: scaleY(1.08) scaleX(1.02); }
+  50% { opacity: 0.75; transform: scaleY(1.15) scaleX(0.98); }
+  75% { opacity: 0.9; transform: scaleY(1.05) scaleX(1.03); }
 }
 
 /* ============================
-   SHOOTING STAR ANIMATION
+   SHOOTING STARS - ULTRA
+   Multiple styles and colors
    ============================ */
 .nightmare-shooting-star {
   position: absolute;
-  width: 2px;
-  height: 2px;
+  width: 3px;
+  height: 3px;
   background: white;
   border-radius: 50%;
-  box-shadow: 
-    0 0 10px rgba(0, 247, 255, 0.8),
-    0 0 20px rgba(0, 247, 255, 0.6),
-    0 0 30px rgba(0, 247, 255, 0.4);
   z-index: -1;
   opacity: 0;
   pointer-events: none;
 }
 
-.nightmare-shooting-star::after {
+/* Cyan shooting star */
+.nightmare-shooting-star.cyan {
+  box-shadow: 
+    0 0 6px 2px rgba(0, 255, 255, 1),
+    0 0 12px 4px rgba(0, 255, 255, 0.8),
+    0 0 24px 6px rgba(0, 255, 255, 0.5),
+    0 0 48px 8px rgba(0, 255, 255, 0.3);
+}
+
+.nightmare-shooting-star.cyan::after {
   content: '';
   position: absolute;
-  top: 0;
+  top: 50%;
   right: 0;
-  width: 100px;
-  height: 2px;
-  background: linear-gradient(to left, rgba(0, 247, 255, 0.8), transparent);
+  width: 150px;
+  height: 3px;
+  transform: translateY(-50%);
+  background: linear-gradient(to left, 
+    rgba(0, 255, 255, 0.9) 0%,
+    rgba(0, 255, 255, 0.6) 30%,
+    rgba(0, 255, 255, 0.2) 70%,
+    transparent 100%);
   filter: blur(2px);
-  transform-origin: right;
+}
+
+/* Magenta shooting star */
+.nightmare-shooting-star.magenta {
+  box-shadow: 
+    0 0 6px 2px rgba(255, 0, 255, 1),
+    0 0 12px 4px rgba(255, 0, 255, 0.8),
+    0 0 24px 6px rgba(255, 0, 255, 0.5),
+    0 0 48px 8px rgba(255, 0, 255, 0.3);
+}
+
+.nightmare-shooting-star.magenta::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 120px;
+  height: 3px;
+  transform: translateY(-50%);
+  background: linear-gradient(to left, 
+    rgba(255, 0, 255, 0.9) 0%,
+    rgba(255, 0, 255, 0.6) 30%,
+    rgba(200, 64, 255, 0.3) 70%,
+    transparent 100%);
+  filter: blur(2px);
+}
+
+/* Gold shooting star (rare) */
+.nightmare-shooting-star.gold {
+  box-shadow: 
+    0 0 8px 3px rgba(255, 170, 0, 1),
+    0 0 16px 6px rgba(255, 204, 0, 0.8),
+    0 0 32px 10px rgba(255, 170, 0, 0.4);
+}
+
+.nightmare-shooting-star.gold::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 180px;
+  height: 4px;
+  transform: translateY(-50%);
+  background: linear-gradient(to left, 
+    rgba(255, 204, 0, 1) 0%,
+    rgba(255, 170, 0, 0.7) 40%,
+    rgba(255, 136, 0, 0.3) 70%,
+    transparent 100%);
+  filter: blur(3px);
+}
+
+/* Rainbow shooting star (ultra rare) */
+.nightmare-shooting-star.rainbow {
+  box-shadow: 
+    0 0 10px 4px rgba(255, 255, 255, 1),
+    0 0 20px 8px rgba(0, 255, 255, 0.6),
+    0 0 30px 12px rgba(255, 0, 255, 0.4);
+}
+
+.nightmare-shooting-star.rainbow::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 200px;
+  height: 5px;
+  transform: translateY(-50%);
+  background: linear-gradient(to left, 
+    rgba(255, 255, 255, 1) 0%,
+    rgba(0, 255, 255, 0.9) 20%,
+    rgba(255, 0, 255, 0.8) 40%,
+    rgba(255, 170, 0, 0.6) 60%,
+    rgba(0, 255, 127, 0.4) 80%,
+    transparent 100%);
+  filter: blur(3px);
 }
 
 .nightmare-shooting-star.active {
-  animation: shootingStar 2s ease-out forwards;
+  animation: shootingStar 1.8s ease-out forwards;
 }
 
 @keyframes shootingStar {
   0% {
     opacity: 0;
-    transform: translate(-100px, -100px) rotate(-45deg);
+    transform: translate(0, 0) rotate(-35deg) scale(0.5);
   }
   10% {
     opacity: 1;
+    transform: translate(50px, 50px) rotate(-35deg) scale(1);
   }
-  90% {
-    opacity: 0.8;
+  70% {
+    opacity: 0.9;
   }
   100% {
     opacity: 0;
-    transform: translate(800px, 800px) rotate(-45deg);
+    transform: translate(600px, 600px) rotate(-35deg) scale(0.8);
   }
 }
 
 /* ============================
-   DEPTH & ATMOSPHERE
+   LIGHT BEAMS - ENHANCED
+   Volumetric god rays
    ============================ */
-
-/* Vertical light beams */
 .nightmare-light-beams {
   position: absolute;
   inset: 0;
-  z-index: -2;
-  background: 
-    linear-gradient(to bottom, 
-      transparent 0%, 
-      rgba(157, 78, 221, 0.02) 30%, 
-      transparent 60%),
-    linear-gradient(to bottom, 
-      transparent 20%, 
-      rgba(0, 247, 255, 0.015) 50%, 
-      transparent 80%);
-  opacity: 0.5;
+  z-index: -4;
   pointer-events: none;
-  animation: lightBeamShift 15s ease-in-out infinite;
+  overflow: hidden;
 }
 
-@keyframes lightBeamShift {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(20px); }
+.nightmare-light-beams::before {
+  content: '';
+  position: absolute;
+  width: 300%;
+  height: 300%;
+  top: -100%;
+  left: -100%;
+  background: 
+    conic-gradient(
+      from 180deg at 30% 80%,
+      transparent 0deg,
+      rgba(255, 0, 255, 0.04) 20deg,
+      transparent 40deg,
+      rgba(0, 255, 255, 0.03) 60deg,
+      transparent 80deg,
+      rgba(200, 64, 255, 0.035) 100deg,
+      transparent 120deg
+    );
+  animation: godRaysSpin 120s linear infinite;
+  filter: blur(40px);
+  opacity: 0.6;
 }
 
-/* Subtle noise texture */
+.nightmare-light-beams::after {
+  content: '';
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  bottom: -100%;
+  right: -100%;
+  background: 
+    conic-gradient(
+      from 0deg at 70% 20%,
+      transparent 0deg,
+      rgba(0, 255, 127, 0.03) 30deg,
+      transparent 60deg,
+      rgba(255, 170, 0, 0.025) 90deg,
+      transparent 120deg
+    );
+  animation: godRaysSpin 90s linear infinite reverse;
+  filter: blur(50px);
+  opacity: 0.5;
+}
+
+@keyframes godRaysSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ============================
+   NOISE & GRAIN TEXTURE
+   Film grain effect
+   ============================ */
 .nightmare-noise {
   position: absolute;
   inset: 0;
-  z-index: -1;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
-  opacity: 0.15;
+  z-index: -3;
   pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+  opacity: 0.2;
   mix-blend-mode: overlay;
+  animation: grainShift 0.5s steps(10) infinite;
 }
 
-/* Vignette at corners */
+@keyframes grainShift {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-1%, -1%); }
+  20% { transform: translate(1%, 1%); }
+  30% { transform: translate(-1%, 1%); }
+  40% { transform: translate(1%, -1%); }
+  50% { transform: translate(-0.5%, 0.5%); }
+  60% { transform: translate(0.5%, -0.5%); }
+  70% { transform: translate(-1%, -0.5%); }
+  80% { transform: translate(0.5%, 1%); }
+  90% { transform: translate(1%, 0.5%); }
+}
+
+/* ============================
+   VIGNETTE - CINEMATIC
+   Darker corners with color
+   ============================ */
 .nightmare-vignette {
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: radial-gradient(ellipse at center, transparent 40%, rgba(5, 6, 10, 0.6) 100%);
   pointer-events: none;
-  opacity: 0.7;
+  background: 
+    radial-gradient(ellipse 80% 80% at center, 
+      transparent 30%, 
+      rgba(0, 0, 20, 0.4) 70%,
+      rgba(0, 0, 10, 0.7) 100%),
+    radial-gradient(ellipse 120% 80% at 50% 100%,
+      rgba(255, 0, 255, 0.05) 0%,
+      transparent 50%);
+  animation: vignetteBreath 10s ease-in-out infinite;
+  opacity: 0.8;
+}
+
+@keyframes vignetteBreath {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 0.85; }
 }
 
 /* ============================
-   CURSOR & CARET
+   CURSOR & CARET - HYPER GLOW
+   Intense pulsing neon cursor
    ============================ */
-
-/* Cursor pulse animation */
 .nightmare-editor .monaco-editor .cursors-layer .cursor {
-  animation: cursorPulse 2s ease-in-out infinite !important;
+  animation: cursorHyperPulse 1.5s ease-in-out infinite !important;
   box-shadow: 
-    0 0 10px rgba(0, 247, 255, 0.8),
-    0 0 20px rgba(0, 247, 255, 0.4);
-}
-
-@keyframes cursorPulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scaleX(1);
-  }
-  50% {
-    opacity: 0.7;
-    transform: scaleX(1.2);
-  }
-}
-
-/* ============================
-   ACTIVE LINE GLOW
-   ============================ */
-.nightmare-editor .monaco-editor .current-line {
-  background: linear-gradient(
-    to right,
-    rgba(157, 78, 221, 0.08) 0%,
-    rgba(157, 78, 221, 0.04) 50%,
-    transparent 100%
-  ) !important;
-  box-shadow: 0 0 20px rgba(157, 78, 221, 0.15);
-}
-
-/* ============================
-   SELECTION GLASS EFFECT
-   ============================ */
-.nightmare-editor .monaco-editor .selected-text {
-  background: rgba(157, 78, 221, 0.25) !important;
-  backdrop-filter: blur(4px);
-  box-shadow: 
-    inset 0 0 20px rgba(157, 78, 221, 0.3),
-    0 0 15px rgba(157, 78, 221, 0.2);
+    0 0 8px 2px rgba(0, 255, 255, 1),
+    0 0 16px 4px rgba(0, 255, 255, 0.7),
+    0 0 32px 8px rgba(0, 255, 255, 0.4),
+    0 0 48px 12px rgba(0, 255, 255, 0.2) !important;
   border-radius: 2px;
 }
 
+@keyframes cursorHyperPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scaleX(1) scaleY(1);
+    box-shadow: 
+      0 0 8px 2px rgba(0, 255, 255, 1),
+      0 0 16px 4px rgba(0, 255, 255, 0.7),
+      0 0 32px 8px rgba(0, 255, 255, 0.4),
+      0 0 48px 12px rgba(0, 255, 255, 0.2);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scaleX(1.3) scaleY(1.02);
+    box-shadow: 
+      0 0 12px 4px rgba(0, 255, 255, 1),
+      0 0 24px 8px rgba(0, 255, 255, 0.8),
+      0 0 48px 12px rgba(255, 0, 255, 0.4),
+      0 0 64px 16px rgba(0, 255, 255, 0.3);
+  }
+}
+
 /* ============================
-   SYNTAX GLOW EFFECTS
+   ACTIVE LINE - AURORA GLOW
+   Gradient line highlight
+   ============================ */
+.nightmare-editor .monaco-editor .current-line {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 0, 255, 0.12) 0%,
+    rgba(200, 64, 255, 0.08) 20%,
+    rgba(0, 255, 255, 0.05) 50%,
+    rgba(200, 64, 255, 0.08) 80%,
+    rgba(255, 0, 255, 0.12) 100%
+  ) !important;
+  box-shadow: 
+    0 0 30px 5px rgba(255, 0, 255, 0.15),
+    inset 0 0 20px rgba(200, 64, 255, 0.1);
+  border-left: 2px solid rgba(255, 0, 255, 0.5);
+  animation: lineGlow 3s ease-in-out infinite;
+}
+
+@keyframes lineGlow {
+  0%, 100% { 
+    box-shadow: 0 0 30px 5px rgba(255, 0, 255, 0.15);
+    border-left-color: rgba(255, 0, 255, 0.5);
+  }
+  50% { 
+    box-shadow: 0 0 40px 8px rgba(0, 255, 255, 0.2);
+    border-left-color: rgba(0, 255, 255, 0.6);
+  }
+}
+
+/* ============================
+   SELECTION - HOLOGRAPHIC GLASS
+   Rainbow iridescent selection
+   ============================ */
+.nightmare-editor .monaco-editor .selected-text {
+  background: linear-gradient(
+    135deg,
+    rgba(200, 64, 255, 0.35) 0%,
+    rgba(255, 0, 255, 0.3) 25%,
+    rgba(0, 255, 255, 0.25) 50%,
+    rgba(255, 0, 255, 0.3) 75%,
+    rgba(200, 64, 255, 0.35) 100%
+  ) !important;
+  background-size: 200% 200%;
+  animation: selectionShimmer 3s ease infinite;
+  backdrop-filter: blur(4px);
+  box-shadow: 
+    inset 0 0 30px rgba(255, 0, 255, 0.3),
+    0 0 20px rgba(200, 64, 255, 0.3);
+  border-radius: 3px;
+}
+
+@keyframes selectionShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ============================
+   SYNTAX GLOW - MAXIMUM NEON
+   Ultra bright text shadows
    ============================ */
 
-/* Keywords - Strong magenta glow */
+/* Keywords - HYPER MAGENTA BLAZE */
 .nightmare-editor .mtk5,
-.nightmare-editor .mtk6 {
+.nightmare-editor .mtk6,
+.nightmare-editor .monaco-editor .keyword {
   text-shadow: 
-    0 0 10px rgba(255, 0, 255, 0.7),
-    0 0 20px rgba(255, 0, 255, 0.4),
-    0 0 30px rgba(255, 0, 255, 0.2);
+    0 0 5px rgba(255, 0, 255, 0.9),
+    0 0 10px rgba(255, 0, 255, 0.8),
+    0 0 20px rgba(255, 0, 255, 0.6),
+    0 0 40px rgba(255, 0, 255, 0.4),
+    0 0 60px rgba(255, 0, 255, 0.2) !important;
+  animation: keywordPulse 2s ease-in-out infinite;
 }
 
-/* Functions - Stronger cyan glow */
+@keyframes keywordPulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.15); }
+}
+
+/* Functions - ELECTRIC CYAN SURGE */
 .nightmare-editor .mtk12,
-.nightmare-editor .mtk13 {
+.nightmare-editor .mtk13,
+.nightmare-editor .monaco-editor .entity.name.function {
   text-shadow: 
-    0 0 12px rgba(0, 247, 255, 0.8),
-    0 0 24px rgba(0, 247, 255, 0.5),
-    0 0 36px rgba(0, 247, 255, 0.3);
+    0 0 5px rgba(0, 255, 255, 1),
+    0 0 10px rgba(0, 255, 255, 0.9),
+    0 0 20px rgba(0, 255, 255, 0.7),
+    0 0 40px rgba(0, 255, 255, 0.5),
+    0 0 60px rgba(0, 255, 255, 0.3) !important;
+  animation: functionPulse 2.5s ease-in-out infinite;
 }
 
-/* Types - Medium violet glow */
+@keyframes functionPulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.2); }
+}
+
+/* Types - VIOLET AURORA */
 .nightmare-editor .mtk8,
-.nightmare-editor .mtk9 {
+.nightmare-editor .mtk9,
+.nightmare-editor .monaco-editor .entity.name.type {
   text-shadow: 
-    0 0 8px rgba(157, 78, 221, 0.6),
-    0 0 16px rgba(157, 78, 221, 0.3);
+    0 0 4px rgba(200, 64, 255, 0.9),
+    0 0 8px rgba(200, 64, 255, 0.7),
+    0 0 16px rgba(200, 64, 255, 0.5),
+    0 0 32px rgba(200, 64, 255, 0.3) !important;
 }
 
-/* Strings - Soft green glow */
+/* Strings - RADIOACTIVE GREEN */
 .nightmare-editor .mtk10,
-.nightmare-editor .mtk11 {
+.nightmare-editor .mtk11,
+.nightmare-editor .monaco-editor .string {
   text-shadow: 
-    0 0 8px rgba(0, 255, 133, 0.5),
-    0 0 16px rgba(0, 255, 133, 0.25);
+    0 0 4px rgba(0, 255, 127, 0.9),
+    0 0 8px rgba(0, 255, 127, 0.7),
+    0 0 16px rgba(0, 255, 127, 0.5),
+    0 0 32px rgba(0, 255, 127, 0.3) !important;
 }
 
-/* Numbers - Orange glow */
-.nightmare-editor .mtk7 {
+/* Numbers - PLASMA ORANGE */
+.nightmare-editor .mtk7,
+.nightmare-editor .monaco-editor .constant.numeric {
   text-shadow: 
-    0 0 6px rgba(255, 174, 0, 0.6),
-    0 0 12px rgba(255, 174, 0, 0.3);
+    0 0 4px rgba(255, 170, 0, 0.9),
+    0 0 8px rgba(255, 170, 0, 0.7),
+    0 0 16px rgba(255, 170, 0, 0.5),
+    0 0 32px rgba(255, 170, 0, 0.3) !important;
 }
 
-/* Operators - Very subtle white glow */
+/* Comments - ETHEREAL BLUE */
+.nightmare-editor .mtk1,
+.nightmare-editor .monaco-editor .comment {
+  text-shadow: 
+    0 0 3px rgba(107, 140, 255, 0.6),
+    0 0 8px rgba(107, 140, 255, 0.4) !important;
+}
+
+/* Operators - GHOST GLOW */
 .nightmare-editor .mtk16,
-.nightmare-editor .mtk17 {
+.nightmare-editor .mtk17,
+.nightmare-editor .monaco-editor .keyword.operator {
   text-shadow: 
-    0 0 4px rgba(240, 244, 255, 0.3);
+    0 0 3px rgba(240, 246, 255, 0.5),
+    0 0 6px rgba(240, 246, 255, 0.3) !important;
 }
 
 /* ============================
-   HOVER GLOW INTENSIFICATION
+   HOVER EFFECTS - GLITCH BURST
+   Intensified glow on hover
    ============================ */
 .nightmare-editor .monaco-editor .view-line:hover .mtk12,
 .nightmare-editor .monaco-editor .view-line:hover .mtk13 {
   text-shadow: 
-    0 0 15px rgba(0, 247, 255, 1),
-    0 0 30px rgba(0, 247, 255, 0.7),
-    0 0 45px rgba(0, 247, 255, 0.4);
-  transition: text-shadow 0.3s ease;
+    0 0 8px rgba(0, 255, 255, 1),
+    0 0 16px rgba(0, 255, 255, 1),
+    0 0 32px rgba(0, 255, 255, 0.8),
+    0 0 64px rgba(0, 255, 255, 0.5),
+    0 0 80px rgba(0, 255, 255, 0.3) !important;
+  filter: brightness(1.3);
+  transition: all 0.2s ease;
+}
+
+.nightmare-editor .monaco-editor .view-line:hover .mtk5,
+.nightmare-editor .monaco-editor .view-line:hover .mtk6 {
+  text-shadow: 
+    0 0 8px rgba(255, 0, 255, 1),
+    0 0 16px rgba(255, 0, 255, 1),
+    0 0 32px rgba(255, 0, 255, 0.8),
+    0 0 64px rgba(255, 0, 255, 0.5) !important;
+  filter: brightness(1.3);
+  transition: all 0.2s ease;
+}
+
+/* Line hover effect */
+.nightmare-editor .monaco-editor .view-line:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 0, 255, 0.03) 0%,
+    rgba(0, 255, 255, 0.02) 50%,
+    rgba(255, 0, 255, 0.03) 100%
+  );
 }
 
 /* ============================
-   FOCUS STATE
+   FOCUS STATE - POWER UP
+   Enhanced when editor focused
    ============================ */
+.nightmare-editor:focus-within {
+  --nm-glow-intensity: 1.3;
+}
+
+.nightmare-editor:focus-within .nightmare-aurora::before {
+  opacity: 0.8;
+  animation-duration: 45s;
+}
+
 .nightmare-editor:focus-within .nightmare-starfield-layer-1 {
-  opacity: 0.45;
-  transition: opacity 0.5s ease;
+  opacity: 0.6 !important;
 }
 
 .nightmare-editor:focus-within .nightmare-starfield-layer-2 {
-  opacity: 0.7;
-  transition: opacity 0.5s ease;
+  opacity: 0.85 !important;
 }
 
 .nightmare-editor:focus-within .nightmare-starfield-layer-3 {
-  opacity: 0.9;
-  transition: opacity 0.5s ease;
+  opacity: 1 !important;
+  filter: brightness(1.2);
 }
 
-.nightmare-editor:focus-within .mtk12,
-.nightmare-editor:focus-within .mtk13,
+.nightmare-editor:focus-within .nightmare-city-glow {
+  opacity: 0.9;
+  filter: blur(25px) brightness(1.1);
+}
+
 .nightmare-editor:focus-within .mtk5,
-.nightmare-editor:focus-within .mtk6 {
-  filter: brightness(1.05);
+.nightmare-editor:focus-within .mtk6,
+.nightmare-editor:focus-within .mtk12,
+.nightmare-editor:focus-within .mtk13 {
+  filter: brightness(1.1);
   transition: filter 0.3s ease;
 }
 
 /* ============================
-   UI PANELS - GLASS DESIGN
+   UI PANELS - GLASSMORPHISM SUPREME
+   Ultra-neon widget styling
    ============================ */
 
 /* Autocomplete / Suggest Widget */
 .nightmare-editor .monaco-editor .suggest-widget {
-  background: rgba(10, 11, 21, 0.85) !important;
-  backdrop-filter: blur(20px);
-  border: 1px solid transparent;
-  border-image: linear-gradient(135deg, 
-    rgba(255, 0, 255, 0.6), 
-    rgba(0, 247, 255, 0.6)) 1;
-  border-radius: 16px;
+  background: rgba(8, 8, 18, 0.92) !important;
+  backdrop-filter: blur(24px) saturate(150%);
+  border: 2px solid transparent !important;
+  border-radius: 16px !important;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.6),
-    0 0 40px rgba(255, 0, 255, 0.2),
-    inset 0 0 60px rgba(157, 78, 221, 0.1);
+    0 0 0 1px rgba(255, 0, 255, 0.3),
+    0 8px 32px rgba(0, 0, 0, 0.8),
+    0 0 60px rgba(255, 0, 255, 0.25),
+    0 0 100px rgba(0, 255, 255, 0.15),
+    inset 0 0 60px rgba(200, 64, 255, 0.08) !important;
   overflow: hidden;
+  animation: widgetAppear 0.3s ease-out;
+}
+
+.nightmare-editor .monaco-editor .suggest-widget::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 2px;
+  background: linear-gradient(135deg, 
+    rgba(255, 0, 255, 0.8), 
+    rgba(200, 64, 255, 0.6),
+    rgba(0, 255, 255, 0.8));
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: borderGradient 4s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes widgetAppear {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes borderGradient {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
 }
 
 .nightmare-editor .monaco-editor .suggest-widget .monaco-list-row.focused {
-  background: rgba(157, 78, 221, 0.3) !important;
+  background: linear-gradient(
+    90deg,
+    rgba(200, 64, 255, 0.4) 0%,
+    rgba(255, 0, 255, 0.3) 50%,
+    rgba(0, 255, 255, 0.2) 100%
+  ) !important;
   backdrop-filter: blur(8px);
+  box-shadow: 
+    inset 0 0 20px rgba(255, 0, 255, 0.2),
+    0 0 15px rgba(200, 64, 255, 0.3);
 }
 
-/* Hover Widget */
+.nightmare-editor .monaco-editor .suggest-widget .monaco-list-row:hover:not(.focused) {
+  background: rgba(255, 0, 255, 0.15) !important;
+}
+
+/* Hover Widget - CYAN HOLOGRAM */
 .nightmare-editor .monaco-editor .monaco-hover {
-  background: rgba(10, 11, 21, 0.9) !important;
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 247, 255, 0.5);
-  border-radius: 16px;
+  background: rgba(8, 8, 18, 0.95) !important;
+  backdrop-filter: blur(24px) saturate(150%);
+  border: 2px solid rgba(0, 255, 255, 0.6) !important;
+  border-radius: 16px !important;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.6),
-    0 0 40px rgba(0, 247, 255, 0.3),
-    inset 0 0 60px rgba(0, 247, 255, 0.08);
+    0 8px 32px rgba(0, 0, 0, 0.8),
+    0 0 50px rgba(0, 255, 255, 0.35),
+    0 0 80px rgba(0, 255, 255, 0.2),
+    inset 0 0 60px rgba(0, 255, 255, 0.06) !important;
+  animation: hoverGlow 2s ease-in-out infinite;
 }
 
-/* Parameter Hints */
+@keyframes hoverGlow {
+  0%, 100% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 50px rgba(0, 255, 255, 0.35); }
+  50% { box-shadow: 0 8px 40px rgba(0, 0, 0, 0.8), 0 0 70px rgba(0, 255, 255, 0.5); }
+}
+
+/* Parameter Hints - VIOLET BEAM */
 .nightmare-editor .monaco-editor .parameter-hints-widget {
-  background: rgba(10, 11, 21, 0.9) !important;
-  backdrop-filter: blur(20px);
-  border: 1px solid transparent;
-  border-image: linear-gradient(135deg, 
-    rgba(0, 247, 255, 0.6), 
-    rgba(157, 78, 221, 0.6)) 1;
-  border-radius: 12px;
+  background: rgba(8, 8, 18, 0.95) !important;
+  backdrop-filter: blur(24px);
+  border: 2px solid rgba(200, 64, 255, 0.6) !important;
+  border-radius: 12px !important;
   box-shadow: 
-    0 6px 24px rgba(0, 0, 0, 0.6),
-    0 0 30px rgba(0, 247, 255, 0.2);
+    0 6px 24px rgba(0, 0, 0, 0.8),
+    0 0 40px rgba(200, 64, 255, 0.3),
+    inset 0 0 40px rgba(200, 64, 255, 0.05) !important;
 }
 
-/* Find Widget */
+/* Find Widget - SEARCH BEAM */
 .nightmare-editor .monaco-editor .find-widget {
-  background: rgba(10, 11, 21, 0.95) !important;
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 0, 255, 0.5);
-  border-radius: 16px;
+  background: rgba(8, 8, 18, 0.98) !important;
+  backdrop-filter: blur(24px) saturate(150%);
+  border: 2px solid transparent !important;
+  border-radius: 16px !important;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.7),
-    0 0 40px rgba(255, 0, 255, 0.3);
+    0 8px 32px rgba(0, 0, 0, 0.9),
+    0 0 60px rgba(255, 0, 255, 0.4),
+    0 0 100px rgba(0, 255, 255, 0.2) !important;
+  overflow: hidden;
+}
+
+.nightmare-editor .monaco-editor .find-widget::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 2px;
+  background: linear-gradient(90deg, 
+    rgba(255, 0, 255, 0.9), 
+    rgba(0, 255, 255, 0.9),
+    rgba(255, 0, 255, 0.9));
+  background-size: 200% 100%;
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: searchBorderPulse 3s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes searchBorderPulse {
+  from { background-position: 0% 0%; }
+  to { background-position: 200% 0%; }
+}
+
+/* Find input highlight */
+.nightmare-editor .monaco-editor .find-widget input {
+  background: rgba(255, 0, 255, 0.1) !important;
+  border: 1px solid rgba(255, 0, 255, 0.4) !important;
+  border-radius: 8px !important;
+  color: #f0f6ff !important;
+}
+
+.nightmare-editor .monaco-editor .find-widget input:focus {
+  border-color: rgba(0, 255, 255, 0.8) !important;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3) !important;
 }
 
 /* ============================
-   SCROLLBAR GLOW
+   SCROLLBAR - PLASMA TRAIL
+   Glowing neon scrollbar
    ============================ */
 .nightmare-editor .monaco-scrollable-element > .scrollbar > .slider {
-  background: rgba(157, 78, 221, 0.3) !important;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(157, 78, 221, 0.4);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 0, 255, 0.4) 0%,
+    rgba(200, 64, 255, 0.5) 50%,
+    rgba(255, 0, 255, 0.4) 100%
+  ) !important;
+  border-radius: 10px !important;
+  box-shadow: 
+    0 0 10px rgba(255, 0, 255, 0.5),
+    0 0 20px rgba(200, 64, 255, 0.3),
+    inset 0 0 10px rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 0, 255, 0.3) !important;
 }
 
 .nightmare-editor .monaco-scrollable-element > .scrollbar > .slider:hover {
-  background: rgba(157, 78, 221, 0.5) !important;
-  box-shadow: 0 0 15px rgba(157, 78, 221, 0.6);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 0, 255, 0.6) 0%,
+    rgba(0, 255, 255, 0.5) 50%,
+    rgba(255, 0, 255, 0.6) 100%
+  ) !important;
+  box-shadow: 
+    0 0 15px rgba(255, 0, 255, 0.7),
+    0 0 30px rgba(0, 255, 255, 0.4),
+    inset 0 0 15px rgba(255, 255, 255, 0.15) !important;
 }
 
 .nightmare-editor .monaco-scrollable-element > .scrollbar > .slider:active {
-  background: rgba(157, 78, 221, 0.7) !important;
-  box-shadow: 0 0 20px rgba(157, 78, 221, 0.8);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 255, 255, 0.7) 0%,
+    rgba(255, 0, 255, 0.6) 50%,
+    rgba(0, 255, 255, 0.7) 100%
+  ) !important;
+  box-shadow: 
+    0 0 20px rgba(0, 255, 255, 0.9),
+    0 0 40px rgba(255, 0, 255, 0.5),
+    inset 0 0 20px rgba(255, 255, 255, 0.2) !important;
+  transform: scaleX(1.1);
+}
+
+/* Scrollbar track glow */
+.nightmare-editor .monaco-scrollable-element > .scrollbar {
+  background: rgba(255, 0, 255, 0.05) !important;
+}
+
+/* ============================
+   MINIMAP - HOLOGRAPHIC
+   Neon code preview
+   ============================ */
+.nightmare-editor .minimap {
+  filter: saturate(1.2) brightness(1.1);
+}
+
+.nightmare-editor .minimap-slider {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 0, 255, 0.15) 0%,
+    rgba(0, 255, 255, 0.1) 100%
+  ) !important;
+  border: 1px solid rgba(255, 0, 255, 0.3) !important;
+  border-radius: 4px;
+}
+
+.nightmare-editor .minimap-slider:hover {
+  background: rgba(255, 0, 255, 0.25) !important;
+}
+
+/* ============================
+   BRACKET PAIR COLORIZATION
+   Rainbow neon brackets
+   ============================ */
+.nightmare-editor .bracket-highlighting-0 { color: #ffaa00 !important; text-shadow: 0 0 8px rgba(255, 170, 0, 0.6); }
+.nightmare-editor .bracket-highlighting-1 { color: #ff00ff !important; text-shadow: 0 0 8px rgba(255, 0, 255, 0.6); }
+.nightmare-editor .bracket-highlighting-2 { color: #00ffff !important; text-shadow: 0 0 8px rgba(0, 255, 255, 0.6); }
+.nightmare-editor .bracket-highlighting-3 { color: #00ff7f !important; text-shadow: 0 0 8px rgba(0, 255, 127, 0.6); }
+.nightmare-editor .bracket-highlighting-4 { color: #c840ff !important; text-shadow: 0 0 8px rgba(200, 64, 255, 0.6); }
+.nightmare-editor .bracket-highlighting-5 { color: #ff3366 !important; text-shadow: 0 0 8px rgba(255, 51, 102, 0.6); }
+
+/* ============================
+   LINE DECORATIONS
+   Diff and error highlighting
+   ============================ */
+.nightmare-editor .monaco-editor .line-insert {
+  background: linear-gradient(90deg,
+    rgba(0, 255, 127, 0.2) 0%,
+    rgba(0, 255, 127, 0.1) 50%,
+    transparent 100%
+  ) !important;
+  border-left: 3px solid rgba(0, 255, 127, 0.8) !important;
+}
+
+.nightmare-editor .monaco-editor .line-delete {
+  background: linear-gradient(90deg,
+    rgba(255, 51, 102, 0.2) 0%,
+    rgba(255, 51, 102, 0.1) 50%,
+    transparent 100%
+  ) !important;
+  border-left: 3px solid rgba(255, 51, 102, 0.8) !important;
+}
+
+/* Error squiggles */
+.nightmare-editor .monaco-editor .squiggly-error {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3'%3E%3Cpath d='M0 3 L1.5 0 L3 3 L4.5 0 L6 3' stroke='%23ff3366' fill='none'/%3E%3C/svg%3E") repeat-x bottom !important;
+  filter: drop-shadow(0 0 4px rgba(255, 51, 102, 0.8));
+}
+
+.nightmare-editor .monaco-editor .squiggly-warning {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3'%3E%3Cpath d='M0 3 L1.5 0 L3 3 L4.5 0 L6 3' stroke='%23ffaa00' fill='none'/%3E%3C/svg%3E") repeat-x bottom !important;
+  filter: drop-shadow(0 0 4px rgba(255, 170, 0, 0.8));
+}
+
+/* ============================
+   TYPING SPARKLE EFFECT
+   Particles on keystroke
+   ============================ */
+.nightmare-sparkle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: sparkleFloat 0.8s ease-out forwards;
+  z-index: 100;
+}
+
+.nightmare-sparkle.cyan {
+  background: #00ffff;
+  box-shadow: 0 0 6px 2px rgba(0, 255, 255, 0.8);
+}
+
+.nightmare-sparkle.magenta {
+  background: #ff00ff;
+  box-shadow: 0 0 6px 2px rgba(255, 0, 255, 0.8);
+}
+
+.nightmare-sparkle.green {
+  background: #00ff7f;
+  box-shadow: 0 0 6px 2px rgba(0, 255, 127, 0.8);
+}
+
+@keyframes sparkleFloat {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--sparkle-x, 20px), var(--sparkle-y, -30px)) scale(0);
+  }
+}
+
+/* ============================
+   GLITCH TEXT EFFECT
+   Optional chromatic aberration
+   ============================ */
+.nightmare-editor.glitch-enabled .monaco-editor .view-line:nth-child(20n) {
+  animation: glitchLine 8s ease-in-out infinite;
+}
+
+@keyframes glitchLine {
+  0%, 98%, 100% {
+    transform: translateX(0);
+    filter: none;
+  }
+  99% {
+    transform: translateX(2px);
+    filter: 
+      drop-shadow(-2px 0 rgba(255, 0, 255, 0.7))
+      drop-shadow(2px 0 rgba(0, 255, 255, 0.7));
+  }
+}
+
+/* ============================
+   MATRIX RAIN (OPTIONAL)
+   Digital rain background
+   ============================ */
+.nightmare-matrix-rain {
+  position: absolute;
+  inset: 0;
+  z-index: -6;
+  pointer-events: none;
+  opacity: 0.15;
+  overflow: hidden;
+}
+
+.nightmare-matrix-column {
+  position: absolute;
+  top: -100%;
+  width: 20px;
+  height: 200%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 255, 127, 0.3) 10%,
+    rgba(0, 255, 127, 0.8) 50%,
+    rgba(0, 255, 255, 0.3) 90%,
+    transparent 100%
+  );
+  animation: matrixFall 10s linear infinite;
+  filter: blur(1px);
+}
+
+@keyframes matrixFall {
+  from { transform: translateY(0); }
+  to { transform: translateY(50%); }
 }
 
 /* ============================
    PERFORMANCE OPTIMIZATIONS
+   GPU acceleration
    ============================ */
 .nightmare-editor,
+.nightmare-aurora,
 .nightmare-starfield,
 .nightmare-city-glow,
 .nightmare-light-beams,
+.nightmare-scanlines,
 .nightmare-editor::before,
 .nightmare-editor::after {
   will-change: opacity, transform;
   contain: layout style paint;
-}
-
-/* Hardware acceleration */
-.nightmare-starfield-layer-1,
-.nightmare-starfield-layer-2,
-.nightmare-starfield-layer-3,
-.nightmare-shooting-star {
   transform: translateZ(0);
   backface-visibility: hidden;
 }
 
-/* Reduce motion for accessibility */
+.nightmare-starfield-layer-1,
+.nightmare-starfield-layer-2,
+.nightmare-starfield-layer-3,
+.nightmare-shooting-star,
+.nightmare-aurora-wave-1,
+.nightmare-aurora-wave-2,
+.nightmare-aurora-wave-3 {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* ============================
+   REDUCED MOTION
+   Accessibility support
+   ============================ */
 @media (prefers-reduced-motion: reduce) {
   .nightmare-editor *,
   .nightmare-editor *::before,
@@ -539,20 +1316,41 @@
     transition-duration: 0.01ms !important;
   }
   
+  .nightmare-aurora,
+  .nightmare-matrix-rain,
+  .nightmare-scanlines {
+    display: none;
+  }
+  
   .nightmare-starfield-layer-1,
   .nightmare-starfield-layer-2,
   .nightmare-starfield-layer-3 {
-    opacity: 0.6 !important;
+    opacity: 0.5 !important;
+  }
+  
+  .nightmare-editor .mtk5,
+  .nightmare-editor .mtk6,
+  .nightmare-editor .mtk12,
+  .nightmare-editor .mtk13 {
+    text-shadow: none !important;
   }
 }
 
 /* ============================
    RESPONSIVE ADJUSTMENTS
+   Mobile optimization
    ============================ */
 @media (max-width: 768px) {
   .nightmare-city-glow {
-    height: 120px;
-    filter: blur(30px);
+    height: 150px;
+    filter: blur(25px);
+    opacity: 0.5;
+  }
+  
+  .nightmare-aurora,
+  .nightmare-light-beams,
+  .nightmare-scanlines {
+    opacity: 0.3;
   }
   
   .nightmare-editor .mtk5,
@@ -564,18 +1362,75 @@
   .nightmare-editor .mtk10,
   .nightmare-editor .mtk11,
   .nightmare-editor .mtk7 {
-    text-shadow: none;
+    text-shadow: none !important;
+  }
+  
+  .nightmare-vignette {
+    opacity: 0.5;
   }
 }
 
-/* High-performance mode for lower-end devices */
-.nightmare-editor.performance-mode .nightmare-editor::after,
+/* ============================
+   PERFORMANCE MODE
+   Lightweight for slow devices
+   ============================ */
+.nightmare-editor.performance-mode .nightmare-aurora,
 .nightmare-editor.performance-mode .nightmare-light-beams,
-.nightmare-editor.performance-mode .nightmare-noise {
-  display: none;
+.nightmare-editor.performance-mode .nightmare-noise,
+.nightmare-editor.performance-mode .nightmare-scanlines,
+.nightmare-editor.performance-mode .nightmare-matrix-rain {
+  display: none !important;
 }
 
 .nightmare-editor.performance-mode .nightmare-starfield-layer-1,
-.nightmare-editor.performance-mode .nightmare-starfield-layer-2 {
-  animation: none;
+.nightmare-editor.performance-mode .nightmare-starfield-layer-2,
+.nightmare-editor.performance-mode .nightmare-starfield-layer-3 {
+  animation: none !important;
+}
+
+.nightmare-editor.performance-mode::after {
+  animation: none !important;
+}
+
+.nightmare-editor.performance-mode .nightmare-city-glow {
+  animation: none !important;
+  filter: blur(20px);
+  opacity: 0.5;
+}
+
+.nightmare-editor.performance-mode .mtk5,
+.nightmare-editor.performance-mode .mtk6,
+.nightmare-editor.performance-mode .mtk12,
+.nightmare-editor.performance-mode .mtk13 {
+  text-shadow: 
+    0 0 5px currentColor !important;
+}
+
+/* ============================
+   PRINT STYLES
+   Clean output for printing
+   ============================ */
+@media print {
+  .nightmare-editor *::before,
+  .nightmare-editor *::after,
+  .nightmare-aurora,
+  .nightmare-starfield,
+  .nightmare-city-glow,
+  .nightmare-light-beams,
+  .nightmare-noise,
+  .nightmare-vignette,
+  .nightmare-scanlines,
+  .nightmare-matrix-rain {
+    display: none !important;
+  }
+  
+  .nightmare-editor {
+    background: white !important;
+  }
+  
+  .nightmare-editor * {
+    text-shadow: none !important;
+    box-shadow: none !important;
+    color: black !important;
+  }
 }
