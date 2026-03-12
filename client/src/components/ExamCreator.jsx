@@ -1,27 +1,37 @@
 import React, { useState, useRef } from "react";
 import {
-  Plus,
-  Trash2,
   Save,
   FileText,
-  Upload,
   AlertCircle,
-  FileJson,
-  FileType,
   X,
-  CheckCircle,
+  Palette,
+  Clock,
+  BookOpen,
 } from "lucide-react";
 import mammoth from "mammoth";
+import { QuestionCard } from "./QuestionCard";
+import { ExamToolbar } from "./ExamToolbar";
 
 export const ExamCreator = ({ onClose, onSuccess }) => {
   // --- STATE QUẢN LÝ DỮ LIỆU ---
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("Pháp luật");
   const [time, setTime] = useState(45);
+  const [description, setDescription] = useState("");
+  const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
 
-  // Mặc định có 1 câu hỏi rỗng để không bị lỗi UI
+  // Mặc định có 1 câu hỏi rỗng
   const [questions, setQuestions] = useState([
-    { question: "", type: "multiple_choice", options: ["", "", "", ""], correctAnswer: 0, correctText: "" },
+    {
+      id: Date.now(),
+      question: "",
+      type: "multiple_choice",
+      options: ["", "", "", ""],
+      correctAnswer: 0,
+      correctText: "",
+      correctAnswers: [], // For checkbox type
+      points: 1,
+    },
   ]);
 
   // Ref cho input file ẩn
@@ -52,7 +62,15 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
         const parsedQuestions = parseHtmlToQuestions(cleanHtml);
 
         if (parsedQuestions.length > 0) {
-          setQuestions(parsedQuestions);
+          // Map với cấu trúc mới (thêm id và points)
+          const mappedQuestions = parsedQuestions.map((q, idx) => ({
+            ...q,
+            id: Date.now() + idx,
+            points: q.points || 1,
+            correctAnswers: q.correctAnswers || [],
+          }));
+          setQuestions(mappedQuestions);
+          setActiveQuestionIndex(0);
           alert(
             `✅ Đã nhập thành công ${parsedQuestions.length} câu hỏi!\n(Hệ thống đã tự động chọn đáp án đúng dựa trên In đậm/Nghiêng/Gạch chân)`
           );
@@ -289,35 +307,48 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
         if (data.title) setTitle(data.title);
         if (data.subject) setSubject(data.subject);
         if (data.time) setTime(data.time);
+        if (data.description) setDescription(data.description);
 
         const rawQuestions = Array.isArray(data) ? data : data.questions || [];
         if (rawQuestions.length === 0) return alert("File JSON rỗng!");
 
-        const mappedQuestions = rawQuestions.map((q) => {
-          const normalizedType = (q.type === "short_answer" || q.type === "essay")
-            ? "short_answer"
-            : "multiple_choice";
+        const mappedQuestions = rawQuestions.map((q, idx) => {
+          const normalizedType =
+            q.type === "short_answer" || q.type === "essay"
+              ? "short_answer"
+              : q.type === "checkbox"
+              ? "checkbox"
+              : "multiple_choice";
           return {
+            id: Date.now() + idx,
             question: q.question || "",
             type: normalizedType,
             options:
               normalizedType === "short_answer"
                 ? []
                 : Array.isArray(q.options)
-                  ? [0, 1, 2, 3].map((i) => q.options[i] || "")
-                  : ["", "", "", ""],
-            correctAnswer: normalizedType === "short_answer"
-              ? -1
-              : typeof q.answer === "number"
+                ? [0, 1, 2, 3].map((i) => q.options[i] || "")
+                : ["", "", "", ""],
+            correctAnswer:
+              normalizedType === "short_answer" || normalizedType === "checkbox"
+                ? -1
+                : typeof q.answer === "number"
                 ? q.answer
                 : 0,
-            correctText: normalizedType === "short_answer"
-              ? String(q.answer ?? "").trim()
-              : "",
+            correctText:
+              normalizedType === "short_answer"
+                ? String(q.answer ?? "").trim()
+                : "",
+            correctAnswers:
+              normalizedType === "checkbox" && Array.isArray(q.correctAnswers)
+                ? q.correctAnswers
+                : [],
+            points: q.points || 1,
           };
         });
 
         setQuestions(mappedQuestions);
+        setActiveQuestionIndex(0);
         alert(`✅ Đã nhập ${mappedQuestions.length} câu hỏi từ JSON!`);
       } catch (error) {
         alert("File JSON lỗi định dạng!");
@@ -332,12 +363,41 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
   // ============================================================
   const handleAddQuestion = () => {
     const lastType = questions[questions.length - 1]?.type || "multiple_choice";
-    setQuestions([
-      ...questions,
+    const newQuestion =
       lastType === "short_answer"
-        ? { question: "", type: "short_answer", options: [], correctAnswer: -1, correctText: "" }
-        : { question: "", type: "multiple_choice", options: ["", "", "", ""], correctAnswer: 0, correctText: "" },
-    ]);
+        ? {
+            id: Date.now(),
+            question: "",
+            type: "short_answer",
+            options: [],
+            correctAnswer: -1,
+            correctText: "",
+            correctAnswers: [],
+            points: 1,
+          }
+        : lastType === "checkbox"
+        ? {
+            id: Date.now(),
+            question: "",
+            type: "checkbox",
+            options: ["", "", "", ""],
+            correctAnswer: -1,
+            correctText: "",
+            correctAnswers: [],
+            points: 1,
+          }
+        : {
+            id: Date.now(),
+            question: "",
+            type: "multiple_choice",
+            options: ["", "", "", ""],
+            correctAnswer: 0,
+            correctText: "",
+            correctAnswers: [],
+            points: 1,
+          };
+    setQuestions([...questions, newQuestion]);
+    setActiveQuestionIndex(questions.length);
     // Cuộn xuống cuối
     setTimeout(
       () =>
@@ -351,6 +411,17 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
   const handleDeleteQuestion = (index) => {
     if (questions.length === 1) return alert("Đề thi cần ít nhất 1 câu hỏi!");
     setQuestions(questions.filter((_, i) => i !== index));
+    if (activeQuestionIndex >= questions.length - 1) {
+      setActiveQuestionIndex(Math.max(0, questions.length - 2));
+    }
+  };
+
+  const handleDuplicateQuestion = (index) => {
+    const questionToDuplicate = { ...questions[index], id: Date.now() };
+    const newQuestions = [...questions];
+    newQuestions.splice(index + 1, 0, questionToDuplicate);
+    setQuestions(newQuestions);
+    setActiveQuestionIndex(index + 1);
   };
 
   const handleQuestionChange = (index, val) => {
@@ -361,7 +432,10 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
 
   const handleOptionChange = (qIndex, optIndex, val) => {
     const newQs = [...questions];
-    if (!Array.isArray(newQs[qIndex].options) || newQs[qIndex].options.length !== 4) {
+    if (
+      !Array.isArray(newQs[qIndex].options) ||
+      newQs[qIndex].options.length !== 4
+    ) {
       newQs[qIndex].options = ["", "", "", ""];
     }
     newQs[qIndex].options[optIndex] = val;
@@ -371,6 +445,23 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
   const handleCorrectAnswerChange = (qIndex, optIndex) => {
     const newQs = [...questions];
     newQs[qIndex].correctAnswer = optIndex;
+    setQuestions(newQs);
+  };
+
+  const handleCorrectCheckboxChange = (qIndex, optIndex, checked) => {
+    const newQs = [...questions];
+    if (!Array.isArray(newQs[qIndex].correctAnswers)) {
+      newQs[qIndex].correctAnswers = [];
+    }
+    if (checked) {
+      if (!newQs[qIndex].correctAnswers.includes(optIndex)) {
+        newQs[qIndex].correctAnswers.push(optIndex);
+      }
+    } else {
+      newQs[qIndex].correctAnswers = newQs[qIndex].correctAnswers.filter(
+        (i) => i !== optIndex
+      );
+    }
     setQuestions(newQs);
   };
 
@@ -386,18 +477,44 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
     if (nextType === "short_answer") {
       newQs[qIndex].options = [];
       newQs[qIndex].correctAnswer = -1;
+      newQs[qIndex].correctAnswers = [];
       if (typeof newQs[qIndex].correctText !== "string") {
         newQs[qIndex].correctText = "";
       }
-    } else {
-      if (!Array.isArray(newQs[qIndex].options) || newQs[qIndex].options.length !== 4) {
+    } else if (nextType === "checkbox") {
+      if (
+        !Array.isArray(newQs[qIndex].options) ||
+        newQs[qIndex].options.length !== 4
+      ) {
         newQs[qIndex].options = ["", "", "", ""];
       }
-      if (!Number.isInteger(newQs[qIndex].correctAnswer) || newQs[qIndex].correctAnswer < 0) {
-        newQs[qIndex].correctAnswer = 0;
+      newQs[qIndex].correctAnswer = -1;
+      if (!Array.isArray(newQs[qIndex].correctAnswers)) {
+        newQs[qIndex].correctAnswers = [];
       }
       newQs[qIndex].correctText = "";
+    } else {
+      if (
+        !Array.isArray(newQs[qIndex].options) ||
+        newQs[qIndex].options.length !== 4
+      ) {
+        newQs[qIndex].options = ["", "", "", ""];
+      }
+      if (
+        !Number.isInteger(newQs[qIndex].correctAnswer) ||
+        newQs[qIndex].correctAnswer < 0
+      ) {
+        newQs[qIndex].correctAnswer = 0;
+      }
+      newQs[qIndex].correctAnswers = [];
+      newQs[qIndex].correctText = "";
     }
+    setQuestions(newQs);
+  };
+
+  const handlePointsChange = (qIndex, points) => {
+    const newQs = [...questions];
+    newQs[qIndex].points = points;
     setQuestions(newQs);
   };
 
@@ -410,7 +527,15 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
     // Kiểm tra dữ liệu trống
     const hasEmpty = questions.some((q) => {
       if (!q.question.trim()) return true;
-      if (q.type === "short_answer") return !String(q.correctText || "").trim();
+      if (q.type === "short_answer")
+        return !String(q.correctText || "").trim();
+      if (q.type === "checkbox")
+        return (
+          !Array.isArray(q.options) ||
+          q.options.some((o) => !o.trim()) ||
+          !q.correctAnswers ||
+          q.correctAnswers.length === 0
+        );
       return !Array.isArray(q.options) || q.options.some((o) => !o.trim());
     });
     if (hasEmpty) {
@@ -428,11 +553,18 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
       title,
       subject,
       time: parseInt(time),
+      description,
       questions: questions.map((q) => ({
         question: q.question,
         type: q.type || "multiple_choice",
         options: q.type === "short_answer" ? [] : q.options,
-        answer: q.type === "short_answer" ? String(q.correctText || "").trim() : q.correctAnswer,
+        answer:
+          q.type === "short_answer"
+            ? String(q.correctText || "").trim()
+            : q.type === "checkbox"
+            ? q.correctAnswers || []
+            : q.correctAnswer,
+        points: q.points || 1,
       })),
       limit: questions.length,
       isStatic: false,
@@ -442,277 +574,209 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
   };
 
   // ============================================================
-  // RENDER GIAO DIỆN
+  // RENDER GIAO DIỆN - GOOGLE FORMS STYLE
   // ============================================================
   return (
-    <div className="fixed inset-0 bg-gray-100 dark:bg-gray-900 z-50 flex flex-col animate-fade-in">
-      {/* HEADER */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-sm shrink-0 gap-4">
-        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-          <FileText className="text-blue-600 dark:text-blue-400" /> Tạo đề thi
-        </h2>
+    <div className="fixed inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 z-50 flex flex-col">
+      {/* INPUT ẨN */}
+      <input
+        type="file"
+        accept=".json"
+        className="hidden"
+        ref={jsonInputRef}
+        onChange={handleJsonUpload}
+      />
+      <input
+        type="file"
+        accept=".docx"
+        className="hidden"
+        ref={wordInputRef}
+        onChange={handleWordUpload}
+      />
 
-        <div className="flex flex-wrap gap-3 items-center justify-center">
-          {/* INPUT ẨN */}
-          <input
-            type="file"
-            accept=".json"
-            className="hidden"
-            ref={jsonInputRef}
-            onChange={handleJsonUpload}
-          />
-          <input
-            type="file"
-            accept=".docx"
-            className="hidden"
-            ref={wordInputRef}
-            onChange={handleWordUpload}
-          />
-
-          {/* BUTTONS */}
-          <button
-            onClick={() => jsonInputRef.current.click()}
-            className="px-3 py-2 text-gray-700 dark:text-gray-200 font-bold bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg flex items-center gap-2 text-sm transition-all"
-            title="Nhập từ file JSON cũ"
-          >
-            <FileJson size={18} />{" "}
-            <span className="hidden sm:inline">JSON</span>
-          </button>
-
-          <button
-            onClick={() => wordInputRef.current.click()}
-            className="px-3 py-2 text-blue-700 dark:text-blue-300 font-bold bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-lg flex items-center gap-2 text-sm transition-all shadow-sm"
-            title="Nhập từ file Word (.docx)"
-          >
-            <FileType size={18} /> Nhập Word
-          </button>
-
-          <div className="h-8 w-[1px] bg-gray-300 dark:bg-gray-600 mx-1 hidden sm:block"></div>
-
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-          >
-            Hủy
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 dark:shadow-blue-900/30 flex items-center gap-2"
-          >
-            <Save size={18} /> Lưu đề
-          </button>
-        </div>
-      </div>
-
-      {/* BODY */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* CẤU HÌNH CHUNG */}
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4 text-lg border-b border-gray-200 dark:border-gray-700 pb-2">
-              Cấu hình chung
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Tên đề thi
-                </label>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl font-bold focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-                  placeholder="VD: Kiểm tra 1 tiết..."
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Môn học
-                </label>
-                <select
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl outline-none text-gray-800 dark:text-gray-100"
-                >
-                  {[
-                    "Pháp luật",
-                    "Tâm lý",
-                    "Triết học",
-                    "Chủ nghĩa xã hội",
-                    "Tâm lý học giáo dục",
-                    "Kinh tế chính trị",
-                    "Cơ sở Toán",
-                    "Lập trình cơ bản",
-                  ].map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Thời gian (phút)
-                </label>
-                <input
-                  type="number"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl outline-none text-gray-800 dark:text-gray-100"
-                />
-              </div>
+      {/* HEADER - Fixed Top Bar */}
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm z-50">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+              <FileText className="text-white" size={20} />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+                Tạo đề thi mới
+              </h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {questions.length} câu hỏi
+              </p>
             </div>
           </div>
 
-          {/* HƯỚNG DẪN */}
-            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 p-4 rounded-xl text-sm text-blue-800 dark:text-blue-200 flex items-start gap-3">
-              <div className="bg-blue-100 dark:bg-blue-900/60 p-2 rounded-lg shrink-0">
-                <AlertCircle size={18} />
-              </div>
-              <div>
-                <p className="font-bold mb-1">Mẹo nhập file Word:</p>
-                <ul className="list-disc pl-4 space-y-1 text-blue-700 dark:text-blue-300">
-                <li>
-                  Hệ thống hỗ trợ cả định dạng <b>Mỗi câu 1 dòng</b> và{" "}
-                  <b>Dính chùm (Câu 1... A... B...)</b>.
-                </li>
-                <li>
-                  Để máy tự chọn đáp án đúng: Hãy <b>Bôi đậm</b>,{" "}
-                  <i>In nghiêng</i> hoặc <u>Gạch chân</u> đáp án đó trong file
-                  Word.
-                </li>
-                <li>
-                  <b>Lưu ý quan trọng:</b> Chỉ bôi đậm nội dung đáp án, không
-                  bôi đậm cả dòng chứa nhiều đáp án.
-                </li>
-                </ul>
-                <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">
-                  Với câu trả lời ngắn, bạn có thể tạo thủ công trong danh sách câu hỏi và nhập đáp án mẫu.
-                </p>
-              </div>
-            </div>
-
-          {/* DANH SÁCH CÂU HỎI */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center sticky top-0 bg-gray-50 dark:bg-gray-900 py-2 z-10 backdrop-blur-sm bg-opacity-90">
-              <h3 className="font-bold text-gray-700 dark:text-gray-200">
-                Danh sách câu hỏi ({questions.length})
-              </h3>
-              <button
-                onClick={handleAddQuestion}
-                className="text-blue-600 dark:text-blue-300 font-bold text-sm bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/40 px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all"
-              >
-                <Plus size={16} /> Thêm câu
-              </button>
-            </div>
-
-            {questions.map((q, qIdx) => (
-              <div
-                key={qIdx}
-                className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative group transition-all hover:shadow-md"
-              >
-                {/* Header Question */}
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold px-2 py-1 rounded">
-                      Câu {qIdx + 1}
-                    </span>
-                    <select
-                      value={q.type || "multiple_choice"}
-                      onChange={(e) => handleQuestionTypeChange(qIdx, e.target.value)}
-                      className="text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 outline-none"
-                      title="Chọn loại câu hỏi"
-                    >
-                      <option value="multiple_choice">Trắc nghiệm</option>
-                      <option value="short_answer">Trả lời ngắn</option>
-                    </select>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteQuestion(qIdx)}
-                    className="text-gray-300 dark:text-gray-500 hover:text-red-500 p-1 transition-colors"
-                    title="Xóa câu này"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-
-                {/* Nội dung câu hỏi */}
-                <textarea
-                  value={q.question}
-                  onChange={(e) => handleQuestionChange(qIdx, e.target.value)}
-                  placeholder="Nhập nội dung câu hỏi..."
-                  className="w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl mb-4 font-medium min-h-[80px] focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-                />
-
-                {/* 4 Đáp án */}
-                {q.type === "short_answer" ? (
-                  <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/60 p-4 text-sm text-gray-600 dark:text-gray-300 space-y-3">
-                    <div>
-                      Trả lời ngắn: người tạo đề nhập đáp án mẫu. Khi làm bài, người học trả lời đúng nếu trùng chữ (không phân biệt hoa thường).
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Đáp án</label>
-                      <input
-                        value={q.correctText || ""}
-                        onChange={(e) => handleShortAnswerChange(qIdx, e.target.value)}
-                        className="w-full p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl outline-none text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-                        placeholder="Ví dụ: đạo đức học"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {q.options.map((opt, optIdx) => (
-                      <div
-                        key={optIdx}
-                        className={`flex items-center gap-3 p-2 rounded-xl border transition-all ${
-                          q.correctAnswer === optIdx
-                            ? "border-green-500 bg-green-50 ring-1 ring-green-200 dark:border-green-600 dark:bg-green-900/30 dark:ring-green-800/50"
-                            : "border-gray-200 hover:border-blue-300 dark:border-gray-600"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name={`correct-${qIdx}`}
-                          checked={q.correctAnswer === optIdx}
-                          onChange={() => handleCorrectAnswerChange(qIdx, optIdx)}
-                          className="w-5 h-5 accent-green-600 cursor-pointer shrink-0"
-                          title="Chọn làm đáp án đúng"
-                        />
-                        <input
-                          value={opt}
-                          onChange={(e) =>
-                            handleOptionChange(qIdx, optIdx, e.target.value)
-                          }
-                          className={`flex-1 bg-transparent outline-none text-sm ${
-                            q.correctAnswer === optIdx
-                              ? "text-green-800 dark:text-green-300 font-bold"
-                              : "text-gray-700 dark:text-gray-200"
-                          }`}
-                          placeholder={`Đáp án ${String.fromCharCode(
-                            65 + optIdx
-                          )}`}
-                        />
-                        <span className="text-xs font-bold text-gray-400 dark:text-gray-500 select-none w-5 text-center">
-                          {String.fromCharCode(65 + optIdx)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* Nút thêm câu hỏi lớn ở dưới */}
+          <div className="flex items-center gap-2">
             <button
-              onClick={handleAddQuestion}
-              className="w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-300 rounded-xl font-bold hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-300 transition-all flex justify-center items-center gap-2"
-              id="end-list"
+              onClick={onClose}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
-              <Plus size={20} /> Thêm câu hỏi tiếp theo
+              <X size={20} />
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg shadow-lg shadow-blue-200 dark:shadow-blue-900/30 flex items-center gap-2 transition-all"
+            >
+              <Save size={18} /> Lưu đề thi
             </button>
           </div>
         </div>
+      </header>
+
+      {/* BODY - Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+          {/* EXAM INFO CARD */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {/* Color Bar */}
+            <div className="h-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600"></div>
+
+            <div className="p-8 space-y-6">
+              {/* Title Input */}
+              <div>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Tiêu đề đề thi"
+                  className="w-full text-3xl font-bold bg-transparent border-b-2 border-transparent hover:border-gray-200 focus:border-blue-500 dark:hover:border-gray-600 dark:focus:border-blue-400 outline-none pb-2 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Mô tả đề thi (tùy chọn)"
+                  className="w-full bg-transparent border-b-2 border-transparent hover:border-gray-200 focus:border-blue-500 dark:hover:border-gray-600 dark:focus:border-blue-400 outline-none pb-2 text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 resize-none transition-colors"
+                  rows="2"
+                />
+              </div>
+
+              {/* Exam Settings Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                {/* Subject */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-400">
+                    <BookOpen size={16} /> Môn học
+                  </label>
+                  <select
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-100 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  >
+                    {[
+                      "Pháp luật",
+                      "Tâm lý",
+                      "Triết học",
+                      "Chủ nghĩa xã hội",
+                      "Tâm lý học giáo dục",
+                      "Kinh tế chính trị",
+                      "Cơ sở Toán",
+                      "Lập trình cơ bản",
+                    ].map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Time */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-400">
+                    <Clock size={16} /> Thời gian (phút)
+                  </label>
+                  <input
+                    type="number"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-100 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* IMPORT GUIDE */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
+                <AlertCircle size={18} className="text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="flex-1 text-sm text-blue-800 dark:text-blue-200">
+                <p className="font-semibold mb-1">💡 Mẹo nhập nhanh:</p>
+                <ul className="list-disc pl-4 space-y-1 text-blue-700 dark:text-blue-300">
+                  <li>
+                    Nhập từ <b>Word</b>: Bôi đậm/nghiêng/gạch chân đáp án đúng
+                  </li>
+                  <li>
+                    Nhập từ <b>JSON</b>: Hỗ trợ format cũ và mới
+                  </li>
+                  <li>
+                    Sử dụng toolbar bên phải (desktop) để thêm câu hỏi nhanh
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* QUESTIONS LIST */}
+          <div className="space-y-4">
+            {questions.map((q, index) => (
+              <QuestionCard
+                key={q.id}
+                question={q}
+                index={index}
+                isActive={activeQuestionIndex === index}
+                onFocus={() => setActiveQuestionIndex(index)}
+                onQuestionChange={(val) => handleQuestionChange(index, val)}
+                onTypeChange={(type) => handleQuestionTypeChange(index, type)}
+                onOptionChange={(optIdx, val) =>
+                  handleOptionChange(index, optIdx, val)
+                }
+                onCorrectAnswerChange={(optIdx) =>
+                  handleCorrectAnswerChange(index, optIdx)
+                }
+                onShortAnswerChange={(val) =>
+                  handleShortAnswerChange(index, val)
+                }
+                onDelete={() => handleDeleteQuestion(index)}
+                onDuplicate={() => handleDuplicateQuestion(index)}
+                onPointsChange={(points) => handlePointsChange(index, points)}
+                onCorrectCheckboxChange={(optIdx, checked) =>
+                  handleCorrectCheckboxChange(index, optIdx, checked)
+                }
+              />
+            ))}
+
+            {/* Add Question Button */}
+            <button
+              onClick={handleAddQuestion}
+              className="w-full py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl font-semibold transition-all"
+              id="end-list"
+            >
+              + Thêm câu hỏi
+            </button>
+          </div>
+
+          {/* Bottom Spacer */}
+          <div className="h-20"></div>
+        </div>
       </div>
+
+      {/* FLOATING TOOLBAR (Desktop Only) */}
+      <ExamToolbar
+        onAddQuestion={handleAddQuestion}
+        onImportJSON={() => jsonInputRef.current?.click()}
+        onImportWord={() => wordInputRef.current?.click()}
+      />
     </div>
   );
 };
