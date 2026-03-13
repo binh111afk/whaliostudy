@@ -53,16 +53,17 @@ const Sidebar = ({ isMobile = false, onNavigate }) => {
               className="block w-full"
             >
               <div
-                className={`relative flex w-full items-center space-x-3 overflow-hidden rounded-xl p-3 transition-colors duration-200 ${
+                className={`group relative flex w-full items-center space-x-3 overflow-hidden rounded-xl p-3 transition-colors duration-200 ${
                   isActive
                     ? "text-slate-900 dark:text-white"
                     : "text-gray-400 hover:bg-blue-50/60 hover:text-primary dark:text-gray-300 dark:hover:bg-gray-800/60 dark:hover:text-blue-400"
                 }`}
               >
+                <span className="pointer-events-none absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-full bg-blue-500 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
                 {isActive && (
                   <span className="absolute left-3 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full bg-blue-500/20 blur-md dark:bg-blue-400/20" />
                 )}
-                <Icon size={20} className="relative z-10" />
+                <Icon size={20} className="relative z-10 transition-colors duration-200 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
                 <span className="font-medium">{item.label}</span>
               </div>
             </NavLink>

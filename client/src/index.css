@@ -132,8 +132,9 @@ body {
 .whalio-card {
   position: relative;
   border-radius: 2rem;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 18px 40px -28px rgba(15, 23, 42, 0.35);
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 25px 60px -30px rgba(148, 163, 184, 0.5);
+  backdrop-filter: blur(8px);
   overflow: hidden;
 }
 
@@ -149,8 +150,8 @@ body {
 }
 
 .dark .whalio-card {
-  background: rgba(15, 23, 42, 0.65);
-  box-shadow: 0 18px 40px -28px rgba(2, 6, 23, 0.7);
+  background: rgba(15, 23, 42, 0.7);
+  box-shadow: 0 25px 60px -30px rgba(2, 6, 23, 0.7);
 }
 
 .dark .whalio-card::before {

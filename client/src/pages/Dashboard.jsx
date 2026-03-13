@@ -637,7 +637,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 240, damping: 26 }}
-        className="relative overflow-hidden rounded-[2rem] bg-white/80 px-6 py-6 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.35)] backdrop-blur-xl dark:bg-slate-900/70 sm:px-8"
+        className="relative overflow-hidden rounded-[2rem] bg-white/80 px-8 py-8 shadow-2xl shadow-slate-200/50 backdrop-blur-sm dark:bg-slate-900/70 sm:px-10 sm:py-9"
       >
         <div className="pointer-events-none absolute -right-24 -top-20 h-56 w-56 rounded-full bg-blue-500/20 blur-3xl" />
         <div className="pointer-events-none absolute -left-16 bottom-0 h-44 w-44 rounded-full bg-indigo-400/15 blur-3xl" />
@@ -645,11 +645,11 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
         <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-col gap-4 font-sans">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+              <p className="text-sm font-medium text-slate-500/60 dark:text-slate-400">
                 Xin chào
               </p>
               <h1 className="text-3xl font-semibold text-slate-800 dark:text-white sm:text-4xl">
-                <span className="font-bold bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
+                <span className="font-bold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
                   {user?.fullName || "Quang Bình"}
                 </span>
               </h1>
