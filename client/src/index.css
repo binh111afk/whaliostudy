@@ -119,3 +119,39 @@ body {
 .animate-bounce-subtle {
   animation: bounceSubtle 1.5s ease-in-out infinite;
 }
+
+@supports (view-transition-name: root) {
+  :root {
+    view-transition-name: root;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 600ms;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    mix-blend-mode: normal;
+  }
+
+  ::view-transition-old(root) {
+    animation-name: vt-fade;
+  }
+
+  ::view-transition-new(root) {
+    animation-name: vt-reveal;
+  }
+}
+
+@keyframes vt-reveal {
+  from {
+    clip-path: circle(0px at var(--vt-x, 50%) var(--vt-y, 50%));
+  }
+  to {
+    clip-path: circle(var(--vt-end-radius, 150%) at var(--vt-x, 50%) var(--vt-y, 50%));
+  }
+}
+
+@keyframes vt-fade {
+  to {
+    opacity: 0;
+  }
+}

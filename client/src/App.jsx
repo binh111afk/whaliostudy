@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
@@ -361,6 +362,7 @@ function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAiChatFullscreen, setIsAiChatFullscreen] = useState(false);
   const [isCodeVaultFullscreen, setIsCodeVaultFullscreen] = useState(false);
+  const [fallbackCircle, setFallbackCircle] = useState(null);
 
   const handleAiChatFullscreenChange = useCallback((next) => {
     setIsAiChatFullscreen(next);
@@ -388,6 +390,58 @@ function App() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (!fallbackCircle) return;
+    const timer = setTimeout(() => setFallbackCircle(null), 650);
+    return () => clearTimeout(timer);
+  }, [fallbackCircle]);
+
+  const getToggleCenter = useCallback((event) => {
+    const target = event?.currentTarget;
+    if (target?.getBoundingClientRect) {
+      const rect = target.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+    }
+    return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  }, []);
+
+  const handleToggleDarkMode = useCallback((event) => {
+    const { x, y } = getToggleCenter(event);
+    const maxX = Math.max(x, window.innerWidth - x);
+    const maxY = Math.max(y, window.innerHeight - y);
+    const endRadius = Math.hypot(maxX, maxY);
+    const root = document.documentElement;
+    const nextThemeIsDark = !darkMode;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    root.style.setProperty('--vt-x', `${x}px`);
+    root.style.setProperty('--vt-y', `${y}px`);
+    root.style.setProperty('--vt-end-radius', `${endRadius}px`);
+
+    if (!document.startViewTransition || reduceMotion) {
+      setDarkMode(nextThemeIsDark);
+      if (!reduceMotion) {
+        setFallbackCircle({
+          id: Date.now(),
+          x,
+          y,
+          radius: endRadius,
+          isDark: nextThemeIsDark,
+        });
+      }
+      return;
+    }
+
+    document.startViewTransition(() => {
+      flushSync(() => {
+        setDarkMode(nextThemeIsDark);
+      });
+    });
+  }, [darkMode, getToggleCenter]);
 
   return (
     <Router>
@@ -447,7 +501,7 @@ function App() {
                   Whalio 2.0
                 </div>
                 <button
-                  onClick={() => setDarkMode(!darkMode)}
+                  onClick={handleToggleDarkMode}
                   className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                   aria-label="Đổi giao diện"
                 >
@@ -468,7 +522,7 @@ function App() {
                   onLoginClick={() => setIsModalOpen(true)}
                   onLogoutClick={handleLogout}
                   darkMode={darkMode}
-                  onToggleDarkMode={() => setDarkMode(!darkMode)}
+                  onToggleDarkMode={handleToggleDarkMode}
                 />
               </div>
             )}
@@ -538,6 +592,26 @@ function App() {
 
           {/* Floating Music Player - controlled by MusicContext */}
           <FloatingPlayer />
+
+          <AnimatePresence>
+            {fallbackCircle && (
+              <motion.div
+                key={fallbackCircle.id}
+                className="pointer-events-none fixed z-[200] rounded-full"
+                initial={{ scale: 0, opacity: 0.9 }}
+                animate={{ scale: 1, opacity: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                style={{
+                  width: fallbackCircle.radius * 2,
+                  height: fallbackCircle.radius * 2,
+                  left: fallbackCircle.x - fallbackCircle.radius,
+                  top: fallbackCircle.y - fallbackCircle.radius,
+                  background: fallbackCircle.isDark ? '#0b1120' : '#f8fafc',
+                }}
+              />
+            )}
+          </AnimatePresence>
 
           <AuthModal
             isOpen={isModalOpen}
