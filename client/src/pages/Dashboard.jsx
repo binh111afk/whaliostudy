@@ -624,150 +624,73 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
     return deadlines.filter((task) => !task?.isDone).length;
   }, [deadlines]);
 
-  const greetingText = "Xin chào";
-  const greetingChars = useMemo(() => greetingText.split(""), []);
   const hintText =
     pendingDeadlines > 0
       ? `Hôm nay bạn có ${pendingDeadlines} deadline cần xử lý đó!`
       : "Hôm nay trống lịch, mình cùng chill nhé!";
 
-  const greetingContainer = {
-    hidden: {},
-    visible: {
-      transition: { staggerChildren: 0.06, delayChildren: 0.12 },
-    },
-  };
-
-  const greetingLetter = {
-    hidden: { y: 18, opacity: 0, rotate: -4 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      rotate: 0,
-      transition: { type: "spring", stiffness: 420, damping: 26 },
-    },
-  };
-
-  const whaleJump = {
-    hidden: { y: 38, opacity: 0 },
-    visible: {
-      y: [38, -8, 0],
-      opacity: 1,
-      transition: { duration: 0.9, ease: [0.2, 0.8, 0.2, 1] },
-    },
-  };
-
-  const particleVariants = {
-    hidden: { y: 12, opacity: 0, scale: 0.2 },
-    visible: (i) => ({
-      y: [-6 - i * 4, -18 - i * 6],
-      opacity: [0, 1, 0],
-      scale: [0.4, 1, 0.6],
-      transition: {
-        duration: 0.8 + i * 0.05,
-        delay: 0.2 + i * 0.04,
-        ease: "easeOut",
-      },
-    }),
-  };
-
   return (
     <div className="space-y-6 sm:space-y-8 pb-10 overflow-x-hidden">
       {/* 1. WELCOME SECTION */}
       <motion.section
-        initial={{ y: 6, opacity: 0 }}
-        animate={{ y: [6, -4, 0], opacity: 1 }}
-        transition={{ duration: 0.9, ease: "easeOut" }}
-        className="relative flex flex-col gap-4 overflow-hidden rounded-3xl border border-blue-100/60 bg-gradient-to-br from-white via-blue-50/70 to-white p-5 shadow-[0_18px_40px_-30px_rgba(37,99,235,0.45)] dark:border-blue-900/40 dark:from-slate-900/80 dark:via-slate-900 dark:to-slate-900/60 sm:p-6"
+        initial={{ opacity: 0, x: -18 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white px-6 py-5 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.25)] dark:border-slate-800 dark:bg-slate-900 sm:px-7 sm:py-6"
       >
-        <motion.div
-          animate={{ y: [0, -6, 0] }}
-          transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute inset-0"
-        />
-
-        <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <motion.div
-                className="flex flex-wrap items-center gap-2 text-2xl sm:text-3xl font-black text-gray-800 dark:text-white"
-                variants={greetingContainer}
-                initial="hidden"
-                animate="visible"
-              >
-                {greetingChars.map((char, idx) => (
-                  <motion.span key={`greet-${idx}`} variants={greetingLetter}>
-                    {char === " " ? "\u00A0" : char}
-                  </motion.span>
-                ))}
-                <span className="text-blue-600 dark:text-blue-400">
-                  {user?.fullName || "Sinh viên"}
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2 font-sans">
+              <div className="flex flex-wrap items-center gap-2 text-2xl font-semibold text-slate-700 sm:text-3xl">
+                <span>Xin chào</span>
+                <span className="bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent font-bold">
+                  {user?.fullName || "Quang Bình"}
                 </span>
-              </motion.div>
-
-              <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
-                <Calendar size={18} className="text-primary dark:text-blue-400" />
-                <span className="font-medium">{getVNDate()}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400">
+                <Calendar size={16} className="text-blue-500 dark:text-blue-400" />
+                <span>{getVNDate()}</span>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative w-fit rounded-2xl bg-white/80 px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm backdrop-blur-sm dark:bg-slate-800/80 dark:text-blue-200">
-                {hintText}
-                <span className="absolute -left-2 top-1/2 h-3 w-3 -translate-y-1/2 rotate-45 rounded-sm bg-white/80 dark:bg-slate-800/80" />
-              </div>
-            </div>
+            <span className="inline-flex w-fit items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+              {hintText}
+            </span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative flex h-24 w-24 items-center justify-center">
-              <motion.div
-                initial="hidden"
-                animate="visible"
-                variants={whaleJump}
-                className="relative"
+          <div className="flex flex-wrap items-center gap-4">
+            <motion.div
+              animate={{ y: [0, -6, 0] }}
+              transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
+              className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-blue-50/60 shadow-[0_16px_30px_-26px_rgba(59,130,246,0.6)] dark:bg-blue-500/10"
+            >
+              <svg
+                width="72"
+                height="72"
+                viewBox="0 0 96 96"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
               >
-                <svg
-                  width="96"
-                  height="96"
-                  viewBox="0 0 96 96"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M15 58c0-18 14-32 33-32 11 0 21 4 28 12l10-4-4 10c1 3 2 7 2 11 0 18-14 32-33 32H37c-12 0-22-8-22-21z"
-                    fill="#1D8BFF"
-                    fillOpacity="0.9"
-                  />
-                  <path
-                    d="M59 39c6 2 10 7 11 13"
-                    stroke="#E0F2FF"
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                  />
-                  <circle cx="35" cy="49" r="4" fill="#E0F2FF" />
-                  <path
-                    d="M22 62c3 5 9 8 16 8"
-                    stroke="#0C5FB8"
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                  />
-                </svg>
-
-                <div className="absolute -top-2 left-1/2 flex -translate-x-1/2 gap-2">
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <motion.span
-                      key={`particle-${i}`}
-                      custom={i}
-                      variants={particleVariants}
-                      initial="hidden"
-                      animate="visible"
-                      className="h-2 w-2 rounded-full bg-blue-200"
-                    />
-                  ))}
-                </div>
-              </motion.div>
-            </div>
+                <path
+                  d="M15 58c0-18 14-32 33-32 11 0 21 4 28 12l10-4-4 10c1 3 2 7 2 11 0 18-14 32-33 32H37c-12 0-22-8-22-21z"
+                  fill="#1D8BFF"
+                  fillOpacity="0.92"
+                />
+                <path
+                  d="M59 39c6 2 10 7 11 13"
+                  stroke="#E0F2FF"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                />
+                <circle cx="35" cy="49" r="4" fill="#E0F2FF" />
+                <path
+                  d="M22 62c3 5 9 8 16 8"
+                  stroke="#0C5FB8"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </motion.div>
 
             <button
               onClick={() => setIsModalOpen(true)}
