@@ -22,11 +22,10 @@ const Tooltip = ({ text, children }) => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="pointer-events-none absolute left-1/2 top-0 z-[999] -translate-x-1/2 -translate-y-full"
+            className="pointer-events-none absolute left-1/2 top-full z-[999] -translate-x-1/2 translate-y-2"
           >
             <span className="relative inline-flex items-center whitespace-nowrap rounded-lg bg-white/80 px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-lg shadow-slate-900/10 backdrop-blur-md dark:bg-slate-900/80 dark:text-slate-200">
               {text}
-              <span className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[2px] bg-white/80 dark:bg-slate-900/80" />
             </span>
           </motion.span>
         )}
