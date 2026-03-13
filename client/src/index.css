@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -22,7 +22,7 @@ body,
 
 html,
 body {
-  font-family: "Lexend", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+  font-family: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
 }
 
