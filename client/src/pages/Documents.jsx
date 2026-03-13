@@ -840,11 +840,17 @@ const Documents = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start gap-2">
                             {/* Tên file (Có thể xuống dòng) */}
-                            <Tooltip text={doc.name}>
-                              <h4 className="font-bold text-gray-800 dark:text-white text-sm line-clamp-2 leading-tight">
-                                {doc.name}
-                              </h4>
-                            </Tooltip>
+                            <div className="relative flex-1 min-w-0">
+                              <Tooltip text={doc.name}>
+                                <h4 className="pr-10 font-bold text-gray-800 dark:text-white text-sm line-clamp-2 leading-tight">
+                                  {doc.name}
+                                </h4>
+                              </Tooltip>
+                              <span
+                                aria-hidden="true"
+                                className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-white via-white/80 to-transparent dark:from-gray-800 dark:via-gray-800/80"
+                              />
+                            </div>
 
                             {/* Badge (Không dùng absolute nữa, dùng flex item để chiếm chỗ) */}
                             {doc.visibility === "private" ? (
