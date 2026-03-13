@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import { NavLink } from "react-router-dom";
 import {
   Search,
@@ -29,6 +30,7 @@ const Header = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const dropdownRef = useRef(null);
 
   // Xử lý click ra ngoài để đóng menu
@@ -53,66 +55,65 @@ const Header = ({
     return () => document.removeEventListener("keydown", handleEsc);
   }, []);
 
-  const navLinkClass = ({ isActive }) =>
-    `text-sm font-bold transition-colors ${
-      isActive
-        ? "text-blue-600 dark:text-blue-400"
-        : "text-gray-500 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
-    }`;
-
   return (
-    // Thêm z-50 vào Header để nó luôn nổi lên trên cùng
-    <div className="fixed left-64 right-0 top-0 z-50 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6 dark:border-gray-700 dark:bg-gray-800">
+    <div className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-slate-200/50 bg-white/70 px-6 backdrop-blur-xl dark:border-slate-700/50 dark:bg-slate-900/70">
       {/* 1. TÌM KIẾM */}
-      <div className="flex items-center bg-gray-50 dark:bg-gray-700 rounded-xl px-4 py-2 w-64 lg:w-80 border border-transparent focus-within:border-blue-500/30 focus-within:bg-white dark:focus-within:bg-gray-600 transition-all">
+      <motion.div
+        layout
+        transition={{ type: "spring", stiffness: 300, damping: 24 }}
+        className="relative flex items-center rounded-full bg-slate-100/50 dark:bg-slate-800/60 px-4 py-2 border border-transparent focus-within:border-blue-500/30 focus-within:bg-white/80 dark:focus-within:bg-slate-700/70"
+        style={{ width: isSearchFocused ? "26rem" : "20rem" }}
+      >
         <Search size={18} className="text-gray-400 dark:text-gray-500" />
         <input
           type="text"
           placeholder="Tìm kiếm..."
+          onFocus={() => setIsSearchFocused(true)}
+          onBlur={() => setIsSearchFocused(false)}
           className="bg-transparent border-none outline-none text-sm ml-3 w-full text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
         />
-      </div>
+        <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-white/80 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 shadow-sm dark:border-slate-600 dark:bg-slate-800/80 dark:text-slate-300">
+          ⌘ K
+        </span>
+      </motion.div>
 
       {/* 2. MENU GIỮA */}
-      <nav className="hidden md:flex items-center space-x-8">
-        <NavLink to="/" className={navLinkClass}>
-          <div className="flex items-center gap-2">
-            <Home size={18} />
-            <span>Trang chủ</span>
-          </div>
-        </NavLink>
-
-        <NavLink to="/portal" className={navLinkClass}>
-          <div className="flex items-center gap-2">
-            <LayoutGrid size={18} />
-            <span>Tiện ích</span>
-          </div>
-        </NavLink>
-
-        <NavLink to="/documents" className={navLinkClass}>
-          <div className="flex items-center gap-2">
-            <FileText size={18} />
-            <span>Tài liệu</span>
-          </div>
-        </NavLink>
-
-        <NavLink to="/community" className={navLinkClass}>
-          <div className="flex items-center gap-2">
-            <Users size={18} />
-            <span>Cộng đồng</span>
-          </div>
-        </NavLink>
+      <nav className={`hidden md:flex items-center space-x-2 transition-opacity ${isSearchFocused ? "opacity-40" : "opacity-100"}`}>
+        {[
+          { to: "/", label: "Trang chủ", icon: Home },
+          { to: "/portal", label: "Tiện ích", icon: LayoutGrid },
+          { to: "/documents", label: "Tài liệu", icon: FileText },
+          { to: "/community", label: "Cộng đồng", icon: Users },
+        ].map((item) => (
+          <NavLink key={item.to} to={item.to} className="relative">
+            {({ isActive }) => (
+              <div className={`relative flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition-colors ${isActive ? "text-blue-600 dark:text-blue-300" : "text-gray-500 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"}`}>
+                {isActive && (
+                  <motion.span
+                    layoutId="active-pill"
+                    className="absolute inset-0 rounded-full bg-blue-50 dark:bg-blue-900/30"
+                    transition={{ type: "spring", stiffness: 420, damping: 30 }}
+                  />
+                )}
+                <item.icon size={18} className="relative z-10" />
+                <span className="relative z-10">{item.label}</span>
+              </div>
+            )}
+          </NavLink>
+        ))}
       </nav>
 
       {/* 3. KHU VỰC CÁ NHÂN */}
-      <div className="flex items-center space-x-3">
+      <div className={`flex items-center space-x-3 transition-opacity ${isSearchFocused ? "opacity-40" : "opacity-100"}`}>
         <Tooltip text={darkMode ? "Chế độ sáng" : "Chế độ tối"}>
-          <button
+          <motion.button
             onClick={onToggleDarkMode}
-            className="p-2 text-gray-400 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-all"
+            whileTap={{ scale: 0.94 }}
+            transition={{ type: "spring", stiffness: 420, damping: 22 }}
+            className="p-2 text-gray-400 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 rounded-full transition-all"
           >
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
+          </motion.button>
         </Tooltip>
 
         <div className="h-6 w-[1px] bg-gray-200 dark:bg-gray-700 mx-1"></div>
@@ -120,18 +121,26 @@ const Header = ({
         {user ? (
           // ✅ CÓ USER -> HIỆN AVATAR VÀ DROPDOWN
           <div className="flex items-center gap-2 relative" ref={dropdownRef}>
-            <button className="p-2 text-gray-400 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-all relative mr-2">
+            <motion.button
+              whileTap={{ scale: 0.94 }}
+              transition={{ type: "spring", stiffness: 420, damping: 22 }}
+              className="p-2 text-gray-400 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 rounded-full transition-all relative mr-2"
+            >
               <Bell size={20} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-            </button>
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white">
+                <span className="absolute inset-0 rounded-full bg-red-500/70 animate-ping"></span>
+              </span>
+            </motion.button>
 
             {/* Nút bấm Avatar */}
-            <button
+            <motion.button
               onClick={() => {
                 console.log("Đã bấm vào avatar!");
                 setIsDropdownOpen(!isDropdownOpen);
               }}
-              className="flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 p-1 pr-2 rounded-full transition-all border border-transparent hover:border-gray-200 dark:hover:border-gray-600 select-none"
+              whileTap={{ scale: 0.96 }}
+              transition={{ type: "spring", stiffness: 420, damping: 22 }}
+              className="flex items-center gap-2 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 p-1 pr-2 rounded-full transition-all border border-slate-200/60 dark:border-slate-700 select-none"
             >
               {/* 1. Ưu tiên hiển thị ảnh (nếu user có đường dẫn ảnh chứa dấu /) */}
               {user.avatar && user.avatar.includes("/") && (
@@ -166,7 +175,7 @@ const Header = ({
                   isDropdownOpen ? "rotate-180" : ""
                 }`}
               />
-            </button>
+            </motion.button>
 
             {/* 👇 MENU DROPDOWN ĐÂY 👇 */}
             {isDropdownOpen && (
