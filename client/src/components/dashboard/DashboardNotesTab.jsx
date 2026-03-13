@@ -8,6 +8,7 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
+import Tooltip from "../Tooltip";
 
 // --- HELPER ---
 const isMobileViewport = () =>
@@ -310,13 +311,14 @@ const DashboardNotesTab = ({ user }) => {
               key={note._id}
               className="group relative bg-yellow-100 dark:bg-yellow-900/30 p-4 rounded-xl shadow-sm border border-yellow-200 dark:border-yellow-700 hover:shadow-md transition-all hover:-translate-y-1"
             >
-              <button
-                onClick={() => handleDeleteNote(note._id)}
-                className="absolute top-2 right-2 text-yellow-600 dark:text-yellow-500 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Xóa"
-              >
-                <Trash2 size={14} />
-              </button>
+              <Tooltip text="Xóa">
+                <button
+                  onClick={() => handleDeleteNote(note._id)}
+                  className="absolute top-2 right-2 text-yellow-600 dark:text-yellow-500 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </Tooltip>
               <h4 className="font-bold text-gray-800 dark:text-white mb-1">
                 {note.title}
               </h4>
@@ -357,16 +359,17 @@ const DashboardNotesTab = ({ user }) => {
                 }`}
               >
                 {/* Nút Xóa (Hiện khi Hover) */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteTimetableNote(note);
-                  }}
-                  className="absolute top-2 right-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all z-10 p-1"
-                  title="Xóa nhắc nhở này"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <Tooltip text="Xóa nhắc nhở này">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteTimetableNote(note);
+                    }}
+                    className="absolute top-2 right-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all z-10 p-1"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </Tooltip>
 
                 <div className="flex gap-4 items-start">
                   {/* Checkbox */}

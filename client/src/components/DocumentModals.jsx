@@ -3,6 +3,7 @@ import {
     X, Upload, Save, FileText, CheckCircle, CloudUpload, Trash2, AlertCircle, 
     FileSpreadsheet, Image, File as FileIcon 
 } from 'lucide-react';
+import Tooltip from "./Tooltip";
 
 // Danh sách môn học
 const SUBJECTS = [
@@ -175,13 +176,14 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
                         <p className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">{file.name}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB • Sẵn sàng tải lên</p>
                     </div>
-                    <button 
-                        onClick={() => setFile(null)} 
-                        className="p-2 bg-white dark:bg-gray-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg shadow-sm transition-colors border border-gray-100 dark:border-gray-700"
-                        title="Hủy chọn file"
-                    >
-                        <Trash2 size={18}/>
-                    </button>
+                    <Tooltip text="Hủy chọn file">
+                        <button 
+                            onClick={() => setFile(null)} 
+                            className="p-2 bg-white dark:bg-gray-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg shadow-sm transition-colors border border-gray-100 dark:border-gray-700"
+                        >
+                            <Trash2 size={18}/>
+                        </button>
+                    </Tooltip>
                 </div>
             )}
 

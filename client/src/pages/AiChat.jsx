@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from 'rehype-raw'; // 👈 Thêm dòng này
 import "highlight.js/styles/atom-one-dark.css";
 import { getFullApiUrl } from '../config/apiConfig';
+import Tooltip from "../components/Tooltip";
 import {
   Send,
   Paperclip,
@@ -516,13 +517,14 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
           <div className="h-14 sm:h-16 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-3 sm:px-6 bg-white dark:bg-gray-800 shrink-0">
           {/* Bên trái: Nút menu và logo */}
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400"
-              title="Mở lịch sử chat"
-            >
-              <Menu size={20} />
-            </button>
+            <Tooltip text="Mở lịch sử chat">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400"
+              >
+                <Menu size={20} />
+              </button>
+            </Tooltip>
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-800 dark:text-white text-base sm:text-lg flex items-center gap-2">
                 Whalio AI{" "}
@@ -536,14 +538,15 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
               </span>
             </div>
           </div>
-          <button
-            onClick={handleToggleFullscreen}
-            className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
-            title={isFullscreen ? "Thu nhỏ AiChat" : "Phóng to AiChat"}
-            aria-label={isFullscreen ? "Thu nhỏ AiChat" : "Phóng to AiChat"}
-          >
-            {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-          </button>
+          <Tooltip text={isFullscreen ? "Thu nhỏ AiChat" : "Phóng to AiChat"}>
+            <button
+              onClick={handleToggleFullscreen}
+              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+              aria-label={isFullscreen ? "Thu nhỏ AiChat" : "Phóng to AiChat"}
+            >
+              {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+            </button>
+          </Tooltip>
         </div>
 
         {/* Nút cuộn xuống */}
@@ -732,21 +735,22 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                 accept="image/*"
               />
 
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className={`p-2.5 sm:p-3 rounded-xl transition-colors shrink-0 cursor-pointer ${
-                  selectedFile
-                    ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30"
-                    : "text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-                }`}
-                title="Gửi ảnh"
-              >
-                {selectedFile ? (
-                  <ImageIcon size={20} />
-                ) : (
-                  <Paperclip size={20} />
-                )}
-              </button>
+              <Tooltip text="Gửi ảnh">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`p-2.5 sm:p-3 rounded-xl transition-colors shrink-0 cursor-pointer ${
+                    selectedFile
+                      ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30"
+                      : "text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  {selectedFile ? (
+                    <ImageIcon size={20} />
+                  ) : (
+                    <Paperclip size={20} />
+                  )}
+                </button>
+              </Tooltip>
 
               <textarea
                 value={input}
@@ -767,18 +771,19 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                 }}
               />
 
-              <button
-                onClick={handleSend}
-                disabled={(!input.trim() && !selectedFile) || isLoading}
-                className={`p-2.5 sm:p-3 rounded-xl shrink-0 transition-all cursor-pointer ${
-                  (input.trim() || selectedFile) && !isLoading
-                    ? "bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 shadow-md hover:shadow-lg"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed"
-                }`}
-                title="Gửi"
-              >
-                <Send size={18} />
-              </button>
+              <Tooltip text="Gửi">
+                <button
+                  onClick={handleSend}
+                  disabled={(!input.trim() && !selectedFile) || isLoading}
+                  className={`p-2.5 sm:p-3 rounded-xl shrink-0 transition-all cursor-pointer ${
+                    (input.trim() || selectedFile) && !isLoading
+                      ? "bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 shadow-md hover:shadow-lg"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                  }`}
+                >
+                  <Send size={18} />
+                </button>
+              </Tooltip>
             </div>
 
             <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-3 font-medium">

@@ -5,6 +5,7 @@ import {
     Monitor, Coffee, Library, Bus, School, RotateCcw
 } from 'lucide-react';
 import { portalService } from '../services/portalService';
+import Tooltip from "../components/Tooltip";
 
 const Portal = ({ user }) => {
     // --- STATE QUẢN LÝ ---
@@ -393,20 +394,22 @@ const Portal = ({ user }) => {
                         {/* NÚT THÊM MỚI (CHỈ ADMIN THẤY) */}
                         {isAdmin && (
                             <>
-                                <button 
-                                    onClick={handleAddNew}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl shadow-lg shadow-blue-200 dark:shadow-none transition-all transform hover:scale-105"
-                                    title="Thêm liên kết mới"
-                                >
-                                    <Plus size={24} />
-                                </button>
-                                <button 
-                                    onClick={handleReset}
-                                    className="bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-xl shadow-lg dark:shadow-none transition-all transform hover:scale-105"
-                                    title="Khôi phục dữ liệu gốc"
-                                >
-                                    <RotateCcw size={24} />
-                                </button>
+                                <Tooltip text="Thêm liên kết mới">
+                                    <button 
+                                        onClick={handleAddNew}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl shadow-lg shadow-blue-200 dark:shadow-none transition-all transform hover:scale-105"
+                                    >
+                                        <Plus size={24} />
+                                    </button>
+                                </Tooltip>
+                                <Tooltip text="Khôi phục dữ liệu gốc">
+                                    <button 
+                                        onClick={handleReset}
+                                        className="bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-xl shadow-lg dark:shadow-none transition-all transform hover:scale-105"
+                                    >
+                                        <RotateCcw size={24} />
+                                    </button>
+                                </Tooltip>
                             </>
                         )}
                     </div>
@@ -461,17 +464,18 @@ const Portal = ({ user }) => {
                                                 {/* --- KHU VỰC NÚT BẤM (Góc phải) --- */}
                                                 <div className="absolute top-3 right-3 flex items-center gap-1">
                                                     {/* Nút Copy */}
-                                                    <button
-                                                        onClick={(e) => handleCopy(e, link.url, link.id)}
-                                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30"
-                                                        title="Copy Link"
-                                                    >
-                                                        {copiedId === link.id ? (
-                                                            <Check size={14} className="text-green-500" />
-                                                        ) : (
-                                                            <Copy size={14} />
-                                                        )}
-                                                    </button>
+                                                    <Tooltip text="Copy Link">
+                                                        <button
+                                                            onClick={(e) => handleCopy(e, link.url, link.id)}
+                                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30"
+                                                        >
+                                                            {copiedId === link.id ? (
+                                                                <Check size={14} className="text-green-500" />
+                                                            ) : (
+                                                                <Copy size={14} />
+                                                            )}
+                                                        </button>
+                                                    </Tooltip>
 
                                                     {/* Icon Open Link */}
                                                     <div className="p-1.5 text-gray-300 group-hover:text-blue-500 transition-colors">
@@ -488,22 +492,24 @@ const Portal = ({ user }) => {
                                             {/* Nút Admin (Ở dưới mô tả) */}
                                             {isAdmin && (
                                                 <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200 dark:border-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={(e) => handleEdit(e, link, section.id)}
-                                                        className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-yellow-600 hover:bg-yellow-50 dark:text-yellow-400 dark:hover:bg-yellow-900/30 transition-colors"
-                                                        title="Sửa"
-                                                    >
-                                                        <Edit size={12} />
-                                                        Sửa
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => handleDelete(e, link.id, section.id)}
-                                                        className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
-                                                        title="Xóa"
-                                                    >
-                                                        <Trash2 size={12} />
-                                                        Xóa
-                                                    </button>
+                                                    <Tooltip text="Sửa">
+                                                        <button
+                                                            onClick={(e) => handleEdit(e, link, section.id)}
+                                                            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-yellow-600 hover:bg-yellow-50 dark:text-yellow-400 dark:hover:bg-yellow-900/30 transition-colors"
+                                                        >
+                                                            <Edit size={12} />
+                                                            Sửa
+                                                        </button>
+                                                    </Tooltip>
+                                                    <Tooltip text="Xóa">
+                                                        <button
+                                                            onClick={(e) => handleDelete(e, link.id, section.id)}
+                                                            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
+                                                        >
+                                                            <Trash2 size={12} />
+                                                            Xóa
+                                                        </button>
+                                                    </Tooltip>
                                                 </div>
                                             )}
                                         </a>

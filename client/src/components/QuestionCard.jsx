@@ -6,6 +6,7 @@ import {
   Image as ImageIcon,
   ChevronDown,
 } from "lucide-react";
+import Tooltip from "./Tooltip";
 
 export const QuestionCard = ({
   question,
@@ -65,13 +66,14 @@ export const QuestionCard = ({
           </div>
 
           {/* Image Upload Button */}
-          <button
-            onClick={(e) => e.stopPropagation()}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            title="Thêm hình ảnh"
-          >
-            <ImageIcon size={20} />
-          </button>
+          <Tooltip text="Thêm hình ảnh">
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <ImageIcon size={20} />
+            </button>
+          </Tooltip>
         </div>
 
         {/* Question Type & Points */}
@@ -135,16 +137,17 @@ export const QuestionCard = ({
                 key={optIndex}
                 className="flex items-center gap-3 group/option"
               >
-                <input
-                  type="checkbox"
-                  checked={question.correctAnswers?.includes(optIndex) || false}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    onCorrectCheckboxChange(optIndex, e.target.checked);
-                  }}
-                  className="w-5 h-5 rounded border-2 border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                  title="Đánh dấu là đáp án đúng"
-                />
+                <Tooltip text="Đánh dấu là đáp án đúng">
+                  <input
+                    type="checkbox"
+                    checked={question.correctAnswers?.includes(optIndex) || false}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      onCorrectCheckboxChange(optIndex, e.target.checked);
+                    }}
+                    className="w-5 h-5 rounded border-2 border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  />
+                </Tooltip>
                 <span className="text-sm text-gray-500 dark:text-gray-400 font-medium w-6">
                   {String.fromCharCode(65 + optIndex)}.
                 </span>
@@ -173,17 +176,18 @@ export const QuestionCard = ({
                 key={optIndex}
                 className="flex items-center gap-3 group/option"
               >
-                <input
-                  type="radio"
-                  name={`question-${index}`}
-                  checked={question.correctAnswer === optIndex}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    onCorrectAnswerChange(optIndex);
-                  }}
-                  className="w-5 h-5 border-2 border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                  title="Chọn làm đáp án đúng"
-                />
+                <Tooltip text="Chọn làm đáp án đúng">
+                  <input
+                    type="radio"
+                    name={`question-${index}`}
+                    checked={question.correctAnswer === optIndex}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      onCorrectAnswerChange(optIndex);
+                    }}
+                    className="w-5 h-5 border-2 border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  />
+                </Tooltip>
                 <span className="text-sm text-gray-500 dark:text-gray-400 font-medium w-6">
                   {String.fromCharCode(65 + optIndex)}.
                 </span>
@@ -208,27 +212,29 @@ export const QuestionCard = ({
       {/* Footer Actions */}
       {isActive && (
         <div className="border-t border-gray-100 dark:border-gray-700 px-6 py-3 flex items-center justify-end gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDuplicate();
-            }}
-            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-            title="Nhân bản câu hỏi"
-          >
-            <Copy size={18} />
-          </button>
+          <Tooltip text="Nhân bản câu hỏi">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDuplicate();
+              }}
+              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+            >
+              <Copy size={18} />
+            </button>
+          </Tooltip>
           <div className="w-[1px] h-6 bg-gray-200 dark:bg-gray-600"></div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-            title="Xóa câu hỏi"
-          >
-            <Trash2 size={18} />
-          </button>
+          <Tooltip text="Xóa câu hỏi">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+            >
+              <Trash2 size={18} />
+            </button>
+          </Tooltip>
         </div>
       )}
     </div>

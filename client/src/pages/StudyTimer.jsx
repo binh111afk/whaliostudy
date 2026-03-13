@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { studyService } from "../services/studyService";
 import StudyTimerMusicPanel from "../components/StudyTimerMusicPanel";
 import { getFullApiUrl } from '../config/apiConfig';
+import Tooltip from "../components/Tooltip";
 
 const TIMER_MODES = {
   focus: { label: "Tập trung", minutes: 25, accent: "from-blue-500 to-indigo-500" },
@@ -615,13 +616,14 @@ const StudyTimer = () => {
                 </div>
               </div>
 
-              <button
-                onClick={() => setIsManualFullscreen((prev) => !prev)}
-                className="absolute right-5 top-5 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-white/15 bg-white/80 dark:bg-white/10 px-3 py-2 text-slate-700 dark:text-slate-100 hover:bg-white dark:hover:bg-white/15 transition-colors"
-                title="Phóng to"
-              >
-                {isManualFullscreen ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
-              </button>
+              <Tooltip text="Phóng to">
+                <button
+                  onClick={() => setIsManualFullscreen((prev) => !prev)}
+                  className="absolute right-5 top-5 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-white/15 bg-white/80 dark:bg-white/10 px-3 py-2 text-slate-700 dark:text-slate-100 hover:bg-white dark:hover:bg-white/15 transition-colors"
+                >
+                  {isManualFullscreen ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
+                </button>
+              </Tooltip>
 
               <div className="mx-auto max-w-2xl text-center">
                 <div className="relative mx-auto h-[13rem] w-[13rem] md:h-[15rem] md:w-[15rem] xl:h-[17rem] xl:w-[17rem]">
@@ -733,13 +735,14 @@ const StudyTimer = () => {
                     {isRunning ? "Pause" : "Start"}
                   </FramerMotion.motion.button>
 
-                  <button
-                    onClick={resetTimer}
-                    className="inline-flex items-center justify-center rounded-2xl border border-slate-200 dark:border-white/15 bg-white/80 dark:bg-white/10 px-4 py-3.5 text-slate-700 dark:text-slate-100 hover:bg-white dark:hover:bg-white/15 transition-colors"
-                    title="Đặt lại"
-                  >
-                    <RotateCcw size={18} />
-                  </button>
+                  <Tooltip text="Đặt lại">
+                    <button
+                      onClick={resetTimer}
+                      className="inline-flex items-center justify-center rounded-2xl border border-slate-200 dark:border-white/15 bg-white/80 dark:bg-white/10 px-4 py-3.5 text-slate-700 dark:text-slate-100 hover:bg-white dark:hover:bg-white/15 transition-colors"
+                    >
+                      <RotateCcw size={18} />
+                    </button>
+                  </Tooltip>
                 </div>
 
                 <FramerMotion.motion.div

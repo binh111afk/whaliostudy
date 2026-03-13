@@ -492,7 +492,7 @@ const DocumentViewer = () => {
         <iframe
           src={doc.path}
           className="w-full h-[800px] rounded-xl border border-gray-200 dark:border-gray-700"
-          title="PDF Viewer"
+          aria-label="PDF Viewer"
         />
       );
     }
@@ -506,7 +506,7 @@ const DocumentViewer = () => {
         <iframe
           src={officeUrl}
           className="w-full h-[800px] rounded-xl border border-gray-200 dark:border-gray-700"
-          title="Office Viewer"
+          aria-label="Office Viewer"
         />
       );
     }

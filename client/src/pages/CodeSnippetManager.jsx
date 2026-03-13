@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { useLocation, useNavigate } from 'react-router-dom';
+import Tooltip from "../components/Tooltip";
 import {
   CalendarDays,
   ChevronLeft,
@@ -2677,22 +2678,24 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
                     </div>
                   </button>
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleEditSnippet(snippet)}
-                      className="rounded-lg p-1.5 text-gray-400 transition hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20"
-                      title="Sửa card code"
-                      aria-label="Sửa card code"
-                    >
-                      <Pencil size={15} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(snippetId)}
-                      className="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
-                      title="Xóa card code"
-                      aria-label="Xóa card code"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    <Tooltip text="Sửa card code">
+                      <button
+                        onClick={() => handleEditSnippet(snippet)}
+                        className="rounded-lg p-1.5 text-gray-400 transition hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20"
+                        aria-label="Sửa card code"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                    </Tooltip>
+                    <Tooltip text="Xóa card code">
+                      <button
+                        onClick={() => handleDelete(snippetId)}
+                        className="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                        aria-label="Xóa card code"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </Tooltip>
                   </div>
                 </div>
 
@@ -2783,22 +2786,23 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
               )}
 
               <div className="flex flex-wrap items-center gap-2">
-                <div className="relative group">
-                  <select
-                    value={editorLanguage}
-                    onChange={(event) => setEditorLanguage(event.target.value)}
-                    className="h-10 cursor-pointer appearance-none rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-10 text-sm font-semibold text-gray-700 shadow-sm outline-none transition-all duration-200 hover:border-blue-300 hover:bg-blue-50/50 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-blue-500 dark:hover:bg-gray-700 dark:focus:border-blue-400 dark:focus:ring-blue-900/30"
-                    title="Chọn ngôn ngữ highlight"
-                  >
-                    {LANGUAGE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value} className="bg-white py-2 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <FileCode2 size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 transition-colors duration-200 group-hover:text-blue-600 dark:text-gray-400 dark:group-hover:text-blue-400" />
-                  <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300" />
-                </div>
+                <Tooltip text="Chọn ngôn ngữ highlight">
+                  <div className="relative group">
+                    <select
+                      value={editorLanguage}
+                      onChange={(event) => setEditorLanguage(event.target.value)}
+                      className="h-10 cursor-pointer appearance-none rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-10 text-sm font-semibold text-gray-700 shadow-sm outline-none transition-all duration-200 hover:border-blue-300 hover:bg-blue-50/50 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-blue-500 dark:hover:bg-gray-700 dark:focus:border-blue-400 dark:focus:ring-blue-900/30"
+                    >
+                      {LANGUAGE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value} className="bg-white py-2 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <FileCode2 size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 transition-colors duration-200 group-hover:text-blue-600 dark:text-gray-400 dark:group-hover:text-blue-400" />
+                    <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300" />
+                  </div>
+                </Tooltip>
 
                 {!isFreeMode && (
                   <button
@@ -2810,22 +2814,23 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
                   </button>
                 )}
 
-                <div className="relative group">
-                  <select
-                    value={editorTheme}
-                    onChange={(event) => setEditorTheme(event.target.value)}
-                    className="h-10 cursor-pointer appearance-none rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-10 text-sm font-semibold text-gray-700 shadow-sm outline-none transition-all duration-200 hover:border-purple-300 hover:bg-purple-50/50 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-purple-500 dark:hover:bg-gray-700 dark:focus:border-purple-400 dark:focus:ring-purple-900/30"
-                    title="Chọn theme editor"
-                  >
-                    {CODE_EDITOR_THEME_OPTIONS.map((theme) => (
-                      <option key={theme.key} value={theme.key} className="bg-white py-2 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                        {theme.label}
-                      </option>
-                    ))}
-                  </select>
-                  <Palette size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 transition-colors duration-200 group-hover:text-purple-600 dark:text-gray-400 dark:group-hover:text-purple-400" />
-                  <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300" />
-                </div>
+                <Tooltip text="Chọn theme editor">
+                  <div className="relative group">
+                    <select
+                      value={editorTheme}
+                      onChange={(event) => setEditorTheme(event.target.value)}
+                      className="h-10 cursor-pointer appearance-none rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-10 text-sm font-semibold text-gray-700 shadow-sm outline-none transition-all duration-200 hover:border-purple-300 hover:bg-purple-50/50 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-purple-500 dark:hover:bg-gray-700 dark:focus:border-purple-400 dark:focus:ring-purple-900/30"
+                    >
+                      {CODE_EDITOR_THEME_OPTIONS.map((theme) => (
+                        <option key={theme.key} value={theme.key} className="bg-white py-2 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                          {theme.label}
+                        </option>
+                      ))}
+                    </select>
+                    <Palette size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 transition-colors duration-200 group-hover:text-purple-600 dark:text-gray-400 dark:group-hover:text-purple-400" />
+                    <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300" />
+                  </div>
+                </Tooltip>
 
                 <button
                   onClick={handleCopyCode}
@@ -2979,26 +2984,28 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
 
               <div className="flex min-h-0 flex-col gap-3 xl:h-full">
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleRunCode}
-                    disabled={runningCode}
-                    className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    title="Chạy code"
-                  >
-                    <Play size={16} />
-                    {runningAction === 'run' ? 'Đang chạy...' : 'Run'}
-                  </button>
+                  <Tooltip text="Chạy code">
+                    <button
+                      onClick={handleRunCode}
+                      disabled={runningCode}
+                      className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Play size={16} />
+                      {runningAction === 'run' ? 'Đang chạy...' : 'Run'}
+                    </button>
+                  </Tooltip>
 
                   {!isFreeMode && (
-                    <button
-                      onClick={handleJudge}
-                      disabled={runningCode}
-                      className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                      title="Chấm bài"
-                    >
-                      <Sparkles size={16} />
-                      {runningAction === 'judge' ? 'Đang chấm...' : 'Chấm bài'}
-                    </button>
+                    <Tooltip text="Chấm bài">
+                      <button
+                        onClick={handleJudge}
+                        disabled={runningCode}
+                        className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Sparkles size={16} />
+                        {runningAction === 'judge' ? 'Đang chấm...' : 'Chấm bài'}
+                      </button>
+                    </Tooltip>
                   )}
 
                   <button
@@ -3108,7 +3115,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
                             style={{ borderColor: terminalTheme.border }}
                           >
                             <iframe
-                              title="Code preview"
+                              aria-label="Code preview"
                               sandbox="allow-scripts"
                               srcDoc={programPreviewHtml}
                               className="h-44 w-full rounded-lg border"

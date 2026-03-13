@@ -11,6 +11,7 @@ import {
 } from "../utils/timetableHelpers"; // 👈 Import PERIOD_TIMES
 import { ClassModal, NotesModal } from "../components/TimetableModals";
 import LoadingOverlay from "../components/LoadingOverlay";
+import Tooltip from "../components/Tooltip";
 
 import {
   Plus,
@@ -308,11 +309,11 @@ const Timetable = () => {
           </div>
         )}
 
-        <div className="font-bold text-gray-800 text-sm leading-tight line-clamp-2"
-          title={cls.subject}
-        >
-          {cls.subject}
-        </div>
+        <Tooltip text={cls.subject}>
+          <div className="font-bold text-gray-800 text-sm leading-tight line-clamp-2">
+            {cls.subject}
+          </div>
+        </Tooltip>
 
         <div className="text-[11px] text-gray-600 flex items-center gap-1 font-medium">
           <Clock size={12} /> {timeDisplay}
@@ -328,38 +329,41 @@ const Timetable = () => {
 
         {/* HOVER ACTIONS */}
         <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-gray-800/90 p-1 rounded-lg backdrop-blur-sm shadow-sm">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setClassForNotes(cls);
-              setNotesModalOpen(true);
-            }}
-            className="p-1 hover:bg-yellow-100 text-yellow-600 rounded"
-            title="Ghi chú"
-          >
-            <ClipboardList size={14} />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setClassToEdit(cls);
-              setClassModalOpen(true);
-            }}
-            className="p-1 hover:bg-blue-100 text-blue-600 rounded"
-            title="Sửa"
-          >
-            <Edit3 size={14} />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDeleteClass(cls._id || cls.id);
-            }}
-            className="p-1 hover:bg-red-100 text-red-600 rounded"
-            title="Xóa"
-          >
-            <Trash2 size={14} />
-          </button>
+          <Tooltip text="Ghi chú">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setClassForNotes(cls);
+                setNotesModalOpen(true);
+              }}
+              className="p-1 hover:bg-yellow-100 text-yellow-600 rounded"
+            >
+              <ClipboardList size={14} />
+            </button>
+          </Tooltip>
+          <Tooltip text="Sửa">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setClassToEdit(cls);
+                setClassModalOpen(true);
+              }}
+              className="p-1 hover:bg-blue-100 text-blue-600 rounded"
+            >
+              <Edit3 size={14} />
+            </button>
+          </Tooltip>
+          <Tooltip text="Xóa">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteClass(cls._id || cls.id);
+              }}
+              className="p-1 hover:bg-red-100 text-red-600 rounded"
+            >
+              <Trash2 size={14} />
+            </button>
+          </Tooltip>
         </div>
       </div>
     );
@@ -458,14 +462,15 @@ const Timetable = () => {
         </div>
 
         <div className="flex gap-2 w-full md:w-auto">
-          <button
-            onClick={handleDeleteAll}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 font-bold transition-all cursor-pointer"
-            title="Xóa tất cả"
-          >
-            <Trash2 size={20} />
-            <span className="hidden sm:inline">Xóa tất cả</span>
-          </button>
+          <Tooltip text="Xóa tất cả">
+            <button
+              onClick={handleDeleteAll}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 font-bold transition-all cursor-pointer"
+            >
+              <Trash2 size={20} />
+              <span className="hidden sm:inline">Xóa tất cả</span>
+            </button>
+          </Tooltip>
           <button
             onClick={() => setImportModalOpen(true)}
             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/30 font-bold transition-all cursor-pointer"

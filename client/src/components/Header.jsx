@@ -17,6 +17,7 @@ import {
   Users,
 } from "lucide-react";
 import BackupRestoreModal from './BackupRestoreModal';
+import Tooltip from "./Tooltip";
 
 const Header = ({
   user,
@@ -105,13 +106,14 @@ const Header = ({
 
       {/* 3. KHU VỰC CÁ NHÂN */}
       <div className="flex items-center space-x-3">
-        <button
-          onClick={onToggleDarkMode}
-          className="p-2 text-gray-400 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-all"
-          title={darkMode ? "Chế độ sáng" : "Chế độ tối"}
-        >
-          {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
+        <Tooltip text={darkMode ? "Chế độ sáng" : "Chế độ tối"}>
+          <button
+            onClick={onToggleDarkMode}
+            className="p-2 text-gray-400 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-all"
+          >
+            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+        </Tooltip>
 
         <div className="h-6 w-[1px] bg-gray-200 dark:bg-gray-700 mx-1"></div>
 

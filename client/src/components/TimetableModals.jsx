@@ -4,6 +4,7 @@ import {
     Calendar, Clock, MapPin, Building, Layers, Edit3, Hash
 } from 'lucide-react';
 import { PERIOD_TIMES } from '../utils/timetableHelpers';
+import Tooltip from "./Tooltip";
 
 // ============================================================
 // 1. MODAL THÊM / SỬA LỚP HỌC (GIAO DIỆN MỚI)
@@ -162,10 +163,14 @@ export const ClassModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                 <label className={labelStyle}><Calendar size={14} className={iconStyle}/> Thời gian áp dụng (Tùy chọn)</label>
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className={inputStyle} title="Ngày bắt đầu" />
+                        <Tooltip text="Ngày bắt đầu">
+                          <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className={inputStyle} />
+                        </Tooltip>
                     </div>
                     <div>
-                        <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} className={inputStyle} title="Ngày kết thúc" />
+                        <Tooltip text="Ngày kết thúc">
+                          <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} className={inputStyle} />
+                        </Tooltip>
                     </div>
                 </div>
                 <p className="text-[11px] text-gray-400 mt-2 italic ml-1">* Mặc định áp dụng cho tuần hiện tại. Để trống nếu học tất cả các tuần.</p>

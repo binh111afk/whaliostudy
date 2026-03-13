@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { documentService } from "../services/documentService";
 import { UploadModal, EditDocModal } from "../components/DocumentModals";
 import AuthModal from "../components/AuthModal";
+import Tooltip from "../components/Tooltip";
 import {
   Search,
   Upload,
@@ -839,12 +840,11 @@ const Documents = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start gap-2">
                             {/* Tên file (Có thể xuống dòng) */}
-                            <h4
-                              className="font-bold text-gray-800 dark:text-white text-sm line-clamp-2 leading-tight"
-                              title={doc.name}
-                            >
-                              {doc.name}
-                            </h4>
+                            <Tooltip text={doc.name}>
+                              <h4 className="font-bold text-gray-800 dark:text-white text-sm line-clamp-2 leading-tight">
+                                {doc.name}
+                              </h4>
+                            </Tooltip>
 
                             {/* Badge (Không dùng absolute nữa, dùng flex item để chiếm chỗ) */}
                             {doc.visibility === "private" ? (
@@ -870,12 +870,11 @@ const Documents = () => {
                         </div>
                         <div className="flex justify-between">
                           <span>Môn:</span>
-                          <span
-                            className="font-medium text-gray-700 dark:text-gray-300 truncate max-w-[120px]"
-                            title={subjectName}
-                          >
-                            {subjectName}
-                          </span>
+                          <Tooltip text={subjectName}>
+                            <span className="font-medium text-gray-700 dark:text-gray-300 truncate max-w-[120px]">
+                              {subjectName}
+                            </span>
+                          </Tooltip>
                         </div>
                         <div className="flex justify-between">
                           <span>Ngày:</span>
@@ -895,47 +894,51 @@ const Documents = () => {
 
                       {/* ACTIONS FOOTER (Giữ nguyên) */}
                       <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <button
-                          onClick={() => handleView(doc)}
-                          className="p-2 text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                          title="Xem"
-                        >
-                          <Eye size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleToggleSave(doc.id)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            isSaved
-                              ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30"
-                              : "text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                          }`}
-                          title="Lưu"
-                        >
-                          <Bookmark
-                            size={18}
-                            fill={isSaved ? "currentColor" : "none"}
-                          />
-                        </button>
+                        <Tooltip text="Xem">
+                          <button
+                            onClick={() => handleView(doc)}
+                            className="p-2 text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                          >
+                            <Eye size={18} />
+                          </button>
+                        </Tooltip>
+                        <Tooltip text="Lưu">
+                          <button
+                            onClick={() => handleToggleSave(doc.id)}
+                            className={`p-2 rounded-lg transition-colors ${
+                              isSaved
+                                ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30"
+                                : "text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                            }`}
+                          >
+                            <Bookmark
+                              size={18}
+                              fill={isSaved ? "currentColor" : "none"}
+                            />
+                          </button>
+                        </Tooltip>
 
                         {canAction && (
                           <>
-                            <button
-                              onClick={() => {
-                                setDocToEdit(doc);
-                                setEditModalOpen(true);
-                              }}
-                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                              title="Sửa"
-                            >
-                              <Edit3 size={18} />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(doc.id)}
-                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                              title="Xóa"
-                            >
-                              <Trash2 size={18} />
-                            </button>
+                            <Tooltip text="Sửa">
+                              <button
+                                onClick={() => {
+                                  setDocToEdit(doc);
+                                  setEditModalOpen(true);
+                                }}
+                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                              >
+                                <Edit3 size={18} />
+                              </button>
+                            </Tooltip>
+                            <Tooltip text="Xóa">
+                              <button
+                                onClick={() => handleDelete(doc.id)}
+                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </Tooltip>
                           </>
                         )}
                       </div>

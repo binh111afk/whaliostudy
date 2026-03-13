@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Image, Paperclip, Send, Trash2, FileText, CornerDownRight } from 'lucide-react';
+import Tooltip from "./Tooltip";
 import { getFullApiUrl } from "../config/apiConfig";
 
 const resolveAvatarSrc = (avatar) => {
@@ -161,12 +162,16 @@ export const CreatePostModal = ({ isOpen, onClose, onSubmit, postToEdit }) => {
         <div className="p-4 border-t border-gray-100 bg-white shrink-0">
             <div className="flex justify-between items-center">
                 <div className="flex gap-2">
-                    <label className="p-2 hover:bg-blue-50 rounded-full cursor-pointer text-blue-500 transition-colors" title="Thêm ảnh">
-                        <Image size={22}/><input type="file" hidden accept="image/*" multiple onChange={handleImageSelect} />
-                    </label>
-                    <label className="p-2 hover:bg-green-50 rounded-full cursor-pointer text-green-500 transition-colors" title="Thêm tài liệu">
-                        <Paperclip size={22}/><input type="file" hidden multiple onChange={handleFileSelect} />
-                    </label>
+                    <Tooltip text="Thêm ảnh">
+                        <label className="p-2 hover:bg-blue-50 rounded-full cursor-pointer text-blue-500 transition-colors">
+                            <Image size={22}/><input type="file" hidden accept="image/*" multiple onChange={handleImageSelect} />
+                        </label>
+                    </Tooltip>
+                    <Tooltip text="Thêm tài liệu">
+                        <label className="p-2 hover:bg-green-50 rounded-full cursor-pointer text-green-500 transition-colors">
+                            <Paperclip size={22}/><input type="file" hidden multiple onChange={handleFileSelect} />
+                        </label>
+                    </Tooltip>
                 </div>
                 <button 
                     onClick={handleSubmit} disabled={isSubmitting}

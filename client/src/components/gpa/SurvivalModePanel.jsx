@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sliders, RotateCcw, TrendingUp, TrendingDown, Minus, X } from 'lucide-react';
+import Tooltip from "../Tooltip";
 
 /**
  * SurvivalModePanel - Inline what-if simulation panel
@@ -113,13 +114,14 @@ const SurvivalModePanel = ({
           )}
 
           {/* Reset Button */}
-          <button
-            onClick={onReset}
-            className="p-2 text-gray-500 hover:text-[#134691] hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all"
-            title="Đặt lại điểm gốc"
-          >
-            <RotateCcw size={16} />
-          </button>
+          <Tooltip text="Đặt lại điểm gốc">
+            <button
+              onClick={onReset}
+              className="p-2 text-gray-500 hover:text-[#134691] hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all"
+            >
+              <RotateCcw size={16} />
+            </button>
+          </Tooltip>
         </div>
       </div>
     </div>

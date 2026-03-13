@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from 'sonner';
 import { getFullApiUrl } from '../config/apiConfig';
+import Tooltip from "../components/Tooltip";
 import {
   Calculator,
   Plus,
@@ -1098,9 +1099,11 @@ const GpaCalc = () => {
                               <div className="w-full flex-1 min-w-0 md:min-w-[30%]">
                                 <div className="flex items-start gap-3">
                                   {isCriticalSubject && (
-                                    <div className="mt-1.5 text-amber-500 animate-pulse" title="Môn trọng điểm">
-                                      <Star size={16} fill="currentColor" />
-                                    </div>
+                                    <Tooltip text="Môn trọng điểm">
+                                      <div className="mt-1.5 text-amber-500 animate-pulse">
+                                        <Star size={16} fill="currentColor" />
+                                      </div>
+                                    </Tooltip>
                                   )}
                                   <div className="w-full space-y-2">
                                     <input
@@ -1317,24 +1320,26 @@ const GpaCalc = () => {
                               {/* 5. ACTIONS (Always visible but subtle, no overlap) */}
                               <div className="flex flex-row items-center justify-end gap-1 self-end border-t border-gray-100 pt-3 md:ml-4 md:flex-col md:self-auto md:border-l md:border-t-0 md:pl-4 md:pt-0 dark:border-gray-700">
                                 {isFull && (
-                                  <button
-                                    onClick={() => handleOpenSurvivalMode(sub.id, parseFloat(finalScore10))}
-                                    className={`p-2 rounded-lg transition-all ${survivalMode.activeSubjectId === sub.id
-                                      ? 'bg-blue-100 text-blue-600'
-                                      : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
-                                      }`}
-                                    title="Giả lập điểm (Survival Mode)"
-                                  >
-                                    <Sliders size={16} />
-                                  </button>
+                                  <Tooltip text="Giả lập điểm (Survival Mode)">
+                                    <button
+                                      onClick={() => handleOpenSurvivalMode(sub.id, parseFloat(finalScore10))}
+                                      className={`p-2 rounded-lg transition-all ${survivalMode.activeSubjectId === sub.id
+                                        ? 'bg-blue-100 text-blue-600'
+                                        : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                                        }`}
+                                    >
+                                      <Sliders size={16} />
+                                    </button>
+                                  </Tooltip>
                                 )}
-                                <button
-                                  onClick={() => removeSubject(sem.id, sub.id)}
-                                  className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                                  title="Xóa môn học"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
+                                <Tooltip text="Xóa môn học">
+                                  <button
+                                    onClick={() => removeSubject(sem.id, sub.id)}
+                                    className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </Tooltip>
                               </div>
 
                             </div>

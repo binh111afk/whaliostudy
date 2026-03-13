@@ -3,6 +3,7 @@ import localforage from "localforage";
 import Marquee from "react-fast-marquee";
 import { Music2, Play, Pause, SkipBack, SkipForward, Plus, X, Volume2, Disc3, ChevronUp, ChevronDown, ListMusic, Timer } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import Tooltip from "./Tooltip";
 
 const musicDB = localforage.createInstance({
   name: "whalio_local_db",
@@ -1041,15 +1042,16 @@ const LocalMusicPlayer = ({ globalMode = false }) => {
     )}
     {floatingVisible && (
       <div className="fixed bottom-[5.35rem] left-1/2 z-40 w-[93vw] -translate-x-1/2 rounded-3xl border border-slate-200/85 bg-white/95 p-3 shadow-2xl shadow-slate-900/10 backdrop-blur-2xl sm:w-[89vw] sm:p-4 md:w-[75vw] lg:bottom-6 lg:w-[75vw] dark:border-white/15 dark:bg-slate-900/85">
-        <button
-          type="button"
-          onClick={dismissFloatingPlayer}
-          className="absolute -top-2 -left-2 z-10 flex items-center justify-center rounded-full bg-slate-500 p-1.5 text-white shadow-lg transition-colors hover:bg-rose-500 dark:bg-slate-600 dark:hover:bg-rose-500"
-          aria-label="Đóng player"
-          title="Đóng player (phát nhạc trên StudyTime để mở lại)"
-        >
-          <X size={14} />
-        </button>
+        <Tooltip text="Đóng player (phát nhạc trên StudyTime để mở lại)">
+          <button
+            type="button"
+            onClick={dismissFloatingPlayer}
+            className="absolute -top-2 -left-2 z-10 flex items-center justify-center rounded-full bg-slate-500 p-1.5 text-white shadow-lg transition-colors hover:bg-rose-500 dark:bg-slate-600 dark:hover:bg-rose-500"
+            aria-label="Đóng player"
+          >
+            <X size={14} />
+          </button>
+        </Tooltip>
         <div className="sm:hidden">
           <p className="whitespace-nowrap text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
             StudyTime Live

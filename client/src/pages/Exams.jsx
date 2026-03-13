@@ -12,6 +12,7 @@ import {
   X,
   Trash2,
 } from "lucide-react";
+import Tooltip from "../components/Tooltip";
 
 const SUBJECTS = [
   "Tất cả",
@@ -233,16 +234,17 @@ const Exams = () => {
             >
               {/* 👇 CHỈ HIỆN KHI CÓ QUYỀN (canDelete) */}
               {canDelete && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(deleteId);
-                  }}
-                  className="absolute top-4 right-4 p-2 bg-white dark:bg-gray-700 text-gray-400 hover:text-red-600 rounded-lg shadow-sm border border-gray-100 dark:border-gray-600 opacity-0 group-hover:opacity-100 transition-all z-10"
-                  title="Xóa đề thi"
-                >
-                  <Trash2 size={18} />
-                </button>
+                <Tooltip text="Xóa đề thi">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(deleteId);
+                    }}
+                    className="absolute top-4 right-4 p-2 bg-white dark:bg-gray-700 text-gray-400 hover:text-red-600 rounded-lg shadow-sm border border-gray-100 dark:border-gray-600 opacity-0 group-hover:opacity-100 transition-all z-10"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </Tooltip>
               )}
 
               {/* ... (Các phần hiển thị tên, môn học giữ nguyên như cũ) ... */}
