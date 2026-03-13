@@ -643,7 +643,7 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
         <div className="pointer-events-none absolute -left-16 bottom-0 h-44 w-44 rounded-full bg-indigo-400/15 blur-3xl" />
 
         <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-col gap-4 font-sans">
+            <div className="flex flex-col gap-3 font-sans">
             <div className="space-y-1">
               <p className="text-sm font-medium text-slate-500/60 dark:text-slate-400">
                 Xin chào

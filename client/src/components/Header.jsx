@@ -72,9 +72,6 @@ const Header = ({
           onBlur={() => setIsSearchFocused(false)}
           className="bg-transparent border-none outline-none text-sm ml-3 w-full text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
         />
-        <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-white/80 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 shadow-sm dark:border-slate-600 dark:bg-slate-800/80 dark:text-slate-300">
-          ⌘ K
-        </span>
       </motion.div>
 
       {/* 2. MENU GIỮA */}
