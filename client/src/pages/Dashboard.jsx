@@ -16,6 +16,7 @@ import {
   Target,
   StickyNote,
   Edit2,
+  Bell,
 } from "lucide-react";
 
 // --- HELPER: Lấy ngày giờ Việt Nam chuẩn ---
@@ -636,14 +637,21 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
         initial={{ opacity: 0, x: -18 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white px-6 py-5 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.25)] dark:border-slate-800 dark:bg-slate-900 sm:px-7 sm:py-6"
+        className="relative overflow-hidden rounded-3xl border border-white/40 bg-white/60 px-6 py-5 shadow-xl shadow-blue-500/5 backdrop-blur-md dark:border-slate-700/40 dark:bg-slate-900/60 sm:px-7 sm:py-6"
       >
-        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-10 h-40 w-40 rounded-full bg-blue-400/20 blur-3xl"
+          animate={{ opacity: [0.45, 0.75, 0.45], scale: [0.98, 1.06, 0.98] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        />
+
+        <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-2 font-sans">
               <div className="flex flex-wrap items-center gap-2 text-2xl font-semibold text-slate-700 sm:text-3xl">
                 <span>Xin chào</span>
-                <span className="bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent font-bold">
+                <span className="font-bold text-blue-600">
                   {user?.fullName || "Quang Bình"}
                 </span>
               </div>
@@ -653,51 +661,57 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
               </div>
             </div>
 
-            <span className="inline-flex w-fit items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+              <Bell size={14} className="text-blue-600 dark:text-blue-300" />
               {hintText}
             </span>
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
-            <motion.div
-              animate={{ y: [0, -6, 0] }}
-              transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
-              className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-blue-50/60 shadow-[0_16px_30px_-26px_rgba(59,130,246,0.6)] dark:bg-blue-500/10"
-            >
-              <svg
-                width="72"
-                height="72"
-                viewBox="0 0 96 96"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M15 58c0-18 14-32 33-32 11 0 21 4 28 12l10-4-4 10c1 3 2 7 2 11 0 18-14 32-33 32H37c-12 0-22-8-22-21z"
-                  fill="#1D8BFF"
-                  fillOpacity="0.92"
-                />
-                <path
-                  d="M59 39c6 2 10 7 11 13"
-                  stroke="#E0F2FF"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                />
-                <circle cx="35" cy="49" r="4" fill="#E0F2FF" />
-                <path
-                  d="M22 62c3 5 9 8 16 8"
-                  stroke="#0C5FB8"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </motion.div>
-
             <button
               onClick={() => setIsModalOpen(true)}
-              className="w-full md:w-auto bg-primary text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 dark:shadow-blue-900/30 hover:bg-blue-800 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full md:w-auto bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-200/70 dark:shadow-blue-900/30 hover:bg-blue-700 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               + Thêm Deadline
             </button>
+
+            <div className="relative h-24 w-24 overflow-hidden">
+              <motion.div
+                animate={{ y: [8, -6, 8] }}
+                transition={{ duration: 4.8, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute bottom-0 right-0 text-blue-600 drop-shadow-[0_18px_32px_rgba(37,99,235,0.25)]"
+              >
+                <svg
+                  width="96"
+                  height="96"
+                  viewBox="0 0 96 96"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="block"
+                >
+                  <path
+                    d="M15 58c0-18 14-32 33-32 11 0 21 4 28 12l10-4-4 10c1 3 2 7 2 11 0 18-14 32-33 32H37c-12 0-22-8-22-21z"
+                    fill="currentColor"
+                    fillOpacity="0.95"
+                  />
+                  <path
+                    d="M59 39c6 2 10 7 11 13"
+                    stroke="#E0F2FF"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                  />
+                  <circle cx="35" cy="49" r="4" fill="#E0F2FF" />
+                  <path
+                    d="M22 62c3 5 9 8 16 8"
+                    stroke="#1D4ED8"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </motion.div>
+
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white/80 via-white/50 to-transparent dark:from-slate-900/80 dark:via-slate-900/50" />
+            </div>
           </div>
         </div>
       </motion.section>
