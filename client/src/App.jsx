@@ -447,7 +447,12 @@ function App() {
     <Router>
       <RouteTitleManager />
       <MusicProvider>
-        <div className="flex h-screen w-full max-w-full overflow-hidden bg-gray-50 dark:bg-gray-900">
+        <div className="relative flex h-screen w-full max-w-full overflow-hidden bg-slate-50 dark:bg-slate-950">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div className="absolute -top-32 -right-24 h-80 w-80 rounded-full bg-blue-200/40 blur-3xl dark:bg-blue-500/10" />
+            <div className="absolute -bottom-24 -left-20 h-72 w-72 rounded-full bg-indigo-200/35 blur-3xl dark:bg-indigo-500/10" />
+            <div className="absolute top-1/3 -left-16 h-64 w-64 rounded-full bg-cyan-100/50 blur-3xl dark:bg-cyan-400/10" />
+          </div>
           {!isFullscreenLayout && (
             <div className="hidden min-[1025px]:block">
               <Sidebar />

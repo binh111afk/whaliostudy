@@ -1,6 +1,5 @@
-import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   BookOpen,
@@ -27,25 +26,10 @@ const NAV_ITEMS = [
 
 const Sidebar = ({ isMobile = false, onNavigate }) => {
   const location = useLocation();
-  const navRef = useRef(null);
-  const itemRefs = useRef({});
-  const [highlight, setHighlight] = useState(null);
-
   const activePath = useMemo(() => {
     const clean = (p) => (p && p.length > 1 ? p.replace(/\/+$/, "") : p || "/");
     return clean(location.pathname);
   }, [location.pathname]);
-
-  useLayoutEffect(() => {
-    const navEl = navRef.current;
-    const activeEl = itemRefs.current[activePath];
-    if (!navEl || !activeEl) return;
-    setHighlight({
-      y: activeEl.offsetTop,
-      height: activeEl.offsetHeight,
-      width: activeEl.offsetWidth,
-    });
-  }, [activePath, isMobile]);
 
   const containerClasses = isMobile
     ? "h-full w-full border-r border-gray-100 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 flex flex-col"
@@ -57,16 +41,7 @@ const Sidebar = ({ isMobile = false, onNavigate }) => {
         <WhalioBrand compact={isMobile} />
       </div>
 
-      <nav ref={navRef} className="relative flex-1 space-y-2">
-        {highlight && (
-          <motion.div
-            layoutId="sidebar-liquid-active"
-            className="pointer-events-none absolute left-0 rounded-xl bg-primary dark:bg-blue-600"
-            initial={false}
-            animate={{ y: highlight.y, height: highlight.height, width: highlight.width, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 360, damping: 30, mass: 0.7 }}
-          />
-        )}
+      <nav className="relative flex-1 space-y-2">
         {NAV_ITEMS.map((item) => {
           const isActive = activePath === item.to || activePath.startsWith(`${item.to}/`);
           const Icon = item.icon;
@@ -78,16 +53,16 @@ const Sidebar = ({ isMobile = false, onNavigate }) => {
               className="block w-full"
             >
               <div
-                ref={(el) => {
-                  itemRefs.current[item.to] = el;
-                }}
-                className={`relative z-10 flex w-full items-center space-x-3 overflow-hidden rounded-xl p-3 transition-colors duration-200 ${
+                className={`relative flex w-full items-center space-x-3 overflow-hidden rounded-xl p-3 transition-colors duration-200 ${
                   isActive
-                    ? "text-white"
-                    : "text-gray-400 hover:bg-blue-50 hover:text-primary dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-blue-400"
+                    ? "text-slate-900 dark:text-white"
+                    : "text-gray-400 hover:bg-blue-50/60 hover:text-primary dark:text-gray-300 dark:hover:bg-gray-800/60 dark:hover:text-blue-400"
                 }`}
               >
-                <Icon size={20} />
+                {isActive && (
+                  <span className="absolute left-3 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full bg-blue-500/20 blur-md dark:bg-blue-400/20" />
+                )}
+                <Icon size={20} className="relative z-10" />
                 <span className="font-medium">{item.label}</span>
               </div>
             </NavLink>

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import {
   BookOpen,
@@ -236,7 +237,11 @@ const DashboardOverviewTab = ({
       {/* Quick Stats Row */}
       <div className="grid grid-cols-2 min-[1025px]:grid-cols-4 gap-3 sm:gap-4">
         {/* CARD 1: GPA */}
-        <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4 relative overflow-hidden">
+        <motion.div
+          whileHover={{ y: -4 }}
+          transition={{ type: "spring", stiffness: 260, damping: 18 }}
+          className="whalio-card p-5 flex items-center gap-4"
+        >
           <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center font-bold z-10">
             {gpaMetrics.current}
           </div>
@@ -264,10 +269,14 @@ const DashboardOverviewTab = ({
               isIncrease ? "bg-green-500" : "bg-red-500"
             }`}
           ></div>
-        </div>
+        </motion.div>
 
         {/* CARD 2: Tín chỉ */}
-        <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+        <motion.div
+          whileHover={{ y: -4 }}
+          transition={{ type: "spring", stiffness: 260, damping: 18 }}
+          className="whalio-card p-5 flex items-center gap-4"
+        >
           <div className="w-12 h-12 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center font-bold">
             {gpaMetrics.totalCredits}
           </div>
@@ -279,10 +288,14 @@ const DashboardOverviewTab = ({
               Đã hoàn thành
             </p>
           </div>
-        </div>
+        </motion.div>
 
         {/* CARD 3: Nhiệm vụ đã hoàn thành */}
-        <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+        <motion.div
+          whileHover={{ y: -4 }}
+          transition={{ type: "spring", stiffness: 260, damping: 18 }}
+          className="whalio-card p-5 flex items-center gap-4"
+        >
           <div className="w-12 h-12 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full flex items-center justify-center font-bold">
             {completedTasksCount}
           </div>
@@ -294,10 +307,14 @@ const DashboardOverviewTab = ({
               Đã hoàn thành
             </p>
           </div>
-        </div>
+        </motion.div>
 
         {/* CARD 4: Giờ học */}
-        <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+        <motion.div
+          whileHover={{ y: -4 }}
+          transition={{ type: "spring", stiffness: 260, damping: 18 }}
+          className="whalio-card p-5 flex items-center gap-4"
+        >
           <div className="w-12 h-12 bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full flex items-center justify-center font-bold">
             <Clock size={24} />
           </div>
@@ -309,13 +326,17 @@ const DashboardOverviewTab = ({
               {formatStudyDuration(totalStudyMinutes)}
             </p>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Main Grid: Chart & Schedule */}
       <div className="grid grid-cols-1 min-[1025px]:grid-cols-3 gap-6">
         {/* CỘT TRÁI: BIỂU ĐỒ ĐA NĂNG */}
-        <div className="min-[1025px]:col-span-2 bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden">
+        <motion.div
+          whileHover={{ y: -3 }}
+          transition={{ type: "spring", stiffness: 220, damping: 20 }}
+          className="min-[1025px]:col-span-2 whalio-card p-4 sm:p-6"
+        >
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-6">
             <h3 className="font-bold text-gray-800 dark:text-white flex items-center gap-2">
               {chartMode === "credit" ? (
@@ -574,10 +595,14 @@ const DashboardOverviewTab = ({
               ) : null
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Cột phải: To-Do List */}
-        <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col h-full transition-shadow duration-300 hover:shadow-md">
+        <motion.div
+          whileHover={{ y: -3 }}
+          transition={{ type: "spring", stiffness: 220, damping: 20 }}
+          className="whalio-card p-4 sm:p-6 flex flex-col h-full"
+        >
           <div className="mb-4">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -970,7 +995,7 @@ const DashboardOverviewTab = ({
               </>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

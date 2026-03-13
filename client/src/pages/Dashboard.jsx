@@ -634,37 +634,40 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
     <div className="space-y-6 sm:space-y-8 pb-10 overflow-x-hidden">
       {/* 1. WELCOME SECTION */}
       <motion.section
-        initial={{ opacity: 0, x: -18 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="relative overflow-hidden rounded-3xl border border-white/40 bg-white/60 px-6 py-5 shadow-xl shadow-blue-500/5 backdrop-blur-md dark:border-slate-700/40 dark:bg-slate-900/60 sm:px-7 sm:py-6"
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 240, damping: 26 }}
+        className="relative overflow-hidden rounded-[2rem] bg-white/80 px-6 py-6 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.35)] backdrop-blur-xl dark:bg-slate-900/70 sm:px-8"
       >
-        <motion.div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-16 -top-10 h-40 w-40 rounded-full bg-blue-400/20 blur-3xl"
-          animate={{ opacity: [0.45, 0.75, 0.45], scale: [0.98, 1.06, 0.98] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        />
+        <div className="pointer-events-none absolute -right-24 -top-20 h-56 w-56 rounded-full bg-blue-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute -left-16 bottom-0 h-44 w-44 rounded-full bg-indigo-400/15 blur-3xl" />
 
-        <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2 font-sans">
-              <div className="flex flex-wrap items-center gap-2 text-2xl font-semibold text-slate-700 sm:text-3xl">
-                <span>Xin chào</span>
-                <span className="font-bold text-blue-600">
+        <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 font-sans">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Xin chào
+              </p>
+              <h1 className="text-3xl font-semibold text-slate-800 dark:text-white sm:text-4xl">
+                <span className="font-bold bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
                   {user?.fullName || "Quang Bình"}
                 </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400">
-                <Calendar size={16} className="text-blue-500 dark:text-blue-400" />
-                <span>{getVNDate()}</span>
-              </div>
+              </h1>
             </div>
 
-            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400">
+              <Calendar size={16} className="text-blue-500 dark:text-blue-400" />
+              <span>{getVNDate()}</span>
+            </div>
+
+            <motion.div
+              whileHover={{ y: -2 }}
+              transition={{ type: "spring", stiffness: 260, damping: 18 }}
+              className="inline-flex w-fit items-center gap-2 rounded-full border border-white/60 bg-white/70 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm shadow-blue-500/10 backdrop-blur-md dark:border-white/10 dark:bg-slate-900/60 dark:text-blue-200"
+            >
               <Bell size={14} className="text-blue-600 dark:text-blue-300" />
               {hintText}
-            </span>
+            </motion.div>
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
@@ -675,42 +678,44 @@ const Dashboard = ({ user, darkMode, setDarkMode }) => {
               + Thêm Deadline
             </button>
 
-            <div className="relative h-24 w-24 overflow-hidden">
+            <div className="relative h-28 w-28 overflow-hidden">
               <motion.div
-                animate={{ y: [8, -6, 8] }}
-                transition={{ duration: 4.8, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute bottom-0 right-0 text-blue-600 drop-shadow-[0_18px_32px_rgba(37,99,235,0.25)]"
+                animate={{ y: [10, -6, 10] }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute bottom-0 right-0"
               >
                 <svg
-                  width="96"
-                  height="96"
-                  viewBox="0 0 96 96"
+                  width="120"
+                  height="120"
+                  viewBox="0 0 120 120"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
                   className="block"
                 >
+                  <defs>
+                    <linearGradient id="waveOrb" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#1D4ED8" />
+                      <stop offset="50%" stopColor="#3B82F6" />
+                      <stop offset="100%" stopColor="#6366F1" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="62" cy="62" r="36" fill="url(#waveOrb)" />
+                  <circle cx="48" cy="52" r="14" fill="rgba(255,255,255,0.35)" />
                   <path
-                    d="M15 58c0-18 14-32 33-32 11 0 21 4 28 12l10-4-4 10c1 3 2 7 2 11 0 18-14 32-33 32H37c-12 0-22-8-22-21z"
-                    fill="currentColor"
-                    fillOpacity="0.95"
-                  />
-                  <path
-                    d="M59 39c6 2 10 7 11 13"
-                    stroke="#E0F2FF"
-                    strokeWidth="4"
+                    d="M20 78c18 10 44 10 70-4"
+                    stroke="rgba(255,255,255,0.55)"
+                    strokeWidth="6"
                     strokeLinecap="round"
                   />
-                  <circle cx="35" cy="49" r="4" fill="#E0F2FF" />
                   <path
-                    d="M22 62c3 5 9 8 16 8"
-                    stroke="#1D4ED8"
+                    d="M26 90c14 6 34 6 54-4"
+                    stroke="rgba(255,255,255,0.35)"
                     strokeWidth="4"
                     strokeLinecap="round"
                   />
                 </svg>
               </motion.div>
-
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white/80 via-white/50 to-transparent dark:from-slate-900/80 dark:via-slate-900/50" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white/90 via-white/60 to-transparent dark:from-slate-900/90 dark:via-slate-900/60" />
             </div>
           </div>
         </div>
