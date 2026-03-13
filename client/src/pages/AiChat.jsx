@@ -6,6 +6,7 @@ import rehypeRaw from 'rehype-raw'; // 👈 Thêm dòng này
 import "highlight.js/styles/atom-one-dark.css";
 import { getFullApiUrl } from '../config/apiConfig';
 import Tooltip from "../components/Tooltip";
+import AvatarWithFrame from "../components/AvatarWithFrame";
 import {
   Send,
   Paperclip,
@@ -573,35 +574,28 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
               }`}
             >
               {/* Avatar */}
-              <div
-                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm border overflow-hidden ${
-                    msg.role === "model"
-                    ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-blue-600 dark:text-blue-400"
-                    : "bg-blue-600 dark:bg-blue-500 border-transparent text-white"
-                }`}
-              >
                 {msg.role === "model" ? (
-                  <img
-                    src="/logo.png"
-                    alt="Whalio AI"
-                    className="w-full h-full object-contain p-1"
-                    onError={(e) => {
-                      e.currentTarget.src = "/img/logo.png";
-                    }}
-                  />
-                ) : (
-                  userAvatarSrc && !isUserAvatarBroken ? (
+                  <div
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm border overflow-hidden bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-blue-600 dark:text-blue-400"
+                  >
                     <img
-                      src={userAvatarSrc}
-                      alt={userDisplayName}
-                      className="w-full h-full object-cover"
-                      onError={() => setIsUserAvatarBroken(true)}
+                      src="/logo.png"
+                      alt="Whalio AI"
+                      className="w-full h-full object-contain p-1"
+                      onError={(e) => {
+                        e.currentTarget.src = "/img/logo.png";
+                      }}
                     />
-                  ) : (
-                    <span className="text-[11px] font-bold">{userInitials}</span>
-                  )
+                  </div>
+                ) : (
+                  <AvatarWithFrame
+                    src={userAvatarSrc && !isUserAvatarBroken ? userAvatarSrc : null}
+                    name={userDisplayName}
+                    sizeClass="w-8 h-8 sm:w-9 sm:h-9"
+                    avatarClassName="border border-transparent"
+                    fallbackClassName="text-[11px] font-bold bg-blue-600 text-white"
+                  />
                 )}
-              </div>
 
               {/* Message Content */}
               <div className="group relative max-w-[92%] sm:max-w-[85%] min-w-0">

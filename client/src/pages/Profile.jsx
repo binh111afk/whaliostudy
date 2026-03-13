@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import AvatarWithFrame from "../components/AvatarWithFrame";
 import EditProfileModal from "../components/EditProfileModal";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import { UploadModal } from "../components/DocumentModals";
@@ -944,58 +945,50 @@ const Profile = ({ user, onUpdateUser }) => {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* === CỘT TRÁI (SIDEBAR) === */}
         <div className="md:col-span-4 lg:col-span-3 space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
+          <motion.div
+            whileHover={{ y: -2, boxShadow: "0 24px 50px -30px rgba(59,130,246,0.2)" }}
+            transition={{ type: "spring", stiffness: 240, damping: 18 }}
+            className="bg-white/60 dark:bg-gray-800/70 rounded-[2rem] border border-white/40 p-6 text-center backdrop-blur-lg"
+          >
             {/* Avatar */}
-            <div className="w-28 h-28 mx-auto rounded-full border-4 border-white dark:border-gray-700 shadow-lg overflow-hidden bg-gray-100 dark:bg-gray-700 mb-4 relative">
-              {/* 1. Ưu tiên hiển thị ảnh (nếu là đường dẫn hợp lệ) */}
-              {user.avatar && user.avatar.includes("/") && (
-                <img
-                  src={user.avatar}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    // Nếu ảnh lỗi -> Ẩn ảnh đi -> Hiện cái chữ cái bên dưới lên
-                    e.target.style.display = "none";
-                    e.target.nextSibling.style.display = "flex";
-                  }}
-                />
-              )}
-
-              {/* 2. Fallback: Chữ cái đầu (Mặc định ẩn nếu đang có ảnh) */}
-              <div
-                className="w-full h-full flex items-center justify-center text-4xl font-bold text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-600"
-                style={{
-                  display:
-                    user.avatar && user.avatar.includes("/") ? "none" : "flex",
-                }}
-              >
-                {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
-              </div>
-            </div>
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+            <motion.div
+              animate={{ y: [0, -6, 0] }}
+              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+              className="mx-auto mb-5"
+            >
+              <AvatarWithFrame
+                src={user.avatar && user.avatar.includes("/") ? user.avatar : null}
+                name={user.fullName}
+                size="xl"
+                avatarClassName="border-4 border-white shadow-lg"
+                fallbackClassName="text-4xl bg-gray-200 dark:bg-gray-600"
+              />
+            </motion.div>
+            <h2 className="text-2xl font-semibold text-slate-800 dark:text-white font-sans tracking-tight">
               {user.fullName}
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-slate-400 dark:text-slate-500 font-sans">
               {user.email}
             </p>
-          </div>
+          </motion.div>
 
           {/* Menu Navigation */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-            <nav ref={profileNavRef} className="relative flex flex-col">
-              {liquidHighlight && (
-                <motion.div
-                  layoutId="profile-liquid-tab"
-                  className="pointer-events-none absolute left-0 bg-primary dark:bg-blue-600"
-                  initial={false}
-                  animate={{
-                    y: liquidHighlight.y,
-                    height: liquidHighlight.height,
-                    width: liquidHighlight.width,
-                  }}
-                  transition={{ type: "spring", stiffness: 360, damping: 30, mass: 0.7 }}
-                />
-              )}
+          <div className="bg-white/60 dark:bg-gray-800/70 rounded-[2rem] border border-white/40 shadow-sm overflow-hidden backdrop-blur-lg">
+            <nav ref={profileNavRef} className="relative flex flex-col gap-1 p-2 pb-4">
+              <AnimatePresence>
+                {liquidHighlight && (
+                  <motion.div
+                    layoutId="active-pill"
+                    className="pointer-events-none absolute left-2 right-2 rounded-2xl bg-blue-50/80"
+                    initial={false}
+                    animate={{
+                      y: liquidHighlight.y,
+                      height: liquidHighlight.height,
+                    }}
+                    transition={{ type: "spring", stiffness: 320, damping: 26, mass: 0.6 }}
+                  />
+                )}
+              </AnimatePresence>
               {profileTabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -1006,20 +999,16 @@ const Profile = ({ user, onUpdateUser }) => {
                     ref={(el) => {
                       profileTabRefs.current[tab.id] = el;
                     }}
-                    className={`relative z-10 flex items-center gap-3 overflow-hidden px-5 py-4 text-sm font-medium transition-colors ${
+                    className={`relative z-10 flex h-12 items-center gap-3 overflow-hidden px-5 text-sm transition-all ${
                       isActive
-                        ? "text-white"
-                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        ? "text-blue-600 font-semibold"
+                        : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
                     }`}
                   >
-                    <div
-                      className={`rounded-lg p-1.5 ${
-                        isActive ? "bg-white/20" : tab.iconClass
-                      }`}
-                    >
+                    <span className="w-5 h-5 inline-flex items-center justify-center">
                       <Icon size={18} />
-                    </div>
-                    <span>{tab.label}</span>
+                    </span>
+                    <span className="leading-none">{tab.label}</span>
                   </button>
                 );
               })}

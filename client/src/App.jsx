@@ -13,6 +13,7 @@ import { MusicProvider } from './context/MusicContext';
 import FloatingPlayer from './components/FloatingPlayer';
 import { authService } from './services/authService';
 import { getFullApiUrl } from './config/apiConfig';
+import { AvatarFrameProvider } from "./context/AvatarFrameContext";
 
 // Import các trang
 import GpaCalc from './pages/GpaCalc';
@@ -446,6 +447,7 @@ function App() {
   return (
     <Router>
       <RouteTitleManager />
+      <AvatarFrameProvider>
       <MusicProvider>
         <div className="relative flex h-screen w-full max-w-full overflow-hidden bg-slate-50 dark:bg-slate-950">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -634,6 +636,7 @@ function App() {
           />
         </div>
       </MusicProvider>
+      </AvatarFrameProvider>
     </Router>
   );
 }

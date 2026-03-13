@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Image, Paperclip, Send, Trash2, FileText, CornerDownRight } from 'lucide-react';
 import Tooltip from "./Tooltip";
+import AvatarWithFrame from "./AvatarWithFrame";
 import { getFullApiUrl } from "../config/apiConfig";
 
 const resolveAvatarSrc = (avatar) => {
@@ -215,22 +216,15 @@ export const CommentModal = ({ isOpen, onClose, post, currentUser, onSubmitComme
         const resolvedSrc = resolveAvatarSrc(src);
 
         return (
-        <div className={`${size} relative shrink-0 overflow-hidden rounded-full border border-gray-200 bg-gray-100 dark:border-gray-600 dark:bg-gray-700`}>
-            {resolvedSrc && (
-                <img 
-                    src={resolvedSrc} alt="Avt" 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {e.target.style.display='none'; e.target.nextSibling.style.display='flex'}}
-                />
-            )}
-            <div 
-                className={`flex h-full w-full items-center justify-center font-bold text-gray-500 dark:text-gray-300 ${fontSize}`} 
-                style={{display: resolvedSrc ? 'none' : 'flex'}}
-            >
-                {name?.charAt(0).toUpperCase()}
-            </div>
-        </div>
-    )};
+            <AvatarWithFrame
+                src={resolvedSrc}
+                name={name}
+                sizeClass={size}
+                avatarClassName="border border-gray-200 dark:border-gray-600"
+                fallbackClassName={`${fontSize} bg-gray-100 dark:bg-gray-700`}
+            />
+        );
+    };
 
     // Xác định Avatar cho bài viết gốc
     const postAvatar = getDisplayAvatar(post);

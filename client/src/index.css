@@ -159,6 +159,316 @@ body {
   opacity: 0.7;
 }
 
+/* Avatar Frames */
+.avatar-frame {
+  position: absolute;
+  inset: -8px;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 20;
+  -webkit-mask: radial-gradient(circle, transparent 60%, #000 62%);
+  mask: radial-gradient(circle, transparent 60%, #000 62%);
+}
+
+.avatar-frame::before,
+.avatar-frame::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.avatar-frame::after {
+  inset: -4px;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.12));
+}
+
+.avatar-ornament {
+  position: absolute;
+  inset: -18px;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 22;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,0.25));
+}
+
+.ornament-winged_aura {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23bfe7ff' stroke-width='6' stroke-linecap='round'><path d='M30 95c25-25 45-30 70-30' /><path d='M30 115c28 8 48 5 70-10' /><path d='M170 95c-25-25-45-30-70-30' /><path d='M170 115c-28 8-48 5-70-10' /></g><g fill='%238bd3ff'><circle cx='100' cy='18' r='6'/><circle cx='20' cy='100' r='6'/><circle cx='180' cy='100' r='6'/></g></svg>");
+}
+
+.ornament-royal_crown {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23ffd166' stroke-width='6' stroke-linecap='round'><path d='M55 45l18 20 27-28 27 28 18-20 12 35H43z'/></g><g fill='%23ffef9c'><circle cx='73' cy='42' r='6'/><circle cx='100' cy='30' r='7'/><circle cx='127' cy='42' r='6'/></g></svg>");
+}
+
+.ornament-arcane_rune {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23d9b6ff' stroke-width='4' stroke-linecap='round'><circle cx='100' cy='100' r='78'/><circle cx='100' cy='100' r='62'/><path d='M100 22v22M100 156v22M22 100h22M156 100h22'/><path d='M45 45l14 14M141 141l14 14M155 45l-14 14M45 155l14-14'/></g></svg>");
+}
+
+.ornament-rare_sapphire {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%239bd8ff' stroke-width='5' stroke-linecap='round'><path d='M30 40h40l10-15 10 15h40' /><path d='M30 160h40l10 15 10-15h40' /></g><g fill='%2380c6ff'><circle cx='32' cy='40' r='6'/><circle cx='168' cy='40' r='6'/><circle cx='32' cy='160' r='6'/><circle cx='168' cy='160' r='6'/></g></svg>");
+}
+
+.ornament-epic_ember {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23ffb36c' stroke-width='5' stroke-linecap='round'><path d='M40 30c10 10 20 12 30 12' /><path d='M160 30c-10 10-20 12-30 12' /><path d='M40 170c10-10 20-12 30-12' /><path d='M160 170c-10-10-20-12-30-12' /></g><g fill='%23ff7a59'><circle cx='48' cy='30' r='6'/><circle cx='152' cy='30' r='6'/><circle cx='48' cy='170' r='6'/><circle cx='152' cy='170' r='6'/></g></svg>");
+}
+
+.ornament-legendary_aurora {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23fff1a8' stroke-width='5' stroke-linecap='round'><path d='M25 100c30-30 120-30 150 0' /><path d='M25 100c30 30 120 30 150 0' /></g><g fill='%23ffe066'><circle cx='100' cy='18' r='6'/><circle cx='18' cy='100' r='6'/><circle cx='182' cy='100' r='6'/><circle cx='100' cy='182' r='6'/></g></svg>");
+}
+
+.frame-whale_wave {
+  background: linear-gradient(120deg, #0ea5e9, #2563eb, #06b6d4, #38bdf8);
+  background-size: 200% 200%;
+  animation: frameWave 3s ease-in-out infinite;
+  box-shadow: 0 0 12px rgba(14, 165, 233, 0.5), 0 0 24px rgba(59, 130, 246, 0.35);
+}
+
+.frame-whale_wave::before {
+  background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.6), transparent 50%),
+    radial-gradient(circle at 80% 30%, rgba(255,255,255,0.45), transparent 55%);
+  opacity: 0.7;
+}
+
+.frame-whale_wave::after {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(56,189,248,0.95), transparent 55%),
+    radial-gradient(circle at 88% 12%, rgba(14,165,233,0.9), transparent 55%),
+    radial-gradient(circle at 12% 88%, rgba(59,130,246,0.9), transparent 55%),
+    radial-gradient(circle at 88% 88%, rgba(6,182,212,0.9), transparent 55%),
+    linear-gradient(140deg, rgba(255,255,255,0.15), transparent 55%);
+}
+
+.frame-cyber_neon {
+  background: conic-gradient(from 0deg, #22d3ee, #3b82f6, #a855f7, #22d3ee, #06b6d4);
+  animation: frameSpin 4s linear infinite;
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.6), 0 0 28px rgba(168, 85, 247, 0.35);
+  filter: brightness(1.1);
+}
+
+.frame-cyber_neon::before {
+  background: repeating-conic-gradient(from 0deg, rgba(255,255,255,0.25) 0deg 6deg, transparent 6deg 12deg);
+  opacity: 0.5;
+}
+
+.frame-cyber_neon::after {
+  background:
+    radial-gradient(circle at 10% 10%, rgba(34,211,238,0.95), transparent 50%),
+    radial-gradient(circle at 90% 10%, rgba(168,85,247,0.9), transparent 50%),
+    radial-gradient(circle at 10% 90%, rgba(56,189,248,0.9), transparent 50%),
+    radial-gradient(circle at 90% 90%, rgba(99,102,241,0.9), transparent 50%),
+    repeating-linear-gradient(45deg, rgba(34,211,238,0.15), rgba(34,211,238,0.15) 6px, transparent 6px, transparent 12px);
+}
+
+.frame-golden_crown {
+  background: linear-gradient(120deg, #f59e0b, #fde68a, #fbbf24, #f59e0b);
+  background-size: 200% 200%;
+  animation: frameShine 3s linear infinite;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.6), 0 0 24px rgba(253, 230, 138, 0.4);
+}
+
+.frame-golden_crown::before {
+  background: radial-gradient(circle at 15% 20%, rgba(255,255,255,0.85), transparent 45%),
+    radial-gradient(circle at 80% 80%, rgba(255,255,255,0.6), transparent 50%);
+  opacity: 0.8;
+}
+
+.frame-golden_crown::after {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(251,191,36,0.95), transparent 52%),
+    radial-gradient(circle at 88% 12%, rgba(245,158,11,0.95), transparent 52%),
+    radial-gradient(circle at 12% 88%, rgba(253,230,138,0.95), transparent 52%),
+    radial-gradient(circle at 88% 88%, rgba(251,191,36,0.95), transparent 52%),
+    linear-gradient(120deg, rgba(255,255,255,0.35), transparent 55%);
+}
+
+.frame-nature_leaf {
+  background: linear-gradient(120deg, #22c55e, #84cc16, #10b981, #16a34a);
+  animation: frameBreath 4s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.4), 0 0 22px rgba(132, 204, 22, 0.3);
+}
+
+.frame-nature_leaf::before {
+  background: radial-gradient(circle at 30% 30%, rgba(187,247,208,0.7), transparent 50%),
+    radial-gradient(circle at 70% 70%, rgba(134,239,172,0.6), transparent 55%);
+  opacity: 0.7;
+}
+
+.frame-nature_leaf::after {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(34,197,94,0.9), transparent 52%),
+    radial-gradient(circle at 88% 12%, rgba(132,204,22,0.9), transparent 52%),
+    radial-gradient(circle at 12% 88%, rgba(16,185,129,0.9), transparent 52%),
+    radial-gradient(circle at 88% 88%, rgba(34,197,94,0.9), transparent 52%),
+    linear-gradient(160deg, rgba(187,247,208,0.25), transparent 55%);
+}
+
+.frame-ai_vortex {
+  background: conic-gradient(from 0deg, #8b5cf6, #6366f1, #a855f7, #9333ea, #8b5cf6);
+  animation: frameSpin 6s linear infinite;
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.6), 0 0 30px rgba(99, 102, 241, 0.35);
+  filter: saturate(1.2);
+}
+
+.frame-ai_vortex::before {
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.25), transparent 55%);
+  opacity: 0.6;
+}
+
+.frame-ai_vortex::after {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(167,139,250,0.95), transparent 52%),
+    radial-gradient(circle at 88% 12%, rgba(139,92,246,0.95), transparent 52%),
+    radial-gradient(circle at 12% 88%, rgba(99,102,241,0.95), transparent 52%),
+    radial-gradient(circle at 88% 88%, rgba(217,70,239,0.95), transparent 52%),
+    linear-gradient(140deg, rgba(255,255,255,0.2), transparent 55%);
+}
+
+@keyframes frameWave {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes frameSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes frameShine {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+@keyframes frameBreath {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.15); }
+}
+
+@keyframes frameSparkle {
+  0% { opacity: 0.2; transform: rotate(0deg); }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.2; transform: rotate(360deg); }
+}
+
+@keyframes framePulseGlow {
+  0%, 100% { box-shadow: 0 0 12px rgba(59,130,246,0.35); }
+  50% { box-shadow: 0 0 22px rgba(59,130,246,0.6); }
+}
+
+/* Extra ornate frames */
+.frame-winged_aura {
+  background: linear-gradient(120deg, #60a5fa, #22d3ee, #93c5fd, #38bdf8);
+  background-size: 220% 220%;
+  animation: frameWave 3.5s ease-in-out infinite;
+  box-shadow: 0 0 14px rgba(96,165,250,0.55), 0 0 26px rgba(34,211,238,0.35);
+}
+.frame-winged_aura::before {
+  background:
+    radial-gradient(circle at 12% 15%, rgba(255,255,255,0.85), transparent 50%),
+    radial-gradient(circle at 88% 15%, rgba(255,255,255,0.85), transparent 50%),
+    linear-gradient(90deg, rgba(255,255,255,0.18), transparent 60%);
+}
+.frame-winged_aura::after {
+  background:
+    radial-gradient(circle at 10% 10%, rgba(125,211,252,0.95), transparent 55%),
+    radial-gradient(circle at 90% 10%, rgba(147,197,253,0.95), transparent 55%),
+    radial-gradient(circle at 10% 90%, rgba(56,189,248,0.95), transparent 55%),
+    radial-gradient(circle at 90% 90%, rgba(14,165,233,0.95), transparent 55%);
+}
+
+.frame-royal_crown {
+  background: linear-gradient(120deg, #f59e0b, #f97316, #fcd34d, #f59e0b);
+  background-size: 220% 220%;
+  animation: frameShine 2.8s linear infinite;
+  box-shadow: 0 0 16px rgba(245,158,11,0.6), 0 0 30px rgba(253,230,138,0.4);
+}
+.frame-royal_crown::before {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.9), transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.85), transparent 50%),
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,0.8), transparent 45%);
+}
+.frame-royal_crown::after {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(252,211,77,0.95), transparent 55%),
+    radial-gradient(circle at 88% 12%, rgba(245,158,11,0.95), transparent 55%),
+    radial-gradient(circle at 12% 88%, rgba(253,230,138,0.95), transparent 55%),
+    radial-gradient(circle at 88% 88%, rgba(245,158,11,0.95), transparent 55%);
+}
+
+.frame-arcane_rune {
+  background: conic-gradient(from 0deg, #8b5cf6, #22d3ee, #a855f7, #3b82f6, #8b5cf6);
+  animation: frameSpin 5s linear infinite;
+  box-shadow: 0 0 14px rgba(139,92,246,0.6), 0 0 28px rgba(34,211,238,0.35);
+}
+.frame-arcane_rune::before {
+  background: repeating-conic-gradient(from 0deg, rgba(255,255,255,0.22) 0deg 8deg, transparent 8deg 16deg);
+}
+.frame-arcane_rune::after {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(167,139,250,0.95), transparent 55%),
+    radial-gradient(circle at 88% 12%, rgba(56,189,248,0.95), transparent 55%),
+    radial-gradient(circle at 12% 88%, rgba(59,130,246,0.95), transparent 55%),
+    radial-gradient(circle at 88% 88%, rgba(217,70,239,0.95), transparent 55%);
+  animation: frameSparkle 6s linear infinite;
+}
+
+.frame-rare_sapphire {
+  background: linear-gradient(120deg, #0ea5e9, #2563eb, #38bdf8, #1d4ed8);
+  background-size: 220% 220%;
+  animation: frameWave 3.2s ease-in-out infinite;
+  box-shadow: 0 0 14px rgba(59,130,246,0.6), 0 0 28px rgba(14,165,233,0.35);
+}
+.frame-rare_sapphire::before {
+  background: radial-gradient(circle at 25% 25%, rgba(255,255,255,0.7), transparent 50%);
+}
+.frame-rare_sapphire::after {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(56,189,248,0.95), transparent 55%),
+    radial-gradient(circle at 88% 88%, rgba(29,78,216,0.95), transparent 55%);
+}
+
+.frame-epic_ember {
+  background: linear-gradient(120deg, #f97316, #ef4444, #f59e0b, #fb7185);
+  background-size: 220% 220%;
+  animation: frameWave 3s ease-in-out infinite;
+  box-shadow: 0 0 16px rgba(249,115,22,0.6), 0 0 30px rgba(239,68,68,0.35);
+}
+.frame-epic_ember::before {
+  background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.7), transparent 50%);
+}
+.frame-epic_ember::after {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(249,115,22,0.95), transparent 55%),
+    radial-gradient(circle at 88% 12%, rgba(239,68,68,0.95), transparent 55%),
+    radial-gradient(circle at 12% 88%, rgba(251,191,36,0.95), transparent 55%),
+    radial-gradient(circle at 88% 88%, rgba(251,113,133,0.95), transparent 55%);
+  animation: frameSparkle 4.5s linear infinite;
+}
+
+.frame-legendary_aurora {
+  background: conic-gradient(from 0deg, #facc15, #34d399, #22d3ee, #a855f7, #facc15);
+  animation: frameSpin 5.5s linear infinite;
+  box-shadow: 0 0 18px rgba(250,204,21,0.6), 0 0 34px rgba(34,211,238,0.35);
+}
+.frame-legendary_aurora::before {
+  background: repeating-conic-gradient(from 0deg, rgba(255,255,255,0.25) 0deg 10deg, transparent 10deg 20deg);
+}
+.frame-legendary_aurora::after {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(250,204,21,0.95), transparent 55%),
+    radial-gradient(circle at 88% 12%, rgba(34,211,238,0.95), transparent 55%),
+    radial-gradient(circle at 12% 88%, rgba(167,139,250,0.95), transparent 55%),
+    radial-gradient(circle at 88% 88%, rgba(52,211,153,0.95), transparent 55%),
+    linear-gradient(140deg, rgba(255,255,255,0.2), transparent 60%);
+  animation: frameSparkle 5s linear infinite;
+}
+
 @supports (view-transition-name: root) {
   :root {
     view-transition-name: root;
