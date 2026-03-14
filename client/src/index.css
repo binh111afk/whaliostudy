@@ -27,6 +27,20 @@ body {
     "Liberation Sans", sans-serif;
 }
 
+/* Global dropdown styling */
+select,
+[role="listbox"],
+[role="menu"] {
+  font-family: "Google Sans", "Product Sans", "Segoe UI", ui-sans-serif,
+    system-ui, -apple-system, "Helvetica Neue", Arial, "Noto Sans",
+    "Liberation Sans", sans-serif;
+  border-radius: 12px;
+}
+
+select option {
+  font-family: inherit;
+}
+
 /* Reset nhẹ để nền web không bị đen */
 :root {
   background-color: #f3f4f6;
@@ -127,6 +141,30 @@ body {
 
 .animate-bounce-subtle {
   animation: bounceSubtle 1.5s ease-in-out infinite;
+}
+
+@keyframes likePop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.25); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+@keyframes savePop {
+  0% { transform: scale(1) rotate(0deg); }
+  35% { transform: scale(1.2) rotate(-6deg); }
+  70% { transform: scale(0.96) rotate(3deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+.animate-like-pop {
+  animation: likePop 320ms ease-out;
+  transform-origin: center;
+}
+
+.animate-save-pop {
+  animation: savePop 320ms ease-out;
+  transform-origin: center;
 }
 
 .whalio-card {

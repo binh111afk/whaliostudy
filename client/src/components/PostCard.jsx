@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Heart,
   MessageCircle,
@@ -61,6 +61,22 @@ const PostCard = ({
   onEdit,
   onViewImage,
 }) => {
+  const [likePulse, setLikePulse] = useState(false);
+  const [savePulse, setSavePulse] = useState(false);
+  const likeTimerRef = useRef(null);
+  const saveTimerRef = useRef(null);
+
+  const triggerPulse = useCallback((setter, timerRef) => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    setter(true);
+    timerRef.current = setTimeout(() => {
+      setter(false);
+      timerRef.current = null;
+    }, 320);
+  }, []);
+
   const isLiked = post.likedBy?.includes(currentUser?.username);
   const isSaved = post.savedBy?.includes(currentUser?.username);
   const isAuthor = post.author === currentUser?.username;
@@ -198,14 +214,22 @@ const PostCard = ({
       {/* ACTIONS FOOTER */}
       <div className="flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-700">
         <button
-          onClick={() => onLike(post._id || post.id)}
+          onClick={() => {
+            triggerPulse(setLikePulse, likeTimerRef);
+            onLike(post._id || post.id);
+          }}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
             isLiked
               ? "bg-red-50 text-red-500 dark:bg-red-900/20 dark:text-red-400"
               : "text-gray-500 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
           }`}
         >
-          <Heart size={18} className={isLiked ? "fill-red-500" : ""} />{" "}
+          <Heart
+            size={18}
+            className={`${isLiked ? "fill-red-500" : ""} ${
+              likePulse ? "animate-like-pop" : ""
+            }`}
+          />{" "}
           {post.likes || 0} lượt thích
         </button>
 
@@ -217,14 +241,23 @@ const PostCard = ({
         </button>
 
         <button
-          onClick={() => onSave(post._id || post.id)}
+          onClick={() => {
+            triggerPulse(setSavePulse, saveTimerRef);
+            onSave(post._id || post.id);
+          }}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
             isSaved
               ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
               : "text-gray-500 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
           }`}
         >
-          <Bookmark size={18} className={isSaved ? "fill-blue-600" : ""} /> Lưu
+          <Bookmark
+            size={18}
+            className={`${isSaved ? "fill-blue-600" : ""} ${
+              savePulse ? "animate-save-pop" : ""
+            }`}
+          />{" "}
+          Lưu
         </button>
       </div>
     </div>
