@@ -57,6 +57,18 @@ export const codeSnippetService = {
     }
   },
 
+  async getSnippetById(id, username) {
+    try {
+      const res = await fetch(
+        getFullApiUrl(`/api/code-snippets/${id}?username=${encodeURIComponent(username || '')}`)
+      );
+      return await res.json();
+    } catch (error) {
+      console.error('Get code snippet detail error:', error);
+      return { success: false, message: 'Lỗi kết nối server' };
+    }
+  },
+
   async formatAssignmentDescription(rawText) {
     try {
       const res = await fetch(getFullApiUrl('/api/code-snippets/format-assignment'), {

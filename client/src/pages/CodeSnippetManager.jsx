@@ -1907,10 +1907,29 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
     toast.success('Đã format nội dung bằng AI');
   };
 
-  const handleOpenDetail = useCallback((snippet) => {
+  const handleOpenDetail = useCallback(async (snippet) => {
     const snippetId = getSnippetId(snippet);
-    const fallbackCode = String(snippet.code || '');
-    const fallbackLanguage = String(snippet.language || inferLanguageFromSubject(snippet.subjectName));
+    let resolvedSnippet = snippet;
+
+    if (username && snippetId) {
+      const hasCode = String(snippet?.code || '').trim().length > 0;
+      const hasLanguage = String(snippet?.language || '').trim().length > 0;
+      const hasTestCases = Array.isArray(snippet?.testCases) && snippet.testCases.length > 0;
+      if (!hasCode || !hasLanguage || !hasTestCases) {
+        const detailResult = await codeSnippetService.getSnippetById(snippetId, username);
+        if (detailResult?.success && detailResult.snippet) {
+          resolvedSnippet = { ...snippet, ...detailResult.snippet };
+          setSnippets((prev) =>
+            prev.map((item) => (getSnippetId(item) === snippetId ? resolvedSnippet : item))
+          );
+        }
+      }
+    }
+
+    const fallbackCode = String(resolvedSnippet.code || '');
+    const fallbackLanguage = String(
+      resolvedSnippet.language || inferLanguageFromSubject(resolvedSnippet.subjectName)
+    );
     let nextCode = fallbackCode;
     let nextLanguage = fallbackLanguage;
 
@@ -1918,7 +1937,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
       const localDraft = readLocalDraft(username, snippetId);
       const canRestoreDraft =
         localDraft &&
-        hasDraftChanged(snippet, localDraft.code, localDraft.language);
+        hasDraftChanged(resolvedSnippet, localDraft.code, localDraft.language);
       if (canRestoreDraft) {
         const restoreMessage = `Phát hiện bản nháp lưu lúc ${formatDateTime(localDraft.updatedAt)}.\n\nBạn có muốn tiếp tục bản nháp gần nhất không?`;
         const shouldRestore = window.confirm(restoreMessage);
@@ -1938,8 +1957,8 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
       latestLocalDraftSignatureRef.current = '';
     }
 
-    const normalizedTestCases = toSnippetTestCaseList(snippet);
-    setSelectedSnippet(snippet);
+    const normalizedTestCases = toSnippetTestCaseList(resolvedSnippet);
+    setSelectedSnippet(resolvedSnippet);
     setEditorCode(nextCode);
     setEditorLanguage(nextLanguage);
     setSnippetTestCases(normalizedTestCases);

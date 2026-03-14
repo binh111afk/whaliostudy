@@ -5446,6 +5446,43 @@ app.get('/api/code-snippets/runner-health', async (req, res) => {
     }
 });
 
+app.get('/api/code-snippets/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const normalizedUsername = String(req.query.username || '').trim();
+        if (!normalizedUsername) {
+            return res.status(400).json({ success: false, message: 'Thiếu username' });
+        }
+
+        const snippet = await CodeSnippet.findOne({
+            _id: id,
+            username: normalizedUsername
+        })
+            .select('-__v')
+            .lean();
+
+        if (!snippet) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy card code' });
+        }
+
+        const formattedSnippet = {
+            ...snippet,
+            title: String(snippet.title || snippet.cardTitle || '').trim(),
+            cardTitle: String(snippet.cardTitle || snippet.title || '').trim(),
+            exerciseName: String(snippet.exerciseName || snippet.assignmentName || '').trim(),
+            assignmentName: String(snippet.assignmentName || snippet.exerciseName || '').trim(),
+            formattedDescription: String(snippet.formattedDescription || snippet.assignmentDescription || '').trim(),
+            assignmentDescription: String(snippet.assignmentDescription || snippet.formattedDescription || '').trim(),
+            id: snippet._id.toString()
+        };
+
+        return res.json({ success: true, snippet: formattedSnippet });
+    } catch (err) {
+        console.error('Get code snippet detail error:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
 app.post('/api/code-snippets/format-assignment', async (req, res) => {
     try {
         const rawText = String(req.body?.text || '').trim();
