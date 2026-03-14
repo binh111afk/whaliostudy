@@ -480,7 +480,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
     };
 
     return !inline && match ? (
-      <div className="relative group my-4 rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+      <div className="relative group my-4 max-w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm">
         <div className="flex justify-between items-center bg-gray-800 px-4 py-1.5 text-xs text-gray-300 select-none">
           <span className="font-mono font-bold text-blue-300">{match[1]}</span>
           <button
@@ -495,8 +495,8 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
             {copied ? "Đã chép" : "Sao chép"}
           </button>
         </div>
-        <div className="overflow-x-auto bg-[#282c34]">
-          <code className={className} {...props}>
+        <div className="max-w-full overflow-x-auto bg-[#282c34]">
+          <code className={`${className} block min-w-max`} {...props}>
             {children}
           </code>
         </div>
@@ -620,7 +620,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
         {/* Header */}
         <div className="h-12 shrink-0 bg-transparent px-3 sm:px-4 flex items-center">
           <div className="flex items-center gap-2.5">
-            <Tooltip text="Mở lịch sử chat">
+            <Tooltip text={sidebarOpen ? "Thu gọn" : "Mở rộng"}>
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="rounded-lg p-2 text-slate-500 hover:bg-slate-100/80 dark:text-slate-400 dark:hover:bg-slate-800/60"
@@ -705,12 +705,14 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                         accept="image/*"
                       />
 
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/30 dark:hover:text-blue-200"
-                      >
-                        {selectedFile ? <IconImage className="h-5 w-5" /> : <IconAttach className="h-5 w-5" />}
-                      </button>
+                      <Tooltip text="Thêm tệp">
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/30 dark:hover:text-blue-200"
+                        >
+                          {selectedFile ? <IconImage className="h-5 w-5" /> : <IconAttach className="h-5 w-5" />}
+                        </button>
+                      </Tooltip>
 
                       <textarea
                         ref={textareaRef}
@@ -729,18 +731,20 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                       />
 
                       <div className="flex items-center pr-1">
-                        <button
-                          onClick={handleSend}
-                          disabled={(!input.trim() && !selectedFile) || isLoading}
-                          className={`flex h-9 w-9 items-center justify-center rounded-full transition-all ${
-                            (input.trim() || selectedFile) && !isLoading
-                              ? "bg-blue-50 border border-blue-200 text-blue-600 shadow-sm hover:bg-blue-100 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/50"
-                              : "bg-slate-100 border border-slate-200 text-slate-400 dark:bg-slate-700/80 dark:border-slate-600 dark:text-slate-500"
-                          }`}
-                          aria-label="Gửi"
-                        >
-                          <IconSend className="h-[15px] w-[15px]" />
-                        </button>
+                        <Tooltip text="Gửi">
+                          <button
+                            onClick={handleSend}
+                            disabled={(!input.trim() && !selectedFile) || isLoading}
+                            className={`flex h-9 w-9 items-center justify-center rounded-full transition-all ${
+                              (input.trim() || selectedFile) && !isLoading
+                                ? "bg-blue-50 border border-blue-200 text-blue-600 shadow-sm hover:bg-blue-100 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/50"
+                                : "bg-slate-100 border border-slate-200 text-slate-400 dark:bg-slate-700/80 dark:border-slate-600 dark:text-slate-500"
+                            }`}
+                            aria-label="Gửi"
+                          >
+                            <IconSend className="h-[15px] w-[15px]" />
+                          </button>
+                        </Tooltip>
                       </div>
                     </div>
                   </div>
@@ -779,12 +783,12 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`mx-auto flex max-w-4xl gap-2 sm:gap-4 ${
+                    className={`mx-auto flex w-full gap-2 sm:max-w-4xl sm:gap-4 ${
                       msg.role === "user" ? "flex-row-reverse" : ""
                     }`}
                   >
                     {msg.role === "model" ? (
-                      <div className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-white text-blue-600 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-blue-400 flex items-center justify-center">
+                      <div className="hidden sm:flex h-9 w-9 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-white text-blue-600 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-blue-400 items-center justify-center">
                         <img
                           src="/logo.png"
                           alt="Whalio AI"
@@ -804,7 +808,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                       />
                     )}
 
-                    <div className={`group relative min-w-0 ${msg.role === "model" ? "flex-1" : "max-w-[88%] sm:max-w-[78%]"}`}>
+                    <div className={`group relative min-w-0 ${msg.role === "model" ? "w-full" : "max-w-[80%] sm:max-w-[78%]"}`}>
                       <div
                         className={`mb-1 text-xs font-bold ${
                           msg.role === "user"
@@ -819,7 +823,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                         className={`max-w-full break-words leading-relaxed ${
                           msg.role === "user"
                             ? "rounded-2xl rounded-tr-sm bg-white px-4 py-3 text-sm text-gray-800 dark:bg-slate-800/80 dark:text-gray-100 sm:px-5 sm:text-[15px]"
-                            : "bg-transparent px-0 py-0 text-base text-slate-800 dark:text-slate-100"
+                            : "w-full bg-transparent px-0 py-0 text-base text-slate-800 dark:text-slate-100 whitespace-pre-wrap [overflow-wrap:anywhere]"
                         }`}
                       >
                         {msg.image && (
@@ -832,7 +836,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
 
                         {msg.role === "model" ? (
                           <div
-                            className="prose prose-sm sm:prose-base prose-blue max-w-none break-words prose-p:leading-7 prose-pre:my-0 prose-pre:overflow-x-auto"
+                            className="prose prose-sm sm:prose-base prose-blue w-full max-w-full break-words [overflow-wrap:anywhere] prose-p:leading-7 prose-pre:my-0 prose-pre:max-w-full prose-pre:overflow-x-auto"
                             style={{ fontFamily: "'Google Sans', 'Product Sans', 'Inter', sans-serif" }}
                           >
                             <ReactMarkdown
