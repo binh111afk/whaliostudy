@@ -381,6 +381,16 @@ function App() {
 
   const isFullscreenLayout = isAiChatFullscreen || isCodeVaultFullscreen;
 
+  // Reset fullscreen flags when navigating away from their respective pages
+  useEffect(() => {
+    if (location.pathname !== "/ai-assistant") {
+      setIsAiChatFullscreen(false);
+    }
+    if (!location.pathname.startsWith("/code-vault")) {
+      setIsCodeVaultFullscreen(false);
+    }
+  }, [location.pathname]);
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1025) {
