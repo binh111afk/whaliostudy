@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
@@ -7,23 +8,6 @@ import "highlight.js/styles/atom-one-dark.css";
 import { getFullApiUrl } from '../config/apiConfig';
 import Tooltip from "../components/Tooltip";
 import AvatarWithFrame from "../components/AvatarWithFrame";
-import {
-  Send,
-  Paperclip,
-  Plus,
-  MessageSquare,
-  MoreVertical,
-  Trash2,
-  X,
-  Image as ImageIcon,
-  Copy,
-  Check,
-  Sparkles,
-  ChevronDown,
-  Menu,
-  Maximize2,
-  Minimize2,
-} from "lucide-react";
 
 const resolveAvatarSrc = (avatar) => {
   const raw = String(avatar || "").trim().replace(/\\/g, "/");
@@ -50,6 +34,135 @@ const getInitials = (name, fallback = "U") => {
   return normalized.slice(0, 2).toUpperCase();
 };
 
+const GEMINI_SUGGESTIONS = [
+  { id: "image", text: "Tạo hình ảnh" },
+  { id: "study", text: "Giúp tôi học" },
+  { id: "write", text: "Viết bất cứ thứ gì" },
+  { id: "plan", text: "Lập kế hoạch ôn thi" },
+];
+
+const SuggestionIcon = ({ type }) => {
+  if (type === "image") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M4 16l4.4-4.4a1 1 0 0 1 1.4 0L14 16" />
+        <path d="M13 15l2.6-2.6a1 1 0 0 1 1.4 0L20 15" />
+        <rect x="3" y="5" width="18" height="14" rx="3" />
+        <circle cx="9" cy="10" r="1.4" />
+      </svg>
+    );
+  }
+  if (type === "study") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M3 7l9-4 9 4-9 4-9-4z" />
+        <path d="M6 10v4.5c0 1.8 2.7 3.5 6 3.5s6-1.7 6-3.5V10" />
+      </svg>
+    );
+  }
+  if (type === "write") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M4 20h4l10-10-4-4L4 16v4z" />
+        <path d="M12.5 7.5l4 4" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 4v4" />
+      <path d="M12 16v4" />
+      <path d="M4 12h4" />
+      <path d="M16 12h4" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+};
+
+const IconMenu = ({ className = "h-5 w-5" }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
+    <path d="M4 6h16" />
+    <path d="M4 12h16" />
+    <path d="M4 18h16" />
+  </svg>
+);
+
+const IconClose = ({ className = "h-5 w-5" }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <path d="M6 6l12 12" />
+    <path d="M18 6L6 18" />
+  </svg>
+);
+
+const IconChat = ({ className = "h-4 w-4" }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-4 3v-3H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" />
+  </svg>
+);
+
+const IconTrash = ({ className = "h-4 w-4" }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <path d="M4 7h16" />
+    <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    <path d="M7 7l1 12h8l1-12" />
+  </svg>
+);
+
+const IconMore = ({ className = "h-[18px] w-[18px]" }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <circle cx="5" cy="12" r="1.8" />
+    <circle cx="12" cy="12" r="1.8" />
+    <circle cx="19" cy="12" r="1.8" />
+  </svg>
+);
+
+const IconCopy = ({ className = "h-4 w-4" }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <rect x="9" y="9" width="11" height="11" rx="2" />
+    <rect x="4" y="4" width="11" height="11" rx="2" />
+  </svg>
+);
+
+const IconCheck = ({ className = "h-4 w-4" }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <path d="M5 13l4 4L19 7" />
+  </svg>
+);
+
+const IconChevronDown = ({ className = "h-4 w-4" }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+);
+
+const IconAttach = ({ className = "h-5 w-5" }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 8v8M8 12h8" />
+  </svg>
+);
+
+const IconImage = ({ className = "h-5 w-5" }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" strokeWidth="1.8" strokeLinecap="round">
+    <defs>
+      <linearGradient id="img-grad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#f59e0b" />
+        <stop offset="100%" stopColor="#ec4899" />
+      </linearGradient>
+    </defs>
+    <rect x="3" y="5" width="18" height="14" rx="3" stroke="url(#img-grad)" />
+    <circle cx="9" cy="10" r="1.4" stroke="url(#img-grad)" />
+    <path d="M4 16l4.5-4.5a1 1 0 0 1 1.4 0L14 16" stroke="url(#img-grad)" />
+    <path d="M13 15l2.8-2.8a1 1 0 0 1 1.4 0L20 15" stroke="url(#img-grad)" />
+  </svg>
+);
+
+const IconSend = ({ className = "h-4 w-4" }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M21.66,12a2,2,0,0,1-1.14,1.81L5.87,20.75A2.08,2.08,0,0,1,5,21a2,2,0,0,1-1.82-2.82L5.46,13H11a1,1,0,0,0,0-2H5.46L3.18,5.87A2,2,0,0,1,5.86,3.25h0l14.65,6.94A2,2,0,0,1,21.66,12Z" />
+  </svg>
+);
+
 const AiChat = ({ onFullscreenChange = () => {} }) => {
   const user = JSON.parse(localStorage.getItem("user"));
   const userDisplayName = user?.fullName || user?.name || user?.username || "Bạn";
@@ -59,13 +172,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
   // --- STATE ---
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      role: "model",
-      text: "Chào bạn! Tôi là **Whalio AI**. Tôi có thể giúp gì cho việc học tập của ông hôm nay? (Giải toán, tâm sự, hay Lên kế hoạch ôn thi?)",
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(
@@ -78,10 +185,10 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
   const [filePreview, setFilePreview] = useState(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isUserAvatarBroken, setIsUserAvatarBroken] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
   const chatContainerRef = useRef(null);
   const isUserAtBottom = useRef(true);
 
@@ -216,18 +323,24 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
 
   const handleNewChat = () => {
     setCurrentSessionId(null);
-    setMessages([
-      {
-        id: 1,
-        role: "model",
-        text: "Chào bạn! Tôi là **Whalio AI**. Tôi có thể giúp gì cho việc học tập của ông hôm nay? (Giải toán, tâm sự, hay Lên kế hoạch ôn thi?)",
-      },
-    ]);
+    setMessages([]);
     setInput("");
     setSelectedFile(null);
     setFilePreview(null);
     setShowScrollButton(false);
     isUserAtBottom.current = true;
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setInput(suggestion.text);
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  };
+
+  const handleTextareaResize = (target) => {
+    target.style.height = "auto";
+    target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
   };
 
   const handleDeleteSession = async (sessionId, e) => {
@@ -276,14 +389,6 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
       setShowScrollButton(false);
       isUserAtBottom.current = true;
     }
-  };
-
-  const handleToggleFullscreen = () => {
-    setIsFullscreen((prev) => {
-      const next = !prev;
-      onFullscreenChange(next);
-      return next;
-    });
   };
 
   const handleSend = async () => {
@@ -383,9 +488,9 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
             className="flex items-center gap-1 hover:text-white transition-colors"
           >
             {copied ? (
-              <Check size={14} className="text-green-400" />
+              <IconCheck className="h-[14px] w-[14px] text-green-400" />
             ) : (
-              <Copy size={14} />
+              <IconCopy className="h-[14px] w-[14px]" />
             )}
             {copied ? "Đã chép" : "Sao chép"}
           </button>
@@ -408,9 +513,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
 
   return (
     <div
-      className={`relative flex h-full min-h-0 w-full overflow-hidden bg-white text-gray-800 dark:bg-gray-900 dark:text-gray-100 ${
-        isFullscreen ? "rounded-none border-0" : "rounded-2xl border border-gray-200 dark:border-gray-700"
-      }`}
+      className="relative flex h-full min-h-0 w-full overflow-hidden rounded-none border-0 bg-white text-gray-800 dark:bg-gray-900 dark:text-gray-100"
     >
       {isMobile && sidebarOpen && (
         <button
@@ -440,17 +543,16 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
               onClick={() => setSidebarOpen(false)}
               className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400"
             >
-              <X size={20} />
+              <IconClose className="h-5 w-5" />
             </button>
           </div>
           <button
             onClick={handleNewChat}
             className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-blue-600 dark:text-blue-400 px-4 py-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 transition-all font-bold shadow-sm group cursor-pointer"
           >
-            <Plus
-              size={18}
-              className="group-hover:rotate-90 transition-transform"
-            />{" "}
+            <span className="group-hover:rotate-90 transition-transform text-blue-500">
+              <IconAttach className="h-[18px] w-[18px]" />
+            </span>{" "}
             Đoạn chat mới
           </button>
         </div>
@@ -471,10 +573,9 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                     : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent"
                 }`}
               >
-                <MessageSquare
-                  size={16}
-                  className="shrink-0 text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"
-                />
+                <span className="shrink-0 text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  <IconChat className="h-4 w-4" />
+                </span>
                 <span className="truncate flex-1 min-w-0">
                   {session.title || "Cuộc trò chuyện mới"}
                 </span>
@@ -482,7 +583,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                   onClick={(e) => handleDeleteSession(session.sessionId, e)}
                   className="opacity-0 group-hover:opacity-100 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-opacity shrink-0"
                 >
-                  <Trash2 size={14} />
+                  <IconTrash className="h-[14px] w-[14px]" />
                 </button>
               </div>
             ))
@@ -507,284 +608,390 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
             <div className="flex-1 text-sm font-bold text-gray-700 dark:text-gray-200 truncate min-w-0">
               {user ? user.username : "Quang Bình"}
             </div>
-            <MoreVertical size={18} className="text-gray-400 dark:text-gray-500 shrink-0" />
+            <span className="text-gray-400 dark:text-gray-500 shrink-0">
+              <IconMore className="h-[18px] w-[18px]" />
+            </span>
           </div>
         </div>
       </div>
 
-        {/* MAIN CHAT AREA */}
-        <div className="flex-1 flex flex-col min-h-0 h-full">
-          {/* SIMPLE HEADER - chỉ có logo và nút menu */}
-          <div className="h-14 sm:h-16 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-3 sm:px-6 bg-white dark:bg-gray-800 shrink-0">
-          {/* Bên trái: Nút menu và logo */}
-          <div className="flex items-center gap-3">
+      {/* MAIN CHAT AREA */}
+      <div className="flex h-full min-h-0 flex-1 flex-col">
+        {/* Header */}
+        <div className="h-12 shrink-0 bg-transparent px-3 sm:px-4 flex items-center">
+          <div className="flex items-center gap-2.5">
             <Tooltip text="Mở lịch sử chat">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400"
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100/80 dark:text-slate-400 dark:hover:bg-slate-800/60"
               >
-                <Menu size={20} />
+                <IconMenu className="h-5 w-5" />
               </button>
             </Tooltip>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-800 dark:text-white text-base sm:text-lg flex items-center gap-2">
-                Whalio AI{" "}
-                <Sparkles
-                  size={14}
-                  className="text-yellow-500 fill-yellow-500"
-                />
-              </span>
-              <span className="hidden sm:inline-flex text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full font-bold border border-blue-100 dark:border-blue-700">
-                Flash 2.5
-              </span>
-            </div>
+            <span className="text-base font-semibold text-slate-800 dark:text-slate-100">
+              Whalio AI
+            </span>
           </div>
-          <Tooltip text={isFullscreen ? "Thu nhỏ AiChat" : "Phóng to AiChat"}>
-            <button
-              onClick={handleToggleFullscreen}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
-              aria-label={isFullscreen ? "Thu nhỏ AiChat" : "Phóng to AiChat"}
-            >
-              {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-            </button>
-          </Tooltip>
         </div>
 
-        {/* Nút cuộn xuống */}
-        {showScrollButton && (
-          <button
-            onClick={scrollToBottom}
-            className="absolute bottom-28 sm:bottom-24 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 animate-bounce z-50 cursor-pointer text-sm"
-          >
-            <ChevronDown size={16} />
-            Tin nhắn mới
-          </button>
-        )}
-
-        {/* Chat Messages Container */}
+        {/* Messages (only scrollable area) */}
         <div
           ref={chatContainerRef}
-          className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 md:p-8 space-y-5 sm:space-y-8 bg-gray-50 dark:bg-gray-900"
+          className="relative flex-1 overflow-y-auto bg-gray-50 px-3 pt-3 pb-4 dark:bg-gray-900 sm:px-4 sm:pt-4"
         >
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex gap-2 sm:gap-4 max-w-4xl mx-auto ${
-                msg.role === "user" ? "flex-row-reverse" : ""
-              }`}
-            >
-              {/* Avatar */}
-                {msg.role === "model" ? (
-                  <div
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm border overflow-hidden bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-blue-600 dark:text-blue-400"
+          <AnimatePresence mode="wait">
+            {messages.length === 0 ? (
+              <motion.div
+                key="start-screen"
+                className="relative mx-auto flex h-full w-full max-w-5xl flex-col items-center justify-center px-4"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.86, y: -72 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+              >
+                <div className="pointer-events-none absolute left-1/2 top-1/2 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/20 blur-[120px]" />
+                <div className="pointer-events-none absolute left-1/2 top-1/2 h-[320px] w-[320px] -translate-x-[35%] -translate-y-[40%] rounded-full bg-violet-500/20 blur-[130px]" />
+
+                <motion.div
+                  className="relative z-10 flex w-full max-w-3xl flex-col items-center"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -24 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <motion.h2
+                    className="text-center text-xl font-semibold text-transparent"
+                    style={{
+                      fontFamily: "'Google Sans', 'Product Sans', 'Inter', sans-serif",
+                      backgroundImage:
+                        "linear-gradient(90deg, #60a5fa 0%, #c084fc 50%, #f472b6 100%)",
+                      WebkitBackgroundClip: "text",
+                      backgroundClip: "text",
+                    }}
                   >
-                    <img
-                      src="/logo.png"
-                      alt="Whalio AI"
-                      className="w-full h-full object-contain p-1"
-                      onError={(e) => {
-                        e.currentTarget.src = "/img/logo.png";
-                      }}
-                    />
+                    Xin chào {userDisplayName}!
+                  </motion.h2>
+
+                  <h1
+                    className="mt-3 text-center text-4xl font-medium tracking-tight text-slate-900 dark:text-white sm:text-5xl"
+                    style={{ fontFamily: "'Google Sans', 'Product Sans', 'Inter', sans-serif" }}
+                  >
+                    Chúng ta nên bắt đầu từ đâu nhỉ?
+                  </h1>
+
+                  <div className="mt-8 w-full max-w-3xl">
+                    {filePreview && (
+                      <div className="mb-3 flex max-w-[calc(100%-2rem)] items-start gap-2 rounded-xl border border-slate-700 bg-[#1e1e1e] p-2 shadow-lg">
+                        <img
+                          src={filePreview}
+                          alt="Preview"
+                          className="h-20 w-auto max-w-[180px] rounded-lg object-cover"
+                        />
+                        <button
+                          onClick={removeFile}
+                          className="shrink-0 rounded-full bg-slate-700/80 p-1 text-slate-300 transition-colors hover:bg-red-900/30 hover:text-red-300"
+                        >
+                          <IconClose className="h-[14px] w-[14px]" />
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="flex items-end gap-2 rounded-3xl border border-slate-200 bg-white/95 p-2.5 shadow-[0_10px_40px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-[#1e1e1e] dark:shadow-[0_10px_40px_rgba(0,0,0,0.35)]">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        accept="image/*"
+                      />
+
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/30 dark:hover:text-blue-200"
+                      >
+                        {selectedFile ? <IconImage className="h-5 w-5" /> : <IconAttach className="h-5 w-5" />}
+                      </button>
+
+                      <textarea
+                        ref={textareaRef}
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSend();
+                          }
+                        }}
+                        placeholder="Hỏi Whalio..."
+                        className="min-h-[44px] max-h-[120px] min-w-0 flex-1 resize-none border-none bg-transparent py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-500 dark:text-slate-100 dark:placeholder:text-slate-400 sm:text-base"
+                        rows={1}
+                        onInput={(e) => handleTextareaResize(e.target)}
+                      />
+
+                      <div className="flex items-center pr-1">
+                        <button
+                          onClick={handleSend}
+                          disabled={(!input.trim() && !selectedFile) || isLoading}
+                          className={`flex h-9 w-9 items-center justify-center rounded-full transition-all ${
+                            (input.trim() || selectedFile) && !isLoading
+                              ? "bg-blue-50 border border-blue-200 text-blue-600 shadow-sm hover:bg-blue-100 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/50"
+                              : "bg-slate-100 border border-slate-200 text-slate-400 dark:bg-slate-700/80 dark:border-slate-600 dark:text-slate-500"
+                          }`}
+                          aria-label="Gửi"
+                        >
+                          <IconSend className="h-[15px] w-[15px]" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <AvatarWithFrame
-                    src={userAvatarSrc && !isUserAvatarBroken ? userAvatarSrc : null}
-                    name={userDisplayName}
-                    sizeClass="w-8 h-8 sm:w-9 sm:h-9"
-                    avatarClassName="border border-transparent"
-                    fallbackClassName="text-[11px] font-bold bg-blue-600 text-white"
-                  />
+
+                  <motion.div
+                    className="mt-5 flex w-full max-w-3xl flex-wrap items-center justify-center gap-2"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                    transition={{ duration: 0.22, delay: 0.06 }}
+                  >
+                    {GEMINI_SUGGESTIONS.map((suggestion) => (
+                      <button
+                        key={suggestion.id}
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm text-slate-700 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white dark:border-slate-800 dark:bg-[#1e1e1e] dark:text-white/80 dark:hover:border-slate-600 dark:hover:text-white"
+                      >
+                        <span className="text-slate-500 dark:text-slate-300">
+                          <SuggestionIcon type={suggestion.id} />
+                        </span>
+                        <span>{suggestion.text}</span>
+                      </button>
+                    ))}
+                  </motion.div>
+                </motion.div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="chat-content"
+                className="space-y-5 sm:space-y-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.24, ease: "easeOut" }}
+              >
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`mx-auto flex max-w-4xl gap-2 sm:gap-4 ${
+                      msg.role === "user" ? "flex-row-reverse" : ""
+                    }`}
+                  >
+                    {msg.role === "model" ? (
+                      <div className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-white text-blue-600 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-blue-400 flex items-center justify-center">
+                        <img
+                          src="/logo.png"
+                          alt="Whalio AI"
+                          className="h-full w-full object-contain p-1"
+                          onError={(e) => {
+                            e.currentTarget.src = "/img/logo.png";
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <AvatarWithFrame
+                        src={userAvatarSrc && !isUserAvatarBroken ? userAvatarSrc : null}
+                        name={userDisplayName}
+                        sizeClass="w-8 h-8 sm:w-9 sm:h-9"
+                        avatarClassName="border border-transparent"
+                        fallbackClassName="text-[11px] font-bold bg-blue-600 text-white"
+                      />
+                    )}
+
+                    <div className={`group relative min-w-0 ${msg.role === "model" ? "flex-1" : "max-w-[88%] sm:max-w-[78%]"}`}>
+                      <div
+                        className={`mb-1 text-xs font-bold ${
+                          msg.role === "user"
+                            ? "text-right text-gray-400 dark:text-gray-500"
+                            : "text-left text-blue-600 dark:text-blue-400"
+                        }`}
+                      >
+                        {msg.role === "model" ? "Whalio AI" : "Bạn"}
+                      </div>
+
+                      <div
+                        className={`max-w-full break-words leading-relaxed ${
+                          msg.role === "user"
+                            ? "rounded-2xl rounded-tr-sm bg-white px-4 py-3 text-sm text-gray-800 dark:bg-slate-800/80 dark:text-gray-100 sm:px-5 sm:text-[15px]"
+                            : "bg-transparent px-0 py-0 text-base text-slate-800 dark:text-slate-100"
+                        }`}
+                      >
+                        {msg.image && (
+                          <img
+                            src={msg.image}
+                            alt="Upload"
+                            className="mb-4 h-auto max-w-full rounded-lg border border-gray-200 shadow-sm dark:border-gray-700 md:max-w-xs"
+                          />
+                        )}
+
+                        {msg.role === "model" ? (
+                          <div
+                            className="prose prose-sm sm:prose-base prose-blue max-w-none break-words prose-p:leading-7 prose-pre:my-0 prose-pre:overflow-x-auto"
+                            style={{ fontFamily: "'Google Sans', 'Product Sans', 'Inter', sans-serif" }}
+                          >
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              rehypePlugins={[rehypeHighlight, rehypeRaw]}
+                              components={{
+                                code: CodeBlock,
+                                table: ({ node, ...props }) => (
+                                  <div className="my-4 overflow-x-auto rounded-lg border border-gray-200">
+                                    <table
+                                      className="min-w-full divide-y divide-gray-200"
+                                      {...props}
+                                    />
+                                  </div>
+                                ),
+                                thead: ({ node, ...props }) => (
+                                  <thead className="bg-gray-50" {...props} />
+                                ),
+                                th: ({ node, ...props }) => (
+                                  <th
+                                    className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-blue-600"
+                                    {...props}
+                                  />
+                                ),
+                                td: ({ node, ...props }) => (
+                                  <td
+                                    className="border-t border-gray-100 px-4 py-3 text-sm text-gray-600"
+                                    {...props}
+                                  />
+                                ),
+                              }}
+                            >
+                              {msg.text}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {isLoading && (
+                  <div className="mx-auto flex max-w-4xl gap-4 animate-pulse">
+                    <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 flex items-center justify-center">
+                      <img
+                        src="/logo.png"
+                        alt="Whalio AI"
+                        className="h-full w-full object-contain p-1"
+                        onError={(e) => {
+                          e.currentTarget.src = "/img/logo.png";
+                        }}
+                      />
+                    </div>
+                    <div className="rounded-2xl rounded-tl-sm border border-gray-100 bg-white px-5 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                      <div className="mb-2 flex items-center gap-2">
+                        <div className="h-2 w-2 animate-bounce rounded-full bg-blue-400"></div>
+                        <div className="delay-75 h-2 w-2 animate-bounce rounded-full bg-blue-400"></div>
+                        <div className="delay-150 h-2 w-2 animate-bounce rounded-full bg-blue-400"></div>
+                      </div>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 sm:text-sm">
+                        Whalio đang suy nghĩ, bạn chịu khó đợi mình một chút nhé
+                      </p>
+                    </div>
+                  </div>
                 )}
 
-              {/* Message Content */}
-              <div className="group relative max-w-[92%] sm:max-w-[85%] min-w-0">
-                <div
-                  className={`text-xs font-bold mb-1 ${
-                    msg.role === "user"
-                      ? "text-right text-gray-400 dark:text-gray-500"
-                      : "text-left text-blue-600 dark:text-blue-400"
-                  }`}
-                >
-                  {msg.role === "model" ? "Whalio AI" : "Bạn"}
-                </div>
+                <div ref={messagesEndRef} />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-                <div
-                  className={`px-4 sm:px-6 py-3 sm:py-4 rounded-2xl shadow-sm leading-relaxed text-sm sm:text-[15px] break-words max-w-full ${
-                    msg.role === "user"
-                      ? "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-tr-sm border border-gray-100 dark:border-gray-700"
-                      : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-tl-sm border border-gray-100 dark:border-gray-700"
-                  }`}
-                >
-                  {msg.image && (
-                    <img
-                      src={msg.image}
-                      alt="Upload"
-                      className="max-w-full md:max-w-xs h-auto rounded-lg mb-4 border border-gray-200 dark:border-gray-700 shadow-sm"
-                    />
-                  )}
-
-                  {msg.role === "model" ? (
-                    <div className="prose prose-sm sm:prose-base max-w-none prose-blue prose-p:leading-7 prose-pre:my-0 break-words overflow-hidden">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]} // Bắt buộc phải có để AI hiểu cú pháp bảng
-                        rehypePlugins={[rehypeHighlight, rehypeRaw]}
-                        components={{
-                          code: CodeBlock,
-                          // 👇 Ép các thẻ bảng dùng class Tailwind
-                          table: ({ node, ...props }) => (
-                            <div className="overflow-x-auto my-4 rounded-lg border border-gray-200">
-                              <table
-                                className="min-w-full divide-y divide-gray-200"
-                                {...props}
-                              />
-                            </div>
-                          ),
-                          thead: ({ node, ...props }) => (
-                            <thead className="bg-gray-50" {...props} />
-                          ),
-                          th: ({ node, ...props }) => (
-                            <th
-                              className="px-4 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider"
-                              {...props}
-                            />
-                          ),
-                          td: ({ node, ...props }) => (
-                            <td
-                              className="px-4 py-3 text-sm text-gray-600 border-t border-gray-100"
-                              {...props}
-                            />
-                          ),
-                        }}
-                      >
-                        {msg.text}
-                      </ReactMarkdown>
-                    </div>
-                  ) : (
-                    <p className="whitespace-pre-wrap break-words">
-                      {msg.text}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {/* Loading Indicator */}
-          {isLoading && (
-            <div className="flex gap-4 max-w-4xl mx-auto animate-pulse">
-              <div className="w-9 h-9 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center shrink-0 overflow-hidden">
-                <img
-                  src="/logo.png"
-                  alt="Whalio AI"
-                  className="w-full h-full object-contain p-1"
-                  onError={(e) => {
-                    e.currentTarget.src = "/img/logo.png";
-                  }}
-                />
-              </div>
-              <div className="bg-white dark:bg-gray-800 px-5 py-4 rounded-2xl rounded-tl-sm border border-gray-100 dark:border-gray-700 shadow-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-75"></div>
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-150"></div>
-                </div>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-                  Whalio đang suy nghĩ, bạn chịu khó đợi mình một chút nhé
-                </p>
-              </div>
-            </div>
+          {showScrollButton && messages.length > 0 && (
+            <button
+              onClick={scrollToBottom}
+              className="absolute bottom-5 left-1/2 z-20 -translate-x-1/2 transform cursor-pointer rounded-full bg-blue-600 px-4 py-2 text-sm text-white shadow-lg transition-all hover:bg-blue-700 flex items-center gap-2"
+            >
+              <IconChevronDown className="h-4 w-4" />
+              Tin nhắn mới
+            </button>
           )}
-
-          <div ref={messagesEndRef} />
         </div>
 
         {/* Input Area */}
-        <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0">
-          <div className="max-w-4xl mx-auto p-3 sm:p-4 relative">
-            {/* Preview ảnh */}
-            {filePreview && (
-              <div className="absolute bottom-full left-0 mb-3 p-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex items-start gap-2 shadow-lg z-10 max-w-[calc(100%-2rem)]">
-                <img
-                  src={filePreview}
-                  alt="Preview"
-                  className="h-20 w-auto rounded-lg object-cover max-w-[180px]"
+        {messages.length > 0 && (
+          <div className="shrink-0 p-4">
+            <div className="relative mx-auto max-w-3xl">
+              {filePreview && (
+                <div className="absolute bottom-full left-0 z-10 mb-3 flex max-w-[calc(100%-2rem)] items-start gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                  <img
+                    src={filePreview}
+                    alt="Preview"
+                    className="h-20 w-auto max-w-[180px] rounded-lg object-cover"
+                  />
+                  <button
+                    onClick={removeFile}
+                    className="shrink-0 rounded-full bg-gray-100 p-1 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-500 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                  >
+                    <IconClose className="h-[14px] w-[14px]" />
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-end gap-2 rounded-full border border-slate-200/70 bg-slate-100/50 p-2 backdrop-blur-md dark:border-slate-700/80 dark:bg-slate-800/80 focus-within:ring-4 focus-within:ring-blue-500/10">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  accept="image/*"
                 />
-                <button
-                  onClick={removeFile}
-                  className="p-1 bg-gray-100 dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-full transition-colors shrink-0"
-                >
-                  <X size={14} />
-                </button>
+
+                <Tooltip text="Gửi ảnh">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors cursor-pointer ${
+                      selectedFile
+                        ? "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300"
+                        : "text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/30 dark:hover:text-blue-200"
+                    }`}
+                  >
+                    {selectedFile ? <IconImage className="h-[18px] w-[18px]" /> : <IconAttach className="h-[18px] w-[18px]" />}
+                  </button>
+                </Tooltip>
+
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  placeholder="Hỏi Whalio bất kì điều gì ..."
+                  className="min-h-[44px] max-h-[120px] min-w-0 flex-1 resize-none border-none bg-transparent py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 transition-colors dark:text-slate-100 dark:placeholder:text-slate-400 sm:text-base"
+                  rows={1}
+                  onInput={(e) => handleTextareaResize(e.target)}
+                />
+
+                <Tooltip text="Gửi">
+                  <button
+                    onClick={handleSend}
+                    disabled={(!input.trim() && !selectedFile) || isLoading}
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all cursor-pointer ${
+                      (input.trim() || selectedFile) && !isLoading
+                        ? "bg-blue-50 border border-blue-200 text-blue-600 shadow-sm hover:bg-blue-100 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/50"
+                        : "cursor-not-allowed bg-slate-100 border border-slate-200 text-slate-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-500"
+                    }`}
+                  >
+                    <IconSend className="h-4 w-4" />
+                  </button>
+                </Tooltip>
               </div>
-            )}
-
-            {/* Thanh nhập liệu */}
-            <div className="flex items-end gap-2 bg-white dark:bg-gray-800 p-2 rounded-2xl border border-gray-200 dark:border-gray-700 focus-within:border-blue-500/50 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all shadow-sm hover:shadow-md">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                className="hidden"
-                accept="image/*"
-              />
-
-              <Tooltip text="Gửi ảnh">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`p-2.5 sm:p-3 rounded-xl transition-colors shrink-0 cursor-pointer ${
-                    selectedFile
-                      ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30"
-                      : "text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  }`}
-                >
-                  {selectedFile ? (
-                    <ImageIcon size={20} />
-                  ) : (
-                    <Paperclip size={20} />
-                  )}
-                </button>
-              </Tooltip>
-
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder="Hỏi Whalio bất kì điều gì ..."
-                className="flex-1 bg-transparent text-gray-800 dark:text-gray-200 border-none outline-none resize-none py-2.5 sm:py-3 max-h-[120px] min-h-[44px] placeholder-gray-400 dark:placeholder-gray-400 text-sm sm:text-base break-words min-w-0 transition-colors"
-                rows={1}
-                onInput={(e) => {
-                  e.target.style.height = "auto";
-                  e.target.style.height =
-                    Math.min(e.target.scrollHeight, 120) + "px";
-                }}
-              />
-
-              <Tooltip text="Gửi">
-                <button
-                  onClick={handleSend}
-                  disabled={(!input.trim() && !selectedFile) || isLoading}
-                  className={`p-2.5 sm:p-3 rounded-xl shrink-0 transition-all cursor-pointer ${
-                    (input.trim() || selectedFile) && !isLoading
-                      ? "bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 shadow-md hover:shadow-lg"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed"
-                  }`}
-                >
-                  <Send size={18} />
-                </button>
-              </Tooltip>
             </div>
-
-            <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-3 font-medium">
-              Whalio AI có thể mắc lỗi. Hãy kiểm tra lại thông tin quan trọng.
-            </p>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

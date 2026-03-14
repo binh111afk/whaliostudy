@@ -540,7 +540,9 @@ function App() {
                 ? "min-w-0 flex-1 overflow-hidden p-0"
                 : isCodeVaultFullscreen
                   ? "min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-0"
-                  : "min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 pb-24 pt-[56px] scroll-smooth sm:p-4 sm:pt-[56px] md:p-5 md:pt-[56px] min-[1025px]:p-6 min-[1025px]:pb-6 min-[1025px]:pt-[56px]"
+                  : location.pathname === "/ai-assistant"
+                    ? "min-w-0 flex-1 overflow-hidden p-0 pt-[56px] min-[1025px]:pt-0"
+                    : "min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 pb-24 pt-[56px] scroll-smooth sm:p-4 sm:pt-[56px] md:p-5 md:pt-[56px] min-[1025px]:p-6 min-[1025px]:pb-6 min-[1025px]:pt-[56px]"
             }>
               <Routes>
                 <Route path="/" element={<Dashboard user={user} darkMode={darkMode} setDarkMode={setDarkMode} />} />
