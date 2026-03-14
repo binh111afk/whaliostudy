@@ -381,16 +381,6 @@ function App() {
 
   const isFullscreenLayout = isAiChatFullscreen || isCodeVaultFullscreen;
 
-  // Reset fullscreen flags when navigating away from their respective pages
-  useEffect(() => {
-    if (location.pathname !== "/ai-assistant") {
-      setIsAiChatFullscreen(false);
-    }
-    if (!location.pathname.startsWith("/code-vault")) {
-      setIsCodeVaultFullscreen(false);
-    }
-  }, [location.pathname]);
-
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1025) {
@@ -454,12 +444,21 @@ function App() {
     });
   }, [darkMode, getToggleCenter]);
 
-  return (
-    <Router>
-      <RouteTitleManager />
-      <AvatarFrameProvider>
-      <MusicProvider>
-        <div className="relative flex h-screen w-full max-w-full overflow-hidden bg-slate-50 dark:bg-slate-950">
+  const AppContent = () => {
+    const location = useLocation();
+
+    // Reset fullscreen flags when navigating away from their respective pages
+    useEffect(() => {
+      if (location.pathname !== "/ai-assistant") {
+        setIsAiChatFullscreen(false);
+      }
+      if (!location.pathname.startsWith("/code-vault")) {
+        setIsCodeVaultFullscreen(false);
+      }
+    }, [location.pathname]);
+
+    return (
+      <div className="relative flex h-screen w-full max-w-full overflow-hidden bg-slate-50 dark:bg-slate-950">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute -top-32 -right-24 h-80 w-80 rounded-full bg-blue-200/40 blur-3xl dark:bg-blue-500/10" />
             <div className="absolute -bottom-24 -left-20 h-72 w-72 rounded-full bg-indigo-200/35 blur-3xl dark:bg-indigo-500/10" />
@@ -551,7 +550,7 @@ function App() {
                 : isCodeVaultFullscreen
                   ? "min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-0"
                   : location.pathname === "/ai-assistant"
-                    ? "min-w-0 flex-1 overflow-hidden p-0 pt-[56px] min-[1025px]:pt-0"
+                    ? "min-w-0 flex flex-col flex-1 overflow-hidden p-0"
                     : "min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 pb-24 pt-[56px] scroll-smooth sm:p-4 sm:pt-[56px] md:p-5 md:pt-[56px] min-[1025px]:p-6 min-[1025px]:pb-6 min-[1025px]:pt-[56px]"
             }>
               <Routes>
@@ -646,8 +645,17 @@ function App() {
             duration={3000}
             theme={darkMode ? 'dark' : 'light'}
           />
-        </div>
-      </MusicProvider>
+      </div>
+    );
+  };
+
+  return (
+    <Router>
+      <RouteTitleManager />
+      <AvatarFrameProvider>
+        <MusicProvider>
+          <AppContent />
+        </MusicProvider>
       </AvatarFrameProvider>
     </Router>
   );

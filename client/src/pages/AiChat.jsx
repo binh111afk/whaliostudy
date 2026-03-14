@@ -513,7 +513,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
 
   return (
     <div
-      className="relative flex h-full min-h-0 w-full overflow-hidden rounded-none border-0 bg-white text-gray-800 dark:bg-gray-900 dark:text-gray-100"
+      className="relative flex flex-1 min-h-0 min-w-0 w-full overflow-hidden rounded-none border-0 bg-white text-gray-800 dark:bg-gray-900 dark:text-gray-100"
     >
       {isMobile && sidebarOpen && (
         <button
@@ -643,7 +643,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
             {messages.length === 0 ? (
               <motion.div
                 key="start-screen"
-                className="relative mx-auto flex h-full w-full max-w-5xl flex-col items-center justify-center px-4"
+                className="relative flex h-full w-full flex-col items-center justify-center px-4"
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.86, y: -72 }}
@@ -653,7 +653,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                 <div className="pointer-events-none absolute left-1/2 top-1/2 h-[320px] w-[320px] -translate-x-[35%] -translate-y-[40%] rounded-full bg-violet-500/20 blur-[130px]" />
 
                 <motion.div
-                  className="relative z-10 flex w-full max-w-3xl flex-col items-center"
+                  className="relative z-10 flex w-full max-w-none flex-col items-center"
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -24 }}
@@ -679,7 +679,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                     Chúng ta nên bắt đầu từ đâu nhỉ?
                   </h1>
 
-                  <div className="mt-8 w-full max-w-3xl">
+                  <div className="mt-8 w-[60%] max-w-3xl">
                     {filePreview && (
                       <div className="mb-3 flex max-w-[calc(100%-2rem)] items-start gap-2 rounded-xl border border-slate-700 bg-[#1e1e1e] p-2 shadow-lg">
                         <img
@@ -750,7 +750,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                   </div>
 
                   <motion.div
-                    className="mt-5 flex w-full max-w-3xl flex-wrap items-center justify-center gap-2"
+                    className="mt-5 flex w-full max-w-none flex-wrap items-center justify-center gap-2"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8, scale: 0.96 }}
@@ -781,12 +781,12 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                 transition={{ duration: 0.24, ease: "easeOut" }}
               >
                 {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`mx-auto flex w-full items-start gap-2 sm:max-w-4xl sm:gap-4 ${
-                      msg.role === "user" ? "flex-row-reverse" : ""
-                    }`}
-                  >
+                <div
+                  key={msg.id}
+                  className={`flex w-full items-start gap-2 sm:gap-4 ${
+                    msg.role === "user" ? "flex-row-reverse" : ""
+                  }`}
+                >
                     {msg.role === "model" ? (
                       <div className="hidden sm:flex h-9 w-9 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-white text-blue-600 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-blue-400 items-center justify-center">
                         <img
@@ -924,7 +924,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
         {/* Input Area */}
         {messages.length > 0 && (
           <div className="shrink-0 p-4">
-            <div className="relative mx-auto max-w-3xl">
+            <div className="relative w-full max-w-none">
               {filePreview && (
                 <div className="absolute bottom-full left-0 z-10 mb-3 flex max-w-[calc(100%-2rem)] items-start gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-800">
                   <img
