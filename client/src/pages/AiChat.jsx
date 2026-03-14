@@ -823,7 +823,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                         className={`max-w-full break-words leading-relaxed ${
                           msg.role === "user"
                             ? "rounded-2xl rounded-tr-sm bg-white px-4 py-3 text-sm text-gray-800 dark:bg-slate-800/80 dark:text-gray-100 sm:px-5 sm:text-[15px]"
-                            : "w-full bg-transparent px-0 py-0 text-base text-slate-800 dark:text-slate-100 whitespace-pre-wrap [overflow-wrap:anywhere]"
+                            : "w-full rounded-2xl rounded-tl-sm border border-slate-200 bg-white/90 px-3 py-3 text-base text-slate-800 whitespace-pre-wrap [overflow-wrap:anywhere] dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-100 sm:bg-transparent sm:border-0 sm:px-0 sm:py-0"
                         }`}
                       >
                         {msg.image && (
@@ -923,8 +923,8 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
 
         {/* Input Area */}
         {messages.length > 0 && (
-          <div className="shrink-0 p-4">
-            <div className="relative mx-auto max-w-3xl">
+          <div className={`shrink-0 ${isMobile ? "h-[20vh] min-h-[140px] p-0" : "p-4"}`}>
+            <div className={`relative ${isMobile ? "h-full w-full" : "mx-auto max-w-3xl"}`}>
               {filePreview && (
                 <div className="absolute bottom-full left-0 z-10 mb-3 flex max-w-[calc(100%-2rem)] items-start gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-800">
                   <img
@@ -941,7 +941,13 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                 </div>
               )}
 
-              <div className="flex items-end gap-2 rounded-full border border-slate-200/70 bg-slate-100/50 p-2 backdrop-blur-md dark:border-slate-700/80 dark:bg-slate-800/80 focus-within:ring-4 focus-within:ring-blue-500/10">
+              <div
+                className={`flex items-end gap-2 border-slate-200/70 bg-slate-100/50 backdrop-blur-md dark:border-slate-700/80 dark:bg-slate-800/80 focus-within:ring-4 focus-within:ring-blue-500/10 ${
+                  isMobile
+                    ? "h-full rounded-t-3xl rounded-b-none border-x border-t border-b-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3"
+                    : "rounded-full p-2 border"
+                }`}
+              >
                 <input
                   type="file"
                   ref={fileInputRef}
