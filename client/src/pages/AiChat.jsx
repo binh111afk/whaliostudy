@@ -637,7 +637,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
         {/* Messages (only scrollable area) */}
         <div
           ref={chatContainerRef}
-          className="relative flex-1 overflow-y-auto bg-gray-50 px-3 pt-3 pb-4 dark:bg-gray-900 sm:px-4 sm:pt-4"
+          className="relative flex-1 overflow-y-auto overflow-x-hidden bg-gray-50 px-3 pt-3 pb-4 dark:bg-gray-900 sm:px-4 sm:pt-4"
         >
           <AnimatePresence mode="wait">
             {messages.length === 0 ? (
@@ -696,7 +696,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                       </div>
                     )}
 
-                    <div className="flex items-end gap-2 rounded-3xl border border-slate-200 bg-white/95 p-2.5 shadow-[0_10px_40px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-[#1e1e1e] dark:shadow-[0_10px_40px_rgba(0,0,0,0.35)]">
+                    <div className="rounded-3xl bg-[#f0f4f9] p-4 shadow-[0_10px_30px_rgba(15,23,42,0.08)] dark:bg-slate-800/80">
                       <input
                         type="file"
                         ref={fileInputRef}
@@ -704,15 +704,6 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                         className="hidden"
                         accept="image/*"
                       />
-
-                      <Tooltip text="Thêm tệp">
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/30 dark:hover:text-blue-200"
-                        >
-                          {selectedFile ? <IconImage className="h-5 w-5" /> : <IconAttach className="h-5 w-5" />}
-                        </button>
-                      </Tooltip>
 
                       <textarea
                         ref={textareaRef}
@@ -725,20 +716,29 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                           }
                         }}
                         placeholder="Hỏi Whalio..."
-                        className="min-h-[44px] max-h-[120px] min-w-0 flex-1 resize-none border-none bg-transparent py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-500 dark:text-slate-100 dark:placeholder:text-slate-400 sm:text-base"
+                        className="min-h-[48px] max-h-[180px] w-full resize-none border-none bg-transparent px-0 py-0 text-sm text-slate-800 outline-none placeholder:text-slate-500 transition-[height] duration-200 ease-out dark:text-slate-100 dark:placeholder:text-slate-400 sm:text-base"
                         rows={1}
                         onInput={(e) => handleTextareaResize(e.target)}
                       />
 
-                      <div className="flex items-center pr-1">
+                      <div className="mt-3 flex items-center justify-between">
+                        <Tooltip text="Thêm tệp">
+                          <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex h-10 w-10 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-white/80 hover:text-blue-700 dark:text-blue-300 dark:hover:bg-slate-700/70 dark:hover:text-blue-200"
+                          >
+                            {selectedFile ? <IconImage className="h-5 w-5" /> : <IconAttach className="h-5 w-5" />}
+                          </button>
+                        </Tooltip>
+
                         <Tooltip text="Gửi">
                           <button
                             onClick={handleSend}
                             disabled={(!input.trim() && !selectedFile) || isLoading}
-                            className={`flex h-9 w-9 items-center justify-center rounded-full transition-all ${
+                            className={`flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200 ${
                               (input.trim() || selectedFile) && !isLoading
-                                ? "bg-blue-50 border border-blue-200 text-blue-600 shadow-sm hover:bg-blue-100 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/50"
-                                : "bg-slate-100 border border-slate-200 text-slate-400 dark:bg-slate-700/80 dark:border-slate-600 dark:text-slate-500"
+                                ? "bg-blue-600 text-white shadow-md hover:bg-blue-700 scale-100"
+                                : "bg-white/70 text-slate-400 dark:bg-slate-700/70 dark:text-slate-500 scale-95"
                             }`}
                             aria-label="Gửi"
                           >
@@ -774,7 +774,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
             ) : (
               <motion.div
                 key="chat-content"
-                className="space-y-5 sm:space-y-8"
+                className="space-y-5 overflow-x-hidden sm:space-y-8"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -783,7 +783,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`mx-auto flex w-full gap-2 sm:max-w-4xl sm:gap-4 ${
+                    className={`mx-auto flex w-full gap-2 overflow-x-hidden sm:max-w-4xl sm:gap-4 ${
                       msg.role === "user" ? "flex-row-reverse" : ""
                     }`}
                   >
@@ -823,7 +823,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                         className={`max-w-full break-words leading-relaxed ${
                           msg.role === "user"
                             ? "rounded-2xl rounded-tr-sm bg-white px-4 py-3 text-sm text-gray-800 dark:bg-slate-800/80 dark:text-gray-100 sm:px-5 sm:text-[15px]"
-                            : "w-full rounded-2xl rounded-tl-sm border border-slate-200 bg-white/90 px-3 py-3 text-base text-slate-800 whitespace-pre-wrap [overflow-wrap:anywhere] dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-100 sm:bg-transparent sm:border-0 sm:px-0 sm:py-0"
+                            : "w-full rounded-2xl rounded-tl-sm border border-slate-300 bg-white px-3 py-3 text-base text-slate-800 shadow-sm whitespace-pre-wrap [overflow-wrap:anywhere] dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-100 sm:bg-transparent sm:border-0 sm:shadow-none sm:px-0 sm:py-0"
                         }`}
                       >
                         {msg.image && (
@@ -923,8 +923,8 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
 
         {/* Input Area */}
         {messages.length > 0 && (
-          <div className={`shrink-0 ${isMobile ? "h-[20vh] min-h-[140px] p-0" : "p-4"}`}>
-            <div className={`relative ${isMobile ? "h-full w-full" : "mx-auto max-w-3xl"}`}>
+          <div className="shrink-0 p-4">
+            <div className="relative mx-auto max-w-3xl">
               {filePreview && (
                 <div className="absolute bottom-full left-0 z-10 mb-3 flex max-w-[calc(100%-2rem)] items-start gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-800">
                   <img
@@ -941,13 +941,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                 </div>
               )}
 
-              <div
-                className={`flex items-end gap-2 border-slate-200/70 bg-slate-100/50 backdrop-blur-md dark:border-slate-700/80 dark:bg-slate-800/80 focus-within:ring-4 focus-within:ring-blue-500/10 ${
-                  isMobile
-                    ? "h-full rounded-t-3xl rounded-b-none border-x border-t border-b-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3"
-                    : "rounded-full p-2 border"
-                }`}
-              >
+              <div className="rounded-3xl bg-[#f0f4f9] p-4 shadow-sm dark:bg-slate-800/80">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -955,19 +949,6 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                   className="hidden"
                   accept="image/*"
                 />
-
-                <Tooltip text="Gửi ảnh">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors cursor-pointer ${
-                      selectedFile
-                        ? "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300"
-                        : "text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/30 dark:hover:text-blue-200"
-                    }`}
-                  >
-                    {selectedFile ? <IconImage className="h-[18px] w-[18px]" /> : <IconAttach className="h-[18px] w-[18px]" />}
-                  </button>
-                </Tooltip>
 
                 <textarea
                   ref={textareaRef}
@@ -980,24 +961,39 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                     }
                   }}
                   placeholder="Hỏi Whalio bất kì điều gì ..."
-                  className="min-h-[44px] max-h-[120px] min-w-0 flex-1 resize-none border-none bg-transparent py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 transition-colors dark:text-slate-100 dark:placeholder:text-slate-400 sm:text-base"
+                  className="min-h-[48px] max-h-[180px] w-full resize-none border-none bg-transparent px-0 py-0 text-sm text-slate-800 outline-none placeholder:text-slate-500 transition-[height] duration-200 ease-out dark:text-slate-100 dark:placeholder:text-slate-400 sm:text-base"
                   rows={1}
                   onInput={(e) => handleTextareaResize(e.target)}
                 />
 
-                <Tooltip text="Gửi">
-                  <button
-                    onClick={handleSend}
-                    disabled={(!input.trim() && !selectedFile) || isLoading}
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all cursor-pointer ${
-                      (input.trim() || selectedFile) && !isLoading
-                        ? "bg-blue-50 border border-blue-200 text-blue-600 shadow-sm hover:bg-blue-100 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/50"
-                        : "cursor-not-allowed bg-slate-100 border border-slate-200 text-slate-400 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-500"
-                    }`}
-                  >
-                    <IconSend className="h-4 w-4" />
-                  </button>
-                </Tooltip>
+                <div className="mt-3 flex items-center justify-between">
+                  <Tooltip text="Gửi ảnh">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors cursor-pointer ${
+                        selectedFile
+                          ? "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300"
+                          : "text-blue-600 hover:bg-white/80 hover:text-blue-700 dark:text-blue-300 dark:hover:bg-slate-700/70 dark:hover:text-blue-200"
+                      }`}
+                    >
+                      {selectedFile ? <IconImage className="h-[18px] w-[18px]" /> : <IconAttach className="h-[18px] w-[18px]" />}
+                    </button>
+                  </Tooltip>
+
+                  <Tooltip text="Gửi">
+                    <button
+                      onClick={handleSend}
+                      disabled={(!input.trim() && !selectedFile) || isLoading}
+                      className={`flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200 cursor-pointer ${
+                        (input.trim() || selectedFile) && !isLoading
+                          ? "bg-blue-600 text-white shadow-md hover:bg-blue-700 scale-100"
+                          : "cursor-not-allowed bg-white/70 text-slate-400 dark:bg-slate-700 dark:text-slate-500 scale-95"
+                      }`}
+                    >
+                      <IconSend className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
+                </div>
               </div>
             </div>
           </div>
