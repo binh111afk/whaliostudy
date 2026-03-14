@@ -828,7 +828,7 @@ const Documents = () => {
                       key={doc.id}
                       className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all group flex flex-col h-full relative"
                     >
-                      {/* HEADER: Icon và Title + Badge (Đã sửa lỗi đè chữ) */}
+                      {/* HEADER: Icon + Title + Badge */}
                       <div className="flex items-start gap-4 mb-4">
                         {/* Icon File */}
                         <FileThumbnail
@@ -838,27 +838,20 @@ const Documents = () => {
 
                         {/* Content Right */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-start gap-2">
-                            {/* Tên file (Có thể xuống dòng) */}
-                            <div className="relative flex-1 min-w-0">
-                              <Tooltip text={doc.name}>
-                                <h4 className="pr-10 font-bold text-gray-800 dark:text-white text-sm line-clamp-2 leading-tight">
-                                  {doc.name}
-                                </h4>
-                              </Tooltip>
-                              <span
-                                aria-hidden="true"
-                                className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-white via-white/80 to-transparent dark:from-gray-800 dark:via-gray-800/80"
-                              />
-                            </div>
+                          <Tooltip text={doc.name}>
+                            <h4 className="font-bold text-gray-800 dark:text-white text-sm leading-tight line-clamp-2 break-words">
+                              {doc.name}
+                            </h4>
+                          </Tooltip>
 
-                            {/* Badge (Không dùng absolute nữa, dùng flex item để chiếm chỗ) */}
+                          {/* Badge đặt dưới tiêu đề */}
+                          <div className="mt-2">
                             {doc.visibility === "private" ? (
-                              <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 whitespace-nowrap">
                                 <Lock size={10} /> Riêng tư
                               </span>
                             ) : (
-                              <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 whitespace-nowrap">
                                 <Globe size={10} /> Công khai
                               </span>
                             )}

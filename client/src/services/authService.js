@@ -143,6 +143,7 @@ export const authService = {
             const response = await fetch(getFullApiUrl('/api/logout'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ username, clientContext })
             });
             return await response.json();

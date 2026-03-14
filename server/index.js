@@ -4149,24 +4149,61 @@ app.post('/api/logout', async (req, res) => {
         const resolvedCountry = clientCountry || user.lastCountry || country;
         const resolvedCity = clientCity || user.lastCity || city;
 
-        await UserActivityLog.create({
-            userId: user._id,
-            username: user.username,
-            action: 'logout',
-            description: 'Đăng xuất',
-            ip: clientIP,
-            device: device,
-            userAgent: userAgent,
-            metadata: {
-                lastCountry: resolvedCountry,
-                lastCity: resolvedCity
-            }
-        });
+      await UserActivityLog.create({
+          userId: user._id,
+          username: user.username,
+          action: 'logout',
+          description: 'Đăng xuất',
+          ip: clientIP,
+          device: device,
+          userAgent: userAgent,
+          metadata: {
+              lastCountry: resolvedCountry,
+              lastCity: resolvedCity
+          }
+      });
 
-        return res.json({
-            success: true,
-            message: 'Đăng xuất thành công'
-        });
+      // Clear passport session if exists
+      if (typeof req.logout === 'function') {
+          try {
+              await new Promise((resolve, reject) => {
+                  req.logout((err) => {
+                      if (err) return reject(err);
+                      return resolve();
+                  });
+              });
+          } catch (error) {
+              console.warn('Logout session error:', error.message);
+          }
+      }
+
+      // Destroy express-session to invalidate server-side session
+      if (req.session) {
+          try {
+              await new Promise((resolve) => req.session.destroy(() => resolve()));
+          } catch (error) {
+              console.warn('Session destroy error:', error.message);
+          }
+      }
+
+      // Clear session cookie (support both custom and default names)
+      res.clearCookie('whalio.sid', {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+          path: '/'
+      });
+      res.clearCookie('connect.sid', {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+          path: '/'
+      });
+
+      return res.json({
+          success: true,
+          message: 'Đăng xuất thành công'
+      });
     } catch (err) {
         console.error('Logout log error:', err);
         return res.status(500).json({

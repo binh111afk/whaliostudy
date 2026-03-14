@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { NavLink } from "react-router-dom";
 import {
@@ -256,13 +257,13 @@ const Header = ({
         />
       )}
 
-      {user && isLogoutConfirmOpen && (
+      {user && isLogoutConfirmOpen && createPortal(
         <div
           className="fixed inset-0 z-[120] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setIsLogoutConfirmOpen(false)}
         >
           <div
-            className="w-[95vw] max-w-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 sm:p-7 self-end sm:self-auto"
+            className="w-[95vw] max-w-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl shadow-2xl p-5 sm:p-7"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-16 h-16 mx-auto rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50 flex items-center justify-center text-4xl mb-4">
@@ -295,7 +296,7 @@ const Header = ({
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 };
