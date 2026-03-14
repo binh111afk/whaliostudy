@@ -305,11 +305,8 @@ const GpaCalc = () => {
 
   // State for Layout
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
-
-  // Track unsaved changes
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [showUnsavedReminderDetails, setShowUnsavedReminderDetails] =
-    useState(true);
+  const semestersRef = useRef(semesters);
+  const targetGpaRef = useRef(targetGpa);
 
   // Load dữ liệu từ Server khi vào trang
   useEffect(() => {
@@ -330,14 +327,55 @@ const GpaCalc = () => {
     }
   }, []); // Chạy 1 lần khi mount
 
-  // Track unsaved changes whenever semesters or targetGpa changes
   useEffect(() => {
-    setHasUnsavedChanges(true);
+    semestersRef.current = semesters;
   }, [semesters, targetGpa]);
 
   useEffect(() => {
-    if (hasUnsavedChanges) setShowUnsavedReminderDetails(true);
-  }, [hasUnsavedChanges]);
+    targetGpaRef.current = targetGpa;
+  }, [targetGpa]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let hasSavedOnExit = false;
+
+    const saveOnExit = () => {
+      if (hasSavedOnExit) return;
+      hasSavedOnExit = true;
+
+      const payload = {
+        username: user.username,
+        semesters: semestersRef.current,
+        targetGpa: targetGpaRef.current,
+      };
+
+      const url = getFullApiUrl("/api/gpa");
+
+      if (navigator.sendBeacon) {
+        const blob = new Blob([JSON.stringify(payload)], {
+          type: "application/json",
+        });
+        navigator.sendBeacon(url, blob);
+        return;
+      }
+
+      fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        keepalive: true,
+      }).catch(() => {});
+    };
+
+    window.addEventListener("beforeunload", saveOnExit);
+    window.addEventListener("pagehide", saveOnExit);
+
+    return () => {
+      window.removeEventListener("beforeunload", saveOnExit);
+      window.removeEventListener("pagehide", saveOnExit);
+    };
+  }, [user]);
 
   // Hàm Lưu dữ liệu lên Server
   const handleSaveGPA = async () => {
@@ -374,7 +412,6 @@ const GpaCalc = () => {
 
       if (data.success) {
         toast.success("Đã lưu bảng điểm thành công!");
-        setHasUnsavedChanges(false); // Reset unsaved changes flag
       } else {
         toast.error("Lỗi: " + data.message);
       }
@@ -1815,39 +1852,6 @@ const GpaCalc = () => {
           window.location.reload();
         }}
       />
-
-      {/* Sticky Save Reminder - Floating Box */}
-      {hasUnsavedChanges && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 duration-300">
-          <div className="flex items-center gap-3 rounded-2xl border border-orange-200 bg-white p-4 shadow-2xl dark:border-orange-800/50 dark:bg-gray-800">
-            <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center shrink-0">
-              <AlertTriangle size={16} className="text-orange-600 dark:text-orange-400" />
-            </div>
-            {showUnsavedReminderDetails && (
-              <div>
-                <p className="text-sm font-bold text-gray-800 dark:text-white">
-                  Chưa lưu thay đổi
-                </p>
-                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                  Đừng quên lưu lại bạn nhé
-                </p>
-              </div>
-            )}
-            <button
-              onClick={() => setShowUnsavedReminderDetails((prev) => !prev)}
-              className="ml-1 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-              aria-label={showUnsavedReminderDetails ? "Thu gọn cảnh báo" : "Mở rộng cảnh báo"}
-            >
-              <ChevronDown
-                size={16}
-                className={`transition-transform duration-200 ${
-                  showUnsavedReminderDetails ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
