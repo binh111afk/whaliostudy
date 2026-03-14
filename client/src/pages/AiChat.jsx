@@ -679,7 +679,7 @@ const AiChat = ({ onFullscreenChange = () => {} }) => {
                     Chúng ta nên bắt đầu từ đâu nhỉ?
                   </h1>
 
-                  <div className="mt-8 w-[60%] max-w-3xl">
+                  <div className="mt-8 w-[80%] max-w-3xl sm:w-[60%]">
                     {filePreview && (
                       <div className="mb-3 flex max-w-[calc(100%-2rem)] items-start gap-2 rounded-xl border border-slate-700 bg-[#1e1e1e] p-2 shadow-lg">
                         <img
