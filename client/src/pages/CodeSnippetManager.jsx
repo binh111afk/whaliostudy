@@ -1545,10 +1545,6 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   }, [loadSnippets]);
 
   useEffect(() => {
-    onFullscreenChange(Boolean(selectedSnippet));
-  }, [selectedSnippet, onFullscreenChange]);
-
-  useEffect(() => {
     try {
       localStorage.setItem(CODE_EDITOR_THEME_STORAGE_KEY, editorTheme);
     } catch {
