@@ -982,8 +982,8 @@ const Profile = ({ user, onUpdateUser }) => {
                     className="pointer-events-none absolute left-2 right-2 rounded-2xl bg-blue-50/80"
                     initial={false}
                     animate={{
-                      y: liquidHighlight.y,
-                      height: liquidHighlight.height,
+                      y: liquidHighlight.y + 3,
+                      height: Math.max(0, liquidHighlight.height - 6),
                     }}
                     transition={{ type: "spring", stiffness: 320, damping: 26, mass: 0.6 }}
                   />
