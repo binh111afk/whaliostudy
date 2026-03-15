@@ -425,6 +425,23 @@ const SUBJECTS = [
   { id: "other", name: "Khác" },
 ];
 
+// --- SVG Folder Icons ---
+const FolderClosedSVG = ({ size = 72 }) => (
+  <svg width={size} height={size} viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" fill="none">
+    <path d="M853.333333 256H469.333333l-85.333333-85.333333H170.666667c-46.933333 0-85.333333 38.4-85.333334 85.333333v170.666667h853.333334v-85.333334c0-46.933333-38.4-85.333333-85.333334-85.333333z" fill="#FFA000"/>
+    <path d="M853.333333 256H170.666667c-46.933333 0-85.333333 38.4-85.333334 85.333333v426.666667c0 46.933333 38.4 85.333333 85.333334 85.333333h682.666666c46.933333 0 85.333333-38.4 85.333334-85.333333V341.333333c0-46.933333-38.4-85.333333-85.333334-85.333333z" fill="#FFCA28"/>
+  </svg>
+);
+
+const FolderOpenSVG = ({ size = 72 }) => (
+  <svg width={size} height={size} viewBox="0 0 491.52 491.52" xmlns="http://www.w3.org/2000/svg" fill="none">
+    <path style={{ fill: "#F6C358" }} d="M445.522,88.989h-259.23c-5.832,0-11.24-3.318-14.26-8.749l-13.88-24.957c-3.021-5.432-8.427-8.749-14.259-8.749H45.998c-9.208,0-16.671,8.126-16.671,18.15v362.151c0,10.024,7.463,18.15,16.671,18.15h399.523c9.207,0,16.671-8.126,16.671-18.15V107.14C462.192,97.116,454.728,88.989,445.522,88.989z"/>
+    <rect x="55.383" y="133.12" style={{ fill: "#EBF0F3" }} width="385.536" height="122.092"/>
+    <rect x="55.383" y="150.17" style={{ fill: "#FFFFFF" }} width="385.536" height="122.092"/>
+    <path style={{ fill: "#FCD462" }} d="M474.806,216.429H16.714c-10.557,0-17.956,8.348-16.541,18.538l27.158,195.639c1.107,7.974,9.46,14.379,18.667,14.379h399.523c9.207,0,17.56-6.405,18.667-14.379l27.158-195.639C492.761,224.777,485.362,216.429,474.806,216.429z"/>
+  </svg>
+);
+
 const Documents = () => {
   const navigate = useNavigate();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -446,6 +463,9 @@ const Documents = () => {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
+
+  // Folder state
+  const [selectedFolder, setSelectedFolder] = useState(null);
 
   // Modals
   const [isUploadModalOpen, setUploadModalOpen] = useState(false);
@@ -478,6 +498,7 @@ const Documents = () => {
   // Reset trang khi đổi chế độ xem
   useEffect(() => {
     setCurrentPage(1);
+    if (viewMode !== "folders") setSelectedFolder(null);
   }, [viewMode, searchTerm, filterSubject, filterType]);
 
   // --- FILTER LOGIC ---
@@ -507,6 +528,24 @@ const Documents = () => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  // --- FOLDER DOC COUNTS ---
+  const docCounts = useMemo(() => {
+    const counts = {};
+    const folderSubjects = SUBJECTS.filter((s) => s.id !== "all");
+    folderSubjects.forEach((s) => {
+      counts[s.id] =
+        s.id === "other"
+          ? documents.filter((d) => {
+              const knownIds = SUBJECTS.filter(
+                (x) => x.id !== "all" && x.id !== "other"
+              ).map((x) => String(x.id));
+              return !knownIds.includes(String(d.course));
+            }).length
+          : documents.filter((d) => String(d.course) === String(s.id)).length;
+    });
+    return counts;
+  }, [documents]);
 
   // --- STATS ---
   const stats = useMemo(() => {
@@ -759,6 +798,23 @@ const Documents = () => {
                 {viewMode === "all" && <Check size={16} />}
               </button>
               <button
+                onClick={() => { setViewMode("folders"); setSelectedFolder(null); }}
+                className={`w-full flex items-center justify-between p-3 rounded-lg text-sm font-medium transition-colors ${
+                  viewMode === "folders"
+                    ? "bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <svg width={18} height={18} viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" fill="none">
+                    <path d="M853.333333 256H469.333333l-85.333333-85.333333H170.666667c-46.933333 0-85.333333 38.4-85.333334 85.333333v170.666667h853.333334v-85.333334c0-46.933333-38.4-85.333333-85.333334-85.333333z" fill="#FFA000"/>
+                    <path d="M853.333333 256H170.666667c-46.933333 0-85.333333 38.4-85.333334 85.333333v426.666667c0 46.933333 38.4 85.333333 85.333334 85.333333h682.666666c46.933333 0 85.333333-38.4 85.333334-85.333333V341.333333c0-46.933333-38.4-85.333333-85.333334-85.333333z" fill="#FFCA28"/>
+                  </svg>
+                  Thư mục tài liệu
+                </span>
+                {viewMode === "folders" && <Check size={16} />}
+              </button>
+              <button
                 onClick={() => setViewMode("saved")}
                 className={`w-full flex items-center justify-between p-3 rounded-lg text-sm font-medium transition-colors ${
                   viewMode === "saved"
@@ -781,9 +837,31 @@ const Documents = () => {
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
               {viewMode === "saved" ? (
                 <>
-                  <Star className="text-orange-500 fill-orange-500" /> Tài liệu
-                  đã lưu
+                  <Star className="text-orange-500 fill-orange-500" /> Tài liệu đã lưu
                 </>
+              ) : viewMode === "folders" ? (
+                selectedFolder ? (
+                  <span className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedFolder(null)}
+                      className="text-sm font-medium text-yellow-600 dark:text-yellow-400 hover:underline flex items-center gap-1"
+                    >
+                      <ChevronLeft size={18} /> Thư mục tài liệu
+                    </button>
+                    <span className="text-gray-300 dark:text-gray-600">/</span>
+                    <span className="text-slate-800 dark:text-white">
+                      {SUBJECTS.find((s) => s.id == selectedFolder)?.name || "Khác"}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <svg width={28} height={28} viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" fill="none">
+                      <path d="M853.333333 256H469.333333l-85.333333-85.333333H170.666667c-46.933333 0-85.333333 38.4-85.333334 85.333333v170.666667h853.333334v-85.333334c0-46.933333-38.4-85.333333-85.333334-85.333333z" fill="#FFA000"/>
+                      <path d="M853.333333 256H170.666667c-46.933333 0-85.333333 38.4-85.333334 85.333333v426.666667c0 46.933333 38.4 85.333333 85.333334 85.333333h682.666666c46.933333 0 85.333333-38.4 85.333334-85.333333V341.333333c0-46.933333-38.4-85.333333-85.333334-85.333333z" fill="#FFCA28"/>
+                    </svg>
+                    Thư mục tài liệu
+                  </span>
+                )
               ) : (
                 "Kho tài liệu"
               )}
@@ -796,7 +874,156 @@ const Documents = () => {
             </button>
           </div>
 
-          {isLoading ? (
+          {viewMode === "folders" && !selectedFolder ? (
+            /* ===================== FOLDER GRID VIEW ===================== */
+            isLoading ? (
+              <div className="text-center py-20 text-gray-400">Đang tải...</div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-5 animate-fade-in-up">
+                {SUBJECTS.filter((s) => s.id !== "all").map((subject) => {
+                  const count = docCounts[subject.id] ?? 0;
+                  return (
+                    <button
+                      key={subject.id}
+                      onClick={() => setSelectedFolder(subject.id)}
+                      className="group bg-white/50 dark:bg-gray-800/60 backdrop-blur-md border border-gray-100 dark:border-gray-700 rounded-3xl p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col items-center gap-3 text-left w-full"
+                    >
+                      <div className="transition-transform duration-200 group-hover:scale-110">
+                        {count > 0 ? <FolderOpenSVG size={72} /> : <FolderClosedSVG size={72} />}
+                      </div>
+                      <div className="w-full text-center">
+                        <p className="font-semibold text-slate-800 dark:text-white text-sm leading-snug line-clamp-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                          {subject.name}
+                        </p>
+                        <p className="text-sm text-slate-400 dark:text-slate-500 mt-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                          {count} tài liệu
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )
+          ) : viewMode === "folders" && selectedFolder ? (
+            /* ===================== FOLDER DETAIL VIEW ===================== */
+            (() => {
+              const knownIds = SUBJECTS.filter(
+                (x) => x.id !== "all" && x.id !== "other"
+              ).map((x) => String(x.id));
+              const folderDocs = documents.filter((doc) => {
+                if (selectedFolder === "other") {
+                  return !knownIds.includes(String(doc.course));
+                }
+                return String(doc.course) === String(selectedFolder);
+              });
+              return folderDocs.length === 0 ? (
+                <div className="text-center py-20 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-600">
+                  <p className="text-gray-500 dark:text-gray-400">Thư mục này chưa có tài liệu nào.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in-up">
+                  {folderDocs.map((doc) => {
+                    const isAdmin = currentUser?.role === "admin";
+                    const isOwner =
+                      currentUser &&
+                      (doc.uploaderUsername === currentUser.username ||
+                        doc.uploader === currentUser.fullName);
+                    const canAction = isAdmin || isOwner;
+                    const isSaved = currentUser?.savedDocs?.includes(doc.id);
+                    const subjectName =
+                      SUBJECTS.find((s) => s.id == doc.course)?.name || "Khác";
+                    return (
+                      <div
+                        key={doc.id}
+                        className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all group flex flex-col h-full relative"
+                      >
+                        <div className="flex items-start gap-4 mb-4">
+                          <FileThumbnail type={doc.type || doc.path.split(".").pop()} size="md" />
+                          <div className="flex-1 min-w-0">
+                            <Tooltip text={doc.name}>
+                              <h4 className="font-bold text-gray-800 dark:text-white text-sm leading-tight line-clamp-2 break-words">
+                                {doc.name}
+                              </h4>
+                            </Tooltip>
+                            <div className="mt-2">
+                              {doc.visibility === "private" ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                                  <Lock size={10} /> Riêng tư
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 whitespace-nowrap">
+                                  <Globe size={10} /> Công khai
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400 mb-6 flex-1">
+                          <div className="flex justify-between">
+                            <span>Người tải:</span>
+                            <span className="font-medium text-gray-700 dark:text-gray-300 truncate ml-2">{doc.uploader || "Ẩn danh"}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Môn:</span>
+                            <Tooltip text={subjectName}>
+                              <span className="font-medium text-gray-700 dark:text-gray-300 truncate max-w-[120px]">{subjectName}</span>
+                            </Tooltip>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Ngày:</span>
+                            <span className="font-medium text-gray-700 dark:text-gray-300">{new Date(doc.createdAt).toLocaleDateString("vi-VN")}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Kích cỡ:</span>
+                            <span className="font-medium text-gray-700 dark:text-gray-300">{(doc.size / 1024 / 1024).toFixed(2)} MB</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
+                          <Tooltip text="Xem">
+                            <button onClick={() => handleView(doc)} className="p-2 text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                              <Eye size={18} />
+                            </button>
+                          </Tooltip>
+                          <Tooltip text="Lưu">
+                            <button
+                              onClick={() => handleToggleSave(doc.id)}
+                              className={`p-2 rounded-lg transition-colors ${
+                                isSaved
+                                  ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30"
+                                  : "text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                              }`}
+                            >
+                              <Bookmark size={18} fill={isSaved ? "currentColor" : "none"} />
+                            </button>
+                          </Tooltip>
+                          {canAction && (
+                            <>
+                              <Tooltip text="Sửa">
+                                <button
+                                  onClick={() => { setDocToEdit(doc); setEditModalOpen(true); }}
+                                  className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                                >
+                                  <Edit3 size={18} />
+                                </button>
+                              </Tooltip>
+                              <Tooltip text="Xóa">
+                                <button
+                                  onClick={() => handleDelete(doc.id)}
+                                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </Tooltip>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()
+          ) : isLoading ? (
             <div className="text-center py-20 text-gray-400">Đang tải...</div>
           ) : filteredDocs.length === 0 ? (
             <div className="text-center py-20 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-600">

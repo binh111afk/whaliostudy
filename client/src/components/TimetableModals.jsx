@@ -83,7 +83,7 @@ export const ClassModal = ({ isOpen, onClose, onSubmit, initialData }) => {
         {/* --- HEADER --- */}
         <div className="p-4 border-b border-gray-100 bg-gray-50/80 flex justify-between items-center shrink-0">
             <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-xl shadow-sm ${initialData ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
+                <div className={`p-2.5 rounded-xl shadow-sm ${initialData ? 'bg-blue-100 text-blue-600' : 'bg-blue-100 text-blue-600'}`}>
                     {initialData ? <Edit3 size={22}/> : <Plus size={22}/>}
                 </div>
                 <div>
@@ -182,7 +182,7 @@ export const ClassModal = ({ isOpen, onClose, onSubmit, initialData }) => {
         <div className="p-4 border-t border-gray-100 bg-white shrink-0">
             <button 
                 onClick={handleSubmit} 
-                className={`w-full py-3.5 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.98] text-base ${initialData ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200' : 'bg-green-600 hover:bg-green-700 shadow-green-200'}`}
+                className={`w-full py-3.5 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.98] text-base ${initialData ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'}`}
             >
                 <Save size={20}/> {initialData ? 'Lưu Thay Đổi' : 'Hoàn Tất Thêm Môn'}
             </button>

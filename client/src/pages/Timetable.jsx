@@ -12,6 +12,7 @@ import {
 import { ClassModal, NotesModal } from "../components/TimetableModals";
 import LoadingOverlay from "../components/LoadingOverlay";
 import Tooltip from "../components/Tooltip";
+import { AnimatePresence, motion } from "framer-motion";
 
 import {
   Plus,
@@ -25,6 +26,8 @@ import {
   Edit3,
   ClipboardList,
   Building,
+  ArrowRight,
+  X,
 } from "lucide-react";
 
 const isMobileViewport = () =>
@@ -632,55 +635,85 @@ const Timetable = () => {
       </div>
 
       {/* --- IMPORT MODAL --- */}
-      {isImportModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="font-bold text-xl mb-4 text-gray-800 dark:text-white">
-              Nhập từ Excel
-            </h3>
-
-            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center mb-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer relative group bg-gray-50/50 dark:bg-gray-700/50">
-              <input
-                type="file"
-                accept=".xlsx, .xls"
-                onChange={handleFileUpload}
-                className="absolute inset-0 opacity-0 cursor-pointer z-10"
-              />
-              <div className="group-hover:scale-110 transition-transform duration-200">
-                <Upload className="mx-auto text-blue-500 mb-3" size={48} />
-              </div>
-              <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
-                Nhấn để tải lên file Excel
-              </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                Hỗ trợ định dạng .xlsx, .xls
-              </p>
-            </div>
-
-            {/* 👇 ĐÃ THÊM LẠI LINK HỖ TRỢ Ở ĐÂY */}
-            <div className="text-center mb-6 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
-              <p className="text-xs text-blue-800 dark:text-blue-300 mb-1 font-medium">
-                Chưa có file Excel?
-              </p>
-              <a
-                href="https://products.aspose.app/cells/conversion/image-to-excel"
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center justify-center gap-1"
-              >
-                👉 Chuyển ảnh TKB sang Excel miễn phí
-              </a>
-            </div>
-
-            <button
-              onClick={() => setImportModalOpen(false)}
-              className="w-full py-3 bg-gray-100 dark:bg-gray-700 rounded-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+      <AnimatePresence>
+        {isImportModalOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              initial={{ y: 36, opacity: 0, scale: 0.97 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 24, opacity: 0, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 360, damping: 28 }}
+              className="relative w-full max-w-md overflow-hidden rounded-[2.5rem] border border-white/60 bg-white/90 p-6 shadow-2xl shadow-blue-500/10 backdrop-blur-xl"
             >
-              Đóng
-            </button>
-          </div>
-        </div>
-      )}
+              <button
+                onClick={() => setImportModalOpen(false)}
+                className="absolute right-5 top-5 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Đóng"
+              >
+                <X size={18} strokeWidth={1.6} />
+              </button>
+
+              <h3
+                className="mb-5 pr-10 text-2xl font-bold text-slate-900"
+                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              >
+                Nhập từ Excel
+              </h3>
+
+              <div className="relative mb-5 cursor-pointer rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-8 text-center transition-all duration-200 hover:border-blue-500 hover:bg-blue-50/50 group">
+                <input
+                  type="file"
+                  accept=".xlsx, .xls"
+                  onChange={handleFileUpload}
+                  className="absolute inset-0 z-10 cursor-pointer opacity-0"
+                />
+                <Upload
+                  className="mx-auto mb-3 text-blue-500 transition-transform duration-200 group-hover:animate-bounce"
+                  size={46}
+                />
+                <p className="text-sm font-bold text-slate-700">
+                  Kéo thả file vào đây hoặc click để chọn
+                </p>
+                <p className="mt-1 text-xs text-slate-500">Hỗ trợ định dạng .xlsx, .xls</p>
+              </div>
+
+              <div className="mb-6 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/70 px-3 py-3 text-center">
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">1</div>
+                  <span className="text-[11px] font-semibold text-slate-600">Tải mẫu</span>
+                </div>
+                <ArrowRight size={14} className="text-slate-400" />
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">2</div>
+                  <span className="text-[11px] font-semibold text-slate-600">Điền thông tin</span>
+                </div>
+                <ArrowRight size={14} className="text-slate-400" />
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">3</div>
+                  <span className="text-[11px] font-semibold text-slate-600">Tải lên</span>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <a
+                  href="https://products.aspose.app/cells/conversion/image-to-excel"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center rounded-full bg-indigo-50 px-5 py-2.5 text-sm font-bold text-indigo-600 transition-colors hover:bg-indigo-100"
+                >
+                  Chuyển ảnh TKB sang Excel
+                </a>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* --- CREATE/EDIT CLASS MODAL --- */}
       <ClassModal
