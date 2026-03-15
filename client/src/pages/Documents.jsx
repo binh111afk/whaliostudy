@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { documentService } from "../services/documentService";
 import { UploadModal, EditDocModal } from "../components/DocumentModals";
 import AuthModal from "../components/AuthModal";
@@ -464,6 +465,7 @@ const Documents = () => {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
+  const folderItemsPerPage = 9;
 
   // Folder state
   const [selectedFolder, setSelectedFolder] = useState(null);
@@ -534,10 +536,10 @@ const Documents = () => {
     () => SUBJECTS.filter((s) => s.id !== "all"),
     []
   );
-  const folderTotalPages = Math.ceil(folderSubjects.length / itemsPerPage);
+  const folderTotalPages = Math.ceil(folderSubjects.length / folderItemsPerPage);
   const currentFolderSubjects = folderSubjects.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    (currentPage - 1) * folderItemsPerPage,
+    currentPage * folderItemsPerPage
   );
 
   // --- FOLDER DOC COUNTS ---
@@ -892,23 +894,47 @@ const Documents = () => {
                 {currentFolderSubjects.map((subject) => {
                   const count = docCounts[subject.id] ?? 0;
                   return (
-                    <button
+                    <motion.button
+                      initial="rest"
+                      whileHover="hover"
                       key={subject.id}
                       onClick={() => setSelectedFolder(subject.id)}
-                      className="group bg-white/50 dark:bg-gray-800/60 backdrop-blur-md border border-gray-100 dark:border-gray-700 rounded-3xl p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col items-center gap-3 text-left w-full"
+                      className="group relative bg-white/80 dark:bg-gray-800/70 backdrop-blur-xl rounded-[2.5rem] p-6 shadow-[0_10px_35px_rgba(15,23,42,0.06)] hover:shadow-[0_18px_40px_rgba(59,130,246,0.12)] transition-all duration-300 flex flex-col items-center justify-center gap-4 text-left w-full min-h-[220px]"
+                      variants={{
+                        rest: { y: 0 },
+                        hover: { y: -8 },
+                      }}
+                      transition={{ duration: 0.22, ease: "easeOut" }}
                     >
-                      <div className="transition-transform duration-200 group-hover:scale-110">
-                        {count > 0 ? <FolderOpenSVG size={72} /> : <FolderClosedSVG size={72} />}
+                      <div className="relative flex items-center justify-center w-full h-[92px]">
+                        <div className="absolute w-24 h-24 rounded-full bg-yellow-400/10 blur-xl" />
+                        <motion.div
+                          className={`${count === 0 ? "opacity-70" : "opacity-100"} relative z-10`}
+                          variants={{
+                            rest: { y: 0, scale: 1 },
+                            hover: {
+                              y: [0, -6, 0],
+                              scale: [1, 1.04, 1],
+                              transition: { duration: 0.55, ease: "easeInOut" },
+                            },
+                          }}
+                        >
+                          {count > 0 ? (
+                            <FolderOpenSVG size={76} />
+                          ) : (
+                            <FolderClosedSVG size={76} />
+                          )}
+                        </motion.div>
                       </div>
-                      <div className="w-full text-center">
-                        <p className="font-semibold text-slate-800 dark:text-white text-sm leading-snug line-clamp-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                      <div className="w-full text-center flex flex-col items-center gap-2">
+                        <p className="font-bold text-slate-800 dark:text-white text-sm leading-snug line-clamp-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                           {subject.name}
                         </p>
-                        <p className="text-sm text-slate-400 dark:text-slate-500 mt-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                        <span className="inline-flex items-center bg-slate-100 dark:bg-slate-700/70 text-slate-500 dark:text-slate-300 px-3 py-1 rounded-full text-xs font-medium" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                           {count} tài liệu
-                        </p>
+                        </span>
                       </div>
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
