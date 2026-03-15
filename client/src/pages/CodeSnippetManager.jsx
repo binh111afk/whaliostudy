@@ -2583,10 +2583,12 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   }, [popupSearchQuery]);
 
   useEffect(() => {
+    if (loading) return;
+
     if (mainPage > mainTotalPages) {
       goToMainPage(mainTotalPages, { scroll: false });
     }
-  }, [goToMainPage, mainPage, mainTotalPages]);
+  }, [goToMainPage, loading, mainPage, mainTotalPages]);
 
   useEffect(() => {
     setPopupPage((prev) => Math.min(prev, popupTotalPages));
