@@ -5844,6 +5844,7 @@ app.post('/api/delete-document', verifyToken, async (req, res) => {
         const { docId } = req.body;
         const username = req.user.username; // Lấy từ JWT token
         const userRole = req.user.role;
+        let storageWarning = '';
         
         const user = await User.findOne({ username }).select('fullName').lean();
         if (!user) {
@@ -5871,65 +5872,52 @@ app.post('/api/delete-document', verifyToken, async (req, res) => {
         if (storageSource === 'cloudinary') {
             const publicId = extractCloudinaryPublicIdFromUrl(fileUrl);
             if (!publicId) {
-                return res.status(500).json({
-                    success: false,
-                    message: 'Không thể xác định public_id để xóa trên Cloudinary.'
-                });
-            }
+                storageWarning = 'Không thể xác định public_id để xóa trên Cloudinary.';
+                console.warn(`⚠️ Delete warning for doc ${docId}: ${storageWarning}`);
+            } else {
+                try {
+                    const resourceType = detectCloudinaryResourceTypeFromUrl(fileUrl);
+                    const deleteResult = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
 
-            try {
-                const resourceType = detectCloudinaryResourceTypeFromUrl(fileUrl);
-                const deleteResult = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
-
-                if (!deleteResult || deleteResult.result !== 'ok') {
-                    return res.status(502).json({
-                        success: false,
-                        message: `Xóa file Cloudinary thất bại: ${deleteResult?.result || 'unknown error'}`
-                    });
+                    const cloudinaryResult = String(deleteResult?.result || '').toLowerCase();
+                    if (cloudinaryResult === 'ok' || cloudinaryResult === 'not found') {
+                        console.log(`✅ Deleted file from Cloudinary: ${publicId} (${resourceType}) -> ${cloudinaryResult}`);
+                    } else {
+                        storageWarning = `Xóa file Cloudinary trả về trạng thái: ${deleteResult?.result || 'unknown error'}`;
+                        console.warn(`⚠️ Delete warning for doc ${docId}: ${storageWarning}`);
+                    }
+                } catch (storageError) {
+                    storageWarning = `Xóa file Cloudinary thất bại: ${storageError?.message || 'unknown error'}`;
+                    console.warn(`⚠️ Delete warning for doc ${docId}: ${storageWarning}`);
                 }
-
-                console.log(`✅ Deleted file from Cloudinary: ${publicId} (${resourceType})`);
-            } catch (storageError) {
-                return res.status(502).json({
-                    success: false,
-                    message: `Xóa file Cloudinary thất bại: ${storageError?.message || 'unknown error'}`
-                });
             }
         } else if (storageSource === 'supabase') {
             if (!supabase || !SUPABASE_BUCKET_NAME) {
-                return res.status(500).json({
-                    success: false,
-                    message: 'Supabase chưa được cấu hình trên server.'
-                });
-            }
+                storageWarning = 'Supabase chưa được cấu hình trên server.';
+                console.warn(`⚠️ Delete warning for doc ${docId}: ${storageWarning}`);
+            } else {
+                const objectPath = extractSupabaseObjectPathFromPublicUrl(fileUrl);
+                if (!objectPath) {
+                    storageWarning = 'Không thể tách đường dẫn file Supabase để xóa.';
+                    console.warn(`⚠️ Delete warning for doc ${docId}: ${storageWarning}`);
+                } else {
+                    try {
+                        const { error: removeError } = await supabase
+                            .storage
+                            .from(SUPABASE_BUCKET_NAME)
+                            .remove([objectPath]);
 
-            const objectPath = extractSupabaseObjectPathFromPublicUrl(fileUrl);
-            if (!objectPath) {
-                return res.status(500).json({
-                    success: false,
-                    message: 'Không thể tách đường dẫn file Supabase để xóa.'
-                });
-            }
-
-            try {
-                const { error: removeError } = await supabase
-                    .storage
-                    .from(SUPABASE_BUCKET_NAME)
-                    .remove([objectPath]);
-
-                if (removeError) {
-                    return res.status(502).json({
-                        success: false,
-                        message: `Xóa file Supabase thất bại: ${removeError.message || 'unknown error'}`
-                    });
+                        if (removeError) {
+                            storageWarning = `Xóa file Supabase thất bại: ${removeError.message || 'unknown error'}`;
+                            console.warn(`⚠️ Delete warning for doc ${docId}: ${storageWarning}`);
+                        } else {
+                            console.log(`✅ Deleted file from Supabase: ${objectPath}`);
+                        }
+                    } catch (storageError) {
+                        storageWarning = `Xóa file Supabase thất bại: ${storageError?.message || 'unknown error'}`;
+                        console.warn(`⚠️ Delete warning for doc ${docId}: ${storageWarning}`);
+                    }
                 }
-
-                console.log(`✅ Deleted file from Supabase: ${objectPath}`);
-            } catch (storageError) {
-                return res.status(502).json({
-                    success: false,
-                    message: `Xóa file Supabase thất bại: ${storageError?.message || 'unknown error'}`
-                });
             }
         } else {
             return res.status(400).json({
@@ -5940,6 +5928,14 @@ app.post('/api/delete-document', verifyToken, async (req, res) => {
 
         await Document.findByIdAndDelete(docId);
         void logActivity(username, 'đã xóa tài liệu', doc.name, '#', 'delete', req);
+
+        if (storageWarning) {
+            return res.json({
+                success: true,
+                message: "Đã xóa tài liệu trong hệ thống. File lưu trữ có thể đã bị thiếu hoặc đã xóa trước đó.",
+                storageWarning
+            });
+        }
 
         res.json({ success: true, message: "Đã xóa tài liệu vĩnh viễn!" });
     } catch (err) {

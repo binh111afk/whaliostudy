@@ -1,5 +1,14 @@
 import { getFullApiUrl } from '../config/apiConfig';
 
+const getAuthHeader = () => {
+  const token =
+    localStorage.getItem('token') ||
+    localStorage.getItem('adminToken') ||
+    localStorage.getItem('accessToken');
+
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 export const documentService = {
     // Lấy danh sách tài liệu
     async getDocuments() {
@@ -34,7 +43,10 @@ export const documentService = {
     async updateDocument(data) {
       const res = await fetch(getFullApiUrl('/api/update-document'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader()
+        },
         body: JSON.stringify(data)
       });
       return await res.json();
@@ -42,12 +54,30 @@ export const documentService = {
   
     // Xóa tài liệu
     async deleteDocument(docId, username) {
-      const res = await fetch(getFullApiUrl('/api/delete-document'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ docId, username })
-      });
-      return await res.json();
+      try {
+        const res = await fetch(getFullApiUrl('/api/delete-document'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeader()
+          },
+          body: JSON.stringify({ docId, username })
+        });
+
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          return await res.json();
+        }
+
+        const text = await res.text();
+        return {
+          success: false,
+          message: text || `Xóa tài liệu thất bại (HTTP ${res.status})`
+        };
+      } catch (error) {
+        console.error('Delete document error:', error);
+        return { success: false, message: 'Lỗi kết nối server' };
+      }
     },
   
     // Lưu / Bỏ lưu
