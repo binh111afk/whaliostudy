@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { documentService } from "../services/documentService";
 import { UploadModal, EditDocModal } from "../components/DocumentModals";
 import AuthModal from "../components/AuthModal";
@@ -445,6 +445,7 @@ const FolderOpenSVG = ({ size = 72 }) => (
 );
 
 const Documents = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -458,7 +459,10 @@ const Documents = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Filters & View Mode
-  const [viewMode, setViewMode] = useState("all");
+  const viewModeParam = String(searchParams.get("view") || "all").trim();
+  const viewMode = ["all", "folders", "saved"].includes(viewModeParam)
+    ? viewModeParam
+    : "all";
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSubject, setFilterSubject] = useState("all");
   const [filterType, setFilterType] = useState("all");
@@ -476,6 +480,30 @@ const Documents = () => {
   // Folder state
   const [selectedFolder, setSelectedFolder] = useState(null);
   const hasInitializedPaginationRef = useRef(false);
+  const previousFiltersRef = useRef({
+    searchTerm: "",
+    filterSubject: "all",
+    filterType: "all",
+  });
+
+  const setViewMode = (nextViewMode) => {
+    const normalizedView = ["all", "folders", "saved"].includes(nextViewMode)
+      ? nextViewMode
+      : "all";
+
+    setSearchParams(
+      (prevParams) => {
+        const nextParams = new URLSearchParams(prevParams);
+        if (normalizedView === "all") {
+          nextParams.delete("view");
+        } else {
+          nextParams.set("view", normalizedView);
+        }
+        return nextParams;
+      },
+      { replace: true }
+    );
+  };
 
   // Modals
   const [isUploadModalOpen, setUploadModalOpen] = useState(false);
@@ -513,8 +541,19 @@ const Documents = () => {
   useEffect(() => {
     if (!hasInitializedPaginationRef.current) {
       hasInitializedPaginationRef.current = true;
+      previousFiltersRef.current = { searchTerm, filterSubject, filterType };
       return;
     }
+
+    const previousFilters = previousFiltersRef.current;
+    const hasFiltersChanged =
+      previousFilters.searchTerm !== searchTerm ||
+      previousFilters.filterSubject !== filterSubject ||
+      previousFilters.filterType !== filterType;
+
+    previousFiltersRef.current = { searchTerm, filterSubject, filterType };
+
+    if (!hasFiltersChanged) return;
 
     if (viewMode === "saved") {
       goToSavedPage(1, { scroll: false });
@@ -524,7 +563,14 @@ const Documents = () => {
     if (viewMode === "all") {
       goToDocsPage(1, { scroll: false });
     }
-  }, [filterSubject, filterType, goToDocsPage, goToSavedPage, searchTerm, viewMode]);
+  }, [
+    filterSubject,
+    filterType,
+    goToDocsPage,
+    goToSavedPage,
+    searchTerm,
+    viewMode,
+  ]);
 
   // --- FILTER LOGIC ---
   const filteredDocs = useMemo(() => {
@@ -570,6 +616,7 @@ const Documents = () => {
 
   useEffect(() => {
     if (viewMode === "folders") return;
+    if (isLoading) return;
 
     if (viewMode === "saved" && currentSavedPage > totalPages) {
       goToSavedPage(totalPages, { scroll: false });
@@ -584,6 +631,7 @@ const Documents = () => {
     currentSavedPage,
     goToDocsPage,
     goToSavedPage,
+    isLoading,
     totalPages,
     viewMode,
   ]);
