@@ -8512,6 +8512,15 @@ app.use((err, req, res, next) => {
     console.error(`Stack Trace: ${err.stack}`);
     console.error('='.repeat(60));
 
+    // 🌐 CRITICAL: Re-apply CORS headers on error responses so browser
+    // can read the JSON body instead of showing a generic CORS block.
+    const origin = req.headers.origin;
+    if (origin && isAllowedCorsOrigin(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Vary', 'Origin');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+
     // 🛡️ Trả về thông báo chung chung cho client
     if (req.path.startsWith('/api/')) {
         return res.status(err.status || 500).json({
