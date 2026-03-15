@@ -465,7 +465,7 @@ const Documents = () => {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
-  const folderItemsPerPage = 16;
+  const folderItemsPerPage = 18;
 
   // Folder state
   const [selectedFolder, setSelectedFolder] = useState(null);
