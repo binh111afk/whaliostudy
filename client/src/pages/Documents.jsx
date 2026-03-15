@@ -465,7 +465,7 @@ const Documents = () => {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
-  const folderItemsPerPage = 9;
+  const folderItemsPerPage = 16;
 
   // Folder state
   const [selectedFolder, setSelectedFolder] = useState(null);
@@ -890,51 +890,33 @@ const Documents = () => {
             isLoading ? (
               <div className="text-center py-20 text-gray-400">Đang tải...</div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-5 animate-fade-in-up">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in-up">
                 {currentFolderSubjects.map((subject) => {
                   const count = docCounts[subject.id] ?? 0;
                   return (
-                    <motion.button
-                      initial="rest"
-                      whileHover="hover"
+                    <button
                       key={subject.id}
                       onClick={() => setSelectedFolder(subject.id)}
-                      className="group relative bg-white/80 dark:bg-gray-800/70 backdrop-blur-xl rounded-[2.5rem] p-6 shadow-[0_10px_35px_rgba(15,23,42,0.06)] hover:shadow-[0_18px_40px_rgba(59,130,246,0.12)] transition-all duration-300 flex flex-col items-center justify-center gap-4 text-left w-full min-h-[220px]"
-                      variants={{
-                        rest: { y: 0 },
-                        hover: { y: -8 },
-                      }}
-                      transition={{ duration: 0.22, ease: "easeOut" }}
+                      className="group bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all flex flex-row items-center justify-center gap-4 w-full text-left"
                     >
-                      <div className="relative flex items-center justify-center w-full h-[92px]">
-                        <div className="absolute w-24 h-24 rounded-full bg-yellow-400/10 blur-xl" />
-                        <motion.div
-                          className={`${count === 0 ? "opacity-70" : "opacity-100"} relative z-10`}
-                          variants={{
-                            rest: { y: 0, scale: 1 },
-                            hover: {
-                              y: [0, -6, 0],
-                              scale: [1, 1.04, 1],
-                              transition: { duration: 0.55, ease: "easeInOut" },
-                            },
-                          }}
-                        >
-                          {count > 0 ? (
-                            <FolderOpenSVG size={76} />
-                          ) : (
-                            <FolderClosedSVG size={76} />
-                          )}
-                        </motion.div>
+                      {/* Icon block */}
+                      <div className={`shrink-0 flex items-center justify-center w-14 h-14 rounded-xl bg-yellow-50/80 dark:bg-yellow-900/20 transition-transform duration-200 group-hover:scale-105 ${count === 0 ? "opacity-60" : "opacity-100"}`}>
+                        {count > 0 ? <FolderOpenSVG size={44} /> : <FolderClosedSVG size={44} />}
                       </div>
-                      <div className="w-full text-center flex flex-col items-center gap-2">
-                        <p className="font-bold text-slate-800 dark:text-white text-sm leading-snug line-clamp-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+
+                      {/* Text block */}
+                      <div className="flex-1 min-w-0 flex flex-col gap-1">
+                        <p
+                          className="font-semibold text-slate-800 dark:text-white text-sm leading-snug line-clamp-2"
+                          style={{ fontFamily: "'Google Sans', 'Plus Jakarta Sans', sans-serif" }}
+                        >
                           {subject.name}
                         </p>
-                        <span className="inline-flex items-center bg-slate-100 dark:bg-slate-700/70 text-slate-500 dark:text-slate-300 px-3 py-1 rounded-full text-xs font-medium" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                        <span className="self-start bg-slate-100 dark:bg-slate-700/70 text-slate-500 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-medium">
                           {count} tài liệu
                         </span>
                       </div>
-                    </motion.button>
+                    </button>
                   );
                 })}
               </div>
