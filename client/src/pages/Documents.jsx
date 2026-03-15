@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { useLocation, useNavigate } from "react-router-dom";
 import { documentService } from "../services/documentService";
 import { UploadModal, EditDocModal } from "../components/DocumentModals";
 import AuthModal from "../components/AuthModal";
 import Tooltip from "../components/Tooltip";
+import { usePersistedPagination } from "../hooks/usePersistedPagination";
 import {
   Search,
   Upload,
@@ -445,6 +445,7 @@ const FolderOpenSVG = ({ size = 72 }) => (
 );
 
 const Documents = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   // 👇 THAY ĐỔI 1: Đưa user vào State để cập nhật không cần reload
@@ -463,12 +464,18 @@ const Documents = () => {
   const [filterType, setFilterType] = useState("all");
 
   // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
   const folderItemsPerPage = 18;
+  const { currentPage: currentDocsPage, goToPage: goToDocsPage } =
+    usePersistedPagination({ paramKey: "page" });
+  const { currentPage: currentSavedPage, goToPage: goToSavedPage } =
+    usePersistedPagination({ paramKey: "savedPage" });
+  const { currentPage: currentFolderPage, goToPage: goToFolderPage } =
+    usePersistedPagination({ paramKey: "folderPage" });
 
   // Folder state
   const [selectedFolder, setSelectedFolder] = useState(null);
+  const hasInitializedPaginationRef = useRef(false);
 
   // Modals
   const [isUploadModalOpen, setUploadModalOpen] = useState(false);
@@ -498,11 +505,26 @@ const Documents = () => {
     loadDocuments();
   }, []); // Chỉ chạy 1 lần khi mount, user thay đổi không cần load lại API documents
 
-  // Reset trang khi đổi chế độ xem
+  // Reset trạng thái thư mục khi rời tab folders
   useEffect(() => {
-    setCurrentPage(1);
     if (viewMode !== "folders") setSelectedFolder(null);
-  }, [viewMode, searchTerm, filterSubject, filterType]);
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (!hasInitializedPaginationRef.current) {
+      hasInitializedPaginationRef.current = true;
+      return;
+    }
+
+    if (viewMode === "saved") {
+      goToSavedPage(1, { scroll: false });
+      return;
+    }
+
+    if (viewMode === "all") {
+      goToDocsPage(1, { scroll: false });
+    }
+  }, [filterSubject, filterType, goToDocsPage, goToSavedPage, searchTerm, viewMode]);
 
   // --- FILTER LOGIC ---
   const filteredDocs = useMemo(() => {
@@ -526,21 +548,51 @@ const Documents = () => {
   }, [documents, searchTerm, filterSubject, filterType, viewMode, currentUser]);
 
   // --- PAGINATION ---
-  const totalPages = Math.ceil(filteredDocs.length / itemsPerPage);
+  const activeLibraryPage = viewMode === "saved" ? currentSavedPage : currentDocsPage;
+  const totalPages = Math.max(1, Math.ceil(filteredDocs.length / itemsPerPage));
   const currentDocs = filteredDocs.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    (activeLibraryPage - 1) * itemsPerPage,
+    activeLibraryPage * itemsPerPage
   );
 
   const folderSubjects = useMemo(
     () => SUBJECTS.filter((s) => s.id !== "all"),
     []
   );
-  const folderTotalPages = Math.ceil(folderSubjects.length / folderItemsPerPage);
-  const currentFolderSubjects = folderSubjects.slice(
-    (currentPage - 1) * folderItemsPerPage,
-    currentPage * folderItemsPerPage
+  const folderTotalPages = Math.max(
+    1,
+    Math.ceil(folderSubjects.length / folderItemsPerPage)
   );
+  const currentFolderSubjects = folderSubjects.slice(
+    (currentFolderPage - 1) * folderItemsPerPage,
+    currentFolderPage * folderItemsPerPage
+  );
+
+  useEffect(() => {
+    if (viewMode === "folders") return;
+
+    if (viewMode === "saved" && currentSavedPage > totalPages) {
+      goToSavedPage(totalPages, { scroll: false });
+      return;
+    }
+
+    if (viewMode === "all" && currentDocsPage > totalPages) {
+      goToDocsPage(totalPages, { scroll: false });
+    }
+  }, [
+    currentDocsPage,
+    currentSavedPage,
+    goToDocsPage,
+    goToSavedPage,
+    totalPages,
+    viewMode,
+  ]);
+
+  useEffect(() => {
+    if (currentFolderPage > folderTotalPages) {
+      goToFolderPage(folderTotalPages, { scroll: false });
+    }
+  }, [currentFolderPage, folderTotalPages, goToFolderPage]);
 
   // --- FOLDER DOC COUNTS ---
   const docCounts = useMemo(() => {
@@ -677,7 +729,11 @@ const Documents = () => {
 
   // 👇 Xem tài liệu - chỉ navigate, việc tăng view sẽ do DocumentViewer xử lý
   const handleView = (doc) => {
-    navigate(`/documents/${doc.id}`);
+    navigate(`/documents/${doc.id}`, {
+      state: {
+        returnTo: `${location.pathname}${location.search}`,
+      },
+    });
   };
 
   const getFileIcon = (type) => {
@@ -814,7 +870,6 @@ const Documents = () => {
                 onClick={() => {
                   setViewMode("folders");
                   setSelectedFolder(null);
-                  setCurrentPage(1);
                 }}
                 className={`w-full flex items-center justify-between p-3 rounded-lg text-sm font-medium transition-colors ${
                   viewMode === "folders"
@@ -1194,8 +1249,10 @@ const Documents = () => {
               {viewMode === "folders" && !selectedFolder && folderTotalPages > 1 && (
                 <div className="flex justify-center items-center gap-2 mt-8">
                   <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
+                    onClick={() =>
+                      goToFolderPage(Math.max(1, currentFolderPage - 1))
+                    }
+                    disabled={currentFolderPage === 1}
                     className="p-2 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft
@@ -1204,13 +1261,15 @@ const Documents = () => {
                     />
                   </button>
                   <span className="text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-4 py-2 rounded-lg">
-                    Trang {currentPage} / {folderTotalPages}
+                    Trang {currentFolderPage} / {folderTotalPages}
                   </span>
                   <button
                     onClick={() =>
-                      setCurrentPage((p) => Math.min(folderTotalPages, p + 1))
+                      goToFolderPage(
+                        Math.min(folderTotalPages, currentFolderPage + 1)
+                      )
                     }
-                    disabled={currentPage === folderTotalPages}
+                    disabled={currentFolderPage === folderTotalPages}
                     className="p-2 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight
@@ -1224,8 +1283,12 @@ const Documents = () => {
               {viewMode !== "folders" && totalPages > 1 && (
                 <div className="flex justify-center items-center gap-2 mt-8">
                   <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
+                    onClick={() =>
+                      viewMode === "saved"
+                        ? goToSavedPage(Math.max(1, currentSavedPage - 1))
+                        : goToDocsPage(Math.max(1, currentDocsPage - 1))
+                    }
+                    disabled={activeLibraryPage === 1}
                     className="p-2 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft
@@ -1234,13 +1297,15 @@ const Documents = () => {
                     />
                   </button>
                   <span className="text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-4 py-2 rounded-lg">
-                    Trang {currentPage} / {totalPages}
+                    Trang {activeLibraryPage} / {totalPages}
                   </span>
                   <button
                     onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      viewMode === "saved"
+                        ? goToSavedPage(Math.min(totalPages, currentSavedPage + 1))
+                        : goToDocsPage(Math.min(totalPages, currentDocsPage + 1))
                     }
-                    disabled={currentPage === totalPages}
+                    disabled={activeLibraryPage === totalPages}
                     className="p-2 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight

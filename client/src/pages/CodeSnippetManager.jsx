@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Tooltip from "../components/Tooltip";
+import { usePersistedPagination } from '../hooks/usePersistedPagination';
 import {
   CalendarDays,
   ChevronLeft,
@@ -1481,11 +1482,14 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   const [snippetTestCases, setSnippetTestCases] = useState([]);
   const [judgeResults, setJudgeResults] = useState([]);
   const [earnedScore, setEarnedScore] = useState(0);
-  const [mainPage, setMainPage] = useState(1);
   const [popupPage, setPopupPage] = useState(1);
   const [popupSearchQuery, setPopupSearchQuery] = useState('');
   const [isExercisePopupOpen, setIsExercisePopupOpen] = useState(false);
   const [pendingFreeSave, setPendingFreeSave] = useState(false);
+  const hasInitializedMainPaginationRef = useRef(false);
+  const { currentPage: mainPage, goToPage: goToMainPage } = usePersistedPagination({
+    paramKey: 'page',
+  });
 
   const username = useMemo(() => resolveUsername(user), [user]);
   const totalJudgeScore = useMemo(() => {
@@ -2560,22 +2564,29 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
         setPopupPage(safePage);
         return;
       }
-      setMainPage(safePage);
+      goToMainPage(safePage);
     },
-    [mainTotalPages, popupTotalPages]
+    [goToMainPage, mainTotalPages, popupTotalPages]
   );
 
   useEffect(() => {
-    setMainPage(1);
-  }, [searchQuery]);
+    if (!hasInitializedMainPaginationRef.current) {
+      hasInitializedMainPaginationRef.current = true;
+      return;
+    }
+
+    goToMainPage(1, { scroll: false });
+  }, [goToMainPage, searchQuery]);
 
   useEffect(() => {
     setPopupPage(1);
   }, [popupSearchQuery]);
 
   useEffect(() => {
-    setMainPage((prev) => Math.min(prev, mainTotalPages));
-  }, [mainTotalPages]);
+    if (mainPage > mainTotalPages) {
+      goToMainPage(mainTotalPages, { scroll: false });
+    }
+  }, [goToMainPage, mainPage, mainTotalPages]);
 
   useEffect(() => {
     setPopupPage((prev) => Math.min(prev, popupTotalPages));

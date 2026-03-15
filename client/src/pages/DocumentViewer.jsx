@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { getFullApiUrl } from '../config/apiConfig';
 import {
   ArrowLeft,
@@ -329,7 +329,9 @@ const ShareModal = ({ isOpen, onClose, url, title }) => {
 // --- COMPONENT CHÍNH ---
 const DocumentViewer = () => {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
+  const returnTo = location.state?.returnTo || "/documents";
 
   // State dữ liệu
   const [document, setDocument] = useState(null);
@@ -555,7 +557,13 @@ const DocumentViewer = () => {
       {/* Header */}
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            if (location.state?.returnTo) {
+              navigate(returnTo);
+              return;
+            }
+            navigate(-1);
+          }}
           className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-colors w-fit"
         >
           <ArrowLeft size={20} /> Quay lại
@@ -644,7 +652,11 @@ const DocumentViewer = () => {
                 {relatedDocs.map((doc) => (
                   <div
                     key={doc.id}
-                    onClick={() => navigate(`/documents/${doc.id || doc._id}`)}
+                    onClick={() =>
+                      navigate(`/documents/${doc.id || doc._id}`, {
+                        state: { returnTo },
+                      })
+                    }
                     className="group p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-all border border-transparent hover:border-gray-100 dark:hover:border-gray-600 flex gap-3"
                   >
                     {/* 👇 THAY ĐOẠN ICON CŨ BẰNG COMPONENT NÀY */}

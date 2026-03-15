@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { examService } from "../services/examService";
 import { ExamRunner } from "../components/ExamRunner";
 import { ExamCreator } from "../components/ExamCreator";
+import { usePersistedPagination } from "../hooks/usePersistedPagination";
 import {
   Search,
   Plus,
@@ -33,13 +34,14 @@ const Exams = () => {
   const [exams, setExams] = useState([]);
   const [filterSubject, setFilterSubject] = useState("Tất cả");
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const { currentPage, goToPage } = usePersistedPagination({ paramKey: "page" });
 
   // View Management
   const [activeExam, setActiveExam] = useState(null); // Exam object selected
   const [examMode, setExamMode] = useState(null); // 'practice' | 'real'
   const [isCreatorOpen, setCreatorOpen] = useState(false);
   const [showModeModal, setShowModeModal] = useState(false); // Modal chọn chế độ
+  const hasInitializedPaginationRef = useRef(false);
 
   useEffect(() => {
     // Load user from localStorage
@@ -136,12 +138,19 @@ const Exams = () => {
   }, [filteredExams, currentPage]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [filterSubject, searchTerm]);
+    if (!hasInitializedPaginationRef.current) {
+      hasInitializedPaginationRef.current = true;
+      return;
+    }
+
+    goToPage(1, { scroll: false });
+  }, [filterSubject, goToPage, searchTerm]);
 
   useEffect(() => {
-    setCurrentPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
+    if (currentPage > totalPages) {
+      goToPage(totalPages, { scroll: false });
+    }
+  }, [currentPage, goToPage, totalPages]);
 
   // --- RENDER: EXAM RUNNER ---
   if (activeExam && examMode) {
@@ -296,7 +305,7 @@ const Exams = () => {
       {filteredExams.length > EXAMS_PER_PAGE && (
         <div className="mt-8 flex items-center justify-center gap-3">
           <button
-            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            onClick={() => goToPage(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
             className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
@@ -306,7 +315,7 @@ const Exams = () => {
             Trang {currentPage} / {totalPages}
           </span>
           <button
-            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
             className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
