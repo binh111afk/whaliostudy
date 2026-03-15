@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 
 const normalizePage = (value, fallback = 1) => {
   const parsed = Number.parseInt(String(value ?? ''), 10);
@@ -15,7 +15,6 @@ export const usePersistedPagination = ({
   replace = true,
   scrollOnChange = true,
 } = {}) => {
-  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const currentPage = useMemo(() => {
@@ -32,10 +31,12 @@ export const usePersistedPagination = ({
     const normalizedPage = normalizePage(rawValue, defaultPage);
     if (String(normalizedPage) === String(rawValue)) return;
 
-    const nextParams = new URLSearchParams(location.search);
-    nextParams.set(paramKey, String(normalizedPage));
-    setSearchParams(nextParams, { replace: true });
-  }, [defaultPage, location.search, paramKey, searchParams, setSearchParams]);
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams);
+      nextParams.set(paramKey, String(normalizedPage));
+      return nextParams;
+    }, { replace: true });
+  }, [defaultPage, paramKey, searchParams, setSearchParams]);
 
   const goToPage = useCallback(
     (nextPage, options = {}) => {
@@ -44,15 +45,17 @@ export const usePersistedPagination = ({
         scroll = scrollOnChange,
       } = options;
       const normalizedPage = normalizePage(nextPage, defaultPage);
-      const nextParams = new URLSearchParams(location.search);
-      nextParams.set(paramKey, String(normalizedPage));
-      setSearchParams(nextParams, { replace: shouldReplace });
+      setSearchParams((prevParams) => {
+        const nextParams = new URLSearchParams(prevParams);
+        nextParams.set(paramKey, String(normalizedPage));
+        return nextParams;
+      }, { replace: shouldReplace });
 
       if (scroll && typeof window !== 'undefined') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     },
-    [defaultPage, location.search, paramKey, replace, scrollOnChange, setSearchParams]
+    [defaultPage, paramKey, replace, scrollOnChange, setSearchParams]
   );
 
   return {
