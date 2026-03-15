@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutGrid,
+  Folder,
   Star,
   Check,
 } from "lucide-react";
@@ -529,6 +530,16 @@ const Documents = () => {
     currentPage * itemsPerPage
   );
 
+  const folderSubjects = useMemo(
+    () => SUBJECTS.filter((s) => s.id !== "all"),
+    []
+  );
+  const folderTotalPages = Math.ceil(folderSubjects.length / itemsPerPage);
+  const currentFolderSubjects = folderSubjects.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   // --- FOLDER DOC COUNTS ---
   const docCounts = useMemo(() => {
     const counts = {};
@@ -798,7 +809,11 @@ const Documents = () => {
                 {viewMode === "all" && <Check size={16} />}
               </button>
               <button
-                onClick={() => { setViewMode("folders"); setSelectedFolder(null); }}
+                onClick={() => {
+                  setViewMode("folders");
+                  setSelectedFolder(null);
+                  setCurrentPage(1);
+                }}
                 className={`w-full flex items-center justify-between p-3 rounded-lg text-sm font-medium transition-colors ${
                   viewMode === "folders"
                     ? "bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400"
@@ -806,10 +821,7 @@ const Documents = () => {
                 }`}
               >
                 <span className="flex items-center gap-2">
-                  <svg width={18} height={18} viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" fill="none">
-                    <path d="M853.333333 256H469.333333l-85.333333-85.333333H170.666667c-46.933333 0-85.333333 38.4-85.333334 85.333333v170.666667h853.333334v-85.333334c0-46.933333-38.4-85.333333-85.333334-85.333333z" fill="#FFA000"/>
-                    <path d="M853.333333 256H170.666667c-46.933333 0-85.333333 38.4-85.333334 85.333333v426.666667c0 46.933333 38.4 85.333333 85.333334 85.333333h682.666666c46.933333 0 85.333333-38.4 85.333334-85.333333V341.333333c0-46.933333-38.4-85.333333-85.333334-85.333333z" fill="#FFCA28"/>
-                  </svg>
+                  <Folder size={18} />
                   Thư mục tài liệu
                 </span>
                 {viewMode === "folders" && <Check size={16} />}
@@ -855,10 +867,7 @@ const Documents = () => {
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
-                    <svg width={28} height={28} viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" fill="none">
-                      <path d="M853.333333 256H469.333333l-85.333333-85.333333H170.666667c-46.933333 0-85.333333 38.4-85.333334 85.333333v170.666667h853.333334v-85.333334c0-46.933333-38.4-85.333333-85.333334-85.333333z" fill="#FFA000"/>
-                      <path d="M853.333333 256H170.666667c-46.933333 0-85.333333 38.4-85.333334 85.333333v426.666667c0 46.933333 38.4 85.333333 85.333334 85.333333h682.666666c46.933333 0 85.333333-38.4 85.333334-85.333333V341.333333c0-46.933333-38.4-85.333333-85.333334-85.333333z" fill="#FFCA28"/>
-                    </svg>
+                    <Folder size={26} className="text-yellow-600 dark:text-yellow-400" />
                     Thư mục tài liệu
                   </span>
                 )
@@ -880,7 +889,7 @@ const Documents = () => {
               <div className="text-center py-20 text-gray-400">Đang tải...</div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-5 animate-fade-in-up">
-                {SUBJECTS.filter((s) => s.id !== "all").map((subject) => {
+                {currentFolderSubjects.map((subject) => {
                   const count = docCounts[subject.id] ?? 0;
                   return (
                     <button
@@ -1174,7 +1183,37 @@ const Documents = () => {
               </div>
 
               {/* Pagination */}
-              {totalPages > 1 && (
+              {viewMode === "folders" && !selectedFolder && folderTotalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-8">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft
+                      size={20}
+                      className="text-gray-600 dark:text-gray-400"
+                    />
+                  </button>
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-4 py-2 rounded-lg">
+                    Trang {currentPage} / {folderTotalPages}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(folderTotalPages, p + 1))
+                    }
+                    disabled={currentPage === folderTotalPages}
+                    className="p-2 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight
+                      size={20}
+                      className="text-gray-600 dark:text-gray-400"
+                    />
+                  </button>
+                </div>
+              )}
+
+              {viewMode !== "folders" && totalPages > 1 && (
                 <div className="flex justify-center items-center gap-2 mt-8">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
