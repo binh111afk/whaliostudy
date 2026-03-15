@@ -1486,7 +1486,6 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   const [popupSearchQuery, setPopupSearchQuery] = useState('');
   const [isExercisePopupOpen, setIsExercisePopupOpen] = useState(false);
   const [pendingFreeSave, setPendingFreeSave] = useState(false);
-  const hasInitializedMainPaginationRef = useRef(false);
   const { currentPage: mainPage, goToPage: goToMainPage } = usePersistedPagination({
     paramKey: 'page',
   });
@@ -2570,15 +2569,6 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   );
 
   useEffect(() => {
-    if (!hasInitializedMainPaginationRef.current) {
-      hasInitializedMainPaginationRef.current = true;
-      return;
-    }
-
-    goToMainPage(1, { scroll: false });
-  }, [goToMainPage, searchQuery]);
-
-  useEffect(() => {
     setPopupPage(1);
   }, [popupSearchQuery]);
 
@@ -2653,7 +2643,10 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
             <input
               type="text"
               value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                goToMainPage(1, { scroll: false });
+              }}
               placeholder="Tìm theo tên card, môn học hoặc tên bài tập..."
               className="w-full rounded-xl border border-gray-200 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             />
