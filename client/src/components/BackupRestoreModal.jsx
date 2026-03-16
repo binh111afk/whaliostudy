@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Download, Upload, AlertTriangle } from 'lucide-react';
 import { backupService } from '../services/backupService';
 
@@ -57,9 +58,15 @@ const BackupRestoreModal = ({ isOpen, onClose, user }) => {
     e.target.value = '';
   };
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md animate-fade-in-up">
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-[140] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto animate-fade-in-up"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-100 dark:border-gray-700">
@@ -144,6 +151,9 @@ const BackupRestoreModal = ({ isOpen, onClose, user }) => {
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return modalContent;
+  return createPortal(modalContent, document.body);
 };
 
 export default BackupRestoreModal;

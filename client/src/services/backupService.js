@@ -8,6 +8,95 @@ const musicDB = localforage.createInstance({
 
 const PLAYLIST_META_KEY = '__playlist_meta_v1__';
 
+const readLocalUserSnapshot = (username) => {
+    try {
+        const raw = localStorage.getItem('user');
+        const parsed = raw ? JSON.parse(raw) : {};
+        return {
+            username: String(parsed?.username || username || '').trim(),
+            fullName: String(parsed?.fullName || ''),
+            email: String(parsed?.email || ''),
+            phone: String(parsed?.phone || ''),
+            gender: String(parsed?.gender || ''),
+            birthYear: parsed?.birthYear || '',
+            facebook: String(parsed?.facebook || ''),
+            city: String(parsed?.city || ''),
+            school: String(parsed?.school || ''),
+            role: String(parsed?.role || 'user'),
+            settings: parsed?.settings || {},
+            savedDocs: Array.isArray(parsed?.savedDocs) ? parsed.savedDocs : []
+        };
+    } catch {
+        return {
+            username: String(username || '').trim(),
+            fullName: '',
+            email: '',
+            phone: '',
+            gender: '',
+            birthYear: '',
+            facebook: '',
+            city: '',
+            school: '',
+            role: 'user',
+            settings: {},
+            savedDocs: []
+        };
+    }
+};
+
+const buildCompleteBackupPayload = ({ serverData, username, localMusic }) => {
+    const base = serverData && typeof serverData === 'object' ? serverData : {};
+    const userSnapshot = base.userSnapshot || base.user || readLocalUserSnapshot(username);
+
+    return {
+        ...base,
+        app: String(base.app || 'Whalio'),
+        version: String(base.version || '2.0.0'),
+        exportDate: String(base.exportDate || new Date().toISOString()),
+        backupType: 'full-user-data',
+        backupOwner: String(userSnapshot?.username || username || ''),
+        userSnapshot,
+        localMusic: localMusic || base.localMusic || null
+    };
+};
+
+const normalizeImportedBackupPayload = (backupData) => {
+    const raw = backupData && typeof backupData === 'object' ? backupData : {};
+    const payload = raw.payload && typeof raw.payload === 'object' ? raw.payload : raw;
+
+    return {
+        ...payload,
+        app: String(payload.app || raw.app || ''),
+        version: String(payload.version || raw.version || ''),
+        exportDate: String(payload.exportDate || raw.exportDate || ''),
+        backupType: String(payload.backupType || raw.backupType || ''),
+        backupOwner: String(payload.backupOwner || raw.backupOwner || ''),
+        userSnapshot: payload.userSnapshot || raw.userSnapshot || payload.user || raw.user || null,
+        localMusic: payload.localMusic || raw.localMusic || null
+    };
+};
+
+const hasEnoughUserData = (payload) => {
+    const userSnapshot = payload?.userSnapshot;
+    if (!userSnapshot || typeof userSnapshot !== 'object') return false;
+
+    const username = String(userSnapshot.username || '').trim();
+    const hasIdentity = Boolean(username);
+    const hasProfileFields = [
+        userSnapshot.fullName,
+        userSnapshot.email,
+        userSnapshot.phone,
+        userSnapshot.city,
+        userSnapshot.school,
+        userSnapshot.settings
+    ].some((field) => {
+        if (field && typeof field === 'object') return Object.keys(field).length > 0;
+        return Boolean(String(field || '').trim());
+    });
+
+    return hasIdentity && hasProfileFields;
+};
+
 // Service để sao lưu và khôi phục dữ liệu
 export const backupService = {
     async getLocalMusicSnapshot() {
@@ -129,10 +218,11 @@ export const backupService = {
             }
 
             const localMusic = await this.getLocalMusicSnapshot();
-            const combinedBackup = {
-                ...result.data,
+            const combinedBackup = buildCompleteBackupPayload({
+                serverData: result.data,
+                username,
                 localMusic
-            };
+            });
 
             // Tạo file JSON và tải xuống
             const jsonString = JSON.stringify(combinedBackup, null, 2);
@@ -178,11 +268,20 @@ export const backupService = {
 
             // Đọc file
             const fileContent = await this.readFileAsText(file);
-            const backupData = JSON.parse(fileContent);
+            const parsedBackupData = JSON.parse(fileContent);
+            const backupData = normalizeImportedBackupPayload(parsedBackupData);
 
             // Validate backup data
             if (backupData.app !== "Whalio") {
                 throw new Error('File không phải là bản sao lưu Whalio hợp lệ!');
+            }
+
+            if (!backupData.exportDate) {
+                throw new Error('File backup thiếu thông tin thời gian sao lưu.');
+            }
+
+            if (!hasEnoughUserData(backupData)) {
+                throw new Error('File backup thiếu dữ liệu người dùng (user profile/settings).');
             }
 
             // Gửi lên server để restore
