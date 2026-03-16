@@ -1462,6 +1462,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   const [selectedSnippet, setSelectedSnippet] = useState(null);
   const [editorCode, setEditorCode] = useState('');
   const [editorLanguage, setEditorLanguage] = useState('plaintext');
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [editorTheme, setEditorTheme] = useState(() => {
     try {
       const savedTheme = localStorage.getItem(CODE_EDITOR_THEME_STORAGE_KEY);
@@ -1470,6 +1471,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
       return DEFAULT_DARK_THEME_KEY;
     }
   });
+  const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
   const [closingDetail, setClosingDetail] = useState(false);
   const [programInput, setProgramInput] = useState('');
   const [programOutput, setProgramOutput] = useState('');
@@ -1506,6 +1508,8 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   const terminalOutputRef = useRef(null);
   const latestLocalDraftSignatureRef = useRef('');
   const latestFreeDraftSignatureRef = useRef('');
+  const languageDropdownRef = useRef(null);
+  const themeDropdownRef = useRef(null);
 
   useEffect(() => {
     usernameRef.current = username;
@@ -1554,6 +1558,32 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
       // Ignore localStorage write errors
     }
   }, [editorTheme]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (
+        languageDropdownRef.current &&
+        !languageDropdownRef.current.contains(event.target)
+      ) {
+        setIsLanguageDropdownOpen(false);
+      }
+
+      if (
+        themeDropdownRef.current &&
+        !themeDropdownRef.current.contains(event.target)
+      ) {
+        setIsThemeDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, []);
 
   useEffect(() => {
     if (!terminalOutputRef.current) return;
@@ -2808,20 +2838,61 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
 
               <div className="flex flex-wrap items-center gap-2">
                 <Tooltip text="Chọn ngôn ngữ highlight">
-                  <div className="relative group">
-                    <select
-                      value={editorLanguage}
-                      onChange={(event) => setEditorLanguage(event.target.value)}
-                      className="h-10 cursor-pointer appearance-none rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-10 text-sm font-semibold text-gray-700 shadow-sm outline-none transition-all duration-200 hover:border-blue-300 hover:bg-blue-50/50 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-blue-500 dark:hover:bg-gray-700 dark:focus:border-blue-400 dark:focus:ring-blue-900/30"
+                  <div ref={languageDropdownRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLanguageDropdownOpen((prev) => !prev);
+                        setIsThemeDropdownOpen(false);
+                      }}
+                      className={`group inline-flex h-10 items-center gap-2 rounded-lg border bg-white py-2 pl-3 pr-3 text-sm font-semibold shadow-sm outline-none transition-all duration-200 dark:bg-gray-800 ${
+                        isLanguageDropdownOpen
+                          ? 'border-blue-400 text-blue-700 ring-2 ring-blue-100 dark:border-blue-500 dark:text-blue-300 dark:ring-blue-900/30'
+                          : 'border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50/50 dark:border-gray-600 dark:text-gray-200 dark:hover:border-blue-500 dark:hover:bg-gray-700'
+                      }`}
                     >
-                      {LANGUAGE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value} className="bg-white py-2 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <FileCode2 size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 transition-colors duration-200 group-hover:text-blue-600 dark:text-gray-400 dark:group-hover:text-blue-400" />
-                    <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300" />
+                      <FileCode2
+                        size={16}
+                        className="text-gray-500 transition-colors duration-200 group-hover:text-blue-600 dark:text-gray-400 dark:group-hover:text-blue-400"
+                      />
+                      <span className="max-w-[140px] truncate">
+                        {LANGUAGE_OPTIONS.find((option) => option.value === editorLanguage)?.label ||
+                          'Plain Text'}
+                      </span>
+                      <ChevronDown
+                        size={15}
+                        className={`text-gray-400 transition-transform duration-200 dark:text-gray-500 ${
+                          isLanguageDropdownOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {isLanguageDropdownOpen && (
+                      <div className="absolute left-0 top-full z-[80] mt-2 w-56 overflow-hidden rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl dark:border-gray-600 dark:bg-gray-800">
+                        <div className="max-h-64 overflow-y-auto space-y-0.5">
+                          {LANGUAGE_OPTIONS.map((option) => {
+                            const isActive = option.value === editorLanguage;
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => {
+                                  setEditorLanguage(option.value);
+                                  setIsLanguageDropdownOpen(false);
+                                }}
+                                className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-all ${
+                                  isActive
+                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                                    : 'text-gray-700 hover:bg-blue-50 dark:text-gray-300 dark:hover:bg-blue-900/20'
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </Tooltip>
 
@@ -2836,20 +2907,61 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
                 )}
 
                 <Tooltip text="Chọn theme editor">
-                  <div className="relative group">
-                    <select
-                      value={editorTheme}
-                      onChange={(event) => setEditorTheme(event.target.value)}
-                      className="h-10 cursor-pointer appearance-none rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-10 text-sm font-semibold text-gray-700 shadow-sm outline-none transition-all duration-200 hover:border-purple-300 hover:bg-purple-50/50 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-purple-500 dark:hover:bg-gray-700 dark:focus:border-purple-400 dark:focus:ring-purple-900/30"
+                  <div ref={themeDropdownRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsThemeDropdownOpen((prev) => !prev);
+                        setIsLanguageDropdownOpen(false);
+                      }}
+                      className={`group inline-flex h-10 items-center gap-2 rounded-lg border bg-white py-2 pl-3 pr-3 text-sm font-semibold shadow-sm outline-none transition-all duration-200 dark:bg-gray-800 ${
+                        isThemeDropdownOpen
+                          ? 'border-purple-400 text-purple-700 ring-2 ring-purple-100 dark:border-purple-500 dark:text-purple-300 dark:ring-purple-900/30'
+                          : 'border-gray-200 text-gray-700 hover:border-purple-300 hover:bg-purple-50/50 dark:border-gray-600 dark:text-gray-200 dark:hover:border-purple-500 dark:hover:bg-gray-700'
+                      }`}
                     >
-                      {CODE_EDITOR_THEME_OPTIONS.map((theme) => (
-                        <option key={theme.key} value={theme.key} className="bg-white py-2 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                          {theme.label}
-                        </option>
-                      ))}
-                    </select>
-                    <Palette size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 transition-colors duration-200 group-hover:text-purple-600 dark:text-gray-400 dark:group-hover:text-purple-400" />
-                    <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300" />
+                      <Palette
+                        size={16}
+                        className="text-gray-500 transition-colors duration-200 group-hover:text-purple-600 dark:text-gray-400 dark:group-hover:text-purple-400"
+                      />
+                      <span className="max-w-[140px] truncate">
+                        {CODE_EDITOR_THEME_OPTIONS.find((theme) => theme.key === editorTheme)?.label ||
+                          'Theme'}
+                      </span>
+                      <ChevronDown
+                        size={15}
+                        className={`text-gray-400 transition-transform duration-200 dark:text-gray-500 ${
+                          isThemeDropdownOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {isThemeDropdownOpen && (
+                      <div className="absolute left-0 top-full z-[80] mt-2 w-60 overflow-hidden rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl dark:border-gray-600 dark:bg-gray-800">
+                        <div className="max-h-64 overflow-y-auto space-y-0.5">
+                          {CODE_EDITOR_THEME_OPTIONS.map((theme) => {
+                            const isActive = theme.key === editorTheme;
+                            return (
+                              <button
+                                key={theme.key}
+                                type="button"
+                                onClick={() => {
+                                  setEditorTheme(theme.key);
+                                  setIsThemeDropdownOpen(false);
+                                }}
+                                className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-all ${
+                                  isActive
+                                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
+                                    : 'text-gray-700 hover:bg-purple-50 dark:text-gray-300 dark:hover:bg-purple-900/20'
+                                }`}
+                              >
+                                {theme.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </Tooltip>
 
