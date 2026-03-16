@@ -5069,6 +5069,9 @@ const mapToWandboxLanguage = (language) => {
         cpp: 'cpp',
         'c++': 'cpp',
         cxx: 'cpp',
+        c: 'c',
+        csharp: 'csharp',
+        'c#': 'csharp',
         javascript: 'javascript',
         js: 'javascript',
         typescript: 'typescript',
@@ -5076,6 +5079,11 @@ const mapToWandboxLanguage = (language) => {
         python: 'python',
         py: 'python',
         java: 'java',
+        ruby: 'ruby',
+        rust: 'rust',
+        go: 'go',
+        golang: 'go',
+        swift: 'swift',
         sql: 'sql'
     };
     return map[normalized] || '';
@@ -5083,19 +5091,31 @@ const mapToWandboxLanguage = (language) => {
 
 const WANDBOX_LANGUAGE_TO_LABEL = {
     cpp: 'C++',
+    c: 'C',
+    csharp: 'C#',
     javascript: 'JavaScript',
     typescript: 'TypeScript',
     python: 'Python',
     java: 'Java',
+    ruby: 'Ruby',
+    rust: 'Rust',
+    go: 'Go',
+    swift: 'Swift',
     sql: 'SQL'
 };
 
 const WANDBOX_COMPILER_PREFERENCES = {
     cpp: ['gcc-head', 'clang-head'],
+    c: ['gcc-head', 'clang-head'],
+    csharp: ['mono-head', 'mono-6.12.0.122', 'dotnet-8.0.413'],
     javascript: ['nodejs-20.17.0', 'nodejs-18.20.4'],
     typescript: ['typescript-5.6.2'],
     python: ['cpython-head', 'cpython-3.13.8', 'cpython-3.12.7'],
     java: ['openjdk-jdk-22+36', 'openjdk-jdk-21+35'],
+    ruby: ['ruby-head', 'ruby-3.3.6'],
+    rust: ['rust-head', 'rust-1.81.0'],
+    go: ['go-head', 'go-1.23.2'],
+    swift: ['swift-head', 'swift-6.0.3'],
     sql: ['sqlite-3.46.1', 'sqlite-3.35.5']
 };
 

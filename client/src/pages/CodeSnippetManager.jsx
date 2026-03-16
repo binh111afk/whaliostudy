@@ -51,14 +51,14 @@ const getSnippetId = (snippet) => String(snippet?.id || snippet?._id || '');
 const LANGUAGE_OPTIONS = [
   { value: 'plaintext', label: 'Plain Text' },
   { value: 'cpp', label: 'C++' },
-  { value: 'javascript', label: 'JavaScript' },
-  { value: 'typescript', label: 'TypeScript' },
+  { value: 'c', label: 'C' },
+  { value: 'csharp', label: 'C#' },
   { value: 'python', label: 'Python' },
   { value: 'java', label: 'Java' },
-  { value: 'html', label: 'HTML' },
-  { value: 'css', label: 'CSS' },
-  { value: 'sql', label: 'SQL' },
-  { value: 'json', label: 'JSON' },
+  { value: 'ruby', label: 'Ruby' },
+  { value: 'rust', label: 'Rust' },
+  { value: 'go', label: 'Golang' },
+  { value: 'swift', label: 'Swift' },
 ];
 
 const MAIN_PAGE_SIZE = 9;
@@ -272,15 +272,23 @@ const inferLanguageFromSubject = (subjectName = '') => {
   const text = String(subjectName || '').toLowerCase();
 
   if (text.includes('c++') || text.includes('cpp')) return 'cpp';
+  if (text === 'c' || text.includes(' ngôn ngữ c') || text.includes('lap trinh c') || text.includes('lập trình c')) return 'c';
+  if (text.includes('c#') || text.includes('csharp')) return 'csharp';
   if (text.includes('python')) return 'python';
   if (text.includes('java')) return 'java';
-  if (text.includes('javascript') || text.includes('js')) return 'javascript';
-  if (text.includes('typescript') || text.includes('ts')) return 'typescript';
-  if (text.includes('html')) return 'html';
-  if (text.includes('css')) return 'css';
-  if (text.includes('sql')) return 'sql';
-  if (text.includes('json')) return 'json';
-  if (text.includes('web')) return 'javascript';
+  if (text.includes('ruby')) return 'ruby';
+  if (text.includes('rust')) return 'rust';
+  if (text.includes('golang') || text.includes('go lang') || /^go$/i.test(text.trim())) return 'go';
+  if (text.includes('swift')) return 'swift';
+
+  // Backward compatibility với dữ liệu cũ
+  if (text.includes('javascript') || text.includes('js')) return 'c';
+  if (text.includes('typescript') || text.includes('ts')) return 'csharp';
+  if (text.includes('html')) return 'ruby';
+  if (text.includes('css')) return 'rust';
+  if (text.includes('sql')) return 'go';
+  if (text.includes('json')) return 'swift';
+  if (text.includes('web')) return 'c';
 
   return 'plaintext';
 };
@@ -288,14 +296,14 @@ const inferLanguageFromSubject = (subjectName = '') => {
 const getExtension = (language = 'plaintext') => {
   const map = {
     cpp: 'cpp',
-    javascript: 'js',
-    typescript: 'ts',
+    c: 'c',
+    csharp: 'cs',
     python: 'py',
     java: 'java',
-    html: 'html',
-    css: 'css',
-    sql: 'sql',
-    json: 'json',
+    ruby: 'rb',
+    rust: 'rs',
+    go: 'go',
+    swift: 'swift',
     plaintext: 'txt',
   };
   return map[language] || 'txt';
@@ -318,10 +326,24 @@ const AUTO_PAIR_MAP = {
   "'": "'",
   '`': '`',
 };
-const JS_LIKE_LANGUAGES = new Set(['javascript', 'typescript', 'cpp', 'java']);
-const AUTO_FORMAT_LINE_LANGUAGES = new Set(['javascript', 'typescript', 'cpp', 'java']);
+const JS_LIKE_LANGUAGES = new Set(['cpp', 'c', 'csharp', 'java']);
+const AUTO_FORMAT_LINE_LANGUAGES = new Set(['cpp', 'c', 'csharp', 'java']);
 const LOCAL_RUN_LANGUAGES = new Set(['plaintext', 'json', 'html', 'css']);
-const REMOTE_RUN_LANGUAGES = new Set(['cpp', 'javascript', 'typescript', 'python', 'java', 'sql']);
+const REMOTE_RUN_LANGUAGES = new Set([
+  'cpp',
+  'c',
+  'csharp',
+  'python',
+  'java',
+  'ruby',
+  'rust',
+  'go',
+  'swift',
+  // Backward compatibility
+  'javascript',
+  'typescript',
+  'sql',
+]);
 const AUTO_JUDGE_TOTAL_SCORE = 10;
 const AUTO_JUDGE_REVEAL_INITIAL_MS = 450;
 const AUTO_JUDGE_REVEAL_STEP_MS = 300;
@@ -748,6 +770,9 @@ const toMonacoLanguage = (language) => {
     cpp: 'cpp',
     cxx: 'cpp',
     'c++': 'cpp',
+    c: 'c',
+    csharp: 'csharp',
+    'c#': 'csharp',
     javascript: 'javascript',
     js: 'javascript',
     typescript: 'typescript',
@@ -755,6 +780,11 @@ const toMonacoLanguage = (language) => {
     python: 'python',
     py: 'python',
     java: 'java',
+    ruby: 'ruby',
+    rust: 'rust',
+    go: 'go',
+    golang: 'go',
+    swift: 'swift',
     html: 'html',
     css: 'css',
     sql: 'sql',
@@ -3341,7 +3371,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
             )}
 
             <div className="px-4 pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-              Hỗ trợ chạy: Plain Text, C++, JavaScript, TypeScript, Python, Java, HTML, CSS, SQL, JSON.
+              Hỗ trợ chạy: Plain Text, C++, C, C#, Python, Java, Ruby, Rust, Golang, Swift.
             </div>
 
             {programError && (
