@@ -63,7 +63,7 @@ const LANGUAGE_OPTIONS = [
   { value: 'swift', label: 'Swift' },
 ];
 
-const LANGUAGE_FALLBACK_ICON = '/img/plaintext.png';
+const LANGUAGE_FALLBACK_ICON = '/img/code-languages/plaintext.png';
 
 const LANGUAGE_ALIAS_MAP = {
   'c++': 'cpp',
@@ -92,52 +92,52 @@ const normalizeLanguageKey = (language) => {
 const LANGUAGE_META = {
   cpp: {
     label: 'C++',
-    icon: '/img/c++.png',
+    icon: '/img/code-languages/cpp.png',
     brandClassName: 'text-blue-700 dark:text-blue-300',
   },
   c: {
     label: 'C',
-    icon: '/img/C.png',
+    icon: '/img/code-languages/c.png',
     brandClassName: 'text-sky-700 dark:text-sky-300',
   },
   csharp: {
     label: 'C#',
-    icon: '/img/c#.png',
+    icon: '/img/code-languages/csharp.png',
     brandClassName: 'text-purple-700 dark:text-purple-300',
   },
   python: {
     label: 'Python',
-    icon: '/img/python.png',
+    icon: '/img/code-languages/python.png',
     brandClassName: 'text-amber-600 dark:text-amber-300',
   },
   java: {
     label: 'Java',
-    icon: '/img/java.png',
+    icon: '/img/code-languages/java.png',
     brandClassName: 'text-red-700 dark:text-red-300',
   },
   ruby: {
     label: 'Ruby',
-    icon: '/img/ruby.png',
+    icon: '/img/code-languages/ruby.png',
     brandClassName: 'text-rose-700 dark:text-rose-300',
   },
   rust: {
     label: 'Rust',
-    icon: '/img/rust.png',
+    icon: '/img/code-languages/rust.png',
     brandClassName: 'text-orange-700 dark:text-orange-300',
   },
   go: {
     label: 'Golang',
-    icon: '/img/go.png',
+    icon: '/img/code-languages/go.png',
     brandClassName: 'text-cyan-700 dark:text-cyan-300',
   },
   swift: {
     label: 'Swift',
-    icon: '/img/swift.png',
+    icon: '/img/code-languages/swift.png',
     brandClassName: 'text-pink-700 dark:text-pink-300',
   },
   plaintext: {
     label: 'Plain Text',
-    icon: '/img/plaintext.png',
+    icon: '/img/code-languages/plaintext.png',
     brandClassName: 'text-slate-600 dark:text-slate-300',
   },
 };
@@ -1584,102 +1584,88 @@ const CreateSnippetModal = ({
             <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
               Ngôn ngữ lập trình
             </label>
-            <div ref={languageSelectRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setIsLanguageSelectOpen((prev) => !prev)}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-left text-sm outline-none transition hover:border-blue-300 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <SmoothImage
-                      src={selectedLanguageMeta.icon}
-                      alt={selectedLanguageMeta.label}
-                      className="h-7 w-7 rounded-md"
-                      imgClassName="h-full w-full object-contain opacity-90"
-                    />
-                    <span className="truncate font-semibold text-gray-800 dark:text-gray-100">
-                      {selectedLanguageMeta.label}
+            <div className="mt-1">
+              <div ref={languageSelectRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsLanguageSelectOpen((prev) => !prev)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-left text-sm outline-none transition hover:border-blue-300 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <SmoothImage
+                        src={selectedLanguageMeta.icon}
+                        alt={selectedLanguageMeta.label}
+                        className="h-7 w-7 rounded-md"
+                        imgClassName="h-full w-full object-contain opacity-90"
+                      />
+                      <span className="truncate font-semibold text-gray-800 dark:text-gray-100">
+                        {selectedLanguageMeta.label}
+                      </span>
                     </span>
-                  </span>
-                  <ChevronDown
-                    size={15}
-                    className={`shrink-0 text-gray-400 transition-transform ${
-                      isLanguageSelectOpen ? 'rotate-180' : ''
-                    }`}
-                  />
-                </div>
-              </button>
-
-              {isLanguageSelectOpen && (
-                <div className="absolute left-0 top-full z-[80] mt-2 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-800">
-                  <div className="relative border-b border-gray-100 p-2 dark:border-gray-700">
-                    <Search
-                      size={14}
-                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
-                    <input
-                      value={languageQuery}
-                      onChange={(event) => setLanguageQuery(event.target.value)}
-                      placeholder="Tìm ngôn ngữ..."
-                      className="w-full rounded-lg border border-gray-200 py-2 pl-8 pr-2 text-sm outline-none transition focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    <ChevronDown
+                      size={15}
+                      className={`shrink-0 text-gray-400 transition-transform ${
+                        isLanguageSelectOpen ? 'rotate-180' : ''
+                      }`}
                     />
                   </div>
-                  <div className="max-h-56 overflow-y-auto p-1.5">
-                    {filteredLanguageOptions.length > 0 ? (
-                      filteredLanguageOptions.map((option) => {
-                        const optionMeta = getLanguageMeta(option.value);
-                        const isActive = normalizeLanguageKey(form?.language) === optionMeta.key;
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => {
-                              onChange('language', optionMeta.key);
-                              setLanguageQuery('');
-                              setIsLanguageSelectOpen(false);
-                            }}
-                            className={`mb-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-all last:mb-0 ${
-                              isActive
-                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                                : 'text-gray-700 hover:bg-blue-50 dark:text-gray-300 dark:hover:bg-blue-900/20'
-                            }`}
-                          >
-                            <SmoothImage
-                              src={optionMeta.icon}
-                              alt={optionMeta.label}
-                              className="h-6 w-6 rounded-md"
-                              imgClassName="h-full w-full object-contain opacity-90"
-                            />
-                            <span className="truncate">{optionMeta.label}</span>
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <div className="px-3 py-4 text-center text-xs text-gray-500 dark:text-gray-400">
-                        Không tìm thấy ngôn ngữ phù hợp
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+                </button>
 
-            <div className="mt-2 rounded-xl border border-gray-200 bg-gray-50/80 p-2 dark:border-gray-600 dark:bg-gray-700/40">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Preview logo
-              </p>
-              <div className="mt-1.5 inline-flex items-center gap-2 rounded-lg bg-white/90 px-2.5 py-1.5 dark:bg-gray-800/90">
-                <SmoothImage
-                  src={selectedLanguageMeta.icon}
-                  alt={selectedLanguageMeta.label}
-                  className="h-7 w-7 rounded-md"
-                  imgClassName="h-full w-full object-contain opacity-90"
-                />
-                <span className={`text-sm font-bold ${selectedLanguageMeta.brandClassName}`}>
-                  Ngôn ngữ: {selectedLanguageMeta.label}
-                </span>
+                {isLanguageSelectOpen && (
+                  <div className="absolute left-0 top-full z-[80] mt-2 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-800">
+                    <div className="relative border-b border-gray-100 p-2 dark:border-gray-700">
+                      <Search
+                        size={14}
+                        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                      />
+                      <input
+                        value={languageQuery}
+                        onChange={(event) => setLanguageQuery(event.target.value)}
+                        placeholder="Tìm ngôn ngữ..."
+                        className="w-full rounded-lg border border-gray-200 py-2 pl-8 pr-2 text-sm outline-none transition focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                    <div className="max-h-56 overflow-y-auto p-1.5">
+                      {filteredLanguageOptions.length > 0 ? (
+                        filteredLanguageOptions.map((option) => {
+                          const optionMeta = getLanguageMeta(option.value);
+                          const isActive = normalizeLanguageKey(form?.language) === optionMeta.key;
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => {
+                                onChange('language', optionMeta.key);
+                                setLanguageQuery('');
+                                setIsLanguageSelectOpen(false);
+                              }}
+                              className={`mb-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-all last:mb-0 ${
+                                isActive
+                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                                  : 'text-gray-700 hover:bg-blue-50 dark:text-gray-300 dark:hover:bg-blue-900/20'
+                              }`}
+                            >
+                              <SmoothImage
+                                src={optionMeta.icon}
+                                alt={optionMeta.label}
+                                className="h-6 w-6 rounded-md"
+                                imgClassName="h-full w-full object-contain opacity-90"
+                              />
+                              <span className="truncate">{optionMeta.label}</span>
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="px-3 py-4 text-center text-xs text-gray-500 dark:text-gray-400">
+                          Không tìm thấy ngôn ngữ phù hợp
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
+
             </div>
           </div>
 
