@@ -1051,7 +1051,9 @@ const Documents = () => {
                     const canAction = isAdmin || isOwner;
                     const isSaved = currentUser?.savedDocs?.includes(doc.id);
                     const subjectName =
-                      SUBJECTS.find((s) => s.id == doc.course)?.name || "Khác";
+                      SUBJECTS.find((s) => s.id == doc.course)?.name ||
+                      doc.course ||
+                      "Khác";
                     return (
                       <div
                         key={doc.id}
@@ -1168,7 +1170,9 @@ const Documents = () => {
 
                   const isSaved = currentUser?.savedDocs?.includes(doc.id);
                   const subjectName =
-                    SUBJECTS.find((s) => s.id == doc.course)?.name || "Khác";
+                    SUBJECTS.find((s) => s.id == doc.course)?.name ||
+                    doc.course ||
+                    "Khác";
 
                   return (
                     <div
