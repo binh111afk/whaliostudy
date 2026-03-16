@@ -44,6 +44,7 @@ const INITIAL_FORM = {
   subjectName: '',
   assignmentName: '',
   assignmentDescription: '',
+  language: 'cpp',
 };
 
 const getSnippetId = (snippet) => String(snippet?.id || snippet?._id || '');
@@ -60,6 +61,96 @@ const LANGUAGE_OPTIONS = [
   { value: 'go', label: 'Golang' },
   { value: 'swift', label: 'Swift' },
 ];
+
+const LANGUAGE_FALLBACK_ICON = '/img/plaintext.png';
+
+const LANGUAGE_ALIAS_MAP = {
+  'c++': 'cpp',
+  cxx: 'cpp',
+  js: 'javascript',
+  ts: 'typescript',
+  'c#': 'csharp',
+  golang: 'go',
+};
+
+const LEGACY_LANGUAGE_REMAP = {
+  javascript: 'c',
+  typescript: 'csharp',
+  html: 'ruby',
+  css: 'rust',
+  sql: 'go',
+  json: 'swift',
+};
+
+const normalizeLanguageKey = (language) => {
+  const raw = String(language || '').trim().toLowerCase();
+  const aliased = LANGUAGE_ALIAS_MAP[raw] || raw;
+  return LEGACY_LANGUAGE_REMAP[aliased] || aliased || 'plaintext';
+};
+
+const LANGUAGE_META = {
+  cpp: {
+    label: 'C++',
+    icon: '/img/c++.png',
+    brandClassName: 'text-blue-700 dark:text-blue-300',
+  },
+  c: {
+    label: 'C',
+    icon: '/img/C.png',
+    brandClassName: 'text-sky-700 dark:text-sky-300',
+  },
+  csharp: {
+    label: 'C#',
+    icon: '/img/c#.png',
+    brandClassName: 'text-purple-700 dark:text-purple-300',
+  },
+  python: {
+    label: 'Python',
+    icon: '/img/python.png',
+    brandClassName: 'text-amber-600 dark:text-amber-300',
+  },
+  java: {
+    label: 'Java',
+    icon: '/img/java.png',
+    brandClassName: 'text-red-700 dark:text-red-300',
+  },
+  ruby: {
+    label: 'Ruby',
+    icon: '/img/ruby.png',
+    brandClassName: 'text-rose-700 dark:text-rose-300',
+  },
+  rust: {
+    label: 'Rust',
+    icon: '/img/rust.png',
+    brandClassName: 'text-orange-700 dark:text-orange-300',
+  },
+  go: {
+    label: 'Golang',
+    icon: '/img/go.png',
+    brandClassName: 'text-cyan-700 dark:text-cyan-300',
+  },
+  swift: {
+    label: 'Swift',
+    icon: '/img/swift.png',
+    brandClassName: 'text-pink-700 dark:text-pink-300',
+  },
+  plaintext: {
+    label: 'Plain Text',
+    icon: '/img/plaintext.png',
+    brandClassName: 'text-slate-600 dark:text-slate-300',
+  },
+};
+
+const getLanguageMeta = (language) => {
+  const normalized = normalizeLanguageKey(language);
+  const meta = LANGUAGE_META[normalized] || LANGUAGE_META.plaintext;
+  return {
+    key: normalized,
+    label: meta.label,
+    icon: meta.icon || LANGUAGE_FALLBACK_ICON,
+    brandClassName: meta.brandClassName || LANGUAGE_META.plaintext.brandClassName,
+  };
+};
 
 const MAIN_PAGE_SIZE = 9;
 const POPUP_PAGE_SIZE = 6;
@@ -1351,6 +1442,45 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
   );
 };
 
+const SmoothImage = ({ src, alt, className = '', imgClassName = '' }) => {
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const finalSrc = failed ? LANGUAGE_FALLBACK_ICON : src;
+
+  useEffect(() => {
+    setLoaded(false);
+    setFailed(false);
+  }, [src]);
+
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      <span
+        aria-hidden="true"
+        className={`absolute inset-0 rounded-[inherit] bg-slate-200/70 dark:bg-slate-700/60 transition-opacity duration-300 ${
+          loaded ? 'opacity-0' : 'opacity-100'
+        }`}
+      />
+      <img
+        src={finalSrc || LANGUAGE_FALLBACK_ICON}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        onError={() => {
+          if (finalSrc !== LANGUAGE_FALLBACK_ICON) {
+            setFailed(true);
+            return;
+          }
+          setLoaded(true);
+        }}
+        className={`${imgClassName} transition-opacity duration-300 ${
+          loaded ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+    </div>
+  );
+};
+
 const CreateSnippetModal = ({
   isOpen,
   form,
@@ -1362,6 +1492,42 @@ const CreateSnippetModal = ({
   onFormatWithAI,
   mode = 'create',
 }) => {
+  const languageSelectRef = useRef(null);
+  const [isLanguageSelectOpen, setIsLanguageSelectOpen] = useState(false);
+  const [languageQuery, setLanguageQuery] = useState('');
+
+  const selectedLanguageMeta = useMemo(
+    () => getLanguageMeta(form?.language || 'plaintext'),
+    [form?.language]
+  );
+
+  const filteredLanguageOptions = useMemo(() => {
+    const normalizedQuery = String(languageQuery || '').trim().toLowerCase();
+    if (!normalizedQuery) return LANGUAGE_OPTIONS;
+    return LANGUAGE_OPTIONS.filter((option) =>
+      String(option.label || '').toLowerCase().includes(normalizedQuery)
+    );
+  }, [languageQuery]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (
+        languageSelectRef.current &&
+        !languageSelectRef.current.contains(event.target)
+      ) {
+        setIsLanguageSelectOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, []);
+
   if (!isOpen) return null;
 
   const isEditMode = mode === 'edit';
@@ -1411,6 +1577,109 @@ const CreateSnippetModal = ({
               placeholder="Ví dụ: C++, Toán rời rạc, Web"
               className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Ngôn ngữ lập trình
+            </label>
+            <div ref={languageSelectRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setIsLanguageSelectOpen((prev) => !prev)}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-left text-sm outline-none transition hover:border-blue-300 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <SmoothImage
+                      src={selectedLanguageMeta.icon}
+                      alt={selectedLanguageMeta.label}
+                      className="h-7 w-7 rounded-md"
+                      imgClassName="h-full w-full object-contain opacity-90"
+                    />
+                    <span className="truncate font-semibold text-gray-800 dark:text-gray-100">
+                      {selectedLanguageMeta.label}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    size={15}
+                    className={`shrink-0 text-gray-400 transition-transform ${
+                      isLanguageSelectOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </div>
+              </button>
+
+              {isLanguageSelectOpen && (
+                <div className="absolute left-0 top-full z-[80] mt-2 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-800">
+                  <div className="relative border-b border-gray-100 p-2 dark:border-gray-700">
+                    <Search
+                      size={14}
+                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
+                    <input
+                      value={languageQuery}
+                      onChange={(event) => setLanguageQuery(event.target.value)}
+                      placeholder="Tìm ngôn ngữ..."
+                      className="w-full rounded-lg border border-gray-200 py-2 pl-8 pr-2 text-sm outline-none transition focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  <div className="max-h-56 overflow-y-auto p-1.5">
+                    {filteredLanguageOptions.length > 0 ? (
+                      filteredLanguageOptions.map((option) => {
+                        const optionMeta = getLanguageMeta(option.value);
+                        const isActive = normalizeLanguageKey(form?.language) === optionMeta.key;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => {
+                              onChange('language', optionMeta.key);
+                              setLanguageQuery('');
+                              setIsLanguageSelectOpen(false);
+                            }}
+                            className={`mb-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-all last:mb-0 ${
+                              isActive
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                                : 'text-gray-700 hover:bg-blue-50 dark:text-gray-300 dark:hover:bg-blue-900/20'
+                            }`}
+                          >
+                            <SmoothImage
+                              src={optionMeta.icon}
+                              alt={optionMeta.label}
+                              className="h-6 w-6 rounded-md"
+                              imgClassName="h-full w-full object-contain opacity-90"
+                            />
+                            <span className="truncate">{optionMeta.label}</span>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="px-3 py-4 text-center text-xs text-gray-500 dark:text-gray-400">
+                        Không tìm thấy ngôn ngữ phù hợp
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-2 rounded-xl border border-gray-200 bg-gray-50/80 p-2 dark:border-gray-600 dark:bg-gray-700/40">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Preview logo
+              </p>
+              <div className="mt-1.5 inline-flex items-center gap-2 rounded-lg bg-white/90 px-2.5 py-1.5 dark:bg-gray-800/90">
+                <SmoothImage
+                  src={selectedLanguageMeta.icon}
+                  alt={selectedLanguageMeta.label}
+                  className="h-7 w-7 rounded-md"
+                  imgClassName="h-full w-full object-contain opacity-90"
+                />
+                <span className={`text-sm font-bold ${selectedLanguageMeta.brandClassName}`}>
+                  Ngôn ngữ: {selectedLanguageMeta.label}
+                </span>
+              </div>
+            </div>
           </div>
 
           <div>
@@ -1837,6 +2106,9 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
     const subjectName = String(createForm.subjectName || '').trim();
     const assignmentName = String(createForm.assignmentName || '').trim();
     const assignmentDescription = String(createForm.assignmentDescription || '').trim();
+    const selectedLanguage = normalizeLanguageKey(
+      createForm.language || inferLanguageFromSubject(subjectName)
+    );
     const isSaveFromFreeMode = pendingFreeSave && Boolean(selectedSnippet?.isFreeMode);
 
     if (!cardTitle) {
@@ -1858,6 +2130,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
       exerciseName: assignmentName,
       assignmentDescription,
       formattedDescription: assignmentDescription,
+      language: selectedLanguage,
     };
 
     const isEditMode = Boolean(editingSnippet);
@@ -1900,7 +2173,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
       } else {
         const payload = {
           ...basePayload,
-          language: isSaveFromFreeMode ? editorLanguage : inferLanguageFromSubject(subjectName),
+          language: isSaveFromFreeMode ? normalizeLanguageKey(editorLanguage) : selectedLanguage,
           code: isSaveFromFreeMode ? String(editorCode || '') : '',
         };
         const result = await codeSnippetService.createSnippet(payload);
@@ -2119,6 +2392,9 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
       subjectName: String(snippet?.subjectName || ''),
       assignmentName: String(snippet?.assignmentName || ''),
       assignmentDescription: String(snippet?.assignmentDescription || ''),
+      language: normalizeLanguageKey(
+        snippet?.language || inferLanguageFromSubject(snippet?.subjectName || '')
+      ),
     });
     setIsCreateOpen(true);
   };
@@ -2165,6 +2441,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
       subjectName: '',
       assignmentName: '',
       assignmentDescription: '',
+      language: normalizeLanguageKey(editorLanguage),
     });
     setIsCreateOpen(true);
   }, [editorCode, selectedSnippet, username]);
@@ -2730,21 +3007,41 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {paginatedSnippets.map((snippet) => {
             const snippetId = snippet.id || snippet._id;
+            const languageMeta = getLanguageMeta(
+              snippet?.language || inferLanguageFromSubject(snippet?.subjectName || '')
+            );
             return (
               <div
                 key={snippetId}
                 className="group rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg dark:border-gray-700 dark:bg-gray-800"
+                style={{ fontFamily: "'Google Sans', 'Product Sans', 'Inter', sans-serif" }}
               >
                 <div className="flex items-start gap-3">
                   <button
                     onClick={() => handleOpenDetail(snippet)}
                     className="flex min-w-0 flex-1 items-start gap-3 text-left"
                   >
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-cyan-100 text-blue-700 dark:from-blue-900/50 dark:to-cyan-900/40 dark:text-blue-300">
-                      <FileCode2 size={18} />
-                    </div>
+                    <Tooltip text={`Ngôn ngữ: ${languageMeta.label}`}>
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.85 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        whileHover={{ scale: 1.06 }}
+                        transition={{ type: 'spring', stiffness: 340, damping: 24 }}
+                        className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-700/70"
+                      >
+                        <SmoothImage
+                          src={languageMeta.icon}
+                          alt={languageMeta.label}
+                          className="h-8 w-8 rounded-md"
+                          imgClassName="h-full w-full object-contain opacity-90 group-hover:opacity-100"
+                        />
+                      </motion.div>
+                    </Tooltip>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-bold uppercase tracking-wide text-blue-600 dark:text-blue-400">
+                      <p className={`truncate text-xs font-bold uppercase tracking-wide ${languageMeta.brandClassName}`}>
+                        {languageMeta.label}
+                      </p>
+                      <p className="mt-1 truncate text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                         {snippet.subjectName || 'Chưa phân môn'}
                       </p>
                       <h3 className="mt-1 truncate text-base font-black text-gray-900 dark:text-gray-100">
