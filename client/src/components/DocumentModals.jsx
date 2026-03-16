@@ -26,6 +26,7 @@ import {
   NotebookPen,
 } from 'lucide-react';
 import Tooltip from './Tooltip';
+import { documentService } from '../services/documentService';
 
 const DEFAULT_SUBJECTS = [
   { id: 1, name: 'Cơ sở toán trong CNTT' },
@@ -41,6 +42,18 @@ const DEFAULT_SUBJECTS = [
   { id: 11, name: 'Quân sự' },
   { id: 'other', name: 'Tài liệu khác' },
 ];
+
+// Chuyển từ response API sang format SubjectPicker dùng
+const apiSubjectsToOptions = (apiSubjects) =>
+  apiSubjects.map((s) => ({
+    id: s._id || s.id,
+    value: s.name,
+    name: s.name,
+  }));
+
+// Fallback nếu API chưa tải xong
+const createFallbackSubjects = () =>
+  DEFAULT_SUBJECTS.map((s) => ({ ...s, value: String(s.id) }));
 
 const DROPDOWN_MOTION = {
   initial: { opacity: 0, y: -10, scale: 0.98 },
@@ -574,8 +587,28 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [oversizeMessage, setOversizeMessage] = useState('');
-  const [subjectOptions, setSubjectOptions] = useState(() => createInitialSubjects());
+  const [subjectOptions, setSubjectOptions] = useState(() => createFallbackSubjects());
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Load subjects từ API mỗi khi mở modal
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    setSubjectsLoading(true);
+    documentService.getSubjects().then((apiSubjects) => {
+      if (cancelled) return;
+      if (apiSubjects && apiSubjects.length > 0) {
+        setSubjectOptions(apiSubjectsToOptions(apiSubjects));
+      } else {
+        setSubjectOptions(createFallbackSubjects());
+      }
+      setSubjectsLoading(false);
+    }).catch(() => {
+      if (!cancelled) setSubjectsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -588,18 +621,34 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
     setOversizeMessage('');
   }, [isOpen]);
 
-  const addSubjectOption = (subjectName) => {
+  // Gọi API khi thêm môn mới
+  const addSubjectOption = async (subjectName) => {
     const trimmedSubject = subjectName.trim();
     if (!trimmedSubject) return null;
 
+    // Kiểm tra đã có trong list nội bộ chưa
     const existingOption = subjectOptions.find(
       (option) => normalizeString(option.name) === normalizeString(trimmedSubject)
     );
-
     if (existingOption) return existingOption;
 
-    const nextOption = createCustomSubjectOption(trimmedSubject);
-    setSubjectOptions((prev) => [nextOption, ...prev]);
+    // Gọi API tạo môn mới trong DB
+    const result = await documentService.createSubject(
+      trimmedSubject,
+      currentUser?.username
+    );
+    if (!result?.success && !result?.alreadyExists) return null;
+
+    const nextOption = {
+      id: result.subject?._id || result.subject?.id,
+      value: result.subject?.name || trimmedSubject,
+      name: result.subject?.name || trimmedSubject,
+    };
+    setSubjectOptions((prev) => {
+      // Tránh trùng nếu API trả về alreadyExists
+      if (prev.some((o) => normalizeString(o.name) === normalizeString(nextOption.name))) return prev;
+      return [nextOption, ...prev];
+    });
     return nextOption;
   };
 
@@ -858,29 +907,60 @@ export const EditDocModal = ({ isOpen, onClose, onSubmit, doc }) => {
   const [name, setName] = useState('');
   const [course, setCourse] = useState('');
   const [visibility, setVisibility] = useState('public');
-  const [subjectOptions, setSubjectOptions] = useState(() => createInitialSubjects());
+  const [subjectOptions, setSubjectOptions] = useState(() => createFallbackSubjects());
+
+  // Load subjects từ API khi mở
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    documentService.getSubjects().then((apiSubjects) => {
+      if (cancelled) return;
+      const opts = apiSubjects && apiSubjects.length > 0
+        ? apiSubjectsToOptions(apiSubjects)
+        : createFallbackSubjects();
+      setSubjectOptions((prev) => {
+        const merged = [...opts];
+        if (doc?.course) {
+          const alreadyIn = merged.some((o) => normalizeString(o.name) === normalizeString(doc.course));
+          if (!alreadyIn) merged.unshift({ id: `custom-${doc.course}`, value: doc.course, name: doc.course });
+        }
+        return merged;
+      });
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [isOpen, doc?.course]);
 
   useEffect(() => {
     if (!doc) return;
-
-    setName(doc.name);
+    setName(doc.name || '');
     setCourse(doc.course || '');
     setVisibility(doc.visibility || 'public');
-    setSubjectOptions((prev) => ensureSubjectOption(prev, doc.course || ''));
   }, [doc]);
 
-  const addSubjectOption = (subjectName) => {
+  const addSubjectOption = async (subjectName) => {
     const trimmedSubject = subjectName.trim();
     if (!trimmedSubject) return null;
 
     const existingOption = subjectOptions.find(
       (option) => normalizeString(option.name) === normalizeString(trimmedSubject)
     );
-
     if (existingOption) return existingOption;
 
-    const nextOption = createCustomSubjectOption(trimmedSubject);
-    setSubjectOptions((prev) => [nextOption, ...prev]);
+    const result = await documentService.createSubject(trimmedSubject);
+    if (!result?.success && !result?.alreadyExists) {
+      const fallback = createCustomSubjectOption(trimmedSubject);
+      setSubjectOptions((prev) => [fallback, ...prev]);
+      return fallback;
+    }
+    const nextOption = {
+      id: result.subject?._id || result.subject?.id,
+      value: result.subject?.name || trimmedSubject,
+      name: result.subject?.name || trimmedSubject,
+    };
+    setSubjectOptions((prev) => {
+      if (prev.some((o) => normalizeString(o.name) === normalizeString(nextOption.name))) return prev;
+      return [nextOption, ...prev];
+    });
     return nextOption;
   };
 

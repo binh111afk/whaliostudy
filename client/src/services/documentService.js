@@ -107,6 +107,33 @@ export const documentService = {
         console.error('Error viewing document:', error);
         return { success: false };
       }
-    }
+    },
+
+    // Lấy danh sách môn học
+    async getSubjects() {
+      try {
+        const res = await fetch(getFullApiUrl('/api/subjects'));
+        if (!res.ok) return [];
+        return await res.json();
+      } catch (error) {
+        console.error('Get subjects error:', error);
+        return [];
+      }
+    },
+
+    // Tạo môn học mới
+    async createSubject(name, username) {
+      try {
+        const res = await fetch(getFullApiUrl('/api/subjects'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+          body: JSON.stringify({ name, createdBy: username || 'user' }),
+        });
+        return await res.json();
+      } catch (error) {
+        console.error('Create subject error:', error);
+        return { success: false, message: 'Lỗi kết nối server' };
+      }
+    },
 
   };

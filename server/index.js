@@ -1871,6 +1871,16 @@ const documentSchema = new mongoose.Schema({
 });
 documentSchema.index({ uploaderUsername: 1, createdAt: -1 });
 
+// ==================== Subject Schema ====================
+const subjectSchema = new mongoose.Schema({
+    name: { type: String, required: true, unique: true, trim: true },
+    icon: { type: String, default: 'BookOpen' },
+    createdBy: { type: String, default: 'system' },
+    isDefault: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now }
+});
+subjectSchema.index({ name: 1 });
+
 // Exam Schema
 const examSchema = new mongoose.Schema({
     examId: { type: String, required: true, unique: true },
@@ -2209,6 +2219,7 @@ const backupRecordSchema = new mongoose.Schema({
 // Create Models
 const User = mongoose.model('User', userSchema);
 const Document = mongoose.model('Document', documentSchema);
+const Subject = mongoose.model('Subject', subjectSchema);
 const Exam = mongoose.model('Exam', examSchema);
 const Post = mongoose.model('Post', postSchema);
 const Activity = mongoose.model('Activity', activitySchema);
@@ -5635,6 +5646,76 @@ app.delete('/api/code-snippets/:id', async (req, res) => {
     } catch (err) {
         console.error('Delete code snippet error:', err);
         return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+// ==================== SUBJECT APIs ====================
+
+// Seed mặc định nếu collection rỗng
+const DEFAULT_SUBJECTS = [
+    { name: 'Cơ sở toán trong CNTT', icon: 'Calculator', isDefault: true, createdBy: 'system' },
+    { name: 'Tâm lý học đại cương', icon: 'Brain', isDefault: true, createdBy: 'system' },
+    { name: 'Kinh tế chính trị', icon: 'Landmark', isDefault: true, createdBy: 'system' },
+    { name: 'Chủ nghĩa xã hội', icon: 'BookOpen', isDefault: true, createdBy: 'system' },
+    { name: 'Tâm lý học giáo dục', icon: 'Brain', isDefault: true, createdBy: 'system' },
+    { name: 'Lập trình C++', icon: 'BookOpen', isDefault: true, createdBy: 'system' },
+    { name: 'Toán rời rạc', icon: 'Sigma', isDefault: true, createdBy: 'system' },
+    { name: 'Xác suất thống kê', icon: 'Calculator', isDefault: true, createdBy: 'system' },
+    { name: 'Triết học Mác Lenin', icon: 'BookOpen', isDefault: true, createdBy: 'system' },
+    { name: 'Pháp luật đại cương', icon: 'Scale', isDefault: true, createdBy: 'system' },
+    { name: 'Quân sự', icon: 'Shield', isDefault: true, createdBy: 'system' },
+    { name: 'Tài liệu khác', icon: 'NotebookPen', isDefault: true, createdBy: 'system' },
+];
+
+(async () => {
+    try {
+        const count = await Subject.countDocuments();
+        if (count === 0) {
+            await Subject.insertMany(DEFAULT_SUBJECTS);
+            console.log('✅ Seeded', DEFAULT_SUBJECTS.length, 'default subjects');
+        }
+    } catch (err) {
+        console.error('Subject seed error:', err.message);
+    }
+})();
+
+// GET /api/subjects - lấy toàn bộ môn học
+app.get('/api/subjects', async (req, res) => {
+    try {
+        const subjects = await Subject.find().sort({ isDefault: -1, createdAt: 1 }).lean();
+        const formatted = subjects.map(s => ({ ...s, id: s._id.toString() }));
+        res.json(formatted);
+    } catch (err) {
+        console.error('Get subjects error:', err);
+        res.status(500).json([]);
+    }
+});
+
+// POST /api/subjects - tạo môn học mới
+app.post('/api/subjects', async (req, res) => {
+    try {
+        const { name, createdBy } = req.body;
+        const trimmedName = (name || '').trim();
+        if (!trimmedName) {
+            return res.status(400).json({ success: false, message: 'Tên môn học không được rỗng' });
+        }
+        // Kiểm tra trùng (case-insensitive)
+        const existing = await Subject.findOne({
+            name: { $regex: new RegExp(`^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+        });
+        if (existing) {
+            return res.json({ success: true, subject: { ...existing.toObject(), id: existing._id.toString() }, alreadyExists: true });
+        }
+        const newSubject = await Subject.create({
+            name: trimmedName,
+            icon: 'NotebookPen',
+            createdBy: createdBy || 'user',
+            isDefault: false
+        });
+        res.json({ success: true, subject: { ...newSubject.toObject(), id: newSubject._id.toString() } });
+    } catch (err) {
+        console.error('Create subject error:', err);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
     }
 });
 

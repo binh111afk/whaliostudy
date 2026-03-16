@@ -6,6 +6,7 @@ import { UploadModal, EditDocModal } from "../components/DocumentModals";
 import AuthModal from "../components/AuthModal";
 import Tooltip from "../components/Tooltip";
 import { usePersistedPagination } from "../hooks/usePersistedPagination";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Search,
   Upload,
@@ -411,8 +412,8 @@ const FileThumbnail = ({ type, size = "md" }) => {
   );
 };
 
-// Danh sách môn học
-const SUBJECTS = [
+// Danh sách môn học (legacy – dùng cho mapping số → tên cũ)
+const SUBJECTS_LEGACY = [
   { id: "all", name: "Tất cả" },
   { id: 1, name: "Cơ sở toán trong CNTT" },
   { id: 2, name: "Tâm lý học đại cương" },
@@ -442,6 +443,14 @@ const normalizeText = (value = "") =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
+
+// Chuyển đổi doc.course (tên mới hoặc id số cũ) → tên hiển thị
+const resolveSubjectName = (course, apiSubjects) => {
+  if (!course) return "Khác";
+  if (apiSubjects.some((s) => s.name === course)) return course;
+  const legacy = SUBJECTS_LEGACY.find((s) => String(s.id) === String(course));
+  return legacy?.name || course;
+};
 
 // --- SVG Folder Icons ---
 const FolderClosedSVG = ({ size = 72 }) => (
@@ -486,6 +495,7 @@ const Documents = () => {
   const [isSubjectDropdownOpen, setIsSubjectDropdownOpen] = useState(false);
   const [isSubjectSearchOpen, setIsSubjectSearchOpen] = useState(false);
   const [isFileTypeDropdownOpen, setIsFileTypeDropdownOpen] = useState(false);
+  const [apiSubjects, setApiSubjects] = useState([]);
   const subjectFilterRef = useRef(null);
   const fileTypeFilterRef = useRef(null);
 
@@ -510,19 +520,21 @@ const Documents = () => {
   });
 
   const subjectFilterOptions = useMemo(() => {
-    const base = SUBJECTS.filter((subject) => subject.id !== "all");
-    const existingIds = new Set(base.map((subject) => String(subject.id)));
-    const dynamic = [];
-
-    documents.forEach((doc) => {
-      const courseValue = String(doc.course || "").trim();
-      if (!courseValue || existingIds.has(courseValue)) return;
-      existingIds.add(courseValue);
-      dynamic.push({ id: courseValue, name: courseValue });
-    });
-
-    return [{ id: "all", name: "Tất cả" }, ...base, ...dynamic];
-  }, [documents]);
+    if (!apiSubjects.length) {
+      // Fallback khi đang tải – dùng danh sách legacy
+      return [
+        { id: "all", name: "Tất cả" },
+        ...SUBJECTS_LEGACY.filter((s) => s.id !== "all").map((s) => ({
+          id: s.name,
+          name: s.name,
+        })),
+      ];
+    }
+    return [
+      { id: "all", name: "Tất cả" },
+      ...apiSubjects.map((s) => ({ id: s.name, name: s.name })),
+    ];
+  }, [apiSubjects]);
 
   const filteredSubjectOptions = useMemo(() => {
     if (!subjectNameQuery.trim()) return subjectFilterOptions;
@@ -626,6 +638,14 @@ const Documents = () => {
     loadDocuments();
   }, []); // Chỉ chạy 1 lần khi mount, user thay đổi không cần load lại API documents
 
+  // Lấy danh sách môn học từ DB
+  useEffect(() => {
+    documentService
+      .getSubjects()
+      .then(setApiSubjects)
+      .catch(() => {});
+  }, []);
+
   // Reset trạng thái thư mục khi rời tab folders
   useEffect(() => {
     if (viewMode !== "folders") setSelectedFolder(null);
@@ -691,7 +711,12 @@ const Documents = () => {
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
       const matchesSubject =
-        filterSubject === "all" || String(doc.course) === String(filterSubject);
+        filterSubject === "all" ||
+        doc.course === filterSubject ||
+        (() => {
+          const legacy = SUBJECTS_LEGACY.find((s) => s.name === filterSubject);
+          return legacy !== undefined && String(doc.course) === String(legacy.id);
+        })();
       const subjectLabel =
         subjectFilterOptions.find((subject) => String(subject.id) === String(doc.course))
           ?.name ||
@@ -723,8 +748,14 @@ const Documents = () => {
   );
 
   const folderSubjects = useMemo(
-    () => SUBJECTS.filter((s) => s.id !== "all"),
-    []
+    () =>
+      apiSubjects.length
+        ? apiSubjects
+        : SUBJECTS_LEGACY.filter((s) => s.id !== "all").map((s) => ({
+            _id: String(s.id),
+            name: s.name,
+          })),
+    [apiSubjects]
   );
   const folderTotalPages = Math.max(
     1,
@@ -766,20 +797,19 @@ const Documents = () => {
   // --- FOLDER DOC COUNTS ---
   const docCounts = useMemo(() => {
     const counts = {};
-    const folderSubjects = SUBJECTS.filter((s) => s.id !== "all");
-    folderSubjects.forEach((s) => {
-      counts[s.id] =
-        s.id === "other"
-          ? documents.filter((d) => {
-              const knownIds = SUBJECTS.filter(
-                (x) => x.id !== "all" && x.id !== "other"
-              ).map((x) => String(x.id));
-              return !knownIds.includes(String(d.course));
-            }).length
-          : documents.filter((d) => String(d.course) === String(s.id)).length;
+    const subjects = apiSubjects.length
+      ? apiSubjects
+      : SUBJECTS_LEGACY.filter((s) => s.id !== "all");
+    subjects.forEach((s) => {
+      const legacyEntry = SUBJECTS_LEGACY.find((x) => x.name === s.name);
+      counts[s.name] = documents.filter((d) => {
+        if (d.course === s.name) return true;
+        if (legacyEntry && String(d.course) === String(legacyEntry.id)) return true;
+        return false;
+      }).length;
     });
     return counts;
-  }, [documents]);
+  }, [documents, apiSubjects]);
 
   // --- STATS ---
   const stats = useMemo(() => {
@@ -957,93 +987,112 @@ const Documents = () => {
                   Môn học
                 </label>
                 <div ref={subjectFilterRef} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsSubjectDropdownOpen((prev) => !prev);
-                      setIsFileTypeDropdownOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                  {/* Framer Motion morph: button → search input */}
+                  <motion.div
+                    layout
+                    className={`overflow-hidden border rounded-xl transition-colors ${
                       isSubjectDropdownOpen
-                        ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700/60"
-                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700/70"
+                        ? "bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700/60"
+                        : "bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700"
                     }`}
                   >
-                    <span className="truncate">{selectedSubjectLabel}</span>
-                    <ChevronDown
-                      size={15}
-                      className={`transition-transform ${isSubjectDropdownOpen ? "rotate-180" : ""}`}
-                    />
-                  </button>
-
-                  {isSubjectDropdownOpen && (
-                    <div className="mt-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1.5 shadow-lg">
-                      <button
-                        type="button"
-                        onClick={() => setIsSubjectSearchOpen((prev) => !prev)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
-                          isSubjectSearchOpen || subjectNameQuery.trim()
-                            ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700/60"
-                            : "bg-transparent text-gray-700 border-transparent hover:bg-gray-50 hover:border-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:border-gray-600"
-                        }`}
-                      >
-                        <span className="flex items-center gap-2 truncate">
-                          <Search size={14} />
-                          {subjectNameQuery.trim()
-                            ? `Tìm môn: ${subjectNameQuery}`
-                            : "Tìm theo tên môn"}
-                        </span>
-                        <ChevronDown
-                          size={14}
-                          className={`transition-transform ${isSubjectSearchOpen ? "rotate-180" : ""}`}
-                        />
-                      </button>
-
-                      {isSubjectSearchOpen && (
-                        <div className="relative mt-1.5">
+                    {/* Trigger row – morphs between a pill-button and search input */}
+                    <AnimatePresence mode="wait" initial={false}>
+                      {isSubjectDropdownOpen ? (
+                        <motion.div
+                          key="input"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.13 }}
+                          className="flex items-center gap-2 px-3 py-2.5"
+                        >
                           <Search
-                            size={15}
-                            className="absolute left-3 top-2.5 text-gray-400 dark:text-gray-500"
+                            size={14}
+                            className="text-blue-500 dark:text-blue-400 shrink-0"
                           />
                           <input
+                            autoFocus
                             value={subjectNameQuery}
                             onChange={(e) => setSubjectNameQuery(e.target.value)}
-                            placeholder="Nhập tên môn học..."
-                            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm outline-none text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900"
+                            placeholder="Tìm môn học..."
+                            className="flex-1 bg-transparent text-sm text-blue-700 dark:text-blue-200 outline-none placeholder-blue-400 dark:placeholder-blue-500 min-w-0"
                           />
-                        </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsSubjectDropdownOpen(false);
+                              setSubjectNameQuery("");
+                            }}
+                            className="text-blue-400 dark:text-blue-500 hover:text-blue-600 dark:hover:text-blue-300 shrink-0"
+                          >
+                            <ChevronDown size={15} className="rotate-180" />
+                          </button>
+                        </motion.div>
+                      ) : (
+                        <motion.button
+                          key="trigger"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.13 }}
+                          type="button"
+                          onClick={() => {
+                            setIsSubjectDropdownOpen(true);
+                            setIsFileTypeDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/70 transition-colors"
+                        >
+                          <span className="truncate">{selectedSubjectLabel}</span>
+                          <ChevronDown size={15} />
+                        </motion.button>
                       )}
+                    </AnimatePresence>
 
-                      <div className="mt-1.5 max-h-[220px] overflow-y-auto space-y-1 pr-0.5">
-                        {filteredSubjectOptions.length ? (
-                          filteredSubjectOptions.map((subject) => {
-                            const isActive = String(filterSubject) === String(subject.id);
-                            return (
-                              <button
-                                key={subject.id}
-                                type="button"
-                                onClick={() => {
-                                  setFilterSubject(String(subject.id));
-                                  setIsSubjectDropdownOpen(false);
-                                }}
-                                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
-                                  isActive
-                                    ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700/60"
-                                    : "bg-transparent text-gray-700 border-transparent hover:bg-gray-50 hover:border-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:border-gray-600"
-                                }`}
-                              >
-                                {subject.name}
-                              </button>
-                            );
-                          })
-                        ) : (
-                          <div className="px-3 py-4 text-center text-xs text-gray-500 dark:text-gray-400">
-                            Không có môn học phù hợp
+                    {/* Dropdown options list */}
+                    <AnimatePresence>
+                      {isSubjectDropdownOpen && (
+                        <motion.div
+                          key="options"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.18 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-1.5 pb-1.5 max-h-[200px] overflow-y-auto space-y-0.5">
+                            {filteredSubjectOptions.length ? (
+                              filteredSubjectOptions.map((subject) => {
+                                const isActive = filterSubject === subject.id;
+                                return (
+                                  <button
+                                    key={subject.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setFilterSubject(subject.id);
+                                      setIsSubjectDropdownOpen(false);
+                                      setSubjectNameQuery("");
+                                    }}
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                      isActive
+                                        ? "bg-blue-100 text-blue-700 dark:bg-blue-800/50 dark:text-blue-300"
+                                        : "text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                    }`}
+                                  >
+                                    {subject.name}
+                                  </button>
+                                );
+                              })
+                            ) : (
+                              <div className="px-3 py-4 text-center text-xs text-gray-400 dark:text-gray-500">
+                                Không có môn học phù hợp
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
                 </div>
               </div>
               <div>
@@ -1202,7 +1251,7 @@ const Documents = () => {
                     </button>
                     <span className="text-gray-300 dark:text-gray-600">/</span>
                     <span className="text-slate-800 dark:text-white">
-                      {SUBJECTS.find((s) => s.id == selectedFolder)?.name || "Khác"}
+                      {selectedFolder || "Khác"}
                     </span>
                   </span>
                 ) : (
@@ -1230,11 +1279,11 @@ const Documents = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in-up">
                 {currentFolderSubjects.map((subject) => {
-                  const count = docCounts[subject.id] ?? 0;
+                  const count = docCounts[subject.name] ?? 0;
                   return (
                     <button
-                      key={subject.id}
-                      onClick={() => setSelectedFolder(subject.id)}
+                      key={subject._id || subject.name}
+                      onClick={() => setSelectedFolder(subject.name)}
                       className="group bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all flex flex-row items-center justify-center gap-4 w-full text-left"
                     >
                       {/* Icon block */}
@@ -1262,14 +1311,11 @@ const Documents = () => {
           ) : viewMode === "folders" && selectedFolder ? (
             /* ===================== FOLDER DETAIL VIEW ===================== */
             (() => {
-              const knownIds = SUBJECTS.filter(
-                (x) => x.id !== "all" && x.id !== "other"
-              ).map((x) => String(x.id));
+              const legacyEntry = SUBJECTS_LEGACY.find((x) => x.name === selectedFolder);
               const folderDocs = documents.filter((doc) => {
-                if (selectedFolder === "other") {
-                  return !knownIds.includes(String(doc.course));
-                }
-                return String(doc.course) === String(selectedFolder);
+                if (doc.course === selectedFolder) return true;
+                if (legacyEntry && String(doc.course) === String(legacyEntry.id)) return true;
+                return false;
               });
               return folderDocs.length === 0 ? (
                 <div className="text-center py-20 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-600">
@@ -1285,10 +1331,7 @@ const Documents = () => {
                         doc.uploader === currentUser.fullName);
                     const canAction = isAdmin || isOwner;
                     const isSaved = currentUser?.savedDocs?.includes(doc.id);
-                    const subjectName =
-                      SUBJECTS.find((s) => s.id == doc.course)?.name ||
-                      doc.course ||
-                      "Khác";
+                    const subjectName = resolveSubjectName(doc.course, apiSubjects);
                     return (
                       <div
                         key={doc.id}
@@ -1404,10 +1447,7 @@ const Documents = () => {
                   const canAction = isAdmin || isOwner; // Cho phép sửa/xóa
 
                   const isSaved = currentUser?.savedDocs?.includes(doc.id);
-                  const subjectName =
-                    SUBJECTS.find((s) => s.id == doc.course)?.name ||
-                    doc.course ||
-                    "Khác";
+                  const subjectName = resolveSubjectName(doc.course, apiSubjects);
 
                   return (
                     <div
