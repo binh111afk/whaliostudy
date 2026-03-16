@@ -492,6 +492,7 @@ const Documents = () => {
   const [filterSubject, setFilterSubject] = useState("all");
   const [subjectNameQuery, setSubjectNameQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [fileTypeQuery, setFileTypeQuery] = useState("");
   const [isSubjectDropdownOpen, setIsSubjectDropdownOpen] = useState(false);
   const [isSubjectSearchOpen, setIsSubjectSearchOpen] = useState(false);
   const [isFileTypeDropdownOpen, setIsFileTypeDropdownOpen] = useState(false);
@@ -564,6 +565,14 @@ const Documents = () => {
     () => FILE_TYPE_OPTIONS.find((type) => type.id === filterType)?.name || "Tất cả",
     [filterType]
   );
+
+  const filteredFileTypeOptions = useMemo(() => {
+    if (!fileTypeQuery.trim()) return FILE_TYPE_OPTIONS;
+    const normalizedQuery = normalizeText(fileTypeQuery);
+    return FILE_TYPE_OPTIONS.filter((type) =>
+      normalizeText(type.name).includes(normalizedQuery)
+    );
+  }, [fileTypeQuery]);
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -1100,51 +1109,109 @@ const Documents = () => {
                   Loại file
                 </label>
                 <div ref={fileTypeFilterRef} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsFileTypeDropdownOpen((prev) => !prev);
-                      setIsSubjectDropdownOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                  <motion.div
+                    layout
+                    className={`overflow-hidden border rounded-xl transition-colors ${
                       isFileTypeDropdownOpen
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700/60"
-                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700/70"
+                        ? "bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700/60"
+                        : "bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700"
                     }`}
                   >
-                    <span className="truncate">{selectedFileTypeLabel}</span>
-                    <ChevronDown
-                      size={15}
-                      className={`transition-transform ${isFileTypeDropdownOpen ? "rotate-180" : ""}`}
-                    />
-                  </button>
+                    <AnimatePresence mode="wait" initial={false}>
+                      {isFileTypeDropdownOpen ? (
+                        <motion.div
+                          key="file-type-input"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.13 }}
+                          className="flex items-center gap-2 px-3 py-2.5"
+                        >
+                          <Search
+                            size={14}
+                            className="text-blue-500 dark:text-blue-400 shrink-0"
+                          />
+                          <input
+                            autoFocus
+                            value={fileTypeQuery}
+                            onChange={(e) => setFileTypeQuery(e.target.value)}
+                            placeholder="Tìm loại file..."
+                            className="flex-1 bg-transparent text-sm text-blue-700 dark:text-blue-200 outline-none placeholder-blue-400 dark:placeholder-blue-500 min-w-0"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsFileTypeDropdownOpen(false);
+                              setFileTypeQuery("");
+                            }}
+                            className="text-blue-400 dark:text-blue-500 hover:text-blue-600 dark:hover:text-blue-300 shrink-0"
+                          >
+                            <ChevronDown size={15} className="rotate-180" />
+                          </button>
+                        </motion.div>
+                      ) : (
+                        <motion.button
+                          key="file-type-trigger"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.13 }}
+                          type="button"
+                          onClick={() => {
+                            setIsFileTypeDropdownOpen(true);
+                            setIsSubjectDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/70 transition-colors"
+                        >
+                          <span className="truncate">{selectedFileTypeLabel}</span>
+                          <ChevronDown size={15} />
+                        </motion.button>
+                      )}
+                    </AnimatePresence>
 
-                  {isFileTypeDropdownOpen && (
-                    <div className="mt-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1.5 shadow-lg">
-                      <div className="max-h-[220px] overflow-y-auto space-y-1 pr-0.5">
-                        {FILE_TYPE_OPTIONS.map((type) => {
-                          const isActive = filterType === type.id;
-                          return (
-                            <button
-                              key={type.id}
-                              type="button"
-                              onClick={() => {
-                                setFilterType(type.id);
-                                setIsFileTypeDropdownOpen(false);
-                              }}
-                              className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
-                                isActive
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700/60"
-                                  : "bg-transparent text-gray-700 border-transparent hover:bg-gray-50 hover:border-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:border-gray-600"
-                              }`}
-                            >
-                              {type.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                    <AnimatePresence>
+                      {isFileTypeDropdownOpen && (
+                        <motion.div
+                          key="file-type-options"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.18 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-1.5 pb-1.5 max-h-[200px] overflow-y-auto space-y-0.5">
+                            {filteredFileTypeOptions.length ? (
+                              filteredFileTypeOptions.map((type) => {
+                                const isActive = filterType === type.id;
+                                return (
+                                  <button
+                                    key={type.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setFilterType(type.id);
+                                      setIsFileTypeDropdownOpen(false);
+                                      setFileTypeQuery("");
+                                    }}
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                      isActive
+                                        ? "bg-blue-100 text-blue-700 dark:bg-blue-800/50 dark:text-blue-300"
+                                        : "text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                    }`}
+                                  >
+                                    {type.name}
+                                  </button>
+                                );
+                              })
+                            ) : (
+                              <div className="px-3 py-4 text-center text-xs text-gray-400 dark:text-gray-500">
+                                Không có loại file phù hợp
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
                 </div>
               </div>
             </div>
