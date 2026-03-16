@@ -21,6 +21,7 @@ import {
   Lock,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   LayoutGrid,
   Folder,
   Star,
@@ -427,6 +428,21 @@ const SUBJECTS = [
   { id: "other", name: "Khác" },
 ];
 
+const FILE_TYPE_OPTIONS = [
+  { id: "all", name: "Tất cả" },
+  { id: "pdf", name: "PDF Document" },
+  { id: "word", name: "Microsoft Word" },
+  { id: "ppt", name: "PowerPoint" },
+  { id: "image", name: "Hình ảnh" },
+];
+
+const normalizeText = (value = "") =>
+  String(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
 // --- SVG Folder Icons ---
 const FolderClosedSVG = ({ size = 72 }) => (
   <svg width={size} height={size} viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" fill="none">
@@ -465,7 +481,13 @@ const Documents = () => {
     : "all";
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSubject, setFilterSubject] = useState("all");
+  const [subjectNameQuery, setSubjectNameQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [isSubjectDropdownOpen, setIsSubjectDropdownOpen] = useState(false);
+  const [isSubjectSearchOpen, setIsSubjectSearchOpen] = useState(false);
+  const [isFileTypeDropdownOpen, setIsFileTypeDropdownOpen] = useState(false);
+  const subjectFilterRef = useRef(null);
+  const fileTypeFilterRef = useRef(null);
 
   // Pagination
   const itemsPerPage = 6;
@@ -483,8 +505,79 @@ const Documents = () => {
   const previousFiltersRef = useRef({
     searchTerm: "",
     filterSubject: "all",
+    subjectNameQuery: "",
     filterType: "all",
   });
+
+  const subjectFilterOptions = useMemo(() => {
+    const base = SUBJECTS.filter((subject) => subject.id !== "all");
+    const existingIds = new Set(base.map((subject) => String(subject.id)));
+    const dynamic = [];
+
+    documents.forEach((doc) => {
+      const courseValue = String(doc.course || "").trim();
+      if (!courseValue || existingIds.has(courseValue)) return;
+      existingIds.add(courseValue);
+      dynamic.push({ id: courseValue, name: courseValue });
+    });
+
+    return [{ id: "all", name: "Tất cả" }, ...base, ...dynamic];
+  }, [documents]);
+
+  const filteredSubjectOptions = useMemo(() => {
+    if (!subjectNameQuery.trim()) return subjectFilterOptions;
+    const normalizedQuery = normalizeText(subjectNameQuery);
+
+    return subjectFilterOptions.filter((subject) =>
+      normalizeText(subject.name).includes(normalizedQuery)
+    );
+  }, [subjectFilterOptions, subjectNameQuery]);
+
+  useEffect(() => {
+    const exists = subjectFilterOptions.some(
+      (subject) => String(subject.id) === String(filterSubject)
+    );
+
+    if (!exists) setFilterSubject("all");
+  }, [filterSubject, subjectFilterOptions]);
+
+  const selectedSubjectLabel = useMemo(
+    () =>
+      subjectFilterOptions.find((subject) => String(subject.id) === String(filterSubject))
+        ?.name || "Tất cả",
+    [subjectFilterOptions, filterSubject]
+  );
+
+  const selectedFileTypeLabel = useMemo(
+    () => FILE_TYPE_OPTIONS.find((type) => type.id === filterType)?.name || "Tất cả",
+    [filterType]
+  );
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (
+        subjectFilterRef.current &&
+        !subjectFilterRef.current.contains(event.target)
+      ) {
+        setIsSubjectDropdownOpen(false);
+      }
+
+      if (
+        fileTypeFilterRef.current &&
+        !fileTypeFilterRef.current.contains(event.target)
+      ) {
+        setIsFileTypeDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+    };
+  }, []);
 
   const setViewMode = (nextViewMode) => {
     const normalizedView = ["all", "folders", "saved"].includes(nextViewMode)
@@ -541,7 +634,12 @@ const Documents = () => {
   useEffect(() => {
     if (!hasInitializedPaginationRef.current) {
       hasInitializedPaginationRef.current = true;
-      previousFiltersRef.current = { searchTerm, filterSubject, filterType };
+      previousFiltersRef.current = {
+        searchTerm,
+        filterSubject,
+        subjectNameQuery,
+        filterType,
+      };
       return;
     }
 
@@ -549,9 +647,15 @@ const Documents = () => {
     const hasFiltersChanged =
       previousFilters.searchTerm !== searchTerm ||
       previousFilters.filterSubject !== filterSubject ||
+      previousFilters.subjectNameQuery !== subjectNameQuery ||
       previousFilters.filterType !== filterType;
 
-    previousFiltersRef.current = { searchTerm, filterSubject, filterType };
+    previousFiltersRef.current = {
+      searchTerm,
+      filterSubject,
+      subjectNameQuery,
+      filterType,
+    };
 
     if (!hasFiltersChanged) return;
 
@@ -569,6 +673,7 @@ const Documents = () => {
     goToDocsPage,
     goToSavedPage,
     searchTerm,
+    subjectNameQuery,
     viewMode,
   ]);
 
@@ -587,11 +692,27 @@ const Documents = () => {
         .includes(searchTerm.toLowerCase());
       const matchesSubject =
         filterSubject === "all" || String(doc.course) === String(filterSubject);
+      const subjectLabel =
+        subjectFilterOptions.find((subject) => String(subject.id) === String(doc.course))
+          ?.name ||
+        String(doc.course || "");
+      const matchesSubjectName =
+        !subjectNameQuery.trim() ||
+        normalizeText(subjectLabel).includes(normalizeText(subjectNameQuery));
       const matchesType = filterType === "all" || doc.type === filterType;
 
-      return matchesSearch && matchesSubject && matchesType;
+      return matchesSearch && matchesSubject && matchesSubjectName && matchesType;
     });
-  }, [documents, searchTerm, filterSubject, filterType, viewMode, currentUser]);
+  }, [
+    documents,
+    searchTerm,
+    filterSubject,
+    subjectNameQuery,
+    filterType,
+    subjectFilterOptions,
+    viewMode,
+    currentUser,
+  ]);
 
   // --- PAGINATION ---
   const activeLibraryPage = viewMode === "saved" ? currentSavedPage : currentDocsPage;
@@ -835,33 +956,147 @@ const Documents = () => {
                 <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
                   Môn học
                 </label>
-                <select
-                  value={filterSubject}
-                  onChange={(e) => setFilterSubject(e.target.value)}
-                  className="w-full p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm outline-none cursor-pointer text-gray-800 dark:text-gray-200"
-                >
-                  {SUBJECTS.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
+                <div ref={subjectFilterRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSubjectDropdownOpen((prev) => !prev);
+                      setIsFileTypeDropdownOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                      isSubjectDropdownOpen
+                        ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700/60"
+                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700/70"
+                    }`}
+                  >
+                    <span className="truncate">{selectedSubjectLabel}</span>
+                    <ChevronDown
+                      size={15}
+                      className={`transition-transform ${isSubjectDropdownOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {isSubjectDropdownOpen && (
+                    <div className="mt-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1.5 shadow-lg">
+                      <button
+                        type="button"
+                        onClick={() => setIsSubjectSearchOpen((prev) => !prev)}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
+                          isSubjectSearchOpen || subjectNameQuery.trim()
+                            ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700/60"
+                            : "bg-transparent text-gray-700 border-transparent hover:bg-gray-50 hover:border-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:border-gray-600"
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 truncate">
+                          <Search size={14} />
+                          {subjectNameQuery.trim()
+                            ? `Tìm môn: ${subjectNameQuery}`
+                            : "Tìm theo tên môn"}
+                        </span>
+                        <ChevronDown
+                          size={14}
+                          className={`transition-transform ${isSubjectSearchOpen ? "rotate-180" : ""}`}
+                        />
+                      </button>
+
+                      {isSubjectSearchOpen && (
+                        <div className="relative mt-1.5">
+                          <Search
+                            size={15}
+                            className="absolute left-3 top-2.5 text-gray-400 dark:text-gray-500"
+                          />
+                          <input
+                            value={subjectNameQuery}
+                            onChange={(e) => setSubjectNameQuery(e.target.value)}
+                            placeholder="Nhập tên môn học..."
+                            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm outline-none text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900"
+                          />
+                        </div>
+                      )}
+
+                      <div className="mt-1.5 max-h-[220px] overflow-y-auto space-y-1 pr-0.5">
+                        {filteredSubjectOptions.length ? (
+                          filteredSubjectOptions.map((subject) => {
+                            const isActive = String(filterSubject) === String(subject.id);
+                            return (
+                              <button
+                                key={subject.id}
+                                type="button"
+                                onClick={() => {
+                                  setFilterSubject(String(subject.id));
+                                  setIsSubjectDropdownOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
+                                  isActive
+                                    ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700/60"
+                                    : "bg-transparent text-gray-700 border-transparent hover:bg-gray-50 hover:border-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:border-gray-600"
+                                }`}
+                              >
+                                {subject.name}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <div className="px-3 py-4 text-center text-xs text-gray-500 dark:text-gray-400">
+                            Không có môn học phù hợp
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
                   Loại file
                 </label>
-                <select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value)}
-                  className="w-full p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm outline-none cursor-pointer text-gray-800 dark:text-gray-200"
-                >
-                  <option value="all">Tất cả</option>
-                  <option value="pdf">PDF Document</option>
-                  <option value="word">Microsoft Word</option>
-                  <option value="ppt">PowerPoint</option>
-                  <option value="image">Hình ảnh</option>
-                </select>
+                <div ref={fileTypeFilterRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsFileTypeDropdownOpen((prev) => !prev);
+                      setIsSubjectDropdownOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                      isFileTypeDropdownOpen
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700/60"
+                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700/70"
+                    }`}
+                  >
+                    <span className="truncate">{selectedFileTypeLabel}</span>
+                    <ChevronDown
+                      size={15}
+                      className={`transition-transform ${isFileTypeDropdownOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {isFileTypeDropdownOpen && (
+                    <div className="mt-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1.5 shadow-lg">
+                      <div className="max-h-[220px] overflow-y-auto space-y-1 pr-0.5">
+                        {FILE_TYPE_OPTIONS.map((type) => {
+                          const isActive = filterType === type.id;
+                          return (
+                            <button
+                              key={type.id}
+                              type="button"
+                              onClick={() => {
+                                setFilterType(type.id);
+                                setIsFileTypeDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
+                                isActive
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700/60"
+                                  : "bg-transparent text-gray-700 border-transparent hover:bg-gray-50 hover:border-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:border-gray-600"
+                              }`}
+                            >
+                              {type.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
