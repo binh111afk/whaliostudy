@@ -11,7 +11,8 @@ import {
   Image,
   File as FileIcon,
   ChevronDown,
-  Search,
+  ChevronLeft,
+  ChevronRight,
   Plus,
   Check,
   BookOpen,
@@ -264,194 +265,204 @@ const SubjectIconBadge = ({ subjectName, compact = false }) => {
   );
 };
 
-const SubjectPicker = ({
-  label,
-  value,
-  options,
-  onChange,
-  onAddOption,
-  placeholder = 'Tìm hoặc nhập môn học...',
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const wrapperRef = useRef(null);
-  const inputRef = useRef(null);
+const SUBJECTS_PER_PAGE = 12;
 
-  useOutsideDismiss(wrapperRef, isOpen, () => setIsOpen(false));
-
-  const selectedOption = useMemo(() => {
-    const matched = options.find(
-      (option) => String(option.value) === String(value)
-    );
-
-    if (matched) return matched;
-    if (!value) return null;
-
-    return {
-      value,
-      name: String(value),
-      isCustom: true,
-    };
-  }, [options, value]);
+const SubjectPickerPopup = ({ isOpen, onClose, options, value, onChange, onAddOption }) => {
+  const [page, setPage] = useState(0);
+  const [customName, setCustomName] = useState('');
+  const customInputRef = useRef(null);
 
   useEffect(() => {
-    if (!isOpen) {
-      setQuery(selectedOption?.name || '');
-    }
-  }, [isOpen, selectedOption]);
+    if (isOpen) setPage(0);
+  }, [isOpen]);
 
-  const filteredOptions = useMemo(
-    () => filterSubjectOptions(options, query),
-    [options, query]
-  );
-
-  const trimmedQuery = query.trim();
-  const canAddNewSubject =
-    !!trimmedQuery &&
-    !options.some(
-      (option) => normalizeString(option.name) === normalizeString(trimmedQuery)
-    );
+  const totalPages = Math.max(1, Math.ceil(options.length / SUBJECTS_PER_PAGE));
+  const pageOptions = options.slice(page * SUBJECTS_PER_PAGE, (page + 1) * SUBJECTS_PER_PAGE);
 
   const handleSelect = (option) => {
     onChange(option.value);
-    setQuery(option.name);
-    setIsOpen(false);
+    onClose();
   };
 
-  const handleAddSubject = () => {
-    if (!trimmedQuery) return;
-    const nextOption = onAddOption(trimmedQuery);
-    if (!nextOption) return;
-    handleSelect(nextOption);
+  const handleAddCustom = () => {
+    const trimmed = customName.trim();
+    if (!trimmed) return;
+    const next = onAddOption(trimmed);
+    if (next) {
+      onChange(next.value);
+      onClose();
+    }
+    setCustomName('');
   };
 
   return (
-    <div ref={wrapperRef} className="relative" style={{ fontFamily: "'Google Sans', 'Product Sans', 'Inter', sans-serif" }}>
-      <label className="mb-1.5 block text-xs font-semibold text-slate-500 dark:text-slate-400">
-        {label}
-      </label>
-
-      <div
-        className={`${FIELD_WRAPPER_BASE} ${
-          isOpen
-            ? 'border-sky-400 ring-4 ring-sky-100 dark:border-sky-400 dark:ring-sky-500/20'
-            : 'border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600'
-        }`}
-        onClick={() => {
-          setIsOpen(true);
-          inputRef.current?.focus();
-        }}
-      >
-        <SubjectIconBadge subjectName={selectedOption?.name || query || 'Môn học'} compact />
-
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onFocus={() => setIsOpen(true)}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setIsOpen(true);
-          }}
-          placeholder={placeholder}
-          className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
-        />
-
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            setIsOpen((prev) => !prev);
-            if (!isOpen) inputRef.current?.focus();
-          }}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={onClose}
+          style={{ fontFamily: "'Google Sans', 'Product Sans', 'Inter', sans-serif" }}
         >
-          <ChevronDown
-            size={18}
-            className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-          />
-        </button>
-      </div>
-
-      <AnimatePresence>
-        {isOpen && (
           <motion.div
-            {...DROPDOWN_MOTION}
-            className="absolute left-0 right-0 top-[calc(100%+10px)] z-30 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
+            initial={{ opacity: 0, scale: 0.95, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
           >
-            <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 dark:border-slate-800">
-              <Search size={15} className="text-slate-400" />
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                Chọn môn học phù hợp
-              </p>
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-5 py-4 dark:border-slate-800 dark:bg-slate-800/70">
+              <div>
+                <h4 className="font-bold text-slate-800 dark:text-white">Chọn môn học</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Trang {page + 1}/{totalPages} · {options.length} môn học
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-full p-2 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
+              >
+                <X size={18} className="text-slate-500 dark:text-slate-300" />
+              </button>
             </div>
 
-            <div className="max-h-72 overflow-y-auto p-2">
-              <div className="space-y-2">
-                {canAddNewSubject && (
-                  <button
-                    type="button"
-                    onClick={handleAddSubject}
-                    className="flex w-full items-center gap-3 rounded-xl border border-dashed border-sky-200 bg-sky-50/70 px-3 py-3 text-left transition-all hover:border-sky-300 hover:bg-sky-100/80 dark:border-sky-500/30 dark:bg-sky-500/10 dark:hover:bg-sky-500/20"
-                  >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-sky-600 shadow-sm dark:bg-slate-800 dark:text-sky-300">
-                      <Plus size={18} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">
-                        Thêm môn mới: {trimmedQuery}
-                      </span>
-                      <span className="block text-xs text-slate-500 dark:text-slate-400">
-                        Tạo môn học mới và chọn ngay cho tài liệu này
-                      </span>
-                    </span>
-                  </button>
-                )}
-
-                {filteredOptions.map((option) => {
+            {/* Grid */}
+            <div className="p-4">
+              <div className="grid grid-cols-4 gap-3">
+                {pageOptions.map((option) => {
                   const isSelected = String(option.value) === String(value);
-
+                  const { icon: Icon, tone } = getSubjectVisual(option.name);
                   return (
                     <button
                       key={option.id}
                       type="button"
                       onClick={() => handleSelect(option)}
-                      className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-all ${
+                      className={`relative flex flex-col items-center gap-2 rounded-2xl border px-2 py-3 text-center transition-all ${
                         isSelected
-                          ? 'border-sky-200 bg-sky-50 dark:border-sky-500/30 dark:bg-sky-500/10'
-                          : 'border-transparent bg-slate-50/80 hover:border-slate-200 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:border-slate-700 dark:hover:bg-slate-800'
+                          ? 'border-sky-300 bg-sky-50 shadow-sm dark:border-sky-500/50 dark:bg-sky-500/10'
+                          : 'border-slate-100 bg-slate-50 hover:border-slate-200 hover:bg-white hover:shadow-sm dark:border-slate-700/60 dark:bg-slate-800/60 dark:hover:border-slate-600 dark:hover:bg-slate-800'
                       }`}
                     >
-                      <SubjectIconBadge subjectName={option.name} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
-                          {option.name}
-                        </span>
-                        <span className="block text-xs text-slate-500 dark:text-slate-400">
-                          {option.isCustom ? 'Môn học tự tạo' : 'Môn học có sẵn'}
-                        </span>
-                      </span>
                       {isSelected && (
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sky-600 shadow-sm dark:bg-slate-700 dark:text-sky-300">
-                          <Check size={16} />
+                        <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-sky-500 text-white">
+                          <Check size={10} strokeWidth={3} />
                         </span>
                       )}
+                      <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${tone}`}>
+                        <Icon size={18} strokeWidth={2.2} />
+                      </span>
+                      <span className="line-clamp-2 w-full text-[11px] font-semibold leading-tight text-slate-700 dark:text-slate-200">
+                        {option.name}
+                      </span>
                     </button>
                   );
                 })}
-
-                {!filteredOptions.length && !canAddNewSubject && (
-                  <div className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center dark:border-slate-700">
-                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                      Không tìm thấy môn phù hợp.
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
+
+            {/* Footer: pagination + add custom */}
+            <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-4 py-3 dark:border-slate-800 dark:bg-slate-800/40">
+              {/* Add custom input */}
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <input
+                  ref={customInputRef}
+                  type="text"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCustom()}
+                  placeholder="Thêm môn học mới..."
+                  className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-sky-400 dark:focus:ring-sky-500/20"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCustom}
+                  disabled={!customName.trim()}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sky-500 text-white shadow-sm transition-all hover:bg-sky-600 disabled:opacity-40"
+                >
+                  <Plus size={15} />
+                </button>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  >
+                    <ChevronLeft size={15} />
+                  </button>
+                  <span className="min-w-[40px] text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    {page + 1}/{totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={page >= totalPages - 1}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  >
+                    <ChevronRight size={15} />
+                  </button>
+                </div>
+              )}
+            </div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+const SubjectPicker = ({ label, value, options, onChange, onAddOption }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const selectedOption = useMemo(() => {
+    const matched = options.find((o) => String(o.value) === String(value));
+    if (matched) return matched;
+    if (!value) return null;
+    return { value, name: String(value), isCustom: true };
+  }, [options, value]);
+
+  return (
+    <div style={{ fontFamily: "'Google Sans', 'Product Sans', 'Inter', sans-serif" }}>
+      <label className="mb-1.5 block text-xs font-semibold text-slate-500 dark:text-slate-400">
+        {label}
+      </label>
+
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className={`${FIELD_WRAPPER_BASE} w-full border-slate-200 hover:border-sky-300 hover:ring-4 hover:ring-sky-50 dark:border-slate-700 dark:hover:border-sky-500 dark:hover:ring-sky-500/10`}
+      >
+        <SubjectIconBadge subjectName={selectedOption?.name || 'Môn học'} compact />
+        <span className="min-w-0 flex-1 text-left">
+          {selectedOption ? (
+            <span className="block truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+              {selectedOption.name}
+            </span>
+          ) : (
+            <span className="text-sm text-slate-400 dark:text-slate-500">Chọn môn học...</span>
+          )}
+        </span>
+        <ChevronDown size={18} className="shrink-0 text-slate-400" />
+      </button>
+
+      <SubjectPickerPopup
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        options={options}
+        value={value}
+        onChange={onChange}
+        onAddOption={onAddOption}
+      />
     </div>
   );
 };
@@ -677,7 +688,7 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
         className="flex w-full max-w-lg flex-col overflow-visible rounded-[28px] border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
         style={{ fontFamily: "'Google Sans', 'Product Sans', 'Inter', sans-serif" }}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-800/70">
+        <div className="flex items-center justify-between rounded-t-[28px] border-b border-slate-100 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-800/70">
           <div>
             <h3 className="text-xl font-bold text-slate-800 dark:text-white">
               Tải tài liệu lên
@@ -784,7 +795,7 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
           )}
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-800/70">
+        <div className="flex justify-end gap-3 rounded-b-[28px] border-t border-slate-100 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-800/70">
           <button
             type="button"
             onClick={onClose}
@@ -886,7 +897,7 @@ export const EditDocModal = ({ isOpen, onClose, onSubmit, doc }) => {
         className="w-full max-w-xl overflow-visible rounded-[28px] border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
         style={{ fontFamily: "'Google Sans', 'Product Sans', 'Inter', sans-serif" }}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-800/70">
+        <div className="flex items-center justify-between rounded-t-[28px] border-b border-slate-100 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-800/70">
           <div>
             <h3 className="text-lg font-bold text-slate-800 dark:text-white">
               Sửa thông tin
