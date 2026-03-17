@@ -83,5 +83,14 @@ export const examService = {
             body: JSON.stringify({ examId, username })
         });
         return await res.json();
+    },
+
+    async updateExam(examId, examData) {
+        const res = await fetch(getFullApiUrl('/api/update-exam'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ examId, ...examData })
+        });
+        return await res.json();
     }
 };

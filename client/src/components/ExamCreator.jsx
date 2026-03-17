@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
@@ -71,16 +71,45 @@ const toEditorQuestion = (input, idx) => {
 const sharedInputClass =
   "w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-slate-700 outline-none transition focus:border-indigo-400 focus:shadow-[0_0_0_4px_rgba(59,130,246,0.18)]";
 
-export const ExamCreator = ({ onClose, onSuccess }) => {
+const initQuestionsFromBank = (questionBank) => {
+  if (!Array.isArray(questionBank) || questionBank.length === 0) return [createQuestion()];
+  return questionBank.map((item, idx) =>
+    toEditorQuestion(
+      {
+        question: item.question,
+        type: item.type,
+        options: item.options,
+        correctAnswer: typeof item.answer === "number" ? item.answer : 0,
+        correctAnswers: Array.isArray(item.answer) ? item.answer : (item.correctAnswers || []),
+        correctText: typeof item.answer === "string" ? item.answer : (item.correctText || ""),
+        points: item.points,
+      },
+      idx
+    )
+  );
+};
+
+export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
+  const isEditMode = Boolean(initialData);
+
   const [step, setStep] = useState(0);
-  const [title, setTitle] = useState("");
-  const [subject, setSubject] = useState(SUBJECTS[0]);
-  const [time, setTime] = useState(45);
-  const [description, setDescription] = useState("");
+  const [title, setTitle] = useState(() => initialData?.title || "");
+  const [subject, setSubject] = useState(() => initialData?.subject || SUBJECTS[0]);
+  const [time, setTime] = useState(() => Number(initialData?.time) || 45);
+  const [description, setDescription] = useState(() => initialData?.description || "");
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [parserWarning, setParserWarning] = useState("");
-  const [questions, setQuestions] = useState([createQuestion()]);
+  const [questions, setQuestions] = useState(() => initQuestionsFromBank(initialData?.questionBank));
+  const [autoScore, setAutoScore] = useState(false);
+
+  // Auto-distribute points (total = 10) when autoScore is enabled or question count changes
+  useEffect(() => {
+    if (!autoScore || questions.length === 0) return;
+    const pts = Math.round((10 / questions.length) * 100) / 100;
+    setQuestions((prev) => prev.map((q) => ({ ...q, points: pts })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoScore, questions.length]);
 
   const jsonInputRef = useRef(null);
   const wordInputRef = useRef(null);
@@ -458,9 +487,10 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
   const handleSave = () => {
     if (!validateBeforeSave()) return;
 
+    const newId = Date.now().toString();
     const payload = {
-      id: Date.now().toString(),
-      examId: Date.now().toString(),
+      id: isEditMode ? (initialData.examId || initialData.id) : newId,
+      examId: isEditMode ? (initialData.examId || initialData.id) : newId,
       title: title.trim(),
       subject,
       time: Number(time) || 45,
@@ -604,12 +634,35 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
         </div>
       </div>
 
+      {/* Auto-score toolbar */}
+      <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-2.5">
+        <label className="flex cursor-pointer items-center gap-2.5 select-none">
+          <div className="relative">
+            <input
+              type="checkbox"
+              checked={autoScore}
+              onChange={(e) => setAutoScore(e.target.checked)}
+              className="peer sr-only"
+            />
+            <div className="h-5 w-9 rounded-full bg-slate-200 transition-colors peer-checked:bg-blue-500" />
+            <div className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-4" />
+          </div>
+          <span className="text-sm font-medium text-slate-700">Tự động chia điểm (tổng = 10đ)</span>
+        </label>
+        {autoScore && (
+          <span className="text-xs font-semibold text-blue-600">
+            {Math.round((10 / questions.length) * 100) / 100}đ / câu
+          </span>
+        )}
+      </div>
+
       <div className="space-y-3">
         {questions.map((question, index) => (
           <QuestionItem
             key={question.id}
             question={question}
             index={index}
+            pointsDisabled={autoScore}
             onQuestionChange={(value) =>
               updateQuestion(question.id, (prev) => ({ ...prev, question: value }))
             }
@@ -637,9 +690,10 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
             onShortAnswerChange={(value) =>
               updateQuestion(question.id, (prev) => ({ ...prev, correctText: value }))
             }
-            onPointsChange={(value) =>
-              updateQuestion(question.id, (prev) => ({ ...prev, points: Math.max(1, Number(value) || 1) }))
-            }
+            onPointsChange={(value) => {
+              if (autoScore) return; // locked while auto-score is on
+              updateQuestion(question.id, (prev) => ({ ...prev, points: Math.max(0.1, Number(value) || 1) }));
+            }}
             onDelete={() => deleteQuestion(question.id)}
             onDuplicate={() => duplicateQuestion(question.id)}
           />
@@ -716,6 +770,7 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
         onClose={onClose}
         onSave={handleSave}
         canSave={canSave}
+        isEditMode={isEditMode}
       />
 
       <div className="mx-auto w-full max-w-6xl flex-1 overflow-y-auto px-4 py-6 sm:px-6">
@@ -763,7 +818,7 @@ export const ExamCreator = ({ onClose, onSuccess }) => {
             onClick={() => (step === 2 ? handleSave() : animateToStep(step + 1))}
             className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700"
           >
-            {step === 2 ? "Lưu đề thi" : "Tiếp tục"}
+            {step === 2 ? (isEditMode ? "Cập nhật đề" : "Lưu đề thi") : "Tiếp tục"}
           </button>
         </div>
       </div>

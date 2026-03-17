@@ -6276,6 +6276,45 @@ app.post('/api/create-exam', async (req, res) => {
     }
 });
 
+app.post('/api/update-exam', async (req, res) => {
+    try {
+        const { examId, username, title, time, subject, description, questions } = req.body;
+
+        const user = await User.findOne({ username }).select('role').lean();
+        if (!user) {
+            return res.status(403).json({ success: false, message: "⛔ Người dùng không tồn tại!" });
+        }
+
+        const exam = await Exam.findOne({ examId }).select('createdBy').lean();
+        if (!exam) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy đề thi!" });
+        }
+
+        const isAdmin = user.role === 'admin';
+        const isCreator = exam.createdBy === username;
+        if (!isAdmin && !isCreator) {
+            return res.status(403).json({ success: false, message: "⛔ Bạn chỉ có thể sửa đề thi do chính mình tạo!" });
+        }
+
+        const updateFields = {};
+        if (title !== undefined) updateFields.title = title;
+        if (time !== undefined) updateFields.time = time;
+        if (subject !== undefined) updateFields.subject = subject;
+        if (description !== undefined) updateFields.description = description;
+        if (Array.isArray(questions)) {
+            updateFields.questionBank = questions;
+            updateFields.questions = questions.length;
+        }
+
+        await Exam.findOneAndUpdate({ examId }, updateFields);
+        console.log(`✏️ ${username} đã cập nhật đề thi ID: ${examId}`);
+        res.json({ success: true, message: "Đã cập nhật đề thi thành công!" });
+    } catch (err) {
+        console.error('Update exam error:', err);
+        res.status(500).json({ success: false, message: "Lỗi server khi cập nhật đề thi" });
+    }
+});
+
 // 8. Community APIs
 app.get('/api/recent-activities', async (req, res) => {
     try {

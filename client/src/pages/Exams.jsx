@@ -40,6 +40,7 @@ const Exams = () => {
   const [activeExam, setActiveExam] = useState(null); // Exam object selected
   const [examMode, setExamMode] = useState(null); // 'practice' | 'real'
   const [isCreatorOpen, setCreatorOpen] = useState(false);
+  const [examToEdit, setExamToEdit] = useState(null);
   const [showModeModal, setShowModeModal] = useState(false); // Modal chọn chế độ
   const hasInitializedPaginationRef = useRef(false);
 
@@ -90,6 +91,31 @@ const Exams = () => {
     await examService.createExam(examWithUser);
     setCreatorOpen(false);
     loadExams();
+  };
+
+  const handleEdit = async (exam) => {
+    // Fetch full question bank for the exam before opening editor
+    const questionBank = await examService.getQuestionsByExamId(
+      exam.examId || exam.id,
+      Boolean(exam.isStatic)
+    );
+    setExamToEdit({ ...exam, questionBank });
+    setCreatorOpen(true);
+  };
+
+  const handleEditSuccess = async (editedExam) => {
+    const targetId = examToEdit.examId || examToEdit.id;
+    const result = await examService.updateExam(targetId, {
+      ...editedExam,
+      username: user?.username || 'anonymous',
+    });
+    if (result.success) {
+      setCreatorOpen(false);
+      setExamToEdit(null);
+      loadExams();
+    } else {
+      alert('Lỗi cập nhật: ' + result.message);
+    }
   };
 
   const handleDelete = async (targetId) => {
@@ -170,8 +196,9 @@ const Exams = () => {
   if (isCreatorOpen) {
     return (
       <ExamCreator
-        onClose={() => setCreatorOpen(false)}
-        onSuccess={handleCreateSuccess}
+        onClose={() => { setCreatorOpen(false); setExamToEdit(null); }}
+        onSuccess={examToEdit ? handleEditSuccess : handleCreateSuccess}
+        initialData={examToEdit}
       />
     );
   }
@@ -230,8 +257,9 @@ const Exams = () => {
           // 👇 LOGIC PHÂN QUYỀN MỚI
           const isAdmin = user?.role === "admin";
           const isOwner = user?.username && exam.createdBy === user.username;
-          // Chỉ hiện nút xóa nếu: (Không phải đề mẫu) VÀ (Là Admin HOẶC Chính chủ)
+          // Chỉ hiện nút xóa/sửa nếu: (Không phải đề mẫu) VÀ (Là Admin HOẶC Chính chủ)
           const canDelete = !exam.isStatic && (isAdmin || isOwner);
+          const canEdit = !exam.isStatic && (isAdmin || isOwner);
 
           // Lấy ID chuẩn
           const deleteId = exam.examId || exam.id;
@@ -241,23 +269,32 @@ const Exams = () => {
               key={exam.examId || exam.id}
               className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all flex flex-col h-full group relative"
             >
-              {/* 👇 CHỈ HIỆN KHI CÓ QUYỀN (canDelete) */}
-              {canDelete && (
-                <Tooltip text="Xóa đề thi">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(deleteId);
-                    }}
-                    className="absolute top-4 right-4 p-2 bg-white dark:bg-gray-700 text-gray-400 hover:text-red-600 rounded-lg shadow-sm border border-gray-100 dark:border-gray-600 opacity-0 group-hover:opacity-100 transition-all z-10"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </Tooltip>
-              )}
+              {/* Action buttons: sửa + xóa */}
+              <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
+                {canEdit && (
+                  <Tooltip text="Sửa đề thi">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleEdit(exam); }}
+                      className="p-2 bg-white dark:bg-gray-700 text-gray-400 hover:text-blue-600 rounded-lg shadow-sm border border-gray-100 dark:border-gray-600 transition-colors"
+                    >
+                      <FileText size={16} />
+                    </button>
+                  </Tooltip>
+                )}
+                {canDelete && (
+                  <Tooltip text="Xóa đề thi">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(deleteId); }}
+                      className="p-2 bg-white dark:bg-gray-700 text-gray-400 hover:text-red-600 rounded-lg shadow-sm border border-gray-100 dark:border-gray-600 transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </Tooltip>
+                )}
+              </div>
 
               {/* ... (Các phần hiển thị tên, môn học giữ nguyên như cũ) ... */}
-              <div className="flex justify-between items-start mb-4 pr-8">
+              <div className="flex justify-between items-start mb-4 pr-16">
                 <h3 className="text-lg font-bold text-gray-800 dark:text-white line-clamp-2">
                   {exam.title}
                 </h3>

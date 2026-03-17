@@ -141,8 +141,12 @@ export const ExamRunner = ({ exam, mode, onExit }) => {
     const handleEssayAnswer = (qId, text) => {
         setAnswers(prev => ({ ...prev, [qId]: text }));
     };
+    const confirmShortAnswer = (qId) => {
+        setConfirmedShortAnswers(prev => new Set([...prev, qId]));
+    };
 
-        const normalizeShortAnswer = (value) => {
+    const normalizeShortAnswer = (value) => {
+                const [confirmedShortAnswers, setConfirmedShortAnswers] = useState(new Set());
             return String(value || '')
                 .toLowerCase()
                 .replace(/[^\p{L}\p{N}\s]/gu, ' ')
@@ -278,6 +282,15 @@ export const ExamRunner = ({ exam, mode, onExit }) => {
                     {questions.map((q, idx) => {
                         const userAns = answers[q.internalId];
                         const showResult = isSubmitted || (mode === 'practice' && userAns !== undefined);
+                        // For short_answer in practice mode: only reveal after explicit confirmation (button/Enter)
+                        // For MCQ in practice mode: reveal immediately after selecting an option
+                        const showResult = isSubmitted || (
+                            mode === 'practice' && (
+                                q.type === 'short_answer'
+                                    ? confirmedShortAnswers.has(q.internalId)
+                                    : userAns !== undefined
+                            )
+                        );
 
                         return (
                             <div key={q.internalId} id={`q-${q.internalId}`} className="bg-white dark:bg-gray-800 p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 scroll-mt-20">
@@ -294,12 +307,26 @@ export const ExamRunner = ({ exam, mode, onExit }) => {
                                             placeholder="Nhập câu trả lời..."
                                             value={userAns || ''}
                                             onChange={(e) => handleEssayAnswer(q.internalId, e.target.value)}
-                                            disabled={isSubmitted || (mode === 'practice' && userAns)} // Khóa nếu đã trả lời ở practice
+                                            disabled={isSubmitted || (mode === 'practice' && confirmedShortAnswers.has(q.internalId))}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.shiftKey && mode === 'practice' && !isSubmitted && !confirmedShortAnswers.has(q.internalId)) {
+                                                    e.preventDefault();
+                                                    confirmShortAnswer(q.internalId);
+                                                }
+                                            }}
                                         />
                                         {showResult && (
                                             <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-sm p-3">
                                                 <span className="font-bold">Đáp án mẫu:</span>{' '}
                                                 <span className="font-medium">{q.correctText || q.answer || 'Chưa có đáp án'}</span>
+                                                                                    {mode === 'practice' && !isSubmitted && !confirmedShortAnswers.has(q.internalId) && (
+                                                                                        <button
+                                                                                            onClick={() => confirmShortAnswer(q.internalId)}
+                                                                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                                                                                        >
+                                                                                            Kiểm tra đáp án
+                                                                                        </button>
+                                                                                    )}
                                             </div>
                                         )}
                                     </div>
