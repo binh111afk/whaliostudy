@@ -281,7 +281,6 @@ export const ExamRunner = ({ exam, mode, onExit }) => {
                 <div className={`flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth pb-20 md:pb-6`} id="questions-list">
                     {questions.map((q, idx) => {
                         const userAns = answers[q.internalId];
-                        const showResult = isSubmitted || (mode === 'practice' && userAns !== undefined);
                         // For short_answer in practice mode: only reveal after explicit confirmation (button/Enter)
                         // For MCQ in practice mode: reveal immediately after selecting an option
                         const showResult = isSubmitted || (
