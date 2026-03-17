@@ -6,6 +6,7 @@ export const ExamRunner = ({ exam, mode, onExit }) => {
     // --- STATE ---
     const [questions, setQuestions] = useState([]);
     const [answers, setAnswers] = useState({});
+    const [confirmedShortAnswers, setConfirmedShortAnswers] = useState(new Set());
     const [timeLeft, setTimeLeft] = useState(0);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [score, setScore] = useState(null);
@@ -146,13 +147,12 @@ export const ExamRunner = ({ exam, mode, onExit }) => {
     };
 
     const normalizeShortAnswer = (value) => {
-                const [confirmedShortAnswers, setConfirmedShortAnswers] = useState(new Set());
-            return String(value || '')
-                .toLowerCase()
-                .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-                .replace(/\s+/g, ' ')
-                .trim();
-        };
+        return String(value || '')
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    };
 
         const handleSubmit = (auto = false) => {
             if (!auto && mode === 'real') {
