@@ -75,7 +75,9 @@ const sharedInputClass =
 
 const SubjectSelect = ({ value, onChange, options }) => {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const wrapRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   useEffect(() => {
     const onDocumentClick = (event) => {
@@ -104,22 +106,66 @@ const SubjectSelect = ({ value, onChange, options }) => {
     setOpen(false);
   }, [value]);
 
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [open]);
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredOptions = normalizedQuery
+    ? options.filter((item) => item.toLowerCase().includes(normalizedQuery))
+    : options;
+
   return (
     <div ref={wrapRef} className="relative z-20">
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        disabled={options.length === 0}
-        className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/85 px-4 py-3 text-left text-slate-700 outline-none transition hover:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60"
-        style={{ fontFamily: "'Plus Jakarta Sans', 'Google Sans', sans-serif" }}
-      >
-        <span className="truncate">{value || "Chưa có môn học"}</span>
-        <ChevronDown size={16} className={`text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
+      {open ? (
+        <div className="flex w-full items-center justify-between rounded-2xl border border-blue-300 bg-white px-4 py-3 text-left text-slate-700 outline-none ring-4 ring-blue-500/10 transition">
+          <input
+            ref={searchInputRef}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Tìm môn học..."
+            className="w-full bg-transparent text-slate-700 outline-none placeholder:text-slate-400"
+            style={{ fontFamily: "'Plus Jakarta Sans', 'Google Sans', sans-serif" }}
+          />
+          <button
+            type="button"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setOpen(false);
+            }}
+            className="ml-2 text-slate-400 transition hover:text-slate-600"
+            aria-label="Đóng tìm môn"
+          >
+            <ChevronDown size={16} className="rotate-180" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen((prev) => !prev)}
+          disabled={options.length === 0}
+          className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/85 px-4 py-3 text-left text-slate-700 outline-none transition hover:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+          style={{ fontFamily: "'Plus Jakarta Sans', 'Google Sans', sans-serif" }}
+        >
+          <span className="truncate">{value || "Chưa có môn học"}</span>
+          <ChevronDown size={16} className={`text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+      )}
 
       {open && options.length > 0 && (
         <div className="absolute left-0 top-[calc(100%+8px)] z-50 max-h-[132px] w-full overflow-y-auto rounded-2xl border border-slate-200/70 bg-white/90 p-1.5 shadow-xl backdrop-blur-md">
-          {options.map((item) => {
+          {filteredOptions.map((item) => {
             const active = item === value;
             return (
               <button
@@ -142,6 +188,9 @@ const SubjectSelect = ({ value, onChange, options }) => {
               </button>
             );
           })}
+          {filteredOptions.length === 0 && (
+            <p className="px-3 py-2 text-sm text-slate-500">Không tìm thấy môn phù hợp</p>
+          )}
         </div>
       )}
     </div>
