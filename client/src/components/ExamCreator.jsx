@@ -99,6 +99,11 @@ const SubjectSelect = ({ value, onChange, options }) => {
     };
   }, []);
 
+  useEffect(() => {
+    // Close menu whenever selected value is committed.
+    setOpen(false);
+  }, [value]);
+
   return (
     <div ref={wrapRef} className="relative z-20">
       <button
@@ -120,9 +125,11 @@ const SubjectSelect = ({ value, onChange, options }) => {
               <button
                 key={item}
                 type="button"
-                onClick={() => {
-                  onChange(item);
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
                   setOpen(false);
+                  onChange(item);
                 }}
                 className={`w-full rounded-xl px-3 py-2.5 text-left text-sm transition ${
                   active
@@ -644,12 +651,12 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
           />
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <label className="space-y-2">
+            <div className="space-y-2">
               <span className="flex items-center gap-2 text-sm font-semibold text-slate-600">
                 <BookOpen size={16} /> Môn học
               </span>
               <SubjectSelect value={subject} onChange={setSubject} options={subjectOptions} />
-            </label>
+            </div>
 
             <label className="space-y-2">
               <span className="flex items-center gap-2 text-sm font-semibold text-slate-600">
