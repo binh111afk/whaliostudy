@@ -71,7 +71,7 @@ const toEditorQuestion = (input, idx) => {
 };
 
 const sharedInputClass =
-  "w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10";
+  "w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-slate-700 outline-none transition-all duration-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2";
 
 const SubjectSelect = ({ value, onChange, options }) => {
   const [open, setOpen] = useState(false);
@@ -128,7 +128,7 @@ const SubjectSelect = ({ value, onChange, options }) => {
   return (
     <div ref={wrapRef} className="relative z-20">
       {open ? (
-        <div className="flex w-full items-center justify-between rounded-2xl border border-blue-300 bg-white px-4 py-3 text-left text-slate-700 outline-none ring-4 ring-blue-500/10 transition">
+        <div className="flex w-full items-center justify-between rounded-2xl border border-blue-300 bg-white px-4 py-3 text-left text-slate-700 outline-none ring-2 ring-blue-500/20 ring-offset-2 transition-all duration-300">
           <input
             ref={searchInputRef}
             value={query}
@@ -155,7 +155,7 @@ const SubjectSelect = ({ value, onChange, options }) => {
           type="button"
           onClick={() => setOpen((prev) => !prev)}
           disabled={options.length === 0}
-          className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/85 px-4 py-3 text-left text-slate-700 outline-none transition hover:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/85 px-4 py-3 text-left text-slate-700 outline-none transition-all duration-300 hover:bg-white focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           style={{ fontFamily: "'Plus Jakarta Sans', 'Google Sans', sans-serif" }}
         >
           <span className="truncate">{value || "Chưa có môn học"}</span>
@@ -164,7 +164,7 @@ const SubjectSelect = ({ value, onChange, options }) => {
       )}
 
       {open && options.length > 0 && (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-50 max-h-[132px] w-full overflow-y-auto rounded-2xl border border-slate-200/70 bg-white/90 p-1.5 shadow-xl backdrop-blur-md">
+        <div className="absolute left-0 top-[calc(100%+8px)] z-50 max-h-[132px] w-full overflow-y-auto rounded-2xl border border-white/40 bg-white/70 p-1.5 shadow-2xl backdrop-blur-xl">
           {filteredOptions.map((item) => {
             const active = item === value;
             return (
@@ -179,7 +179,7 @@ const SubjectSelect = ({ value, onChange, options }) => {
                 }}
                 className={`w-full rounded-xl px-3 py-2.5 text-left text-sm transition ${
                   active
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                    ? "bg-gradient-to-r from-blue-100/95 to-indigo-100/95 text-blue-700 shadow-sm"
                     : "text-slate-700 hover:bg-blue-50"
                 }`}
                 style={{ fontFamily: "'Plus Jakarta Sans', 'Google Sans', sans-serif" }}
@@ -680,13 +680,12 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
   const stepContent = [
     <section key="general" className="space-y-5">
       <div className="relative overflow-visible rounded-[2rem] border border-white/70 border-t-blue-500/10 bg-white/80 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
-        <div className="pointer-events-none absolute inset-x-8 -top-3 h-6 rounded-full bg-gradient-to-r from-blue-500/20 to-indigo-500/20 blur-md" />
         <div className="space-y-5 p-6 sm:p-8">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Tiêu đề đề thi"
-            className={`${sharedInputClass} text-3xl font-bold text-slate-800`}
+            className={`${sharedInputClass} text-3xl font-extrabold text-slate-800 placeholder:text-slate-300`}
             style={{ fontFamily: "'Plus Jakarta Sans', 'Google Sans', sans-serif" }}
           />
 
@@ -922,9 +921,9 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-slate-50">
-      <div className="pointer-events-none absolute left-[-120px] top-[-90px] h-72 w-72 rounded-full bg-blue-200/35 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-[-140px] right-[-80px] h-80 w-80 rounded-full bg-violet-200/30 blur-3xl" />
+    <div className="fixed inset-0 z-50 isolate flex flex-col overflow-hidden bg-slate-50">
+      <div className="pointer-events-none absolute left-[-120px] top-[-110px] -z-10 h-[420px] w-[420px] rounded-full bg-blue-400/10 blur-[120px]" />
+      <div className="pointer-events-none absolute bottom-[-170px] right-[-90px] -z-10 h-[460px] w-[460px] rounded-full bg-purple-400/10 blur-[120px]" />
       <input
         ref={jsonInputRef}
         type="file"
@@ -956,13 +955,18 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
               key={label}
               type="button"
               onClick={() => animateToStep(idx)}
-              className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
-                step === idx
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                  : "text-slate-600 hover:bg-slate-100"
+              className={`relative rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                step === idx ? "text-white" : "text-slate-600 hover:bg-slate-100"
               }`}
             >
-              {idx + 1}. {label}
+              {step === idx && (
+                <motion.span
+                  layoutId="exam-studio-step-pill"
+                  className="absolute inset-0 rounded-xl bg-blue-600 shadow-lg shadow-blue-500/20"
+                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                />
+              )}
+              <span className="relative z-10">{idx + 1}. {label}</span>
             </button>
           ))}
         </nav>
@@ -979,6 +983,16 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
             {stepContent[step]}
           </motion.div>
         </AnimatePresence>
+
+        <div className="sticky bottom-4 z-20 mt-5 flex justify-end">
+          <button
+            type="button"
+            onClick={() => (step === 2 ? handleSave() : animateToStep(step + 1))}
+            className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition-all duration-200 hover:shadow-indigo-500/25 hover:shadow-lg active:scale-95"
+          >
+            {step === 2 ? (isEditMode ? "Cập nhật đề" : "Lưu đề thi") : "Tiếp tục"}
+          </button>
+        </div>
 
       </div>
 
