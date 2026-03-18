@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
 import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
@@ -1734,6 +1734,92 @@ const CreateSnippetModal = ({
   return createPortal(modalContent, document.body);
 };
 
+const ClearAllCodeModal = ({ isOpen, onClose, onConfirm }) => {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <AnimatePresence>
+      {isOpen ? (
+        <motion.div
+          key="clear-all-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+          className="fixed inset-0 z-[160] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <motion.div
+            key="clear-all-modal"
+            initial={{ opacity: 0, scale: 0.92, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 10 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            className="relative w-full max-w-md rounded-[2rem] border border-white/70 bg-white/90 px-6 pb-6 pt-10 shadow-[0_30px_90px_rgba(15,23,42,0.16)] backdrop-blur-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-4 top-4 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              aria-label="Đóng xác nhận dọn code"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-orange-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+              <Eraser size={34} className="text-orange-500" strokeWidth={2.1} />
+            </div>
+
+            <div className="mt-6 text-center">
+              <h3
+                className="text-[1.7rem] font-bold tracking-tight text-slate-900"
+                style={{ fontFamily: "'Plus Jakarta Sans', 'Google Sans', sans-serif" }}
+              >
+                Dọn dẹp sàn code?
+              </h3>
+              <p className="mt-3 text-sm leading-7 text-slate-500">
+                Toàn bộ code hiện tại sẽ bị xóa sạch để bạn bắt đầu ý tưởng mới. Bạn chắc chứ?
+              </p>
+            </div>
+
+            <div className="mt-8 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex min-w-[120px] items-center justify-center rounded-full px-5 py-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={onConfirm}
+                className="inline-flex min-w-[140px] items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-orange-500 px-5 py-3 text-sm font-bold text-white shadow-[0_18px_35px_rgba(239,68,68,0.28)] transition hover:scale-[1.01] hover:shadow-[0_22px_40px_rgba(239,68,68,0.34)]"
+              >
+                Xóa hết
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>,
+    document.body
+  );
+};
+
 const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMode = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1774,6 +1860,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   const [popupSearchQuery, setPopupSearchQuery] = useState('');
   const [isExercisePopupOpen, setIsExercisePopupOpen] = useState(false);
   const [pendingFreeSave, setPendingFreeSave] = useState(false);
+  const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
   const { currentPage: mainPage, goToPage: goToMainPage } = usePersistedPagination({
     paramKey: 'page',
   });
@@ -1812,6 +1899,12 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   useEffect(() => {
     languageRef.current = editorLanguage;
   }, [editorLanguage]);
+
+  useEffect(() => {
+    if (!selectedSnippet?.isFreeMode) {
+      setIsClearAllModalOpen(false);
+    }
+  }, [selectedSnippet]);
 
   const loadSnippets = useCallback(async () => {
     if (!username) {
@@ -2433,18 +2526,20 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
     setIsCreateOpen(true);
   }, [editorCode, selectedSnippet, username]);
 
-  const handleClearAllCode = useCallback(() => {
-    if (!selectedSnippet?.isFreeMode) return;
-    const confirmed = window.confirm('Xóa toàn bộ code hiện tại để bắt đầu ý tưởng mới?');
-    if (!confirmed) return;
-
+  const confirmClearAllCode = useCallback(() => {
     setEditorCode('');
     setProgramInput('');
     setProgramOutput('');
     setProgramError('');
     setProgramPreviewHtml('');
     setStatusBanner({ kind: 'hidden', message: '' });
+    setIsClearAllModalOpen(false);
     toast.success('Đã dọn dẹp toàn bộ code');
+  }, []);
+
+  const handleClearAllCode = useCallback(() => {
+    if (!selectedSnippet?.isFreeMode) return;
+    setIsClearAllModalOpen(true);
   }, [selectedSnippet]);
 
   const handleGenerateShareLink = useCallback(async () => {
@@ -3124,6 +3219,12 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
           void handleSelectSnippetFromPopup(snippet);
         }}
         onClose={() => setIsExercisePopupOpen(false)}
+      />
+
+      <ClearAllCodeModal
+        isOpen={isClearAllModalOpen}
+        onClose={() => setIsClearAllModalOpen(false)}
+        onConfirm={confirmClearAllCode}
       />
 
       {selectedSnippet && (

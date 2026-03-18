@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import Tooltip from './Tooltip';
 import { documentService } from '../services/documentService';
+import { toast } from 'sonner';
 
 const DEFAULT_SUBJECTS = [
   { id: 1, name: 'Cơ sở toán trong CNTT' },
@@ -696,9 +697,18 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
   };
 
   const handleSubmit = async () => {
-    if (!file) return alert('Vui lòng chọn file!');
-    if (!name.trim()) return alert('Vui lòng nhập tên tài liệu!');
-    if (!course) return alert('Vui lòng chọn môn học!');
+    if (!file) {
+      toast.error('Vui lòng chọn file!', { duration: 3000, position: 'top-right' });
+      return;
+    }
+    if (!name.trim()) {
+      toast.error('Vui lòng nhập tên tài liệu!', { duration: 3000, position: 'top-right' });
+      return;
+    }
+    if (!course) {
+      toast.error('Vui lòng chọn môn học!', { duration: 3000, position: 'top-right' });
+      return;
+    }
 
     setIsSubmitting(true);
 

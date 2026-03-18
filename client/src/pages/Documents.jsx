@@ -836,12 +836,26 @@ const Documents = () => {
 
   // --- HANDLERS ---
   const handleUpload = async (formData) => {
-    const res = await documentService.uploadDocument(formData);
-    if (res.success) {
-      alert("Tải lên thành công!");
-      loadDocuments();
-    } else {
-      alert("Lỗi: " + res.message);
+    try {
+      const res = await documentService.uploadDocument(formData);
+      if (res.success) {
+        toast.success("Tải lên thành công!", {
+          duration: 3000,
+          position: "top-right",
+        });
+        loadDocuments();
+      } else {
+        toast.error("Lỗi: " + res.message, {
+          duration: 3000,
+          position: "top-right",
+        });
+      }
+    } catch (error) {
+      console.error("Lỗi tải tài liệu:", error);
+      toast.error("Có lỗi xảy ra khi tải tài liệu lên!", {
+        duration: 3000,
+        position: "top-right",
+      });
     }
   };
 
