@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
   BookOpen,
+  ChevronDown,
   Clock,
   FileType,
   Lightbulb,
@@ -11,13 +12,14 @@ import {
 } from "lucide-react";
 import mammoth from "mammoth";
 import * as aiModule from "../services/ai";
+import { documentService } from "../services/documentService";
 import { ExamHeader } from "./exam-creator/ExamHeader";
 import { QuestionItem } from "./exam-creator/QuestionItem";
 import { Toolbar } from "./exam-creator/Toolbar";
 
 const aiService = aiModule.aiService || aiModule.default || null;
 
-const SUBJECTS = [
+const FALLBACK_SUBJECTS = [
   "Pháp luật",
   "Tâm lý",
   "Triết học",
@@ -69,7 +71,75 @@ const toEditorQuestion = (input, idx) => {
 };
 
 const sharedInputClass =
-  "w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-slate-700 outline-none transition focus:border-indigo-400 focus:shadow-[0_0_0_4px_rgba(59,130,246,0.18)]";
+  "w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10";
+
+const SubjectSelect = ({ value, onChange, options }) => {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const onDocumentClick = (event) => {
+      if (!wrapRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    const onEscape = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onDocumentClick);
+    document.addEventListener("keydown", onEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", onDocumentClick);
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, []);
+
+  return (
+    <div ref={wrapRef} className="relative z-20">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        disabled={options.length === 0}
+        className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/85 px-4 py-3 text-left text-slate-700 outline-none transition hover:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+        style={{ fontFamily: "'Plus Jakarta Sans', 'Google Sans', sans-serif" }}
+      >
+        <span className="truncate">{value || "Chưa có môn học"}</span>
+        <ChevronDown size={16} className={`text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && options.length > 0 && (
+        <div className="absolute left-0 top-[calc(100%+8px)] z-50 max-h-[132px] w-full overflow-y-auto rounded-2xl border border-slate-200/70 bg-white/90 p-1.5 shadow-xl backdrop-blur-md">
+          {options.map((item) => {
+            const active = item === value;
+            return (
+              <button
+                key={item}
+                type="button"
+                onClick={() => {
+                  onChange(item);
+                  setOpen(false);
+                }}
+                className={`w-full rounded-xl px-3 py-2.5 text-left text-sm transition ${
+                  active
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                    : "text-slate-700 hover:bg-blue-50"
+                }`}
+                style={{ fontFamily: "'Plus Jakarta Sans', 'Google Sans', sans-serif" }}
+              >
+                {item}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const initQuestionsFromBank = (questionBank) => {
   if (!Array.isArray(questionBank) || questionBank.length === 0) return [createQuestion()];
@@ -91,11 +161,16 @@ const initQuestionsFromBank = (questionBank) => {
 
 export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
   const isEditMode = Boolean(initialData);
+  const defaultTime = 45;
 
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState(() => initialData?.title || "");
-  const [subject, setSubject] = useState(() => initialData?.subject || SUBJECTS[0]);
-  const [time, setTime] = useState(() => Number(initialData?.time) || 45);
+  const [subject, setSubject] = useState(() => initialData?.subject || FALLBACK_SUBJECTS[0]);
+  const [subjectOptions, setSubjectOptions] = useState(FALLBACK_SUBJECTS);
+  const [timeInput, setTimeInput] = useState(() => {
+    const initialTime = Math.max(1, Number(initialData?.time) || defaultTime);
+    return String(initialTime);
+  });
   const [description, setDescription] = useState(() => initialData?.description || "");
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
@@ -111,6 +186,35 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoScore, questions.length]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSubjectOptions = async () => {
+      const apiSubjects = await documentService.getSubjects();
+      if (cancelled) return;
+
+      const names = Array.isArray(apiSubjects)
+        ? apiSubjects
+            .map((item) => String(item?.name || "").trim())
+            .filter(Boolean)
+        : [];
+
+      const source = names.length ? names : FALLBACK_SUBJECTS;
+      const merged = [...new Set([
+        ...source,
+        String(initialData?.subject || "").trim(),
+      ].filter(Boolean))];
+
+      setSubjectOptions(merged);
+      setSubject((prev) => (merged.includes(prev) ? prev : merged[0] || ""));
+    };
+
+    loadSubjectOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialData?.subject]);
+
   const jsonInputRef = useRef(null);
   const wordInputRef = useRef(null);
 
@@ -118,6 +222,9 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
     () => questions.reduce((sum, q) => sum + (Number(q.points) || 1), 0),
     [questions]
   );
+
+  const parsedTime = Number(timeInput);
+  const finalTime = Number.isFinite(parsedTime) && parsedTime > 0 ? parsedTime : defaultTime;
 
   const animateToStep = (nextStep) => {
     setStep(Math.max(0, Math.min(2, nextStep)));
@@ -372,7 +479,7 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
 
       if (parsed.title) setTitle(parsed.title);
       if (parsed.subject) setSubject(parsed.subject);
-      if (parsed.time) setTime(Number(parsed.time) || 45);
+      if (parsed.time) setTimeInput(String(Math.max(1, Number(parsed.time) || defaultTime)));
       if (parsed.description) setDescription(parsed.description);
 
       const rawQuestions = Array.isArray(parsed) ? parsed : parsed.questions;
@@ -413,7 +520,7 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
 
     if (payload.title) setTitle(String(payload.title));
     if (payload.subject) setSubject(String(payload.subject));
-    if (payload.time) setTime(Math.max(1, Number(payload.time) || 45));
+    if (payload.time) setTimeInput(String(Math.max(1, Number(payload.time) || defaultTime)));
     if (payload.description) setDescription(String(payload.description));
 
     const generatedQuestions = Array.isArray(payload.questions) ? payload.questions : [];
@@ -493,7 +600,7 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
       examId: isEditMode ? (initialData.examId || initialData.id) : newId,
       title: title.trim(),
       subject,
-      time: Number(time) || 45,
+      time: finalTime,
       description: description.trim(),
       questions: questions.map((q) => ({
         question: String(q.question || "").trim(),
@@ -516,14 +623,14 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
 
   const stepContent = [
     <section key="general" className="space-y-5">
-      <div className="rounded-[2rem] border border-white/70 bg-white/80 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
-        <div className="h-2 rounded-t-[2rem] bg-gradient-to-r from-blue-600 to-cyan-400" />
+      <div className="relative overflow-visible rounded-[2rem] border border-white/70 border-t-blue-500/10 bg-white/80 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
+        <div className="pointer-events-none absolute inset-x-8 -top-3 h-6 rounded-full bg-gradient-to-r from-blue-500/20 to-indigo-500/20 blur-md" />
         <div className="space-y-5 p-6 sm:p-8">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Tiêu đề đề thi"
-            className={`${sharedInputClass} text-2xl font-bold`}
+            className={`${sharedInputClass} text-3xl font-bold text-slate-800`}
             style={{ fontFamily: "'Plus Jakarta Sans', 'Google Sans', sans-serif" }}
           />
 
@@ -541,18 +648,7 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
               <span className="flex items-center gap-2 text-sm font-semibold text-slate-600">
                 <BookOpen size={16} /> Môn học
               </span>
-              <select
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className={sharedInputClass}
-                style={{ fontFamily: "'Plus Jakarta Sans', 'Google Sans', sans-serif" }}
-              >
-                {SUBJECTS.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
+              <SubjectSelect value={subject} onChange={setSubject} options={subjectOptions} />
             </label>
 
             <label className="space-y-2">
@@ -562,8 +658,20 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
               <input
                 type="number"
                 min={1}
-                value={time}
-                onChange={(e) => setTime(Math.max(1, Number(e.target.value) || 45))}
+                value={timeInput}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  if (nextValue === "" || /^\d+$/.test(nextValue)) {
+                    setTimeInput(nextValue);
+                  }
+                }}
+                onBlur={() => {
+                  if (timeInput.trim() === "") {
+                    setTimeInput(String(defaultTime));
+                    return;
+                  }
+                  setTimeInput(String(Math.max(1, Number(timeInput) || defaultTime)));
+                }}
                 className={sharedInputClass}
                 style={{ fontFamily: "'Plus Jakarta Sans', 'Google Sans', sans-serif" }}
               />
@@ -627,7 +735,7 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
             type="button"
             onClick={handleGenerateByAi}
             disabled={isGeneratingAi}
-            className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2.5 font-semibold text-white shadow-md shadow-indigo-200 transition hover:bg-indigo-700 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-2.5 font-semibold text-white shadow-md shadow-blue-500/20 transition hover:brightness-105 disabled:opacity-60"
           >
             <Sparkles size={16} /> {isGeneratingAi ? "Đang tạo..." : "Tạo đề bằng AI"}
           </button>
@@ -656,57 +764,67 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
         )}
       </div>
 
-      <div className="space-y-3">
-        {questions.map((question, index) => (
-          <QuestionItem
-            key={question.id}
-            question={question}
-            index={index}
-            pointsDisabled={autoScore}
-            onQuestionChange={(value) =>
-              updateQuestion(question.id, (prev) => ({ ...prev, question: value }))
-            }
-            onTypeChange={(nextType) =>
-              updateQuestion(question.id, (prev) => normalizeQuestionByType(prev, nextType))
-            }
-            onOptionChange={(optIndex, value) =>
-              updateQuestion(question.id, (prev) => {
-                const nextOptions = Array.isArray(prev.options) ? [...prev.options] : ["", "", "", ""];
-                nextOptions[optIndex] = value;
-                return { ...prev, options: nextOptions };
-              })
-            }
-            onCorrectAnswerChange={(optIndex) =>
-              updateQuestion(question.id, (prev) => ({ ...prev, correctAnswer: optIndex }))
-            }
-            onCorrectCheckboxChange={(optIndex, checked) =>
-              updateQuestion(question.id, (prev) => {
-                const current = new Set(Array.isArray(prev.correctAnswers) ? prev.correctAnswers : []);
-                if (checked) current.add(optIndex);
-                else current.delete(optIndex);
-                return { ...prev, correctAnswers: Array.from(current).sort((a, b) => a - b) };
-              })
-            }
-            onShortAnswerChange={(value) =>
-              updateQuestion(question.id, (prev) => ({ ...prev, correctText: value }))
-            }
-            onPointsChange={(value) => {
-              if (autoScore) return; // locked while auto-score is on
-              updateQuestion(question.id, (prev) => ({ ...prev, points: Math.max(0.1, Number(value) || 1) }));
-            }}
-            onDelete={() => deleteQuestion(question.id)}
-            onDuplicate={() => duplicateQuestion(question.id)}
-          />
-        ))}
+      <motion.div layout className="space-y-3">
+        <AnimatePresence initial={false}>
+          {questions.map((question, index) => (
+            <motion.div
+              key={question.id}
+              layout
+              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -12, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              <QuestionItem
+                question={question}
+                index={index}
+                pointsDisabled={autoScore}
+                onQuestionChange={(value) =>
+                  updateQuestion(question.id, (prev) => ({ ...prev, question: value }))
+                }
+                onTypeChange={(nextType) =>
+                  updateQuestion(question.id, (prev) => normalizeQuestionByType(prev, nextType))
+                }
+                onOptionChange={(optIndex, value) =>
+                  updateQuestion(question.id, (prev) => {
+                    const nextOptions = Array.isArray(prev.options) ? [...prev.options] : ["", "", "", ""];
+                    nextOptions[optIndex] = value;
+                    return { ...prev, options: nextOptions };
+                  })
+                }
+                onCorrectAnswerChange={(optIndex) =>
+                  updateQuestion(question.id, (prev) => ({ ...prev, correctAnswer: optIndex }))
+                }
+                onCorrectCheckboxChange={(optIndex, checked) =>
+                  updateQuestion(question.id, (prev) => {
+                    const current = new Set(Array.isArray(prev.correctAnswers) ? prev.correctAnswers : []);
+                    if (checked) current.add(optIndex);
+                    else current.delete(optIndex);
+                    return { ...prev, correctAnswers: Array.from(current).sort((a, b) => a - b) };
+                  })
+                }
+                onShortAnswerChange={(value) =>
+                  updateQuestion(question.id, (prev) => ({ ...prev, correctText: value }))
+                }
+                onPointsChange={(value) => {
+                  if (autoScore) return; // locked while auto-score is on
+                  updateQuestion(question.id, (prev) => ({ ...prev, points: Math.max(0.1, Number(value) || 1) }));
+                }}
+                onDelete={() => deleteQuestion(question.id)}
+                onDuplicate={() => duplicateQuestion(question.id)}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
 
         <button
           type="button"
           onClick={addQuestion}
-          className="w-full rounded-2xl border border-dashed border-indigo-300 bg-indigo-50/60 px-4 py-3 font-semibold text-indigo-700 transition hover:bg-indigo-100"
+          className="w-full rounded-2xl border border-dashed border-blue-300 bg-blue-50/60 px-4 py-3 font-semibold text-blue-700 transition hover:bg-blue-100"
         >
           + Thêm câu hỏi
         </button>
-      </div>
+      </motion.div>
     </section>,
 
     <section key="preview" className="space-y-4">
@@ -721,7 +839,7 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
         </div>
         <div className="rounded-3xl border border-slate-200 bg-white p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Thời gian</p>
-          <p className="mt-1 text-2xl font-bold text-slate-900">{time} phút</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">{finalTime} phút</p>
         </div>
       </div>
 
@@ -748,7 +866,9 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-50">
+    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-slate-50">
+      <div className="pointer-events-none absolute left-[-120px] top-[-90px] h-72 w-72 rounded-full bg-blue-200/35 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-[-140px] right-[-80px] h-80 w-80 rounded-full bg-violet-200/30 blur-3xl" />
       <input
         ref={jsonInputRef}
         type="file"
@@ -773,8 +893,8 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
         isEditMode={isEditMode}
       />
 
-      <div className="mx-auto w-full max-w-6xl flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-        <nav className="mb-6 grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white p-2">
+      <div className="relative z-10 mx-auto w-full max-w-6xl flex-1 overflow-y-auto px-4 py-8 sm:px-6">
+        <nav className="mb-8 grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white p-2">
           {["Thiết lập chung", "Nội dung câu hỏi", "Xem trước & Lưu"].map((label, idx) => (
             <button
               key={label}
@@ -782,7 +902,7 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
               onClick={() => animateToStep(idx)}
               className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
                 step === idx
-                  ? "bg-indigo-600 text-white"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
                   : "text-slate-600 hover:bg-slate-100"
               }`}
             >
@@ -804,23 +924,6 @@ export const ExamCreator = ({ onClose, onSuccess, initialData = null }) => {
           </motion.div>
         </AnimatePresence>
 
-        <div className="sticky bottom-0 mt-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-white/90 p-3 backdrop-blur">
-          <button
-            type="button"
-            onClick={() => animateToStep(step - 1)}
-            disabled={step === 0}
-            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
-          >
-            Quay lại
-          </button>
-          <button
-            type="button"
-            onClick={() => (step === 2 ? handleSave() : animateToStep(step + 1))}
-            className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700"
-          >
-            {step === 2 ? (isEditMode ? "Cập nhật đề" : "Lưu đề thi") : "Tiếp tục"}
-          </button>
-        </div>
       </div>
 
       <Toolbar

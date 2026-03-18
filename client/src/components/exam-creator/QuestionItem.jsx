@@ -1,5 +1,5 @@
-import React, { memo, useMemo, useRef } from "react";
-import { Copy, Trash2 } from "lucide-react";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
+import { AlignLeft, CheckCircle2, Copy, ListChecks, PenSquare, Trash2 } from "lucide-react";
 
 const letters = ["A", "B", "C", "D"];
 const FONT = { fontFamily: "'Plus Jakarta Sans', 'Google Sans', sans-serif" };
@@ -9,6 +9,107 @@ const framelessInput =
 
 const zoneInputClass =
   "flex-1 rounded-xl border-0 bg-white/70 px-3 py-2 text-sm text-slate-700 placeholder-slate-300 outline-none transition focus:bg-white focus:ring-2 focus:ring-blue-400/30";
+
+const QUESTION_TYPE_OPTIONS = [
+  {
+    value: "multiple_choice",
+    label: "Trắc nghiệm (1 đáp án)",
+    icon: CheckCircle2,
+    hint: "Chọn 1 phương án đúng",
+  },
+  {
+    value: "checkbox",
+    label: "Trắc nghiệm (nhiều đáp án)",
+    icon: ListChecks,
+    hint: "Chọn nhiều phương án",
+  },
+  {
+    value: "short_answer",
+    label: "Trả lời ngắn",
+    icon: AlignLeft,
+    hint: "Điền nội dung ngắn",
+  },
+  {
+    value: "essay",
+    label: "Tự luận",
+    icon: PenSquare,
+    hint: "Câu mở rộng",
+  },
+];
+
+const TypeSelect = ({ value, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  const selected = QUESTION_TYPE_OPTIONS.find((item) => item.value === value) || QUESTION_TYPE_OPTIONS[0];
+  const SelectedIcon = selected.icon;
+
+  useEffect(() => {
+    const onDocumentClick = (event) => {
+      if (!containerRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    const onEscape = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onDocumentClick);
+    document.addEventListener("keydown", onEscape);
+    return () => {
+      document.removeEventListener("mousedown", onDocumentClick);
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex w-full items-center justify-between rounded-xl border border-slate-200/70 bg-slate-50 px-3 py-2 text-left text-sm text-slate-700 outline-none transition hover:bg-white focus:ring-2 focus:ring-blue-400/30"
+        style={FONT}
+      >
+        <span className="flex items-center gap-2">
+          <SelectedIcon size={15} className="text-blue-500" />
+          <span>{selected.label}</span>
+        </span>
+        <span className={`text-xs text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}>▼</span>
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-full rounded-xl border border-slate-200/70 bg-white/85 p-1.5 shadow-xl backdrop-blur-md">
+          {QUESTION_TYPE_OPTIONS.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.value === value;
+
+            return (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => {
+                  onChange(item.value);
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition ${
+                  isActive ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-100"
+                }`}
+                style={FONT}
+              >
+                <Icon size={15} className={isActive ? "text-blue-600" : "text-slate-500"} />
+                <span className="flex-1 text-sm">{item.label}</span>
+                <span className="text-[10px] uppercase tracking-wider text-slate-400">{item.hint}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const AutoGrowTextarea = ({ value, onChange, placeholder }) => {
   const ref = useRef(null);
@@ -54,9 +155,9 @@ const QuestionItemBase = ({
   const optionList = useMemo(() => question.options || ["", "", "", ""], [question.options]);
 
   return (
-    <article className="group relative overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm transition-shadow hover:shadow-md">
+    <article className="group relative overflow-visible rounded-3xl border border-slate-100 bg-white shadow-sm transition-all hover:shadow-md focus-within:border-blue-200 focus-within:ring-2 focus-within:ring-blue-100">
       {/* Left accent bar */}
-      <div className="absolute inset-y-0 left-0 w-[3px] rounded-l-3xl bg-blue-500" />
+      <div className="absolute inset-y-0 left-0 w-1 rounded-l-3xl bg-blue-300 transition-all duration-200 group-focus-within:w-1.5 group-focus-within:bg-blue-500 group-focus-within:shadow-[0_0_18px_rgba(59,130,246,0.7)]" />
 
       <div className="px-6 py-5 sm:px-7">
         {/* Header: badge + action buttons */}
@@ -106,21 +207,11 @@ const QuestionItemBase = ({
         {/* Settings row: type + points */}
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-[1fr_130px]">
           <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Loại câu hỏi</p>
-            <select
-              value={question.type}
-              onChange={(e) => onTypeChange(e.target.value)}
-              className="w-full rounded-xl border-0 bg-slate-50 px-3 py-2 text-sm text-slate-700 outline-none transition focus:bg-white focus:ring-2 focus:ring-blue-400/30"
-              style={FONT}
-            >
-              <option value="multiple_choice">Trắc nghiệm (1 đáp án)</option>
-              <option value="checkbox">Trắc nghiệm (nhiều đáp án)</option>
-              <option value="short_answer">Trả lời ngắn</option>
-              <option value="essay">Tự luận</option>
-            </select>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Loại câu hỏi</p>
+            <TypeSelect value={question.type} onChange={onTypeChange} />
           </div>
           <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Điểm</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Điểm</p>
             <input
               type="number"
               min={0.1}
