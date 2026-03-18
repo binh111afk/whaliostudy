@@ -5105,17 +5105,17 @@ const WANDBOX_LANGUAGE_TO_LABEL = {
 };
 
 const WANDBOX_COMPILER_PREFERENCES = {
-    cpp: ['gcc-head', 'clang-head'],
-    c: ['gcc-head', 'clang-head'],
-    csharp: ['mono-head', 'mono-6.12.0.122', 'dotnet-8.0.413'],
+    cpp: ['gcc-head', 'gcc-13.2.0', 'clang-head'],
+    c: ['gcc-head-c', 'gcc-13.2.0-c', 'clang-head-c'],
+    csharp: ['mono-6.12.0.199', 'dotnetcore-8.0.402', 'dotnetcore-6.0.425'],
     javascript: ['nodejs-20.17.0', 'nodejs-18.20.4'],
     typescript: ['typescript-5.6.2'],
-    python: ['cpython-head', 'cpython-3.13.8', 'cpython-3.12.7'],
+    python: ['cpython-3.13.8', 'cpython-3.12.7', 'cpython-head'],
     java: ['openjdk-jdk-22+36', 'openjdk-jdk-21+35'],
-    ruby: ['ruby-head', 'ruby-3.3.6'],
-    rust: ['rust-head', 'rust-1.81.0'],
-    go: ['go-head', 'go-1.23.2'],
-    swift: ['swift-head', 'swift-6.0.3'],
+    ruby: ['ruby-3.4.1', 'ruby-3.3.6', 'ruby-3.2.6'],
+    rust: ['rust-1.82.0', 'rust-1.81.0', 'rust-1.80.1'],
+    go: ['go-1.23.2', 'go-1.22.8', 'go-1.16.3'],
+    swift: ['swift-5.10.1', 'swift-6.0.1'],
     sql: ['sqlite-3.46.1', 'sqlite-3.35.5']
 };
 
