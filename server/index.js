@@ -2048,6 +2048,24 @@ const codeSnippetSchema = new mongoose.Schema({
 
 codeSnippetSchema.index({ username: 1, createdAt: -1 });
 
+// Mind Map Schema (Sơ đồ tư duy)
+const mindMapSchema = new mongoose.Schema({
+    username: { type: String, required: true, index: true },
+    title: { type: String, default: 'Mind Map của bạn', trim: true, maxlength: 200 },
+    topic: { type: String, default: 'Whalio Mind Map', trim: true, maxlength: 200 },
+    theme: { type: String, default: 'ocean', trim: true, maxlength: 40 },
+    nodes: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    edges: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    viewport: {
+        type: mongoose.Schema.Types.Mixed,
+        default: { x: 0, y: 0, zoom: 1 }
+    },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+mindMapSchema.index({ username: 1, updatedAt: -1 });
+
 // Announcement Schema (Admin notifications)
 const announcementSchema = new mongoose.Schema({
     title: { type: String, required: true, trim: true, maxlength: 200 },
@@ -2226,6 +2244,7 @@ const Activity = mongoose.model('Activity', activitySchema);
 const Timetable = mongoose.model('Timetable', timetableSchema);
 const QuickNote = mongoose.model('QuickNote', quickNoteSchema);
 const CodeSnippet = mongoose.model('CodeSnippet', codeSnippetSchema);
+const MindMap = mongoose.model('MindMap', mindMapSchema);
 const Announcement = mongoose.model('Announcement', announcementSchema);
 const PortalConfig = mongoose.model('PortalConfig', portalConfigSchema);
 const Event = mongoose.model('Event', eventSchema);
@@ -5690,6 +5709,275 @@ app.delete('/api/code-snippets/:id', async (req, res) => {
     } catch (err) {
         console.error('Delete code snippet error:', err);
         return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+const MIND_MAP_MAX_NODES = 180;
+const MIND_MAP_MAX_EDGES = 240;
+const MIND_MAP_MAX_LABEL_LENGTH = 160;
+const MIND_MAP_MAX_AI_CHILDREN = 4;
+const MIND_MAP_MAX_AI_DEPTH = 4;
+
+const sanitizeMindMapText = (value, limit = MIND_MAP_MAX_LABEL_LENGTH) =>
+    String(value === undefined || value === null ? '' : value)
+        .replace(/\r\n/g, '\n')
+        .trim()
+        .slice(0, limit);
+
+const normalizeMindMapTree = (rawNode, fallbackLabel = 'Chủ đề', depth = 0) => {
+    if (depth > MIND_MAP_MAX_AI_DEPTH) return null;
+    if (!rawNode && depth === 0) return null;
+
+    const rawLabel = typeof rawNode === 'string'
+        ? rawNode
+        : rawNode?.label || rawNode?.title || rawNode?.name || rawNode?.topic || rawNode?.text || fallbackLabel;
+    const label = sanitizeMindMapText(rawLabel || fallbackLabel, MIND_MAP_MAX_LABEL_LENGTH) || fallbackLabel;
+
+    const rawChildren = Array.isArray(rawNode?.children)
+        ? rawNode.children
+        : Array.isArray(rawNode?.items)
+            ? rawNode.items
+            : Array.isArray(rawNode?.nodes)
+                ? rawNode.nodes
+                : [];
+
+    return {
+        label,
+        children: rawChildren
+            .slice(0, depth === 0 ? 8 : MIND_MAP_MAX_AI_CHILDREN)
+            .map((child) => normalizeMindMapTree(child, 'Ý phụ', depth + 1))
+            .filter(Boolean)
+    };
+};
+
+const normalizeMindMapAiPayload = (payload, fallbackTopic = 'Mind Map') => {
+    const candidate = payload?.mindMap || payload?.tree || payload?.root || payload?.data || payload;
+    return normalizeMindMapTree(candidate, fallbackTopic, 0);
+};
+
+const sanitizeMindMapNodes = (rawNodes = []) => {
+    if (!Array.isArray(rawNodes)) return [];
+    return rawNodes
+        .slice(0, MIND_MAP_MAX_NODES)
+        .map((node, index) => {
+            const id = sanitizeMindMapText(node?.id || `node-${index}`, 80) || `node-${index}`;
+            return {
+                id,
+                type: sanitizeMindMapText(node?.type || 'mindMapNode', 40) || 'mindMapNode',
+                position: {
+                    x: Number(node?.position?.x || 0),
+                    y: Number(node?.position?.y || 0)
+                },
+                data: {
+                    label: sanitizeMindMapText(node?.data?.label || 'Node', MIND_MAP_MAX_LABEL_LENGTH) || 'Node',
+                    depth: Math.max(0, Number(node?.data?.depth || 0)),
+                    colorIndex: Math.max(0, Number(node?.data?.colorIndex || 0)),
+                    theme: sanitizeMindMapText(node?.data?.theme || 'ocean', 40) || 'ocean',
+                    direction: sanitizeMindMapText(node?.data?.direction || 'right', 12) || 'right',
+                    parentId: node?.data?.parentId ? sanitizeMindMapText(node.data.parentId, 80) : null
+                }
+            };
+        });
+};
+
+const sanitizeMindMapEdges = (rawEdges = []) => {
+    if (!Array.isArray(rawEdges)) return [];
+    return rawEdges
+        .slice(0, MIND_MAP_MAX_EDGES)
+        .map((edge, index) => ({
+            id: sanitizeMindMapText(edge?.id || `edge-${index}`, 120) || `edge-${index}`,
+            source: sanitizeMindMapText(edge?.source, 80),
+            target: sanitizeMindMapText(edge?.target, 80),
+            type: sanitizeMindMapText(edge?.type || 'smoothstep', 40) || 'smoothstep'
+        }))
+        .filter((edge) => edge.source && edge.target);
+};
+
+const formatMindMapDocument = (doc) => ({
+    id: doc._id.toString(),
+    title: String(doc.title || 'Mind Map của bạn'),
+    topic: String(doc.topic || 'Whalio Mind Map'),
+    theme: String(doc.theme || 'ocean'),
+    nodes: Array.isArray(doc.nodes) ? doc.nodes : [],
+    edges: Array.isArray(doc.edges) ? doc.edges : [],
+    viewport: doc.viewport || { x: 0, y: 0, zoom: 1 },
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt
+});
+
+const buildMindMapPrompt = (topic) => [
+    'Bạn là chuyên gia tạo sơ đồ tư duy cho sinh viên.',
+    'Hãy trả về DUY NHẤT JSON hợp lệ, không markdown, không giải thích.',
+    'Cấu trúc bắt buộc:',
+    '{"label":"Chủ đề trung tâm","children":[{"label":"Nhánh chính","children":[{"label":"Ý phụ","children":[]}]}]}',
+    'Quy tắc:',
+    '- Tạo 4 đến 6 nhánh chính.',
+    '- Mỗi nhánh chính có 2 đến 4 ý phụ ngắn gọn.',
+    '- Nhãn ngắn, súc tích, phù hợp học tập.',
+    `- Chủ đề: ${sanitizeMindMapText(topic, 180)}`
+].join('\n');
+
+const buildMindMapExpandPrompt = (topic, nodeLabel, path) => [
+    'Bạn là chuyên gia mở rộng sơ đồ tư duy.',
+    'Hãy trả về DUY NHẤT JSON hợp lệ, không markdown, không giải thích.',
+    'Cấu trúc bắt buộc:',
+    '{"children":[{"label":"Ý con 1"},{"label":"Ý con 2"},{"label":"Ý con 3"},{"label":"Ý con 4"}]}',
+    'Quy tắc:',
+    '- Trả về đúng 3 hoặc 4 ý con.',
+    '- Mỗi nhãn phải ngắn, rõ, không lặp.',
+    `- Chủ đề tổng: ${sanitizeMindMapText(topic, 180) || 'Mind Map'}`,
+    `- Node cần khai triển: ${sanitizeMindMapText(nodeLabel, 180) || 'Ý chính'}`,
+    `- Ngữ cảnh đường dẫn: ${sanitizeMindMapText(path, 240) || sanitizeMindMapText(nodeLabel, 180)}`
+].join('\n');
+
+app.get('/api/mind-maps/current', ensureAuthenticated, async (req, res) => {
+    try {
+        const username = resolveUsernameFromRequest(req);
+        if (!username) {
+            return res.status(401).json({ success: false, message: 'Chưa xác định được người dùng' });
+        }
+
+        const doc = await MindMap.findOne({ username }).sort({ updatedAt: -1 }).lean();
+        return res.json({ success: true, mindMap: doc ? formatMindMapDocument(doc) : null });
+    } catch (error) {
+        console.error('Get current mind map error:', error);
+        return res.status(500).json({ success: false, message: 'Không thể tải sơ đồ tư duy' });
+    }
+});
+
+app.post('/api/mind-maps', ensureAuthenticated, async (req, res) => {
+    try {
+        const username = resolveUsernameFromRequest(req);
+        if (!username) {
+            return res.status(401).json({ success: false, message: 'Chưa xác định được người dùng' });
+        }
+
+        const nodes = sanitizeMindMapNodes(req.body?.nodes || []);
+        const edges = sanitizeMindMapEdges(req.body?.edges || []);
+        const now = new Date();
+        const doc = new MindMap({
+            username,
+            title: sanitizeMindMapText(req.body?.title || 'Mind Map của bạn', 200) || 'Mind Map của bạn',
+            topic: sanitizeMindMapText(req.body?.topic || 'Whalio Mind Map', 200) || 'Whalio Mind Map',
+            theme: sanitizeMindMapText(req.body?.theme || 'ocean', 40) || 'ocean',
+            nodes,
+            edges,
+            viewport: req.body?.viewport || { x: 0, y: 0, zoom: 1 },
+            createdAt: now,
+            updatedAt: now
+        });
+
+        await doc.save();
+        return res.json({ success: true, mindMap: formatMindMapDocument(doc) });
+    } catch (error) {
+        console.error('Create mind map error:', error);
+        return res.status(500).json({ success: false, message: 'Không thể tạo sơ đồ tư duy' });
+    }
+});
+
+app.put('/api/mind-maps/:id', ensureAuthenticated, async (req, res) => {
+    try {
+        const username = resolveUsernameFromRequest(req);
+        const id = String(req.params?.id || '').trim();
+        if (!username || !id) {
+            return res.status(400).json({ success: false, message: 'Thiếu dữ liệu lưu sơ đồ' });
+        }
+
+        const updated = await MindMap.findOneAndUpdate(
+            { _id: id, username },
+            {
+                $set: {
+                    title: sanitizeMindMapText(req.body?.title || 'Mind Map của bạn', 200) || 'Mind Map của bạn',
+                    topic: sanitizeMindMapText(req.body?.topic || 'Whalio Mind Map', 200) || 'Whalio Mind Map',
+                    theme: sanitizeMindMapText(req.body?.theme || 'ocean', 40) || 'ocean',
+                    nodes: sanitizeMindMapNodes(req.body?.nodes || []),
+                    edges: sanitizeMindMapEdges(req.body?.edges || []),
+                    viewport: req.body?.viewport || { x: 0, y: 0, zoom: 1 },
+                    updatedAt: new Date()
+                }
+            },
+            { new: true, runValidators: false }
+        );
+
+        if (!updated) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy sơ đồ để cập nhật' });
+        }
+
+        return res.json({ success: true, mindMap: formatMindMapDocument(updated) });
+    } catch (error) {
+        console.error('Update mind map error:', error);
+        return res.status(500).json({ success: false, message: 'Không thể lưu sơ đồ tư duy' });
+    }
+});
+
+app.post('/api/mind-maps/ai/generate', ensureAuthenticated, async (req, res) => {
+    try {
+        const topic = sanitizeMindMapText(req.body?.topic || '', 180);
+        if (!topic) {
+            return res.status(400).json({ success: false, message: 'Thiếu chủ đề để tạo sơ đồ' });
+        }
+
+        const aiResult = await generateAIResponse(buildMindMapPrompt(topic));
+        if (!aiResult?.success) {
+            return res.status(502).json({ success: false, message: aiResult?.message || 'AI chưa tạo được sơ đồ' });
+        }
+
+        const parsed = extractAiJsonPayload(aiResult.message || '');
+        const mindMap = normalizeMindMapAiPayload(parsed, topic);
+        if (!mindMap) {
+            return res.status(502).json({ success: false, message: 'AI trả về cấu trúc sơ đồ chưa hợp lệ' });
+        }
+
+        return res.json({
+            success: true,
+            modelUsed: aiResult.model || '',
+            mindMap
+        });
+    } catch (error) {
+        console.error('Generate mind map by AI error:', error);
+        return res.status(500).json({ success: false, message: 'Không thể tạo sơ đồ bằng AI' });
+    }
+});
+
+app.post('/api/mind-maps/ai/expand', ensureAuthenticated, async (req, res) => {
+    try {
+        const topic = sanitizeMindMapText(req.body?.topic || 'Mind Map', 180) || 'Mind Map';
+        const nodeLabel = sanitizeMindMapText(req.body?.nodeLabel || '', 180);
+        const path = sanitizeMindMapText(req.body?.path || nodeLabel, 240);
+        if (!nodeLabel) {
+            return res.status(400).json({ success: false, message: 'Thiếu node cần khai triển' });
+        }
+
+        const aiResult = await generateAIResponse(buildMindMapExpandPrompt(topic, nodeLabel, path));
+        if (!aiResult?.success) {
+            return res.status(502).json({ success: false, message: aiResult?.message || 'AI chưa khai triển được ý này' });
+        }
+
+        const parsed = extractAiJsonPayload(aiResult.message || '');
+        const rawChildren = Array.isArray(parsed?.children)
+            ? parsed.children
+            : Array.isArray(parsed)
+                ? parsed
+                : [];
+        const children = rawChildren
+            .slice(0, MIND_MAP_MAX_AI_CHILDREN)
+            .map((item) => ({
+                label: sanitizeMindMapText(item?.label || item?.title || item?.name || item, 120)
+            }))
+            .filter((item) => item.label);
+
+        if (children.length === 0) {
+            return res.status(502).json({ success: false, message: 'AI chưa trả về ý con hợp lệ' });
+        }
+
+        return res.json({
+            success: true,
+            modelUsed: aiResult.model || '',
+            children
+        });
+    } catch (error) {
+        console.error('Expand mind map node by AI error:', error);
+        return res.status(500).json({ success: false, message: 'Không thể khai triển node bằng AI' });
     }
 });
 

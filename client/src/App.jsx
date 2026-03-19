@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom';
 import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
-import { Menu, X, Home, FileText, Users, LayoutGrid, Moon, Sun, Settings, LogOut, Save, User } from 'lucide-react';
+import { Menu, X, Home, FileText, Users, LayoutGrid, Moon, Sun, Settings, LogOut, Save, User, GitGraph } from 'lucide-react';
 import axios from './config/axiosConfig';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -12,7 +12,6 @@ import BackupRestoreModal from './components/BackupRestoreModal';
 import { MusicProvider } from './context/MusicContext';
 import FloatingPlayer from './components/FloatingPlayer';
 import { authService } from './services/authService';
-import { getFullApiUrl } from './config/apiConfig';
 import { AvatarFrameProvider } from "./context/AvatarFrameContext";
 
 // Import các trang
@@ -29,12 +28,16 @@ import DocumentViewer from './pages/DocumentViewer';
 import Portal from './pages/Portal';
 import Announcements from './pages/Announcements';
 import CodeSnippetManager from './pages/CodeSnippetManager';
+import MindMap from './pages/MindMap';
+
+const MotionDiv = motion.div;
 
 const MOBILE_NAV_ITEMS = [
   { to: '/', label: 'Trang chủ', icon: Home },
   { to: '/portal', label: 'Tiện ích', icon: LayoutGrid },
   { to: '/documents', label: 'Tài liệu', icon: FileText },
   { to: '/community', label: 'Cộng đồng', icon: Users },
+  { to: '/mind-map', label: 'Mind Map', icon: GitGraph },
 ];
 
 const ROUTE_TITLES = {
@@ -51,6 +54,7 @@ const ROUTE_TITLES = {
   '/announcements': 'Thông báo',
   '/code-vault': 'Kho Code',
   '/code-vault/free': 'CodePad',
+  '/mind-map': 'Sơ đồ tư duy',
 };
 
 const AUTH_USER_ENDPOINT = 'https://whaliostudy.onrender.com/auth/user';
@@ -473,7 +477,7 @@ function App() {
           <AnimatePresence>
             {!isFullscreenLayout && isMobileSidebarOpen && (
               <div className="fixed inset-0 z-[90] flex min-[1025px]:hidden">
-                <motion.div
+                <MotionDiv
                   initial={{ x: '-100%' }}
                   animate={{ x: 0 }}
                   exit={{ x: '-100%' }}
@@ -491,8 +495,8 @@ function App() {
                     isMobile
                     onNavigate={() => setIsMobileSidebarOpen(false)}
                   />
-                </motion.div>
-                <motion.div
+                </MotionDiv>
+                <MotionDiv
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -594,6 +598,7 @@ function App() {
                     />
                   }
                 />
+                <Route path="/mind-map" element={<MindMap user={user} />} />
                 {/* Catch-all: redirect về trang chủ nếu không tìm thấy route */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
@@ -613,7 +618,7 @@ function App() {
 
           <AnimatePresence>
             {fallbackCircle && (
-              <motion.div
+              <MotionDiv
                 key={fallbackCircle.id}
                 className="pointer-events-none fixed z-[200] rounded-full"
                 initial={{ scale: 0, opacity: 0.9 }}

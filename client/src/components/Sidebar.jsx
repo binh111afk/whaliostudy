@@ -10,6 +10,7 @@ import {
   Hourglass,
   Bell,
   Code2,
+  GitGraph,
 } from "lucide-react";
 import WhalioBrand from "./WhalioBrand";
 
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { icon: Calendar, label: "Thời khóa biểu", to: "/timetable" },
   { icon: Bell, label: "Thông báo", to: "/announcements" },
   { icon: Code2, label: "Kho Code", to: "/code-vault" },
+  { icon: GitGraph, label: "Sơ đồ tư duy", to: "/mind-map" },
 ];
 
 const Sidebar = ({ isMobile = false, onNavigate }) => {
@@ -64,7 +66,7 @@ const Sidebar = ({ isMobile = false, onNavigate }) => {
                   <span className="absolute left-3 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full bg-blue-500/20 blur-md dark:bg-blue-400/20" />
                 )}
                 <Icon size={20} className="relative z-10 transition-colors duration-200 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
-                <span className="font-medium">{item.label}</span>
+                <span className="relative z-10 font-medium">{item.label}</span>
               </div>
             </NavLink>
           );
