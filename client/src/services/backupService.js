@@ -7,6 +7,15 @@ const musicDB = localforage.createInstance({
 });
 
 const PLAYLIST_META_KEY = '__playlist_meta_v1__';
+const LOCAL_PREFERENCE_KEYS = [
+    'theme',
+    'whalio_avatar_frame',
+    'whalio_music_playback_v1',
+    'whalio_study_overlay_state_v1',
+    'whalio_flashcard_decks',
+    'whalio_flashcard_progress',
+    'whalio.code-editor-theme'
+];
 
 const readLocalUserSnapshot = (username) => {
     try {
@@ -46,7 +55,10 @@ const readLocalUserSnapshot = (username) => {
 
 const buildCompleteBackupPayload = ({ serverData, username, localMusic }) => {
     const base = serverData && typeof serverData === 'object' ? serverData : {};
-    const userSnapshot = base.userSnapshot || base.user || readLocalUserSnapshot(username);
+    const userSnapshot = {
+        ...readLocalUserSnapshot(username),
+        ...(base.userSnapshot || base.user || {})
+    };
 
     return {
         ...base,
@@ -56,7 +68,8 @@ const buildCompleteBackupPayload = ({ serverData, username, localMusic }) => {
         backupType: 'full-user-data',
         backupOwner: String(userSnapshot?.username || username || ''),
         userSnapshot,
-        localMusic: localMusic || base.localMusic || null
+        localMusic: localMusic || base.localMusic || null,
+        localPreferences: base.localPreferences || {}
     };
 };
 
@@ -72,7 +85,8 @@ const normalizeImportedBackupPayload = (backupData) => {
         backupType: String(payload.backupType || raw.backupType || ''),
         backupOwner: String(payload.backupOwner || raw.backupOwner || ''),
         userSnapshot: payload.userSnapshot || raw.userSnapshot || payload.user || raw.user || null,
-        localMusic: payload.localMusic || raw.localMusic || null
+        localMusic: payload.localMusic || raw.localMusic || null,
+        localPreferences: payload.localPreferences || raw.localPreferences || {}
     };
 };
 
@@ -95,6 +109,53 @@ const hasEnoughUserData = (payload) => {
     });
 
     return hasIdentity && hasProfileFields;
+};
+
+const readLocalPreferenceSnapshot = () => {
+    const snapshot = {};
+
+    LOCAL_PREFERENCE_KEYS.forEach((key) => {
+        const value = localStorage.getItem(key);
+        if (value !== null) snapshot[key] = value;
+    });
+
+    for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (!key) continue;
+        if (snapshot[key] !== undefined) continue;
+        if (key.startsWith('whalio_') || key.startsWith('whalio.')) {
+            const value = localStorage.getItem(key);
+            if (value !== null) snapshot[key] = value;
+        }
+    }
+
+    return snapshot;
+};
+
+const restoreLocalPreferenceSnapshot = (snapshot) => {
+    if (!snapshot || typeof snapshot !== 'object') return;
+
+    Object.entries(snapshot).forEach(([key, value]) => {
+        if (typeof key !== 'string' || key.length === 0) return;
+        if (value === null || value === undefined) {
+            localStorage.removeItem(key);
+            return;
+        }
+        localStorage.setItem(key, String(value));
+    });
+};
+
+const restoreLocalUserSnapshot = (userSnapshot) => {
+    if (!userSnapshot || typeof userSnapshot !== 'object') return;
+
+    try {
+        const currentRaw = localStorage.getItem('user');
+        const currentParsed = currentRaw ? JSON.parse(currentRaw) : {};
+        const merged = { ...currentParsed, ...userSnapshot };
+        localStorage.setItem('user', JSON.stringify(merged));
+    } catch {
+        localStorage.setItem('user', JSON.stringify(userSnapshot));
+    }
 };
 
 // Service để sao lưu và khôi phục dữ liệu
@@ -223,6 +284,7 @@ export const backupService = {
                 username,
                 localMusic
             });
+            combinedBackup.localPreferences = readLocalPreferenceSnapshot();
 
             // Tạo file JSON và tải xuống
             const jsonString = JSON.stringify(combinedBackup, null, 2);
@@ -297,6 +359,8 @@ export const backupService = {
                 throw new Error(result.message || 'Lỗi khi khôi phục dữ liệu');
             }
 
+            restoreLocalUserSnapshot(backupData.userSnapshot);
+            restoreLocalPreferenceSnapshot(backupData.localPreferences);
             const localMusicRestore = await this.restoreLocalMusicSnapshot(backupData.localMusic);
 
             return { 

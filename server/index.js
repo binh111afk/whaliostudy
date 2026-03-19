@@ -2240,6 +2240,30 @@ const SystemEvent = mongoose.model('SystemEvent', systemEventSchema);
 const UserActivityLog = mongoose.model('UserActivityLog', userActivityLogSchema);
 const BackupRecord = mongoose.model('BackupRecord', backupRecordSchema);
 
+const stripMongoFields = (value) => {
+    if (Array.isArray(value)) {
+        return value.map(stripMongoFields);
+    }
+
+    if (!value || typeof value !== 'object') {
+        return value;
+    }
+
+    const plain = {};
+    Object.entries(value).forEach(([key, entryValue]) => {
+        if (key === '_id' || key === '__v') return;
+        plain[key] = stripMongoFields(entryValue);
+    });
+    return plain;
+};
+
+const normalizeBackupArray = (value) => {
+    if (!Array.isArray(value)) return [];
+    return value
+        .filter((item) => item && typeof item === 'object')
+        .map((item) => stripMongoFields(item));
+};
+
 passport.serializeUser((user, done) => {
     const userId = String(user?._id || '').trim();
     if (!userId) {
@@ -8134,6 +8158,178 @@ app.post('/api/gpa', async (req, res) => {
     } catch (err) {
         console.error('Save GPA error:', err);
         res.status(500).json({ success: false, message: 'Lỗi lưu dữ liệu' });
+    }
+});
+
+app.post('/api/backup', async (req, res) => {
+    try {
+        const username = String(req.body?.username || '').trim();
+        if (!username) {
+            return res.status(400).json({ success: false, message: 'Thiếu username để sao lưu.' });
+        }
+
+        const [userDoc, gpaDoc, timetableDocs, eventDocs, deadlineTagDocs, quickNoteDocs, studyTaskDocs, studySessionDocs] = await Promise.all([
+            User.findOne({ username })
+                .select('username fullName email avatar savedDocs totalStudyMinutes totalTargetCredits')
+                .lean(),
+            GpaModel.findOne({ username }).lean(),
+            Timetable.find({ username }).sort({ createdAt: 1 }).lean(),
+            Event.find({ username }).sort({ date: 1, createdAt: 1 }).lean(),
+            DeadlineTag.find({ username }).sort({ createdAt: 1 }).lean(),
+            QuickNote.find({ username }).sort({ createdAt: 1 }).lean(),
+            StudyTask.find({ username }).sort({ createdAt: 1 }).lean(),
+            StudySession.find({ username }).sort({ date: 1, createdAt: 1 }).lean()
+        ]);
+
+        const payload = {
+            app: 'Whalio',
+            version: '2.0.0',
+            exportDate: new Date().toISOString(),
+            userSnapshot: stripMongoFields(userDoc || { username }),
+            gpa: gpaDoc
+                ? {
+                    targetGpa: String(gpaDoc.targetGpa || ''),
+                    semesters: normalizeBackupArray(gpaDoc.semesters)
+                }
+                : { targetGpa: '', semesters: [] },
+            timetable: normalizeBackupArray(timetableDocs),
+            events: normalizeBackupArray(eventDocs),
+            deadlineTags: normalizeBackupArray(deadlineTagDocs),
+            quickNotes: normalizeBackupArray(quickNoteDocs),
+            studyTasks: normalizeBackupArray(studyTaskDocs),
+            studySessions: normalizeBackupArray(studySessionDocs)
+        };
+
+        return res.json({ success: true, data: payload });
+    } catch (error) {
+        console.error('Backup export error:', error);
+        return res.status(500).json({ success: false, message: 'Lỗi khi sao lưu dữ liệu.' });
+    }
+});
+
+app.post('/api/restore', async (req, res) => {
+    try {
+        const username = String(req.body?.username || '').trim();
+        const backupData = req.body?.backupData && typeof req.body.backupData === 'object'
+            ? req.body.backupData
+            : null;
+
+        if (!username || !backupData) {
+            return res.status(400).json({ success: false, message: 'Thiếu dữ liệu để khôi phục.' });
+        }
+
+        const backupOwner = String(
+            backupData?.backupOwner || backupData?.userSnapshot?.username || ''
+        ).trim();
+        if (backupOwner && backupOwner !== username) {
+            return res.status(400).json({
+                success: false,
+                message: 'File backup không khớp với tài khoản đang đăng nhập.'
+            });
+        }
+
+        const userSnapshot = backupData.userSnapshot && typeof backupData.userSnapshot === 'object'
+            ? backupData.userSnapshot
+            : null;
+
+        const restoreOperations = [
+            Timetable.deleteMany({ username }),
+            Event.deleteMany({ username }),
+            DeadlineTag.deleteMany({ username }),
+            QuickNote.deleteMany({ username }),
+            StudyTask.deleteMany({ username }),
+            StudySession.deleteMany({ username }),
+            GpaModel.deleteOne({ username })
+        ];
+
+        if (userSnapshot) {
+            restoreOperations.push(
+                User.findOneAndUpdate(
+                    { username },
+                    {
+                        $set: {
+                            fullName: String(userSnapshot.fullName || ''),
+                            email: String(userSnapshot.email || ''),
+                            avatar: userSnapshot.avatar || null,
+                            savedDocs: Array.isArray(userSnapshot.savedDocs) ? userSnapshot.savedDocs : [],
+                            totalStudyMinutes: Number(userSnapshot.totalStudyMinutes || 0),
+                            totalTargetCredits: Number(userSnapshot.totalTargetCredits || 150),
+                            updatedAt: new Date()
+                        }
+                    },
+                    { new: true }
+                )
+            );
+        }
+
+        await Promise.all(restoreOperations);
+
+        const timetableDocs = normalizeBackupArray(backupData.timetable).map((item) => ({
+            ...item,
+            username,
+            updatedAt: item.updatedAt || new Date()
+        }));
+        const eventDocs = normalizeBackupArray(backupData.events).map((item) => ({
+            ...item,
+            username
+        }));
+        const deadlineTagDocs = normalizeBackupArray(backupData.deadlineTags).map((item) => ({
+            ...item,
+            username,
+            normalizedName: String(item.normalizedName || item.name || '').trim().toLowerCase()
+        })).filter((item) => item.name && item.normalizedName);
+        const quickNoteDocs = normalizeBackupArray(backupData.quickNotes).map((item) => ({
+            ...item,
+            username,
+            updatedAt: item.updatedAt || new Date()
+        }));
+        const studyTaskDocs = normalizeBackupArray(backupData.studyTasks).map((item) => ({
+            ...item,
+            username,
+            updatedAt: item.updatedAt || new Date()
+        }));
+        const studySessionDocs = normalizeBackupArray(backupData.studySessions).map((item) => ({
+            ...item,
+            username
+        }));
+
+        const gpaPayload = backupData.gpa && typeof backupData.gpa === 'object'
+            ? backupData.gpa
+            : {};
+
+        const insertOperations = [];
+        if (timetableDocs.length > 0) insertOperations.push(Timetable.insertMany(timetableDocs, { ordered: false }));
+        if (eventDocs.length > 0) insertOperations.push(Event.insertMany(eventDocs, { ordered: false }));
+        if (deadlineTagDocs.length > 0) insertOperations.push(DeadlineTag.insertMany(deadlineTagDocs, { ordered: false }));
+        if (quickNoteDocs.length > 0) insertOperations.push(QuickNote.insertMany(quickNoteDocs, { ordered: false }));
+        if (studyTaskDocs.length > 0) insertOperations.push(StudyTask.insertMany(studyTaskDocs, { ordered: false }));
+        if (studySessionDocs.length > 0) insertOperations.push(StudySession.insertMany(studySessionDocs, { ordered: false }));
+
+        insertOperations.push(
+            GpaModel.findOneAndUpdate(
+                { username },
+                {
+                    username,
+                    targetGpa: String(gpaPayload.targetGpa || ''),
+                    semesters: normalizeBackupArray(gpaPayload.semesters),
+                    updatedAt: new Date()
+                },
+                { upsert: true, new: true }
+            )
+        );
+
+        await Promise.all(insertOperations);
+
+        invalidateUserDashboardBatchCache(username);
+        invalidateStudyStatsCache(username);
+
+        return res.json({
+            success: true,
+            message: 'Khôi phục dữ liệu thành công.'
+        });
+    } catch (error) {
+        console.error('Backup restore error:', error);
+        return res.status(500).json({ success: false, message: 'Lỗi khi khôi phục dữ liệu.' });
     }
 });
 
