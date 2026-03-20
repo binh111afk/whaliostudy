@@ -30,12 +30,6 @@ const extractHtmlDocumentParts = (input) => {
   };
 };
 
-const scopePreviewStyles = (cssText) =>
-  String(cssText || '')
-    .replace(/:root\b/g, `.${HTML_PREVIEW_SCOPE_CLASS}`)
-    .replace(/\bhtml\b/g, `.${HTML_PREVIEW_SCOPE_CLASS}`)
-    .replace(/\bbody\b/g, `.${HTML_PREVIEW_SCOPE_CLASS}`);
-
 const normalizePreviewHtml = (input) => {
   const rawValue = String(input || '');
   if (!rawValue.trim()) return '';
@@ -96,12 +90,10 @@ function HtmlPreviewer({
         const { bodyHtml, inlineStyles } = extractHtmlDocumentParts(normalizedInput);
         const nextHtml = DOMPurify.sanitize(normalizePreviewHtml(bodyHtml), sanitizeConfig);
         const nextStyles = inlineStyles
-          ? scopePreviewStyles(
-              DOMPurify.sanitize(inlineStyles, {
-                ALLOWED_TAGS: [],
-                ALLOWED_ATTR: [],
-              })
-            )
+          ? DOMPurify.sanitize(inlineStyles, {
+              ALLOWED_TAGS: [],
+              ALLOWED_ATTR: [],
+            })
           : '';
 
         if (isMounted) {
@@ -132,16 +124,6 @@ function HtmlPreviewer({
     };
   }, [isHtmlMode, normalizedInput]);
 
-  if (previewState.mode === 'empty') {
-    return (
-      <div
-        className={`rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500 ${className}`.trim()}
-      >
-        {emptyMessage}
-      </div>
-    );
-  }
-
   const sharedContentClassName = [
     'max-w-none break-words text-slate-700',
     '[&_a]:text-blue-600 [&_a]:underline [&_a]:underline-offset-2',
@@ -169,13 +151,59 @@ function HtmlPreviewer({
     .filter(Boolean)
     .join(' ');
 
+  const iframeSrcDoc = useMemo(() => {
+    if (previewState.mode !== 'html') return '';
+
+    return `<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #f8fafc;
+        color: #334155;
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      body {
+        padding: 24px;
+      }
+      img, table {
+        max-width: 100%;
+      }
+      pre {
+        white-space: pre-wrap;
+      }
+    </style>
+    ${previewState.inlineStyles ? `<style>${previewState.inlineStyles}</style>` : ''}
+  </head>
+  <body>
+    <div class="${HTML_PREVIEW_SCOPE_CLASS}">${previewState.html}</div>
+  </body>
+</html>`;
+  }, [previewState.html, previewState.inlineStyles, previewState.mode]);
+
+  if (previewState.mode === 'empty') {
+    return (
+      <div
+        className={`rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500 ${className}`.trim()}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
+
   return (
     <div className={`rounded-2xl border border-slate-200 bg-slate-50 p-6 ${className}`.trim()}>
-      {previewState.inlineStyles ? <style>{previewState.inlineStyles}</style> : null}
       {previewState.mode === 'html' ? (
-        <div
-          className={`${HTML_PREVIEW_SCOPE_CLASS} ${sharedContentClassName}`.trim()}
-          dangerouslySetInnerHTML={{ __html: previewState.html }}
+        <iframe
+          title="HTML assignment preview"
+          sandbox=""
+          srcDoc={iframeSrcDoc}
+          className="min-h-[420px] w-full rounded-2xl border border-slate-200 bg-white"
         />
       ) : (
         <div className={sharedContentClassName}>
