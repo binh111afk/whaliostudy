@@ -2037,8 +2037,8 @@ const codeSnippetSchema = new mongoose.Schema({
     subjectName: { type: String, default: '', trim: true, maxlength: 120 },
     exerciseName: { type: String, default: '', trim: true, maxlength: 220 },
     assignmentName: { type: String, default: '', trim: true, maxlength: 220 },
-    formattedDescription: { type: String, default: '', trim: true, maxlength: 12000 },
-    assignmentDescription: { type: String, default: '', trim: true, maxlength: 12000 },
+    formattedDescription: { type: String, default: '', trim: true, maxlength: CODE_SNIPPET_DESCRIPTION_MAX_LENGTH },
+    assignmentDescription: { type: String, default: '', trim: true, maxlength: CODE_SNIPPET_DESCRIPTION_MAX_LENGTH },
     code: { type: String, default: '' },
     language: { type: String, default: 'plaintext', trim: true, maxlength: 60 },
     testCases: { type: [codeSnippetTestCaseSchema], default: [] },
@@ -4797,6 +4797,7 @@ app.delete('/api/announcements/:id', async (req, res) => {
 
 // 4.3 Code Snippet APIs (MongoDB)
 const CODE_SNIPPET_TOTAL_SCORE = 10;
+const CODE_SNIPPET_DESCRIPTION_MAX_LENGTH = 20000;
 const CODE_SNIPPET_DEFAULT_TEST_CASE_COUNT = 5;
 const CODE_SNIPPET_MAX_TEST_CASES = Math.min(
     12,
@@ -4921,7 +4922,10 @@ const generateCodeSnippetTestCases = async ({
     assignmentName,
     assignmentDescription
 }) => {
-    const normalizedDescription = sanitizeSnippetTestCaseText(assignmentDescription, 12000);
+    const normalizedDescription = sanitizeSnippetTestCaseText(
+        assignmentDescription,
+        CODE_SNIPPET_DESCRIPTION_MAX_LENGTH
+    );
     if (!normalizedDescription) {
         return {
             success: true,
