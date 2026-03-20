@@ -1763,7 +1763,7 @@ const CreateSnippetModal = ({
                     Live Preview
                   </p>
                   <h3 className="text-xl font-black text-slate-900 dark:text-white">
-                    Xem trước nội dung bài tập
+                    Nội dung bài tập
                   </h3>
                 </div>
                 <button
