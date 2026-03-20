@@ -8,6 +8,7 @@ const DEFAULT_EMPTY_MESSAGE = 'Chưa có nội dung để xem trước.';
 
 const HTML_TAG_PATTERN = /<\/?[a-z][\s\S]*>/i;
 const HTML_DOCUMENT_PATTERN = /<(?:!doctype|html|head|body|style)\b/i;
+const HTML_PREVIEW_SCOPE_CLASS = 'whalio-html-preview-root';
 
 const escapeHtml = (value) =>
   String(value || '')
@@ -28,6 +29,12 @@ const extractHtmlDocumentParts = (input) => {
     bodyHtml: bodyMatch ? String(bodyMatch[1] || '').trim() : rawValue,
   };
 };
+
+const scopePreviewStyles = (cssText) =>
+  String(cssText || '')
+    .replace(/:root\b/g, `.${HTML_PREVIEW_SCOPE_CLASS}`)
+    .replace(/\bhtml\b/g, `.${HTML_PREVIEW_SCOPE_CLASS}`)
+    .replace(/\bbody\b/g, `.${HTML_PREVIEW_SCOPE_CLASS}`);
 
 const normalizePreviewHtml = (input) => {
   const rawValue = String(input || '');
@@ -89,10 +96,12 @@ function HtmlPreviewer({
         const { bodyHtml, inlineStyles } = extractHtmlDocumentParts(normalizedInput);
         const nextHtml = DOMPurify.sanitize(normalizePreviewHtml(bodyHtml), sanitizeConfig);
         const nextStyles = inlineStyles
-          ? DOMPurify.sanitize(inlineStyles, {
-              ALLOWED_TAGS: [],
-              ALLOWED_ATTR: [],
-            })
+          ? scopePreviewStyles(
+              DOMPurify.sanitize(inlineStyles, {
+                ALLOWED_TAGS: [],
+                ALLOWED_ATTR: [],
+              })
+            )
           : '';
 
         if (isMounted) {
@@ -165,7 +174,7 @@ function HtmlPreviewer({
       {previewState.inlineStyles ? <style>{previewState.inlineStyles}</style> : null}
       {previewState.mode === 'html' ? (
         <div
-          className={sharedContentClassName}
+          className={`${HTML_PREVIEW_SCOPE_CLASS} ${sharedContentClassName}`.trim()}
           dangerouslySetInnerHTML={{ __html: previewState.html }}
         />
       ) : (
