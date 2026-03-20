@@ -5565,14 +5565,36 @@ app.post('/api/code-snippets/format-assignment', async (req, res) => {
         }
 
         const prompt = [
-            'Bạn là trợ lý format đề bài lập trình.',
-            'Hãy chuyển đoạn văn bản thô sau thành Markdown rõ ràng, dễ đọc.',
-            '- Giữ nguyên ý nghĩa gốc, không bịa thêm dữ liệu.',
-            '- Dùng heading/list hợp lý.',
-            '- Các phần Input/Output/Ví dụ phải ưu tiên biểu diễn bằng bảng Markdown nếu có thể.',
-            '- Chỉ trả về nội dung Markdown, không thêm giải thích ngoài lề, không dùng khung ```.',
+            'Bạn là một chuyên gia UI/UX và Technical Writer của hệ thống Whalio.',
+            'Nhiệm vụ của bạn là tiếp nhận nội dung bài tập lập trình thô từ người dùng và trình bày lại thành một trang HTML chuyên nghiệp, dễ đọc và đẹp mắt.',
             '',
-            'Nội dung gốc:',
+            'YÊU CẦU PHONG CÁCH:',
+            '- Trả về DUY NHẤT mã HTML hoàn chỉnh có thể render trực tiếp trong trình duyệt. Không thêm giải thích, không markdown, không dùng khung ```.',
+            '- Toàn bộ nội dung phải nằm trong một thẻ <div class="card"> với nền trắng, bo góc lớn, đổ bóng mượt.',
+            '- Sử dụng CSS nội tuyến trong thẻ <style> đặt ở đầu kết quả để tự chứa toàn bộ giao diện.',
+            '- Dùng h1 làm tiêu đề chính, có border-left màu xanh #3498db.',
+            '- Nếu bài có mô tả ngắn, hãy đặt ngay dưới h1 trong thẻ <p class="description">.',
+            '- Nếu bài có phân loại kiểu dữ liệu hoặc nhóm như kiểu a, kiểu b, loại 1..., hãy tạo khối .type-list với các .tag nền tối chữ trắng.',
+            '- Phần Input và Output phải nằm trong khối .format-section nền xám nhạt #f1f2f6.',
+            '- Mỗi ví dụ minh họa phải có tiêu đề rõ ràng như "Ví dụ minh họa 1", "Ví dụ minh họa 2"...',
+            '- Phần ví dụ phải dùng bảng <table class="example-table"> để chia 2 cột: bên trái là Input, bên phải là Output.',
+            '- Dữ liệu mẫu hoặc code phải đặt trong <pre class="code-block"> với nền tối #1e272e và font monospace.',
+            '- Nếu có ghi chú đặc biệt, thêm một mục "Lưu ý" với màu nhấn mạnh và nội dung súc tích.',
+            '',
+            'YÊU CẦU LINH HOẠT:',
+            '- Tự động trích xuất các ý chính từ bản thô để sắp xếp thành các mục: tiêu đề, mô tả, định dạng dữ liệu, ví dụ, lưu ý.',
+            '- Nếu bài không có phần phân loại kiểu thì bỏ hẳn .type-list.',
+            '- Nếu bài không có ví dụ thì tạo cấu trúc nội dung sạch sẽ, nhưng không được bịa ví dụ mới.',
+            '- Giữ nguyên ý nghĩa gốc, không bịa thêm dữ liệu, không tự suy luận test case mới ngoài phần user cung cấp.',
+            '- Nếu input gốc đã chứa dữ liệu ví dụ, phải ưu tiên đưa chúng vào bảng Input/Output rõ ràng.',
+            '- Ưu tiên tiếng Việt tự nhiên, chuyên nghiệp, dễ đọc.',
+            '',
+            'KHUNG HTML/CSS MONG MUỐN:',
+            '- Có thể dùng cấu trúc html/body/style/card tương tự mẫu chuẩn của Whalio.',
+            '- Dùng các class: card, description, type-list, type-item, tag, format-section, example-container, example-title, example-table, code-block.',
+            '- Hãy điều chỉnh tiêu đề cho đúng tên bài tập thực tế. Không dùng tiêu đề chung chung như "Xem trước nội dung bài tập" nếu có thể suy ra tên bài.',
+            '',
+            'NỘI DUNG BÀI TẬP THÔ:',
             rawText
         ].join('\n');
 
@@ -5585,7 +5607,7 @@ app.post('/api/code-snippets/format-assignment', async (req, res) => {
         }
 
         let formattedText = String(aiResult.message || '').trim();
-        formattedText = formattedText.replace(/^```(?:markdown|md)?\s*/i, '');
+        formattedText = formattedText.replace(/^```(?:html|markdown|md)?\s*/i, '');
         formattedText = formattedText.replace(/\s*```$/i, '').trim();
 
         return res.json({
