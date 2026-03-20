@@ -5039,6 +5039,9 @@ app.post('/api/code-snippets', async (req, res) => {
         const normalizedTitle = String(title || cardTitle || '').trim();
         const normalizedSubjectName = String(subjectName || '').trim();
         const normalizedExerciseName = String(exerciseName || assignmentName || '').trim();
+        const normalizedAssignmentDescription = String(
+            assignmentDescription || formattedDescription || ''
+        ).trim();
         const normalizedFormattedDescription = String(
             formattedDescription || assignmentDescription || ''
         ).trim();
@@ -5054,7 +5057,7 @@ app.post('/api/code-snippets', async (req, res) => {
             cardTitle: normalizedTitle,
             subjectName: normalizedSubjectName,
             assignmentName: normalizedExerciseName,
-            assignmentDescription: normalizedFormattedDescription
+            assignmentDescription: normalizedFormattedDescription || normalizedAssignmentDescription
         });
         if (!testCaseResult.success) {
             return res.status(502).json({
@@ -5072,7 +5075,7 @@ app.post('/api/code-snippets', async (req, res) => {
             exerciseName: normalizedExerciseName,
             assignmentName: normalizedExerciseName,
             formattedDescription: normalizedFormattedDescription,
-            assignmentDescription: normalizedFormattedDescription,
+            assignmentDescription: normalizedAssignmentDescription,
             code: String(code || ''),
             language: String(language || 'plaintext').trim() || 'plaintext',
             testCases: testCaseResult.testCases,
@@ -5571,33 +5574,33 @@ app.post('/api/code-snippets/format-assignment', async (req, res) => {
 
         const prompt = [
             'Bạn là một chuyên gia UI/UX và Technical Writer của hệ thống Whalio.',
-            'Nhiệm vụ của bạn là tiếp nhận nội dung bài tập lập trình thô từ người dùng và trình bày lại thành một trang HTML chuyên nghiệp, dễ đọc và đẹp mắt.',
+            'Nhiệm vụ của bạn là tiếp nhận nội dung bài tập lập trình thô từ người dùng và tạo ra đồng thời 2 phiên bản:',
+            '1. html: phiên bản HTML đẹp, chuyên nghiệp, render trực tiếp được.',
+            '2. markdown: phiên bản Markdown sạch, dễ đọc, phù hợp trên mobile.',
             '',
-            'YÊU CẦU PHONG CÁCH:',
-            '- Trả về DUY NHẤT mã HTML hoàn chỉnh có thể render trực tiếp trong trình duyệt. Không thêm giải thích, không markdown, không dùng khung ```.',
-            '- Toàn bộ nội dung phải nằm trong một thẻ <div class="card"> với nền trắng, bo góc lớn, đổ bóng mượt.',
-            '- Sử dụng CSS nội tuyến trong thẻ <style> đặt ở đầu kết quả để tự chứa toàn bộ giao diện.',
-            '- Dùng h1 làm tiêu đề chính, có border-left màu xanh #3498db.',
-            '- Nếu bài có mô tả ngắn, hãy đặt ngay dưới h1 trong thẻ <p class="description">.',
-            '- Nếu bài có phân loại kiểu dữ liệu hoặc nhóm như kiểu a, kiểu b, loại 1..., hãy tạo khối .type-list với các .tag nền tối chữ trắng.',
-            '- Phần Input và Output phải nằm trong khối .format-section nền xám nhạt #f1f2f6.',
-            '- Mỗi ví dụ minh họa phải có tiêu đề rõ ràng như "Ví dụ minh họa 1", "Ví dụ minh họa 2"...',
-            '- Phần ví dụ phải dùng bảng <table class="example-table"> để chia 2 cột: bên trái là Input, bên phải là Output.',
-            '- Dữ liệu mẫu hoặc code phải đặt trong <pre class="code-block"> với nền tối #1e272e và font monospace.',
-            '- Nếu có ghi chú đặc biệt, thêm một mục "Lưu ý" với màu nhấn mạnh và nội dung súc tích.',
+            'YÊU CẦU CHUNG:',
+            '- Trả về DUY NHẤT JSON hợp lệ, không markdown code fence, không giải thích ngoài lề.',
+            '- JSON phải có đúng 2 khóa chuỗi: "html" và "markdown".',
+            '- Giữ nguyên ý nghĩa gốc, không bịa thêm ví dụ hoặc dữ liệu không có trong đề.',
+            '- Nếu không có phân loại kiểu dữ liệu thì bỏ hẳn phần tag/type-list.',
+            '- Nếu có lưu ý đặc biệt thì thêm một mục "Lưu ý".',
             '',
-            'YÊU CẦU LINH HOẠT:',
-            '- Tự động trích xuất các ý chính từ bản thô để sắp xếp thành các mục: tiêu đề, mô tả, định dạng dữ liệu, ví dụ, lưu ý.',
-            '- Nếu bài không có phần phân loại kiểu thì bỏ hẳn .type-list.',
-            '- Nếu bài không có ví dụ thì tạo cấu trúc nội dung sạch sẽ, nhưng không được bịa ví dụ mới.',
-            '- Giữ nguyên ý nghĩa gốc, không bịa thêm dữ liệu, không tự suy luận test case mới ngoài phần user cung cấp.',
-            '- Nếu input gốc đã chứa dữ liệu ví dụ, phải ưu tiên đưa chúng vào bảng Input/Output rõ ràng.',
-            '- Ưu tiên tiếng Việt tự nhiên, chuyên nghiệp, dễ đọc.',
+            'YÊU CẦU CHO html:',
+            '- Dùng cấu trúc HTML/CSS chuyên nghiệp theo phong cách Whalio.',
+            '- Toàn bộ nội dung phải nằm trong một thẻ <div class="card">.',
+            '- Có thể dùng <style> nội tuyến.',
+            '- Dùng h1 với border-left màu #3498db.',
+            '- Input/Output nằm trong khối format-section.',
+            '- Ví dụ phải dùng bảng chia 2 cột Input/Output.',
+            '- Dữ liệu mẫu hoặc code nằm trong <pre class="code-block">.',
+            '- Các class ưu tiên: card, description, type-list, type-item, tag, format-section, example-container, example-title, example-table, code-block.',
+            '- Tiêu đề phải là tên bài tập thực tế nếu suy ra được.',
             '',
-            'KHUNG HTML/CSS MONG MUỐN:',
-            '- Có thể dùng cấu trúc html/body/style/card tương tự mẫu chuẩn của Whalio.',
-            '- Dùng các class: card, description, type-list, type-item, tag, format-section, example-container, example-title, example-table, code-block.',
-            '- Hãy điều chỉnh tiêu đề cho đúng tên bài tập thực tế. Không dùng tiêu đề chung chung như "Xem trước nội dung bài tập" nếu có thể suy ra tên bài.',
+            'YÊU CẦU CHO markdown:',
+            '- Viết lại cùng nội dung bằng Markdown rõ ràng, ngắn gọn, thân thiện mobile.',
+            '- Dùng heading, bullet list, bảng markdown khi hợp lý.',
+            '- Phần ví dụ ưu tiên theo cấu trúc: "Ví dụ minh họa 1", sau đó có mục Input và Output bằng code block.',
+            '- Không đưa CSS, không đưa HTML vào trường markdown.',
             '',
             'NỘI DUNG BÀI TẬP THÔ:',
             rawText
@@ -5612,12 +5615,33 @@ app.post('/api/code-snippets/format-assignment', async (req, res) => {
         }
 
         let formattedText = String(aiResult.message || '').trim();
-        formattedText = formattedText.replace(/^```(?:html|markdown|md)?\s*/i, '');
+        formattedText = formattedText.replace(/^```(?:json|html|markdown|md)?\s*/i, '');
         formattedText = formattedText.replace(/\s*```$/i, '').trim();
+
+        let formattedHtml = '';
+        let formattedMarkdown = '';
+
+        try {
+            const parsed = JSON.parse(formattedText);
+            formattedHtml = String(parsed?.html || '').trim();
+            formattedMarkdown = String(parsed?.markdown || '').trim();
+        } catch {
+            formattedHtml = formattedText;
+            formattedMarkdown = formattedText;
+        }
+
+        if (!formattedHtml && !formattedMarkdown) {
+            return res.status(502).json({
+                success: false,
+                message: 'AI không trả về nội dung hợp lệ'
+            });
+        }
 
         return res.json({
             success: true,
-            formattedText,
+            formattedText: formattedHtml || formattedMarkdown,
+            formattedHtml,
+            formattedMarkdown,
             modelUsed: aiResult.model || ''
         });
     } catch (err) {
@@ -5675,15 +5699,17 @@ app.patch('/api/code-snippets/:id', async (req, res) => {
             update.assignmentName = value;
         }
 
-        const incomingDescription = typeof formattedDescription === 'string'
-            ? formattedDescription
-            : typeof assignmentDescription === 'string'
-                ? assignmentDescription
-                : null;
-        if (incomingDescription !== null) {
-            const value = incomingDescription.trim();
-            update.formattedDescription = value;
-            update.assignmentDescription = value;
+        const hasIncomingHtml = typeof assignmentDescription === 'string';
+        const hasIncomingMarkdown = typeof formattedDescription === 'string';
+        if (hasIncomingHtml || hasIncomingMarkdown) {
+            const htmlValue = hasIncomingHtml
+                ? assignmentDescription.trim()
+                : String(formattedDescription || '').trim();
+            const markdownValue = hasIncomingMarkdown
+                ? formattedDescription.trim()
+                : String(assignmentDescription || '').trim();
+            update.assignmentDescription = htmlValue;
+            update.formattedDescription = markdownValue;
         }
         if (typeof code === 'string') update.code = code;
         if (typeof language === 'string') {

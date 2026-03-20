@@ -49,11 +49,15 @@ const sanitizeConfig = {
 
 function HtmlPreviewer({
   rawHtml,
+  rawMarkdown = '',
+  preferredMode = 'auto',
   className = '',
   contentClassName = '',
   emptyMessage = DEFAULT_EMPTY_MESSAGE,
 }) {
+  const [isCompactViewport, setIsCompactViewport] = useState(false);
   const deferredRawHtml = useDeferredValue(rawHtml);
+  const deferredRawMarkdown = useDeferredValue(rawMarkdown);
   const [previewState, setPreviewState] = useState({
     mode: 'empty',
     html: '',
@@ -61,20 +65,87 @@ function HtmlPreviewer({
     inlineStyles: '',
   });
 
-  const normalizedInput = useMemo(
+  const normalizedHtml = useMemo(
     () => String(deferredRawHtml || '').trim(),
     [deferredRawHtml]
   );
+  const normalizedMarkdown = useMemo(
+    () => String(deferredRawMarkdown || '').trim(),
+    [deferredRawMarkdown]
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+
+    const mediaQuery = window.matchMedia('(max-width: 1024px), (pointer: coarse)');
+    const updateViewportMode = () => {
+      setIsCompactViewport(mediaQuery.matches || window.innerWidth < 1024);
+    };
+
+    updateViewportMode();
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', updateViewportMode);
+    } else if (typeof mediaQuery.addListener === 'function') {
+      mediaQuery.addListener(updateViewportMode);
+    }
+
+    window.addEventListener('resize', updateViewportMode);
+    window.addEventListener('orientationchange', updateViewportMode);
+
+    return () => {
+      if (typeof mediaQuery.removeEventListener === 'function') {
+        mediaQuery.removeEventListener('change', updateViewportMode);
+      } else if (typeof mediaQuery.removeListener === 'function') {
+        mediaQuery.removeListener(updateViewportMode);
+      }
+      window.removeEventListener('resize', updateViewportMode);
+      window.removeEventListener('orientationchange', updateViewportMode);
+    };
+  }, []);
+
+  const selectedSource = useMemo(() => {
+    const hasHtml = Boolean(normalizedHtml);
+    const hasMarkdown = Boolean(normalizedMarkdown);
+
+    if (!hasHtml && !hasMarkdown) {
+      return { mode: 'empty', value: '' };
+    }
+
+    if (preferredMode === 'html') {
+      return hasHtml
+        ? { mode: 'html', value: normalizedHtml }
+        : { mode: 'markdown', value: normalizedMarkdown };
+    }
+
+    if (preferredMode === 'markdown') {
+      return hasMarkdown
+        ? { mode: 'markdown', value: normalizedMarkdown }
+        : { mode: 'html', value: normalizedHtml };
+    }
+
+    if (isCompactViewport) {
+      return hasMarkdown
+        ? { mode: 'markdown', value: normalizedMarkdown }
+        : { mode: 'html', value: normalizedHtml };
+    }
+
+    return hasHtml
+      ? { mode: 'html', value: normalizedHtml }
+      : { mode: 'markdown', value: normalizedMarkdown };
+  }, [isCompactViewport, normalizedHtml, normalizedMarkdown, preferredMode]);
 
   const isHtmlMode = useMemo(
-    () => HTML_DOCUMENT_PATTERN.test(normalizedInput) || HTML_TAG_PATTERN.test(normalizedInput),
-    [normalizedInput]
+    () =>
+      selectedSource.mode === 'html' &&
+      (HTML_DOCUMENT_PATTERN.test(selectedSource.value) || HTML_TAG_PATTERN.test(selectedSource.value)),
+    [selectedSource.mode, selectedSource.value]
   );
 
   useEffect(() => {
     let isMounted = true;
     const frameId = window.requestAnimationFrame(() => {
-      if (!normalizedInput) {
+      if (selectedSource.mode === 'empty' || !selectedSource.value) {
         if (isMounted) {
           setPreviewState({
             mode: 'empty',
@@ -87,7 +158,7 @@ function HtmlPreviewer({
       }
 
       if (isHtmlMode) {
-        const { bodyHtml, inlineStyles } = extractHtmlDocumentParts(normalizedInput);
+        const { bodyHtml, inlineStyles } = extractHtmlDocumentParts(selectedSource.value);
         const nextHtml = DOMPurify.sanitize(normalizePreviewHtml(bodyHtml), sanitizeConfig);
         const nextStyles = inlineStyles
           ? DOMPurify.sanitize(inlineStyles, {
@@ -107,7 +178,7 @@ function HtmlPreviewer({
         return;
       }
 
-      const nextMarkdown = DOMPurify.sanitize(normalizedInput, sanitizeConfig);
+      const nextMarkdown = DOMPurify.sanitize(selectedSource.value, sanitizeConfig);
       if (isMounted) {
         setPreviewState({
           mode: 'markdown',
@@ -122,7 +193,7 @@ function HtmlPreviewer({
       isMounted = false;
       window.cancelAnimationFrame(frameId);
     };
-  }, [isHtmlMode, normalizedInput]);
+  }, [isHtmlMode, selectedSource.mode, selectedSource.value]);
 
   const sharedContentClassName = [
     'max-w-none break-words text-slate-700',

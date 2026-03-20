@@ -43,6 +43,7 @@ const INITIAL_FORM = {
   subjectName: '',
   assignmentName: '',
   assignmentDescription: '',
+  formattedDescription: '',
   language: 'cpp',
 };
 
@@ -1831,6 +1832,7 @@ const CreateSnippetModal = ({
 
               <HtmlPreviewer
                 rawHtml={form.assignmentDescription}
+                rawMarkdown={form.formattedDescription}
                 className="max-h-[70vh] overflow-y-auto"
                 emptyMessage="Khung preview sẽ hiển thị tại đây khi bạn nhập mô tả hoặc HTML."
               />
@@ -2299,6 +2301,9 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
     const subjectName = String(createForm.subjectName || '').trim();
     const assignmentName = String(createForm.assignmentName || '').trim();
     const assignmentDescription = String(createForm.assignmentDescription || '').trim();
+    const formattedDescription = String(
+      createForm.formattedDescription || createForm.assignmentDescription || ''
+    ).trim();
     const selectedLanguage = normalizeLanguageKey(
       createForm.language || inferLanguageFromSubject(subjectName)
     );
@@ -2322,7 +2327,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
       assignmentName,
       exerciseName: assignmentName,
       assignmentDescription,
-      formattedDescription: assignmentDescription,
+      formattedDescription,
       language: selectedLanguage,
     };
 
@@ -2419,15 +2424,19 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
       return;
     }
 
-    const formattedText = String(result.formattedText || '').trim();
-    if (!formattedText) {
+    const formattedHtml = String(result.formattedHtml || result.formattedText || '').trim();
+    const formattedMarkdown = String(
+      result.formattedMarkdown || result.formattedText || formattedHtml
+    ).trim();
+    if (!formattedHtml && !formattedMarkdown) {
       toast.error('AI không trả về nội dung hợp lệ');
       return;
     }
 
     setCreateForm((prev) => ({
       ...prev,
-      assignmentDescription: formattedText,
+      assignmentDescription: formattedHtml || formattedMarkdown,
+      formattedDescription: formattedMarkdown || formattedHtml,
     }));
     toast.success('Đã format nội dung bằng AI');
   };
@@ -2584,7 +2593,8 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
       cardTitle: String(snippet?.cardTitle || ''),
       subjectName: String(snippet?.subjectName || ''),
       assignmentName: String(snippet?.assignmentName || ''),
-      assignmentDescription: String(snippet?.assignmentDescription || ''),
+      assignmentDescription: String(snippet?.assignmentDescription || snippet?.formattedDescription || ''),
+      formattedDescription: String(snippet?.formattedDescription || snippet?.assignmentDescription || ''),
       language: normalizeLanguageKey(
         snippet?.language || inferLanguageFromSubject(snippet?.subjectName || '')
       ),
@@ -2634,6 +2644,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
       subjectName: '',
       assignmentName: '',
       assignmentDescription: '',
+      formattedDescription: '',
       language: normalizeLanguageKey(editorLanguage),
     });
     setIsCreateOpen(true);
@@ -3564,7 +3575,8 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
               </div>
               <div className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
                 <HtmlPreviewer
-                  rawHtml={selectedSnippet.assignmentDescription || selectedSnippet.formattedDescription || ''}
+                  rawHtml={selectedSnippet.assignmentDescription || ''}
+                  rawMarkdown={selectedSnippet.formattedDescription || ''}
                   emptyMessage="Chưa có mô tả"
                 />
               </div>
