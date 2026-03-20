@@ -3510,12 +3510,8 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
               </div>
               </div>
               <div className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
-                <p className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Nội dung bài tập
-                </p>
                 <HtmlPreviewer
                   rawHtml={selectedSnippet.assignmentDescription || selectedSnippet.formattedDescription || ''}
-                  className="mt-2"
                   emptyMessage="Chưa có mô tả"
                 />
               </div>
