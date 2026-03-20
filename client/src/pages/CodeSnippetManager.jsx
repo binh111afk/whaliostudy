@@ -949,14 +949,45 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
   const themeKeyRef = useRef(themeKey);
   const [themeReady, setThemeReady] = useState(false);
   const [isEditorFocused, setIsEditorFocused] = useState(false);
+  const [isCompactViewport, setIsCompactViewport] = useState(false);
   const [shootingStarSeed, setShootingStarSeed] = useState(0);
   const [shootingStarStyle, setShootingStarStyle] = useState({});
   const themeConfig = useMemo(() => getCodeEditorThemeConfig(themeKey), [themeKey]);
   const isNightmareTheme = themeConfig.key === 'nightmare';
   const nightmareStarLayers = useMemo(
-    () => (isNightmareTheme ? buildNightmareStarFieldStyles() : null),
-    [isNightmareTheme]
+    () => (isNightmareTheme && !isCompactViewport ? buildNightmareStarFieldStyles() : null),
+    [isCompactViewport, isNightmareTheme]
   );
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+
+    const mediaQuery = window.matchMedia('(max-width: 1024px), (pointer: coarse)');
+    const updateViewportMode = () => {
+      setIsCompactViewport(mediaQuery.matches || window.innerWidth < 1024);
+    };
+
+    updateViewportMode();
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', updateViewportMode);
+    } else if (typeof mediaQuery.addListener === 'function') {
+      mediaQuery.addListener(updateViewportMode);
+    }
+
+    window.addEventListener('resize', updateViewportMode);
+    window.addEventListener('orientationchange', updateViewportMode);
+
+    return () => {
+      if (typeof mediaQuery.removeEventListener === 'function') {
+        mediaQuery.removeEventListener('change', updateViewportMode);
+      } else if (typeof mediaQuery.removeListener === 'function') {
+        mediaQuery.removeListener(updateViewportMode);
+      }
+      window.removeEventListener('resize', updateViewportMode);
+      window.removeEventListener('orientationchange', updateViewportMode);
+    };
+  }, []);
 
   useEffect(() => {
     languageRef.current = language;
@@ -983,7 +1014,29 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
   }, [language]);
 
   useEffect(() => {
-    if (!isNightmareTheme) return undefined;
+    if (!editorRef.current) return undefined;
+
+    const layoutEditor = () => {
+      window.requestAnimationFrame(() => {
+        editorRef.current?.layout();
+      });
+    };
+
+    layoutEditor();
+
+    if (!isCompactViewport) return undefined;
+
+    window.addEventListener('resize', layoutEditor);
+    window.addEventListener('orientationchange', layoutEditor);
+
+    return () => {
+      window.removeEventListener('resize', layoutEditor);
+      window.removeEventListener('orientationchange', layoutEditor);
+    };
+  }, [isCompactViewport, themeReady, language]);
+
+  useEffect(() => {
+    if (!isNightmareTheme || isCompactViewport) return undefined;
 
     let timeoutId = null;
     let cancelled = false;
@@ -1016,11 +1069,11 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
         window.clearTimeout(timeoutId);
       }
     };
-  }, [isNightmareTheme]);
+  }, [isCompactViewport, isNightmareTheme]);
 
   const options = useMemo(
     () => ({
-      automaticLayout: true,
+      automaticLayout: !isCompactViewport,
       minimap: { enabled: false },
       fontSize: 14,
       lineHeight: 24,
@@ -1042,8 +1095,8 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
         bracketPairs: true,
         indentation: true,
       },
-      smoothScrolling: true,
-      cursorSmoothCaretAnimation: 'on',
+      smoothScrolling: !isCompactViewport,
+      cursorSmoothCaretAnimation: isCompactViewport ? 'off' : 'on',
       quickSuggestions: {
         other: true,
         comments: false,
@@ -1051,7 +1104,7 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
       },
       suggestOnTriggerCharacters: true,
     }),
-    []
+    [isCompactViewport]
   );
 
   const handleMount = useCallback(
@@ -1402,7 +1455,7 @@ const MonacoCodeEditor = ({ value, onChange, language, themeKey, isFreeMode = fa
           }
         ` : ''}
       </style>
-      {isNightmareTheme && (
+      {isNightmareTheme && !isCompactViewport && (
         <>
           <span className="nightmare-depth-base" aria-hidden="true" />
           <span className="nightmare-nebula" aria-hidden="true" />
