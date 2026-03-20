@@ -3,12 +3,10 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
 import Editor from '@monaco-editor/react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Tooltip from "../components/Tooltip";
 import { usePersistedPagination } from '../hooks/usePersistedPagination';
+import HtmlPreviewer from '../components/HtmlPreviewer';
 import {
   CalendarDays,
   ChevronLeft,
@@ -1491,11 +1489,15 @@ const CreateSnippetModal = ({
   creating,
   formattingDescription,
   onFormatWithAI,
+  isPreviewOpen,
+  onOpenPreview,
+  onClosePreview,
   mode = 'create',
 }) => {
   const languageSelectRef = useRef(null);
   const [isLanguageSelectOpen, setIsLanguageSelectOpen] = useState(false);
   const [languageQuery, setLanguageQuery] = useState('');
+  const MotionDiv = motion.div;
 
   const selectedLanguageMeta = useMemo(
     () => getLanguageMeta(form?.language || 'plaintext'),
@@ -1686,27 +1688,36 @@ const CreateSnippetModal = ({
               <label className="block text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 Nội dung / Mô tả bài tập
               </label>
-              <button
-                type="button"
-                onClick={onFormatWithAI}
-                disabled={formattingDescription}
-                className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-70 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40"
-              >
-                <Sparkles size={12} />
-                {formattingDescription ? 'Đang format...' : 'Format bằng AI'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onOpenPreview}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                >
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  onClick={onFormatWithAI}
+                  disabled={formattingDescription}
+                  className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-70 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40"
+                >
+                  <Sparkles size={12} />
+                  {formattingDescription ? 'Đang format...' : 'Format bằng AI'}
+                </button>
+              </div>
             </div>
             <textarea
               value={form.assignmentDescription}
               onChange={(event) => onChange('assignmentDescription', event.target.value)}
-              rows={4}
-              placeholder="Mô tả ngắn nội dung yêu cầu của bài tập"
+              rows={7}
+              placeholder="Nhập mô tả hoặc HTML bài tập. Ví dụ: <h1 style=&quot;color:red&quot;>Ok</h1>"
               className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             />
             <p className="mt-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
               {isFreeSaveMode
                 ? 'Để lưu phiên CodePad, hãy điền tên môn học và tên bài tập trước khi bấm lưu.'
-                : 'Khi lưu card, AI sẽ tự tạo test case và chia điểm tự động theo từng case.'}
+                : 'Bạn có thể dán HTML có style/class để xem trước trực tiếp trước khi lưu card.'}
             </p>
           </div>
         </div>
@@ -1727,6 +1738,53 @@ const CreateSnippetModal = ({
           </button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {isPreviewOpen && (
+          <MotionDiv
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+            onClick={onClosePreview}
+          >
+            <MotionDiv
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.98, y: 10 }}
+              transition={{ duration: 0.24, ease: 'easeOut' }}
+              className="w-full max-w-4xl rounded-[28px] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-900/15 dark:border-gray-700 dark:bg-gray-800"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">
+                    Live Preview
+                  </p>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                    Xem trước nội dung bài tập
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={onClosePreview}
+                  className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-gray-700 dark:hover:text-white"
+                  aria-label="Đóng preview HTML"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <HtmlPreviewer
+                rawHtml={form.assignmentDescription}
+                className="max-h-[70vh] overflow-y-auto"
+                emptyMessage="Khung preview sẽ hiển thị tại đây khi bạn nhập mô tả hoặc HTML."
+              />
+            </MotionDiv>
+          </MotionDiv>
+        )}
+      </AnimatePresence>
     </div>
   );
 
@@ -1831,6 +1889,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   const [editingSnippet, setEditingSnippet] = useState(null);
   const [creating, setCreating] = useState(false);
   const [formattingDescription, setFormattingDescription] = useState(false);
+  const [isHtmlPreviewOpen, setIsHtmlPreviewOpen] = useState(false);
   const [selectedSnippet, setSelectedSnippet] = useState(null);
   const [editorCode, setEditorCode] = useState('');
   const [editorLanguage, setEditorLanguage] = useState('plaintext');
@@ -2103,6 +2162,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
 
   const resetSnippetModalState = () => {
     setIsCreateOpen(false);
+    setIsHtmlPreviewOpen(false);
     setCreateForm(INITIAL_FORM);
     setEditingSnippet(null);
     setPendingFreeSave(false);
@@ -3200,6 +3260,9 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
         mode={editingSnippet ? 'edit' : pendingFreeSave ? 'free-save' : 'create'}
         formattingDescription={formattingDescription}
         onFormatWithAI={handleFormatAssignmentWithAI}
+        isPreviewOpen={isHtmlPreviewOpen}
+        onOpenPreview={() => setIsHtmlPreviewOpen(true)}
+        onClosePreview={() => setIsHtmlPreviewOpen(false)}
         onClose={resetSnippetModalState}
         onCreate={handleCreateSnippet}
         creating={creating}
@@ -3450,39 +3513,11 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Nội dung bài tập
                 </p>
-                <div className="prose prose-sm mt-2 max-w-none dark:prose-invert">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeRaw]}
-                    components={{
-                      table: (props) => (
-                        <div className="my-4 overflow-x-auto rounded-lg border border-gray-300 shadow-sm dark:border-gray-600">
-                          <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-600" {...props} />
-                        </div>
-                      ),
-                      thead: (props) => (
-                        <thead className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:bg-gradient-to-r dark:from-gray-700 dark:to-gray-700/80" {...props} />
-                      ),
-                      th: (props) => (
-                        <th
-                          className="border-b-2 border-blue-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-blue-700 dark:border-gray-600 dark:text-blue-300"
-                          {...props}
-                        />
-                      ),
-                      tbody: (props) => (
-                        <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800" {...props} />
-                      ),
-                      tr: (props) => (
-                        <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50" {...props} />
-                      ),
-                      td: (props) => (
-                        <td className="whitespace-pre-wrap px-4 py-3 text-sm text-gray-700 dark:text-gray-200" {...props} />
-                      ),
-                    }}
-                  >
-                    {selectedSnippet.assignmentDescription || selectedSnippet.formattedDescription || 'Chưa có mô tả'}
-                  </ReactMarkdown>
-                </div>
+                <HtmlPreviewer
+                  rawHtml={selectedSnippet.assignmentDescription || selectedSnippet.formattedDescription || ''}
+                  className="mt-2"
+                  emptyMessage="Chưa có mô tả"
+                />
               </div>
               </div>
             )}
