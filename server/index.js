@@ -2024,6 +2024,8 @@ const quickNoteSchema = new mongoose.Schema({
 quickNoteSchema.index({ username: 1, createdAt: -1 });
 
 // Code Snippet Schema (Kho Code)
+const CODE_SNIPPET_DESCRIPTION_MAX_LENGTH = 20000;
+
 const codeSnippetTestCaseSchema = new mongoose.Schema({
     input: { type: String, default: '' },
     expectedOutput: { type: String, required: true, trim: true, maxlength: 12000 },
@@ -4797,7 +4799,6 @@ app.delete('/api/announcements/:id', async (req, res) => {
 
 // 4.3 Code Snippet APIs (MongoDB)
 const CODE_SNIPPET_TOTAL_SCORE = 10;
-const CODE_SNIPPET_DESCRIPTION_MAX_LENGTH = 20000;
 const CODE_SNIPPET_DEFAULT_TEST_CASE_COUNT = 5;
 const CODE_SNIPPET_MAX_TEST_CASES = Math.min(
     12,
