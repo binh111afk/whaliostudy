@@ -1,5 +1,4 @@
 import React, { memo, useMemo } from 'react';
-import { BaseEdge, EdgeLabelRenderer, getBezierPath } from '@xyflow/react';
 
 const sampleBezierPoint = (t, p0, p1, p2, p3) => {
   const mt = 1 - t;
@@ -17,27 +16,30 @@ const buildControlPoints = (sourceX, sourceY, targetX, targetY, layoutDirection)
   const deltaY = targetY - sourceY;
 
   if (layoutDirection === 'TB') {
-    const controlOffset = Math.max(64, Math.abs(deltaY) * 0.38);
+    const offsetY = Math.max(86, Math.abs(deltaY) * 0.42);
+    const swayX = deltaX * 0.14;
     return [
-      { x: sourceX, y: sourceY + controlOffset },
-      { x: targetX, y: targetY - controlOffset },
+      { x: sourceX + swayX, y: sourceY + offsetY },
+      { x: targetX - swayX, y: targetY - offsetY },
     ];
   }
 
-  const controlOffset = Math.max(72, Math.abs(deltaX) * 0.35);
+  const offsetX = Math.max(94, Math.abs(deltaX) * 0.4);
+  const swayY = deltaY * 0.16;
+  const sign = Math.sign(deltaX || 1);
+
   return [
-    { x: sourceX + Math.sign(deltaX || 1) * controlOffset, y: sourceY },
-    { x: targetX - Math.sign(deltaX || 1) * controlOffset, y: targetY },
+    { x: sourceX + sign * offsetX, y: sourceY + swayY * 0.55 },
+    { x: targetX - sign * offsetX, y: targetY - swayY * 0.55 },
   ];
 };
 
-const buildTaperPath = (sourceX, sourceY, targetX, targetY, layoutDirection) => {
-  const p0 = { x: sourceX, y: sourceY };
-  const p3 = { x: targetX, y: targetY };
-  const [p1, p2] = buildControlPoints(sourceX, sourceY, targetX, targetY, layoutDirection);
-  const samples = 22;
+const buildTaperPath = (p0, p1, p2, p3, depth) => {
+  const samples = 26;
   const left = [];
   const right = [];
+  const startWidth = depth <= 1 ? 5.6 : depth === 2 ? 4.1 : 3.2;
+  const endWidth = depth <= 1 ? 1.4 : 1.15;
 
   for (let index = 0; index <= samples; index += 1) {
     const t = index / samples;
@@ -48,7 +50,8 @@ const buildTaperPath = (sourceX, sourceY, targetX, targetY, layoutDirection) => 
     const length = Math.max(1, Math.hypot(dx, dy));
     const nx = -dy / length;
     const ny = dx / length;
-    const width = Math.max(1.25, 7.4 - t * 5.8);
+    const eased = 1 - (1 - t) * (1 - t);
+    const width = startWidth + (endWidth - startWidth) * eased;
 
     left.push(`${point.x + nx * width},${point.y + ny * width}`);
     right.unshift(`${point.x - nx * width},${point.y - ny * width}`);
@@ -57,58 +60,56 @@ const buildTaperPath = (sourceX, sourceY, targetX, targetY, layoutDirection) => 
   return `M ${left.join(' L ')} L ${right.join(' L ')} Z`;
 };
 
-const CustomEdge = memo((props) => {
-  const {
-    id,
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-    data,
-  } = props;
-
+const CustomEdge = memo(({ id, sourceX, sourceY, targetX, targetY, data }) => {
   const color = data?.color || '#3b82f6';
   const layoutDirection = data?.layoutDirection || 'LR';
   const depth = Number(data?.depth || 1);
-  const [edgePath] = getBezierPath({
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-    curvature: layoutDirection === 'TB' ? 0.36 : 0.42,
-  });
 
-  const taperPath = useMemo(
-    () => buildTaperPath(sourceX, sourceY, targetX, targetY, layoutDirection),
-    [layoutDirection, sourceX, sourceY, targetX, targetY]
-  );
+  const geometry = useMemo(() => {
+    const p0 = { x: sourceX, y: sourceY };
+    const p3 = { x: targetX, y: targetY };
+    const [p1, p2] = buildControlPoints(sourceX, sourceY, targetX, targetY, layoutDirection);
+
+    return {
+      cubicPath: `M ${p0.x},${p0.y} C ${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`,
+      taperPath: buildTaperPath(p0, p1, p2, p3, depth),
+    };
+  }, [depth, layoutDirection, sourceX, sourceY, targetX, targetY]);
 
   return (
     <>
       <defs>
-        <linearGradient id={`mindmap-edge-gradient-${id}`} gradientUnits="userSpaceOnUse" x1={sourceX} y1={sourceY} x2={targetX} y2={targetY}>
-          <stop offset="0%" stopColor={color} stopOpacity="0.5" />
-          <stop offset="65%" stopColor={color} stopOpacity={depth <= 1 ? '0.3' : '0.22'} />
-          <stop offset="100%" stopColor={color} stopOpacity="0.06" />
+        <linearGradient
+          id={`mindmap-edge-gradient-${id}`}
+          gradientUnits="userSpaceOnUse"
+          x1={sourceX}
+          y1={sourceY}
+          x2={targetX}
+          y2={targetY}
+        >
+          <stop offset="0%" stopColor={color} stopOpacity="0.56" />
+          <stop offset="58%" stopColor={color} stopOpacity={depth <= 1 ? '0.24' : '0.18'} />
+          <stop offset="100%" stopColor={color} stopOpacity="0.03" />
         </linearGradient>
       </defs>
-      <path d={taperPath} fill={`url(#mindmap-edge-gradient-${id})`} />
-      <BaseEdge
-        path={edgePath}
-        style={{
-          stroke: color,
-          strokeWidth: depth <= 1 ? 2.4 : 1.8,
-          strokeOpacity: depth <= 1 ? 0.88 : 0.62,
-          strokeLinecap: 'round',
-        }}
+
+      <path d={geometry.taperPath} fill={`url(#mindmap-edge-gradient-${id})`} />
+      <path
+        d={geometry.cubicPath}
+        fill="none"
+        stroke={color}
+        strokeOpacity={depth <= 1 ? 0.62 : 0.42}
+        strokeWidth={depth <= 1 ? 1.55 : 1.15}
+        strokeLinecap="round"
       />
-      <EdgeLabelRenderer>
-        <div style={{ display: 'none' }} />
-      </EdgeLabelRenderer>
+      <path
+        d={geometry.cubicPath}
+        fill="none"
+        stroke="rgba(255,255,255,0.28)"
+        strokeWidth="0.9"
+        strokeLinecap="round"
+      />
+      <path d={geometry.cubicPath} fill="none" stroke="transparent" strokeWidth="18" />
     </>
   );
 });

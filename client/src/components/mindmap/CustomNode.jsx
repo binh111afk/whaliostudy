@@ -8,34 +8,36 @@ const MotionDiv = motion.div;
 const sharedHandleClassName = '!h-2.5 !w-2.5 !border-0 !bg-transparent !opacity-0';
 
 const getNodeClassName = ({ depth, isSelected }) => {
-  const selectedRing = isSelected ? ' ring-4 ring-blue-200/70' : '';
+  const selectedRing = isSelected ? ' ring-4 ring-slate-300/70' : '';
 
   if (depth === 0) {
-    return `min-w-[220px] rounded-full bg-blue-600 px-8 py-5 text-white shadow-[0_20px_55px_-22px_rgba(59,130,246,0.9)] shadow-blue-500/40 sm:min-w-[280px] sm:px-10 sm:py-6${selectedRing}`;
+    return `min-w-[220px] rounded-full px-8 py-5 text-white shadow-2xl sm:min-w-[280px] sm:px-10 sm:py-6${selectedRing}`;
   }
 
   if (depth === 1) {
-    return `min-w-[180px] rounded-[26px] border bg-white/75 px-5 py-3.5 backdrop-blur-xl shadow-[0_14px_38px_-28px_rgba(15,23,42,0.45)] sm:min-w-[220px] sm:px-6 sm:py-4${selectedRing}`;
+    return `min-w-[180px] rounded-xl border bg-white/72 px-5 py-3.5 backdrop-blur-xl shadow-[0_18px_44px_-30px_rgba(15,23,42,0.42)] sm:min-w-[220px] sm:px-6 sm:py-4${selectedRing}`;
   }
 
-  return `min-w-[138px] bg-transparent px-2 py-1.5 sm:min-w-[156px]${selectedRing}`;
+  return `min-w-[138px] bg-transparent px-1 py-1 sm:min-w-[156px]${selectedRing}`;
 };
 
 const getNodeStyle = ({ depth, selected, branchColor }) => {
   if (depth === 0) {
     return {
+      background: 'linear-gradient(135deg, #0f172a 0%, #2563eb 58%, #38bdf8 100%)',
       boxShadow: selected
-        ? '0 0 0 10px rgba(96,165,250,0.18), 0 20px 55px -22px rgba(59,130,246,0.82)'
-        : '0 20px 55px -22px rgba(59,130,246,0.82)',
+        ? '0 0 0 10px rgba(148,163,184,0.2), 0 28px 64px -28px rgba(15,23,42,0.72)'
+        : '0 28px 64px -28px rgba(15,23,42,0.72)',
     };
   }
 
   if (depth === 1) {
     return {
       borderColor: branchColor,
+      background: 'rgba(255,255,255,0.74)',
       boxShadow: selected
-        ? `0 0 0 8px ${branchColor}22, 0 14px 38px -28px rgba(15,23,42,0.45)`
-        : '0 14px 38px -28px rgba(15,23,42,0.45)',
+        ? `0 0 0 8px ${branchColor}1f, 0 18px 44px -30px rgba(15,23,42,0.45)`
+        : '0 18px 44px -30px rgba(15,23,42,0.45)',
     };
   }
 
@@ -61,13 +63,13 @@ const CustomNode = memo(({ id, data, selected }) => {
   const isPrimaryBranch = depth === 1;
   const isSecondaryBranch = depth >= 2;
   const isMobile = data.layoutDirection === 'TB';
-  const branchColor = data.branchColor || '#3b82f6';
+  const branchColor = data.color || data.branchColor || '#3b82f6';
   const showActions = isHovered || isMobile;
 
   const labelClassName = useMemo(() => {
-    if (depth === 0) return 'text-center text-[1.3rem] font-extrabold leading-tight text-white sm:text-[1.6rem]';
-    if (depth === 1) return 'text-sm font-semibold leading-6 text-slate-800 sm:text-[15px]';
-    return 'text-sm font-medium leading-5 text-slate-700';
+    if (depth === 0) return 'font-["Plus_Jakarta_Sans"] text-center text-[1.3rem] font-extrabold leading-tight tracking-tight text-white sm:text-[1.65rem]';
+    if (depth === 1) return 'font-["Plus_Jakarta_Sans"] text-sm font-semibold leading-6 tracking-tight text-slate-800 sm:text-[15px]';
+    return 'font-["Plus_Jakarta_Sans"] text-sm font-medium leading-5 tracking-tight text-slate-700';
   }, [depth]);
 
   return (
@@ -87,7 +89,7 @@ const CustomNode = memo(({ id, data, selected }) => {
           event.stopPropagation();
           data.onEdit?.(id);
         }}
-        className={`group relative transition-all duration-200 ${getNodeClassName({ depth, isSelected: selected })}`}
+        className={`group relative font-["Plus_Jakarta_Sans"] transition-all duration-200 ${getNodeClassName({ depth, isSelected: selected })}`}
         style={getNodeStyle({ depth, selected, branchColor })}
       >
         {depth === 1 && (

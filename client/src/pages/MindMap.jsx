@@ -299,6 +299,7 @@ const MindMapCanvas = ({ user }) => {
       const childLabel = parentId === 'root' ? 'Ý chính mới' : 'Ý con mới';
       const childBranchIndex =
         parentId === 'root' ? siblingCount : Number(parentNode.data?.branchIndex || 0);
+      const childColor = parentNode.data?.color || parentNode.data?.branchColor;
       const childDirection =
         layoutDirection === 'TB'
           ? 'down'
@@ -315,6 +316,7 @@ const MindMapCanvas = ({ user }) => {
           y: parentNode.position.y + (layoutDirection === 'TB' ? 140 : (siblingCount - 1) * 72),
           depth: childDepth,
           branchIndex: childBranchIndex,
+          branchColor: childColor,
           theme: DEFAULT_THEME,
           direction: childDirection,
           parentId,
@@ -330,6 +332,7 @@ const MindMapCanvas = ({ user }) => {
           source: parentId,
           target: childId,
           branchIndex: childBranchIndex,
+          color: childColor,
           depth: childDepth,
           sourceSide: layoutDirection === 'TB' ? 'bottom' : childDirection === 'left' ? 'left' : 'right',
           targetSide: layoutDirection === 'TB' ? 'top' : childDirection === 'left' ? 'right' : 'left',
@@ -475,6 +478,7 @@ const MindMapCanvas = ({ user }) => {
               ? 'right'
               : 'left'
             : contextMenu.node.data?.direction || 'right';
+      const branchColor = contextMenu.node.data?.color || contextMenu.node.data?.branchColor;
       const depth = parentDepth + 1;
 
       nextNodes.push(
@@ -485,6 +489,7 @@ const MindMapCanvas = ({ user }) => {
           y: contextMenu.node.position.y + (layoutDirection === 'TB' ? 140 : (index - 1.5) * 88),
           depth,
           branchIndex,
+          branchColor,
           theme: DEFAULT_THEME,
           direction,
           parentId: contextMenu.node.id,
@@ -499,6 +504,7 @@ const MindMapCanvas = ({ user }) => {
           source: contextMenu.node.id,
           target: childId,
           branchIndex,
+          color: branchColor,
           depth,
           sourceSide: layoutDirection === 'TB' ? 'bottom' : direction === 'left' ? 'left' : 'right',
           targetSide: layoutDirection === 'TB' ? 'top' : direction === 'left' ? 'right' : 'left',
@@ -575,6 +581,7 @@ const MindMapCanvas = ({ user }) => {
           ? 'down'
           : targetNode?.data?.direction || sourceNode?.data?.direction || 'right';
       const branchIndex = Number(targetNode?.data?.branchIndex ?? sourceNode?.data?.branchIndex ?? 0);
+      const branchColor = sourceNode?.data?.color || targetNode?.data?.color || sourceNode?.data?.branchColor;
 
       setEdges((currentEdges) =>
         addEdge(
@@ -583,6 +590,7 @@ const MindMapCanvas = ({ user }) => {
             source: params.source,
             target: params.target,
             branchIndex,
+            color: branchColor,
             depth: Number(targetNode?.data?.depth || 1),
             sourceSide: layoutDirection === 'TB' ? 'bottom' : direction === 'left' ? 'left' : 'right',
             targetSide: layoutDirection === 'TB' ? 'top' : direction === 'left' ? 'right' : 'left',
@@ -614,10 +622,10 @@ const MindMapCanvas = ({ user }) => {
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-7rem)]">
+    <div className='relative min-h-[calc(100vh-7rem)] font-["Plus_Jakarta_Sans"] tracking-tight'>
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] font-black uppercase tracking-[0.28em] text-blue-500">Whalio Mind Map</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.28em] text-slate-500">Whalio Mind Map</p>
           <input
             value={mapTitle}
             onChange={(event) => setMapTitle(event.target.value)}
@@ -628,7 +636,7 @@ const MindMapCanvas = ({ user }) => {
             Desktop hiển thị ngang, mobile tự chuyển dọc; double-click để sửa nhanh và hover nhánh chính để thêm nhánh.
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm backdrop-blur">
+        <div className="inline-flex items-center gap-2 self-start rounded-full border border-slate-300/80 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm backdrop-blur">
           {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
           {isSaving ? 'Đang lưu MongoDB...' : 'Tự động lưu'}
         </div>
@@ -691,7 +699,7 @@ const MindMapCanvas = ({ user }) => {
               <button
                 type="button"
                 onClick={() => setIsAiPromptOpen((prev) => !prev)}
-                className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-[0_20px_50px_-20px_rgba(37,99,235,0.78)] transition-transform hover:-translate-y-0.5 hover:bg-blue-700"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/92 px-4 py-3 text-sm font-bold text-slate-50 shadow-[0_20px_50px_-24px_rgba(15,23,42,0.65)] transition-transform hover:-translate-y-0.5 hover:bg-slate-800"
               >
                 <Sparkles size={16} />
                 {isMobile ? 'AI' : 'Tạo sơ đồ bằng Whalio AI'}
@@ -701,7 +709,7 @@ const MindMapCanvas = ({ user }) => {
                 {isAiPromptOpen && (
                   <div className="w-[min(92vw,420px)] rounded-[1.6rem] border border-white/80 bg-white/84 p-4 shadow-2xl backdrop-blur-xl">
                     <div className="flex items-start gap-3">
-                      <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
+                      <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
                         <Bot size={18} />
                       </div>
                       <div className="flex-1">
@@ -729,7 +737,7 @@ const MindMapCanvas = ({ user }) => {
                         type="button"
                         onClick={handleGenerateByAi}
                         disabled={isGenerating}
-                        className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-70"
+                        className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-70"
                       >
                         {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
                         {isGenerating ? 'Đang tạo...' : 'Tạo sơ đồ'}
@@ -770,7 +778,7 @@ const MindMapCanvas = ({ user }) => {
                   <button
                     type="button"
                     onClick={handleNodeEditSubmit}
-                    className="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white"
+                    className="rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white"
                   >
                     Lưu
                   </button>
@@ -783,13 +791,13 @@ const MindMapCanvas = ({ user }) => {
                 className="fixed z-[120] w-72 rounded-[1.4rem] border border-white/80 bg-white/92 p-3 shadow-2xl backdrop-blur-xl"
                 style={{ left: contextMenu.x, top: contextMenu.y }}
               >
-                <p className="px-2 text-xs font-black uppercase tracking-[0.24em] text-blue-500">Whalio AI</p>
+                <p className="px-2 text-xs font-black uppercase tracking-[0.24em] text-slate-500">Whalio AI</p>
                 <p className="px-2 pt-2 text-sm font-bold text-slate-900">{contextMenu.node.data?.label}</p>
                 <button
                   type="button"
                   onClick={handleExpandNode}
                   disabled={isExpandingNode}
-                  className="mt-3 flex w-full items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-left text-sm font-bold text-white disabled:opacity-70"
+                  className="mt-3 flex w-full items-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-left text-sm font-bold text-white disabled:opacity-70"
                 >
                   {isExpandingNode ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                   Whalio ơi, khai triển ý này đi
@@ -798,11 +806,11 @@ const MindMapCanvas = ({ user }) => {
             )}
 
             <div className="absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-3 sm:px-4 sm:pb-4">
-              <div className="flex w-full max-w-5xl flex-wrap items-center justify-center gap-2 rounded-full border border-white/70 bg-white/70 px-3 py-3 shadow-xl backdrop-blur-xl">
+              <div className="flex w-full max-w-5xl flex-wrap items-center justify-center gap-2 rounded-full border border-slate-300/80 bg-zinc-950/82 px-3 py-3 shadow-[0_24px_64px_-28px_rgba(15,23,42,0.72)] backdrop-blur-xl">
                 <button
                   type="button"
                   onClick={() => reactFlowInstance.zoomIn({ duration: 180 })}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-700"
+                  className={`inline-flex items-center gap-2 rounded-full border border-slate-700 bg-zinc-900 px-3 py-2 text-sm font-semibold text-slate-100 ${isMobile ? 'min-h-11 min-w-[112px] justify-center' : ''}`}
                 >
                   <ZoomIn size={16} />
                   {!isMobile && 'Zoom +'}
@@ -810,7 +818,7 @@ const MindMapCanvas = ({ user }) => {
                 <button
                   type="button"
                   onClick={() => reactFlowInstance.zoomOut({ duration: 180 })}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-700"
+                  className={`inline-flex items-center gap-2 rounded-full border border-slate-700 bg-zinc-900 px-3 py-2 text-sm font-semibold text-slate-100 ${isMobile ? 'min-h-11 min-w-[112px] justify-center' : ''}`}
                 >
                   <ZoomOut size={16} />
                   {!isMobile && 'Zoom -'}
@@ -818,7 +826,7 @@ const MindMapCanvas = ({ user }) => {
                 <button
                   type="button"
                   onClick={handleAutoLayout}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-700"
+                  className={`inline-flex items-center gap-2 rounded-full border border-slate-700 bg-zinc-900 px-3 py-2 text-sm font-semibold text-slate-100 ${isMobile ? 'min-h-11 min-w-[112px] justify-center' : ''}`}
                 >
                   <RefreshCcw size={16} />
                   Auto Layout
@@ -826,7 +834,7 @@ const MindMapCanvas = ({ user }) => {
                 <button
                   type="button"
                   onClick={() => fitCanvas(420)}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-700"
+                  className={`inline-flex items-center gap-2 rounded-full border border-slate-600 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-900 ${isMobile ? 'min-h-11 min-w-[128px] justify-center' : ''}`}
                 >
                   <Maximize size={16} />
                   Fit View
@@ -834,7 +842,7 @@ const MindMapCanvas = ({ user }) => {
                 <button
                   type="button"
                   onClick={handleExportPng}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-700"
+                  className={`inline-flex items-center gap-2 rounded-full border border-slate-700 bg-zinc-900 px-3 py-2 text-sm font-semibold text-slate-100 ${isMobile ? 'min-h-11 min-w-[112px] justify-center' : ''}`}
                 >
                   <ImageDown size={16} />
                   {!isMobile && 'PNG'}
@@ -842,7 +850,7 @@ const MindMapCanvas = ({ user }) => {
                 <button
                   type="button"
                   onClick={handleExportPdf}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-700"
+                  className={`inline-flex items-center gap-2 rounded-full border border-slate-700 bg-zinc-900 px-3 py-2 text-sm font-semibold text-slate-100 ${isMobile ? 'min-h-11 min-w-[112px] justify-center' : ''}`}
                 >
                   <FileText size={16} />
                   {!isMobile && 'PDF'}
