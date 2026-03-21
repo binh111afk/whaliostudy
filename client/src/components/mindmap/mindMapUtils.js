@@ -21,14 +21,14 @@ export const getBranchColor = (index = 0) => BRANCH_COLORS[Math.abs(Number(index
 
 export const getNodeDimensions = (depth = 0, isMobile = false) => {
   if (depth === 0) {
-    return isMobile ? { width: 250, height: 84 } : { width: 300, height: 96 };
+    return isMobile ? { width: 212, height: 72 } : { width: 300, height: 96 };
   }
 
   if (depth === 1) {
-    return isMobile ? { width: 200, height: 72 } : { width: 230, height: 76 };
+    return isMobile ? { width: 168, height: 58 } : { width: 230, height: 76 };
   }
 
-  return isMobile ? { width: 156, height: 48 } : { width: 176, height: 52 };
+  return isMobile ? { width: 132, height: 40 } : { width: 176, height: 52 };
 };
 
 export const buildNodeLookup = (nodes) =>
@@ -206,9 +206,9 @@ const layoutBranch = ({ rootId, nodes, edges, direction = 'right', isMobile = fa
   const graph = new dagre.graphlib.Graph();
   graph.setGraph({
     rankdir: isMobile ? 'TB' : direction === 'left' ? 'RL' : 'LR',
-    ranksep: isMobile ? 72 : 96,
-    nodesep: isMobile ? 38 : 30,
-    edgesep: isMobile ? 26 : 18,
+    ranksep: isMobile ? 118 : 96,
+    nodesep: isMobile ? 72 : 30,
+    edgesep: isMobile ? 38 : 18,
     marginx: 0,
     marginy: 0,
   });

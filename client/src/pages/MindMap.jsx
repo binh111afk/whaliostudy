@@ -14,6 +14,7 @@ import { AnimatePresence } from 'framer-motion';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import {
+  Ellipsis,
   Bot,
   FileText,
   ImageDown,
@@ -95,14 +96,18 @@ const MindMapCanvas = ({ user }) => {
   const [editingValue, setEditingValue] = useState('');
   const [contextMenu, setContextMenu] = useState(null);
   const [isExpandingNode, setIsExpandingNode] = useState(false);
+  const [isDockMenuOpen, setIsDockMenuOpen] = useState(false);
 
-  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+    setIsDockMenuOpen(false);
+  }, []);
 
   const fitCanvas = useCallback(
     (duration = 520) => {
       requestAnimationFrame(() => {
         reactFlowInstance.fitView({
-          padding: isMobile ? 0.14 : 0.22,
+          padding: isMobile ? 0.2 : 0.22,
           duration,
           maxZoom: isMobile ? 1.05 : 1.2,
         });
@@ -282,6 +287,7 @@ const MindMapCanvas = ({ user }) => {
       );
 
       applyHydratedGraph(nextNodes, nextEdges, { shouldFit: true, duration: 380 });
+      setIsDockMenuOpen(false);
       closeContextMenu();
       toast.success('Đã xóa nhánh khỏi sơ đồ');
     },
@@ -344,6 +350,7 @@ const MindMapCanvas = ({ user }) => {
       setEditingNodeId(childId);
       setEditingValue(childLabel);
       clearNodeAnimation(childId);
+      setIsDockMenuOpen(false);
     },
     [applyHydratedGraph, clearNodeAnimation, edges, layoutDirection, nodes]
   );
@@ -421,11 +428,13 @@ const MindMapCanvas = ({ user }) => {
     setAiPrompt(trimmedPrompt);
     setIsAiPromptOpen(false);
     fitCanvas(620);
+    setIsDockMenuOpen(false);
     toast.success(`Whalio AI đã dựng sơ đồ cho "${trimmedPrompt}"`);
   }, [aiPrompt, fitCanvas, layoutDirection, setEdges, setNodes]);
 
   const handleAutoLayout = useCallback(() => {
     applyHydratedGraph(nodes, edges, { shouldFit: true, duration: 480 });
+    setIsDockMenuOpen(false);
     toast.success(isMobile ? 'Đã sắp xếp lại sơ đồ dọc cho mobile' : 'Đã sắp xếp lại sơ đồ ngang');
   }, [applyHydratedGraph, edges, isMobile, nodes]);
 
@@ -516,6 +525,7 @@ const MindMapCanvas = ({ user }) => {
     });
 
     applyHydratedGraph(nextNodes, nextEdges, { shouldFit: true, duration: 620 });
+    setIsDockMenuOpen(false);
     toast.success('Whalio AI đã khai triển thêm ý mới');
   }, [
     applyHydratedGraph,
@@ -541,6 +551,7 @@ const MindMapCanvas = ({ user }) => {
       link.download = `${mapTitle || 'whalio-mind-map'}.png`;
       link.href = dataUrl;
       link.click();
+      setIsDockMenuOpen(false);
       toast.success('Đã xuất PNG');
     } catch (error) {
       console.error('Export PNG error:', error);
@@ -565,6 +576,7 @@ const MindMapCanvas = ({ user }) => {
       const pageHeight = pdf.internal.pageSize.getHeight();
       pdf.addImage(dataUrl, 'PNG', 18, 18, pageWidth - 36, pageHeight - 36, undefined, 'FAST');
       pdf.save(`${mapTitle || 'whalio-mind-map'}.pdf`);
+      setIsDockMenuOpen(false);
       toast.success('Đã xuất PDF');
     } catch (error) {
       console.error('Export PDF error:', error);
@@ -636,11 +648,63 @@ const MindMapCanvas = ({ user }) => {
             Desktop hiển thị ngang, mobile tự chuyển dọc; double-click để sửa nhanh và hover nhánh chính để thêm nhánh.
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 self-start rounded-full border border-slate-300/80 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm backdrop-blur">
-          {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-          {isSaving ? 'Đang lưu MongoDB...' : 'Tự động lưu'}
+        <div className="flex flex-wrap items-center gap-2 self-start">
+          <button
+            type="button"
+            onClick={() => setIsAiPromptOpen((prev) => !prev)}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur hover:bg-white"
+          >
+            <Sparkles size={15} />
+            Tạo sơ đồ bằng AI
+          </button>
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-300/80 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm backdrop-blur">
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {isSaving ? 'Đang lưu MongoDB...' : 'Tự động lưu'}
+          </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {isAiPromptOpen && (
+          <div className="mb-4 w-full max-w-[420px] rounded-[1.6rem] border border-white/80 bg-white/84 p-4 shadow-2xl backdrop-blur-xl">
+            <div className="flex items-start gap-3">
+              <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+                <Bot size={18} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-black text-slate-900">Whalio AI Generator</p>
+                <p className="mt-1 text-xs leading-6 text-slate-500">
+                  Nhập chủ đề như "Kiến trúc máy tính", "Đệ quy", hay "OOP trong Java".
+                </p>
+              </div>
+            </div>
+            <textarea
+              value={aiPrompt}
+              onChange={(event) => setAiPrompt(event.target.value)}
+              placeholder="Ví dụ: Kiến trúc máy tính"
+              className="mt-4 h-28 w-full rounded-2xl border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-300"
+            />
+            <div className="mt-3 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsAiPromptOpen(false)}
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateByAi}
+                disabled={isGenerating}
+                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-70"
+              >
+                {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+                {isGenerating ? 'Đang tạo...' : 'Tạo sơ đồ'}
+              </button>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <div
         ref={wrapperRef}
@@ -675,7 +739,7 @@ const MindMapCanvas = ({ user }) => {
                 });
               }}
               fitView
-              fitViewOptions={{ padding: isMobile ? 0.14 : 0.22 }}
+              fitViewOptions={{ padding: isMobile ? 0.2 : 0.22 }}
               minZoom={0.2}
               maxZoom={2.2}
               zoomOnPinch
@@ -694,59 +758,6 @@ const MindMapCanvas = ({ user }) => {
                 size={1.3}
               />
             </ReactFlow>
-
-            <div className="absolute right-4 top-4 z-20 flex flex-col items-end gap-3 sm:right-6 sm:top-6">
-              <button
-                type="button"
-                onClick={() => setIsAiPromptOpen((prev) => !prev)}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/92 px-4 py-3 text-sm font-bold text-slate-50 shadow-[0_20px_50px_-24px_rgba(15,23,42,0.65)] transition-transform hover:-translate-y-0.5 hover:bg-slate-800"
-              >
-                <Sparkles size={16} />
-                {isMobile ? 'AI' : 'Tạo sơ đồ bằng Whalio AI'}
-              </button>
-
-              <AnimatePresence>
-                {isAiPromptOpen && (
-                  <div className="w-[min(92vw,420px)] rounded-[1.6rem] border border-white/80 bg-white/84 p-4 shadow-2xl backdrop-blur-xl">
-                    <div className="flex items-start gap-3">
-                      <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-                        <Bot size={18} />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-black text-slate-900">Whalio AI Generator</p>
-                        <p className="mt-1 text-xs leading-6 text-slate-500">
-                          Nhập chủ đề như "Kiến trúc máy tính", "Đệ quy", hay "OOP trong Java".
-                        </p>
-                      </div>
-                    </div>
-                    <textarea
-                      value={aiPrompt}
-                      onChange={(event) => setAiPrompt(event.target.value)}
-                      placeholder="Ví dụ: Kiến trúc máy tính"
-                      className="mt-4 h-28 w-full rounded-2xl border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-300"
-                    />
-                    <div className="mt-3 flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsAiPromptOpen(false)}
-                        className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
-                      >
-                        Đóng
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleGenerateByAi}
-                        disabled={isGenerating}
-                        className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-70"
-                      >
-                        {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-                        {isGenerating ? 'Đang tạo...' : 'Tạo sơ đồ'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </AnimatePresence>
-            </div>
 
             {editingNodeId && (
               <div className="absolute left-1/2 top-4 z-30 w-[min(92vw,420px)] -translate-x-1/2 rounded-[1.4rem] border border-white/80 bg-white/88 p-4 shadow-2xl backdrop-blur-xl sm:top-6">
@@ -805,56 +816,71 @@ const MindMapCanvas = ({ user }) => {
               </div>
             )}
 
-            <div className="absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-3 sm:px-4 sm:pb-4">
-              <div className="flex w-full max-w-5xl flex-wrap items-center justify-center gap-2 rounded-full border border-slate-300/80 bg-zinc-950/82 px-3 py-3 shadow-[0_24px_64px_-28px_rgba(15,23,42,0.72)] backdrop-blur-xl">
+            <div className={`absolute inset-x-0 z-20 flex justify-center px-3 ${isMobile ? 'bottom-2 pb-0' : 'bottom-0 pb-4 sm:px-4'}`}>
+              <div className={`relative flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/80 shadow-lg backdrop-blur-md ${isMobile ? 'px-2 py-2' : 'px-3 py-3'}`}>
                 <button
                   type="button"
                   onClick={() => reactFlowInstance.zoomIn({ duration: 180 })}
-                  className={`inline-flex items-center gap-2 rounded-full border border-slate-700 bg-zinc-900 px-3 py-2 text-sm font-semibold text-slate-100 ${isMobile ? 'min-h-11 min-w-[112px] justify-center' : ''}`}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700"
+                  aria-label="Phóng to"
                 >
                   <ZoomIn size={16} />
-                  {!isMobile && 'Zoom +'}
                 </button>
                 <button
                   type="button"
                   onClick={() => reactFlowInstance.zoomOut({ duration: 180 })}
-                  className={`inline-flex items-center gap-2 rounded-full border border-slate-700 bg-zinc-900 px-3 py-2 text-sm font-semibold text-slate-100 ${isMobile ? 'min-h-11 min-w-[112px] justify-center' : ''}`}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700"
+                  aria-label="Thu nhỏ"
                 >
                   <ZoomOut size={16} />
-                  {!isMobile && 'Zoom -'}
                 </button>
                 <button
                   type="button"
                   onClick={handleAutoLayout}
-                  className={`inline-flex items-center gap-2 rounded-full border border-slate-700 bg-zinc-900 px-3 py-2 text-sm font-semibold text-slate-100 ${isMobile ? 'min-h-11 min-w-[112px] justify-center' : ''}`}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700"
+                  aria-label="Auto layout"
                 >
                   <RefreshCcw size={16} />
-                  Auto Layout
                 </button>
                 <button
                   type="button"
                   onClick={() => fitCanvas(420)}
-                  className={`inline-flex items-center gap-2 rounded-full border border-slate-600 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-900 ${isMobile ? 'min-h-11 min-w-[128px] justify-center' : ''}`}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700"
+                  aria-label="Fit view"
                 >
                   <Maximize size={16} />
-                  Fit View
                 </button>
                 <button
                   type="button"
-                  onClick={handleExportPng}
-                  className={`inline-flex items-center gap-2 rounded-full border border-slate-700 bg-zinc-900 px-3 py-2 text-sm font-semibold text-slate-100 ${isMobile ? 'min-h-11 min-w-[112px] justify-center' : ''}`}
+                  onClick={() => setIsDockMenuOpen((prev) => !prev)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700"
+                  aria-label="Mở menu"
                 >
-                  <ImageDown size={16} />
-                  {!isMobile && 'PNG'}
+                  <Ellipsis size={16} />
                 </button>
-                <button
-                  type="button"
-                  onClick={handleExportPdf}
-                  className={`inline-flex items-center gap-2 rounded-full border border-slate-700 bg-zinc-900 px-3 py-2 text-sm font-semibold text-slate-100 ${isMobile ? 'min-h-11 min-w-[112px] justify-center' : ''}`}
-                >
-                  <FileText size={16} />
-                  {!isMobile && 'PDF'}
-                </button>
+
+                <AnimatePresence>
+                  {isDockMenuOpen && (
+                    <div className="absolute bottom-14 right-0 flex min-w-[132px] flex-col gap-1 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-xl backdrop-blur-md">
+                      <button
+                        type="button"
+                        onClick={handleExportPng}
+                        className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                      >
+                        <ImageDown size={15} />
+                        PNG
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleExportPdf}
+                        className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                      >
+                        <FileText size={15} />
+                        PDF
+                      </button>
+                    </div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </div>
