@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom';
 import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
-import { Menu, X, Home, FileText, Users, LayoutGrid, Moon, Sun, Settings, LogOut, Save, User, GitGraph } from 'lucide-react';
+import { Menu, X, Home, FileText, Users, LayoutGrid, Moon, Sun, Settings, LogOut, Save, User } from 'lucide-react';
 import axios from './config/axiosConfig';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -37,7 +37,6 @@ const MOBILE_NAV_ITEMS = [
   { to: '/portal', label: 'Tiện ích', icon: LayoutGrid },
   { to: '/documents', label: 'Tài liệu', icon: FileText },
   { to: '/community', label: 'Cộng đồng', icon: Users },
-  { to: '/mind-map', label: 'Mind Map', icon: GitGraph },
 ];
 
 const ROUTE_TITLES = {
@@ -114,26 +113,35 @@ const MobileBottomNav = ({ user, onLoginClick, onLogoutClick }) => {
             );
           })}
 
-          <div ref={profileMenuRef} className="relative flex items-center justify-center">
+          <div ref={profileMenuRef} className="relative">
             <button
-              onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-transparent bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              onClick={() => {
+                if (!user) {
+                  onLoginClick();
+                  return;
+                }
+                setIsProfileMenuOpen((prev) => !prev);
+              }}
+              className="flex w-full flex-col items-center justify-center gap-1 rounded-xl py-2 text-[11px] font-semibold text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
               aria-label="Mở menu người dùng"
             >
-              {user?.avatar && user.avatar.includes('/') ? (
-                <img
-                  src={user.avatar}
-                  alt="Avatar"
-                  className="h-9 w-9 rounded-full border border-gray-200 object-cover dark:border-gray-600"
-                />
-              ) : (
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
-                  {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
-                </span>
-              )}
+              <span className="flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-300">
+                {user?.avatar && user.avatar.includes('/') ? (
+                  <img
+                    src={user.avatar}
+                    alt="Avatar"
+                    className="h-9 w-9 rounded-full border border-gray-200 object-cover dark:border-gray-600"
+                  />
+                ) : (
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+                    {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
+                  </span>
+                )}
+              </span>
+              <span>{user ? 'Tôi' : 'Đăng nhập'}</span>
             </button>
 
-            {isProfileMenuOpen && (
+            {user && isProfileMenuOpen && (
               <div className="absolute bottom-12 right-0 w-56 rounded-2xl border border-gray-200 bg-white p-2 shadow-2xl dark:border-gray-700 dark:bg-gray-800">
                 <button
                   onClick={() => {
