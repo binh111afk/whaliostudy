@@ -80,6 +80,9 @@ const Timetable = () => {
     { id: "afternoon", label: "Chiều" },
     { id: "evening", label: "Tối" },
   ];
+  const actionBtnFontStyle = {
+    fontFamily: "'Google Sans', 'Plus Jakarta Sans', sans-serif",
+  };
 
   const handleSaveClass = async (formData, isEdit) => {
     const classData = {
@@ -160,7 +163,7 @@ const Timetable = () => {
           {/* Nút Hủy */}
           <button
             onClick={() => toast.dismiss(t)}
-            className="w-full flex-1 py-3 sm:py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+            className="w-full flex-1 py-3 sm:py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-all hover:shadow-md active:scale-95"
           >
             Hủy
           </button>
@@ -185,7 +188,7 @@ const Timetable = () => {
                 setLoadingState({ isLoading: false, message: "" });
               }
             }}
-            className="w-full flex-1 py-3 sm:py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
+            className="w-full flex-1 py-3 sm:py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all hover:shadow-md active:scale-95"
           >
             Xóa
           </button>
@@ -212,7 +215,7 @@ const Timetable = () => {
           
           <button
             onClick={() => toast.dismiss(t)}
-            className="w-full flex-1 py-3 sm:py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+            className="w-full flex-1 py-3 sm:py-2 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg transition-all hover:shadow-md active:scale-95"
           >
             Giữ lại
           </button>
@@ -236,7 +239,7 @@ const Timetable = () => {
                 setLoadingState({ isLoading: false, message: "" });
               }
             }}
-            className="w-full flex-1 py-3 sm:py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-red-500/30 transition-all"
+            className="w-full flex-1 py-3 sm:py-2 px-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-red-500/30 transition-all hover:shadow-md active:scale-95"
           >
             Xóa hết
           </button>
@@ -339,7 +342,7 @@ const Timetable = () => {
                 setClassForNotes(cls);
                 setNotesModalOpen(true);
               }}
-              className="p-1 hover:bg-yellow-100 text-yellow-600 rounded"
+              className="p-1 hover:bg-yellow-100 text-yellow-600 rounded transition-all hover:shadow-md active:scale-95"
             >
               <ClipboardList size={14} />
             </button>
@@ -351,7 +354,7 @@ const Timetable = () => {
                 setClassToEdit(cls);
                 setClassModalOpen(true);
               }}
-              className="p-1 hover:bg-blue-100 text-blue-600 rounded"
+              className="p-1 hover:bg-blue-100 text-blue-600 rounded transition-all hover:shadow-md active:scale-95"
             >
               <Edit3 size={14} />
             </button>
@@ -362,7 +365,7 @@ const Timetable = () => {
                 e.stopPropagation();
                 handleDeleteClass(cls._id || cls.id);
               }}
-              className="p-1 hover:bg-red-100 text-red-600 rounded"
+              className="p-1 hover:bg-red-100 text-red-600 rounded transition-all hover:shadow-md active:scale-95"
             >
               <Trash2 size={14} />
             </button>
@@ -409,7 +412,7 @@ const Timetable = () => {
                 setClassForNotes(cls);
                 setNotesModalOpen(true);
               }}
-              className="p-2 bg-yellow-50 text-yellow-600 rounded-xl relative"
+              className="p-2 bg-yellow-50 text-yellow-600 rounded-xl relative transition-all hover:shadow-md active:scale-95"
             >
               <ClipboardList size={20} />
               {notesCount > 0 && (
@@ -423,13 +426,13 @@ const Timetable = () => {
                 setClassToEdit(cls);
                 setClassModalOpen(true);
               }}
-              className="p-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl"
+              className="p-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl transition-all hover:shadow-md active:scale-95"
             >
               <Edit3 size={20} />
             </button>
             <button
               onClick={() => handleDeleteClass(cls._id || cls.id)}
-              className="p-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl"
+              className="p-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl transition-all hover:shadow-md active:scale-95"
             >
               <Trash2 size={20} />
             </button>
@@ -442,15 +445,16 @@ const Timetable = () => {
   return (
     <div className="max-w-[1600px] mx-auto p-4 md:p-6 pb-20 overflow-x-hidden">
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-        <div className="flex items-center gap-4 bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 w-full md:w-auto justify-between md:justify-start">
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex h-12 items-center justify-between gap-1 rounded-full border border-slate-100 bg-white px-2 py-1.5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:h-auto">
           <button
             onClick={() => handleWeekChange(-1)}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300"
+            className="h-9 w-9 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100/80 transition-all hover:shadow-md active:scale-95"
+            aria-label="Tuần trước"
           >
-            <ChevronLeft />
+            <ChevronLeft size={18} strokeWidth={1.8} />
           </button>
-          <div className="font-bold text-gray-700 dark:text-gray-200 min-w-[200px] text-center text-sm md:text-base">
+          <div className="min-w-[190px] px-2 text-center text-sm font-semibold text-slate-700 font-['Plus_Jakarta_Sans']">
             {formatDateDisplay(currentWeekStart)} -{" "}
             {formatDateDisplay(
               new Date(currentWeekStart).setDate(currentWeekStart.getDate() + 6)
@@ -458,48 +462,61 @@ const Timetable = () => {
           </div>
           <button
             onClick={() => handleWeekChange(1)}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300"
+            className="h-9 w-9 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100/80 transition-all hover:shadow-md active:scale-95"
+            aria-label="Tuần sau"
           >
-            <ChevronRight />
+            <ChevronRight size={18} strokeWidth={1.8} />
           </button>
         </div>
 
-        <div className="flex gap-2 w-full md:w-auto">
-          <Tooltip text="Xóa tất cả">
-            <button
+        <div className="grid h-12 w-full grid-cols-3 gap-2 rounded-2xl bg-slate-50/70 p-1 sm:flex sm:h-auto sm:w-auto sm:items-center sm:justify-end sm:rounded-full sm:p-1.5">
+          <Tooltip text="Xóa toàn bộ môn học trong tuần biểu">
+            <motion.button
               onClick={handleDeleteAll}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 font-bold transition-all cursor-pointer"
+              whileHover={{
+                x: [0, -2, 2, -1.5, 1.5, 0],
+                transition: { duration: 0.35 },
+              }}
+              className="group relative flex h-full w-full items-center justify-center gap-2 rounded-2xl border border-transparent text-slate-400 transition-all duration-200 hover:bg-rose-500 hover:text-white hover:shadow-[0_10px_24px_-8px_rgba(244,63,94,0.55)] active:scale-95 sm:h-10 sm:w-auto sm:rounded-full sm:border-rose-200/70 sm:bg-rose-50 sm:px-4 sm:text-rose-500 sm:hover:bg-rose-100 sm:hover:text-rose-600"
+              style={actionBtnFontStyle}
             >
-              <Trash2 size={20} />
+              <Trash2 size={16} className="opacity-80" />
               <span className="hidden sm:inline">Xóa tất cả</span>
+            </motion.button>
+          </Tooltip>
+
+          <Tooltip text="Nhập danh sách môn từ file Excel">
+            <button
+              onClick={() => setImportModalOpen(true)}
+              className="flex h-full w-full items-center justify-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-3 text-emerald-600 text-sm font-bold transition-all duration-300 hover:bg-gradient-to-br hover:from-emerald-500 hover:to-green-500 hover:text-white hover:border-transparent hover:shadow-[0_10px_24px_-8px_rgba(16,185,129,0.55)] hover:scale-105 active:scale-95 sm:h-10 sm:w-auto sm:rounded-full sm:px-4"
+              style={actionBtnFontStyle}
+            >
+              <Upload size={17} />
+              <span className="hidden sm:inline">Nhập Excel</span>
             </button>
           </Tooltip>
-          <button
-            onClick={() => setImportModalOpen(true)}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/30 font-bold transition-all cursor-pointer"
-          >
-            <Upload size={20} />{" "}
-            <span className="hidden sm:inline">Nhập Excel</span>
-          </button>
+
           <button
             onClick={() => {
               setClassToEdit(null);
               setClassModalOpen(true);
             }}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold shadow-lg shadow-blue-200 dark:shadow-blue-900/30 transition-all cursor-pointer"
+            className="flex h-full w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-indigo-600 via-blue-600 to-violet-500 px-3 text-white text-sm font-bold shadow-[0_10px_20px_-5px_rgba(79,70,229,0.4)] transition-all duration-300 hover:scale-105 hover:shadow-[0_16px_30px_-8px_rgba(79,70,229,0.55)] active:scale-95 sm:h-10 sm:w-auto sm:rounded-full sm:px-5"
+            style={actionBtnFontStyle}
           >
-            <Plus size={20} /> <span>Thêm môn</span>
+            <Plus size={17} strokeWidth={2} />
+            <span className="hidden sm:inline">Thêm môn</span>
           </button>
         </div>
       </div>
 
       {/* --- DESKTOP VIEW (TABLE) --- */}
-      <div className="hidden md:block bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="hidden md:block bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-slate-100/80 dark:border-slate-700/80 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1000px] border-collapse table-fixed">
             <thead>
               <tr>
-                <th className="p-4 bg-gray-50 dark:bg-gray-900 border-b border-r border-gray-200 dark:border-gray-700 w-24 text-gray-500 dark:text-gray-400 uppercase text-xs font-bold sticky left-0 z-10">
+                <th className="p-4 bg-slate-50/80 dark:bg-slate-900 border-b border-r border-slate-100/80 dark:border-slate-700/80 w-24 text-slate-500 dark:text-slate-400 uppercase text-xs font-bold sticky left-0 z-10">
                   Buổi
                 </th>
                 {days.map((day, index) => {
@@ -510,16 +527,19 @@ const Timetable = () => {
                   return (
                     <th
                       key={day}
-                      className={`p-4 border-b border-r border-gray-200 dark:border-gray-700 ${
+                      className={`p-4 border-b border-r border-slate-100/80 dark:border-slate-700/80 ${
                         isToday ? "bg-blue-50/50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"
                       }`}
                     >
                       <div
-                        className={`text-sm font-black ${
-                          isToday ? "text-blue-600 dark:text-blue-400" : "text-gray-800 dark:text-white"
+                        className={`text-sm font-black flex flex-col items-center gap-1 ${
+                          isToday ? "text-blue-700 dark:text-blue-300" : "text-gray-800 dark:text-white"
                         }`}
                       >
-                        THỨ {day}
+                        <span>THỨ {day}</span>
+                        {isToday && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-300" />
+                        )}
                       </div>
                       <div className="text-xs text-gray-400 dark:text-gray-500 font-medium mt-1">
                         {formatDateDisplay(date)}
@@ -532,7 +552,7 @@ const Timetable = () => {
             <tbody>
               {sessions.map((session) => (
                 <tr key={session.id}>
-                  <td className="p-4 bg-gray-50 dark:bg-gray-900 border-b border-r border-gray-200 dark:border-gray-700 font-bold text-gray-600 dark:text-gray-400 text-center sticky left-0 z-10 text-sm">
+                  <td className="p-4 bg-slate-50/80 dark:bg-slate-900 border-b border-r border-slate-100/80 dark:border-slate-700/80 font-bold text-slate-600 dark:text-slate-400 text-center sticky left-0 z-10 text-sm">
                     {session.label}
                   </td>
                   {days.map((day) => {
@@ -553,7 +573,7 @@ const Timetable = () => {
                       // 👇 Fix layout: min-h-[140px] để ô rộng hơn, h-auto để co giãn nếu nhiều môn
                       <td
                         key={`${day}-${session.id}`}
-                        className="p-2 border-b border-r border-gray-200 dark:border-gray-600 align-top h-auto min-h-[140px] relative group/cell"
+                        className="p-2 border-b border-r border-slate-100/80 dark:border-slate-700/80 align-top h-auto min-h-[140px] relative group/cell"
                       >
                         <div className="flex flex-col gap-2 h-full">
                           {cellClasses.map((cls) => (
@@ -565,7 +585,7 @@ const Timetable = () => {
                                 setClassToEdit(null);
                                 setClassModalOpen(true);
                               }}
-                              className="w-full h-full min-h-[100px] flex items-center justify-center text-gray-300 hover:text-blue-500 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              className="w-full h-full min-h-[100px] flex items-center justify-center text-gray-300 hover:text-blue-500 opacity-0 group-hover/cell:opacity-100 transition-all hover:shadow-md active:scale-95"
                             >
                               <Plus size={24} />
                             </button>
@@ -600,7 +620,7 @@ const Timetable = () => {
                     : isToday
                     ? "border-blue-200 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
                     : "border-transparent bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-                }`}
+                } hover:shadow-md active:scale-95`}
               >
                 <span className="text-xs font-bold">Thứ {day}</span>
                 <span
@@ -653,7 +673,7 @@ const Timetable = () => {
             >
               <button
                 onClick={() => setImportModalOpen(false)}
-                className="absolute right-5 top-5 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                className="absolute right-5 top-5 rounded-full p-1.5 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-700 hover:shadow-md active:scale-95"
                 aria-label="Đóng"
               >
                 <X size={18} strokeWidth={1.6} />
