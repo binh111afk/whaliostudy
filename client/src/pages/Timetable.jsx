@@ -46,7 +46,7 @@ const Timetable = () => {
     getMonday(new Date())
   );
   const [selectedMobileDay, setSelectedMobileDay] = useState(
-    new Date().getDay() === 0 ? "CN" : String(new Date().getDay() + 1)
+    new Date().getDay() === 0 ? "CHỦ NHẬT" : String(new Date().getDay() + 1)
   );
 
   const [isImportModalOpen, setImportModalOpen] = useState(false);
@@ -59,10 +59,21 @@ const Timetable = () => {
   // Loading overlay state
   const [loadingState, setLoadingState] = useState({ isLoading: false, message: "" });
 
+  // Helper: Convert day between frontend (CHỦ NHẬT) and backend (CN)
+  const convertDayToBackend = (day) => day === "CHỦ NHẬT" ? "CN" : day;
+  const convertDayFromBackend = (day) => day === "CN" ? "CHỦ NHẬT" : day;
+
   const loadTimetable = async () => {
     if (user) {
       const res = await timetableService.getTimetable(user.username);
-      if (res.success) setTimetable(res.timetable);
+      if (res.success) {
+        // Convert CN -> CHỦ NHẬT for display
+        const convertedTimetable = res.timetable.map(cls => ({
+          ...cls,
+          day: convertDayFromBackend(cls.day)
+        }));
+        setTimetable(convertedTimetable);
+      }
     }
   };
 
@@ -74,19 +85,29 @@ const Timetable = () => {
     return timetable.filter((cls) => isClassInWeek(cls, currentWeekStart));
   }, [timetable, currentWeekStart]);
 
-  const days = ["2", "3", "4", "5", "6", "7", "CN"];
+  const days = ["2", "3", "4", "5", "6", "7", "CHỦ NHẬT"];
   const sessions = [
     { id: "morning", label: "Sáng" },
     { id: "afternoon", label: "Chiều" },
     { id: "evening", label: "Tối" },
   ];
+  const getCurrentSession = () => {
+    const now = new Date();
+    const hour = now.getHours();
+    if (hour >= 5 && hour < 12) return "morning";
+    if (hour >= 12 && hour < 18) return "afternoon";
+    if (hour >= 18 && hour < 22) return "evening";
+    return null;
+  };
   const actionBtnFontStyle = {
     fontFamily: "'Google Sans', 'Plus Jakarta Sans', sans-serif",
   };
 
   const handleSaveClass = async (formData, isEdit) => {
+    // Convert CHỦ NHẬT -> CN for backend
     const classData = {
       ...formData,
+      day: convertDayToBackend(formData.day),
       username: user.username,
       classId: isEdit ? classToEdit._id || classToEdit.id : undefined,
     };
@@ -258,7 +279,9 @@ const Timetable = () => {
         setLoadingState({ isLoading: true, message: `Đang thêm ${importedData.length} lớp học...` });
         try {
           for (const cls of importedData) {
-            await timetableService.saveClass({ ...cls, username: user.username });
+            // Convert day to backend format (CHỦ NHẬT or CN -> CN)
+            const dayToSave = cls.day === "CHỦ NHẬT" ? "CN" : cls.day;
+            await timetableService.saveClass({ ...cls, day: dayToSave, username: user.username });
           }
           await loadTimetable();
           setImportModalOpen(false);
@@ -536,7 +559,7 @@ const Timetable = () => {
                           isToday ? "text-blue-700 dark:text-blue-300" : "text-gray-800 dark:text-white"
                         }`}
                       >
-                        <span>THỨ {day}</span>
+                        <span>{day === "CHỦ NHẬT" ? "CHỦ NHẬT" : `THỨ ${day}`}</span>
                         {isToday && (
                           <span className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-300" />
                         )}
@@ -551,8 +574,8 @@ const Timetable = () => {
             </thead>
             <tbody>
               {sessions.map((session) => (
-                <tr key={session.id}>
-                  <td className="p-4 bg-slate-50/80 dark:bg-slate-900 border-b border-r border-slate-100/80 dark:border-slate-700/80 font-bold text-slate-600 dark:text-slate-400 text-center sticky left-0 z-10 text-sm">
+                <tr key={session.id} className={getCurrentSession() === session.id ? "bg-blue-50/40 dark:bg-blue-900/10" : ""}>
+                  <td className={`p-4 border-b border-r border-slate-100/80 dark:border-slate-700/80 font-bold text-center sticky left-0 z-10 text-sm transition-colors ${getCurrentSession() === session.id ? "bg-blue-100/60 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" : "bg-slate-50/80 dark:bg-slate-900 text-slate-600 dark:text-slate-400"}`}>
                     {session.label}
                   </td>
                   {days.map((day) => {
@@ -622,7 +645,7 @@ const Timetable = () => {
                     : "border-transparent bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400"
                 } hover:shadow-md active:scale-95`}
               >
-                <span className="text-xs font-bold">Thứ {day}</span>
+                <span className="text-xs font-bold">{day === "CHỦ NHẬT" ? "CHỦ NHẬT" : `Thứ ${day}`}</span>
                 <span
                   className={`text-[10px] ${
                     isSelected ? "text-blue-100" : "text-gray-400"

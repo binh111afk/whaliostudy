@@ -121,7 +121,7 @@ export const ClassModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                     <div>
                         <label className={labelStyle}><Calendar size={14} className={iconStyle}/> Thứ</label>
                         <select name="day" value={formData.day} onChange={handleChange} className={inputStyle}>
-                            {['2', '3', '4', '5', '6', '7', 'CN'].map(d => <option key={d} value={d}>{d === 'CN' ? 'Chủ Nhật' : 'Thứ ' + d}</option>)}
+                            {['2', '3', '4', '5', '6', '7', 'CHỦ NHẬT'].map(d => <option key={d} value={d}>{d === 'CHỦ NHẬT' ? 'CHỦ NHẬT' : 'Thứ ' + d}</option>)}
                         </select>
                     </div>
                     <div>
