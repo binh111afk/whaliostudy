@@ -32,6 +32,7 @@ import {
   Search,
   Plus,
   Copy,
+  Check,
   EyeOff,
   ShieldEllipsis,
   Vault,
@@ -176,6 +177,17 @@ const PlatformLogo = ({ account, className = "" }) => {
 const maskPassword = (password = "") =>
   "•".repeat(Math.max(8, Math.min(password.length || 8, 16)));
 
+const PRIVACY_CHIP_STYLES = {
+  Facebook:
+    "border-[#1877F2]/20 bg-[#1877F2] text-white shadow-[0_10px_24px_-16px_rgba(24,119,242,0.85)]",
+  Instagram:
+    "border-transparent bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 text-white shadow-[0_10px_24px_-16px_rgba(225,48,108,0.85)]",
+  Gmail:
+    "border-[#EA4335]/20 bg-[#EA4335] text-white shadow-[0_10px_24px_-16px_rgba(234,67,53,0.85)]",
+  TikTok:
+    "border-[#111111]/20 bg-[#111111] text-white shadow-[0_10px_24px_-16px_rgba(17,17,17,0.85)]",
+};
+
 const DisplayRow = ({ label, value, isLink }) => (
   <div className="flex items-center py-4 border-b border-gray-50 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50 px-2 transition-colors -mx-2 rounded-lg">
     <span className="w-1/3 text-gray-500 dark:text-gray-400 font-medium text-sm">
@@ -294,17 +306,19 @@ const PrivacyAccountModal = ({
 
         <div className="mb-4 flex flex-wrap gap-2">
           {PRIVACY_SUGGESTIONS.map((item) => (
-            <button
+            <motion.button
               key={item}
               onClick={() => setPlatform(item)}
-              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+              whileTap={{ scale: 0.95 }}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium tracking-tight transition ${
                 platform === item
-                  ? "border-emerald-400 bg-emerald-500 text-white"
-                  : "border-slate-200 bg-white/70 text-slate-600 hover:border-emerald-300 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-300"
+                  ? PRIVACY_CHIP_STYLES[item] ||
+                    "border-indigo-400 bg-indigo-500 text-white"
+                  : "border-slate-200 bg-white/70 text-slate-600 hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-white"
               }`}
             >
               {item}
-            </button>
+            </motion.button>
           ))}
         </div>
 
@@ -313,20 +327,20 @@ const PrivacyAccountModal = ({
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
             placeholder="Tên nền tảng"
-            className="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:focus:border-emerald-500"
+            className="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm tracking-tight text-slate-800 outline-none transition focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:focus:border-emerald-500"
           />
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Tài khoản"
-            className="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:focus:border-emerald-500"
+            className="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm tracking-tight text-slate-800 outline-none transition focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:focus:border-emerald-500"
           />
           <input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Mật khẩu"
             type="password"
-            className="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:focus:border-emerald-500"
+            className="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm tracking-tight text-slate-800 outline-none transition focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:focus:border-emerald-500"
           />
         </div>
 
@@ -1147,6 +1161,10 @@ const PrivacyVaultTab = ({ currentUser }) => {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
+  const [copiedState, setCopiedState] = useState({});
+  const [activeRowId, setActiveRowId] = useState(null);
+  const [isListHovered, setIsListHovered] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const syncAccounts = (nextAccounts = []) => {
     const sorted = [...nextAccounts].sort((a, b) => {
@@ -1204,7 +1222,13 @@ const PrivacyVaultTab = ({ currentUser }) => {
   const copyText = async (value, label) => {
     try {
       await navigator.clipboard.writeText(value);
-      toast.success(`Đã sao chép ${label}.`);
+      setCopiedState((prev) => ({ ...prev, [label]: true }));
+      window.clearTimeout(copyText.timeoutMap?.[label]);
+      copyText.timeoutMap = copyText.timeoutMap || {};
+      copyText.timeoutMap[label] = window.setTimeout(() => {
+        setCopiedState((prev) => ({ ...prev, [label]: false }));
+      }, 1400);
+      toast.success("Đã sao chép vào bộ nhớ tạm");
     } catch (error) {
       console.error("Copy failed:", error);
       toast.error("Không thể sao chép lúc này.");
@@ -1304,10 +1328,15 @@ const PrivacyVaultTab = ({ currentUser }) => {
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <label className="flex min-w-[220px] items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3.5 py-2.5 text-sm text-slate-400 shadow-sm transition focus-within:border-indigo-300 sm:min-w-[280px]">
-              <Search size={14} />
+              <Search
+                size={14}
+                className={isSearchFocused ? "text-indigo-500" : "text-slate-400"}
+              />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
                 placeholder="Tìm kiếm tài khoản"
                 className="w-full bg-transparent text-sm tracking-tight text-slate-700 outline-none placeholder:text-slate-400"
               />
@@ -1322,7 +1351,13 @@ const PrivacyVaultTab = ({ currentUser }) => {
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-[1.75rem] border border-slate-100 bg-white/70 shadow-[0_18px_50px_-36px_rgba(99,102,241,0.4)]">
+        <div
+          className="relative overflow-hidden rounded-[1.75rem] border border-slate-100 bg-white/70 shadow-[0_18px_50px_-36px_rgba(99,102,241,0.4)]"
+          onMouseLeave={() => {
+            setActiveRowId(null);
+            setIsListHovered(false);
+          }}
+        >
           {loading ? (
             <div className="flex items-center justify-center gap-2 px-6 py-16 text-sm tracking-tight text-slate-500">
               <RefreshCw size={16} className="animate-spin" />
@@ -1333,105 +1368,159 @@ const PrivacyVaultTab = ({ currentUser }) => {
               variants={containerVariants}
               initial="hidden"
               animate={isUnlocked ? "show" : "hidden"}
-              className={`${isUnlocked ? "" : "select-none"} divide-y divide-slate-50`}
+              className={`${isUnlocked ? "" : "select-none"}`}
             >
               {filteredAccounts.map((account) => {
                 const meta = resolveStoredPrivacyPlatform(account);
                 const accountId = account._id || account.id;
                 const isVisible = Boolean(visiblePasswords[accountId]);
+                const usernameCopyKey = `${accountId}-username`;
+                const passwordCopyKey = `${accountId}-password`;
+                const shouldBlurSensitive = isUnlocked && (!isListHovered || activeRowId !== accountId);
 
                 return (
                   <motion.div
                     key={accountId}
                     variants={cardVariants}
-                    className={`group flex flex-col gap-3 px-4 py-4 transition sm:flex-row sm:items-center sm:gap-4 ${
-                      isUnlocked ? "hover:bg-slate-50/80" : "blur-[3px] opacity-55"
+                    onMouseEnter={() => {
+                      if (!isUnlocked) return;
+                      setIsListHovered(true);
+                      setActiveRowId(accountId);
+                    }}
+                    className={`group border-b border-slate-100 px-4 py-4 transition last:border-b-0 ${
+                      isUnlocked
+                        ? "hover:rounded-xl hover:bg-slate-50/50"
+                        : "blur-[3px] opacity-55"
                     }`}
                   >
-                    <div className="flex min-w-0 items-center gap-3 sm:w-[28%]">
-                      <div
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${meta.tintClass} ring-1 ${meta.ringClass}`}
-                      >
-                        <PlatformLogo
-                          account={account}
-                          className="h-[15px] w-[15px] text-slate-500"
-                        />
+                    <div className="grid items-center gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${meta.tintClass} ring-1 ${meta.ringClass}`}
+                        >
+                          <PlatformLogo
+                            account={account}
+                            className="h-[15px] w-[15px] text-slate-500"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold tracking-tight text-slate-800">
+                            {meta.label}
+                          </p>
+                        </div>
                       </div>
+
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold tracking-tight text-slate-800">
-                          {meta.label}
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          User
                         </p>
-                      </div>
-                    </div>
-
-                    <div className="min-w-0 sm:w-[30%]">
-                      <p className="text-[11px] font-medium tracking-tight text-slate-400">
-                        Tên đăng nhập
-                      </p>
-                      <p className="truncate text-sm font-medium tracking-tight text-slate-700">
-                        {account.username}
-                      </p>
-                    </div>
-
-                    <div className="min-w-0 sm:w-[26%]">
-                      <p className="text-[11px] font-medium tracking-tight text-slate-400">
-                        Mật khẩu
-                      </p>
-                      <div className="truncate">
-                        <AnimatePresence mode="wait" initial={false}>
-                          <motion.span
-                            key={isVisible ? "visible" : "hidden"}
-                            initial={{ opacity: 0, y: 3, filter: "blur(4px)" }}
-                            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                            exit={{ opacity: 0, y: -3, filter: "blur(4px)" }}
-                            transition={{ duration: 0.18, ease: "easeOut" }}
-                            className={`inline-block tracking-tight ${
-                              isVisible
-                                ? "text-sm font-medium text-slate-700"
-                                : "text-[8px] text-slate-500"
+                        <div className="mt-1 flex items-center gap-2">
+                          <p
+                            className={`truncate text-sm font-medium tracking-tight text-slate-700 transition ${
+                              shouldBlurSensitive ? "blur-sm" : "blur-0"
                             }`}
                           >
-                            {isVisible
-                              ? account.password
-                              : maskPassword(account.password)}
-                          </motion.span>
-                        </AnimatePresence>
+                            {account.username}
+                          </p>
+                          <button
+                            onClick={() => copyText(account.username, usernameCopyKey)}
+                            className="rounded-full p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
+                            aria-label="Sao chép tài khoản"
+                          >
+                            <AnimatePresence mode="wait" initial={false}>
+                              <motion.span
+                                key={copiedState[usernameCopyKey] ? "check" : "copy"}
+                                initial={{ scale: 0.7, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.7, opacity: 0 }}
+                                transition={{ duration: 0.16, ease: "easeOut" }}
+                                className="block"
+                              >
+                                {copiedState[usernameCopyKey] ? (
+                                  <Check size={15} strokeWidth={2} className="text-emerald-500" />
+                                ) : (
+                                  <Copy size={15} strokeWidth={1.8} />
+                                )}
+                              </motion.span>
+                            </AnimatePresence>
+                          </button>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-1 sm:ml-auto">
-                      <button
-                        onClick={() => togglePassword(accountId)}
-                        className="rounded-full p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
-                        aria-label={isVisible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                      >
-                        {isVisible ? (
-                          <EyeOff size={15} strokeWidth={1.8} />
-                        ) : (
-                          <Eye size={15} strokeWidth={1.8} />
-                        )}
-                      </button>
-                      <button
-                        onClick={() => copyText(account.password, "mật khẩu")}
-                        className="rounded-full p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
-                        aria-label="Sao chép mật khẩu"
-                      >
-                        <Copy size={15} strokeWidth={1.8} />
-                      </button>
-                      <button
-                        onClick={() => copyText(account.username, "tài khoản")}
-                        className="rounded-full p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
-                        aria-label="Sao chép tài khoản"
-                      >
-                        <Copy size={15} strokeWidth={1.8} />
-                      </button>
-                      <button
-                        onClick={() => openEditModal(account)}
-                        className="rounded-full p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
-                        aria-label="Chỉnh sửa tài khoản"
-                      >
-                        <Edit2 size={15} strokeWidth={1.8} />
-                      </button>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Pass
+                        </p>
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <div className="min-w-0 flex-1 truncate">
+                            <AnimatePresence mode="wait" initial={false}>
+                              <motion.span
+                                key={isVisible ? "visible" : "hidden"}
+                                initial={{ opacity: 0, y: 3, filter: "blur(4px)" }}
+                                animate={{
+                                  opacity: 1,
+                                  y: 0,
+                                  filter: shouldBlurSensitive ? "blur(5px)" : "blur(0px)",
+                                }}
+                                exit={{ opacity: 0, y: -3, filter: "blur(4px)" }}
+                                transition={{ duration: 0.18, ease: "easeOut" }}
+                                className={`inline-block tracking-tight transition ${
+                                  isVisible
+                                    ? "text-sm font-medium text-slate-700"
+                                    : "text-[8px] text-slate-500"
+                                }`}
+                              >
+                                {isVisible
+                                  ? account.password
+                                  : maskPassword(account.password)}
+                              </motion.span>
+                            </AnimatePresence>
+                          </div>
+                          <button
+                            onClick={() => togglePassword(accountId)}
+                            className="rounded-full p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
+                            aria-label={isVisible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                          >
+                            {isVisible ? (
+                              <EyeOff size={15} strokeWidth={1.8} />
+                            ) : (
+                              <Eye size={15} strokeWidth={1.8} />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => copyText(account.password, passwordCopyKey)}
+                            className="rounded-full p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
+                            aria-label="Sao chép mật khẩu"
+                          >
+                            <AnimatePresence mode="wait" initial={false}>
+                              <motion.span
+                                key={copiedState[passwordCopyKey] ? "check" : "copy"}
+                                initial={{ scale: 0.7, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.7, opacity: 0 }}
+                                transition={{ duration: 0.16, ease: "easeOut" }}
+                                className="block"
+                              >
+                                {copiedState[passwordCopyKey] ? (
+                                  <Check size={15} strokeWidth={2} className="text-emerald-500" />
+                                ) : (
+                                  <Copy size={15} strokeWidth={1.8} />
+                                )}
+                              </motion.span>
+                            </AnimatePresence>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-start gap-1 lg:justify-end">
+                        <button
+                          onClick={() => openEditModal(account)}
+                          className="rounded-full p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
+                          aria-label="Chỉnh sửa tài khoản"
+                        >
+                          <Edit2 size={15} strokeWidth={1.8} />
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 );
