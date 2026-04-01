@@ -107,5 +107,19 @@ export const userService = {
         console.error('Error updating privacy account:', error);
         return { success: false, message: 'Lỗi kết nối server' };
       }
+    },
+
+    async unlockPrivacyVault(password) {
+      try {
+        const response = await fetch(getFullApiUrl('/api/privacy-vault/unlock'), {
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ password })
+        });
+        return await response.json();
+      } catch (error) {
+        console.error('Error unlocking privacy vault:', error);
+        return { success: false, message: 'Lỗi kết nối server' };
+      }
     }
   };

@@ -4669,6 +4669,52 @@ app.put('/api/privacy-accounts/:accountId', verifyToken, async (req, res) => {
     }
 });
 
+app.post('/api/privacy-vault/unlock', verifyToken, async (req, res) => {
+    try {
+        const inputPassword = String(req.body?.password || '');
+        if (!inputPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng nhập mật khẩu để mở kho lưu trữ.'
+            });
+        }
+
+        const user = await User.findOne({ username: req.user.username })
+            .select('_id username password');
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy user'
+            });
+        }
+
+        const storedPassword = String(user.password || '');
+        const isBcryptHash = /^\$2[aby]\$\d{2}\$/.test(storedPassword);
+        const isPasswordValid = isBcryptHash
+            ? await bcrypt.compare(inputPassword, storedPassword)
+            : inputPassword === storedPassword;
+
+        if (!isPasswordValid) {
+            return res.status(401).json({
+                success: false,
+                message: 'Mật khẩu chưa đúng. Vui lòng thử lại.'
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: 'Xác thực thành công.'
+        });
+    } catch (error) {
+        console.error('Unlock privacy vault error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Lỗi server'
+        });
+    }
+});
+
 // 🔐 API đổi mật khẩu - Yêu cầu xác thực JWT
 app.post('/api/change-password', verifyToken, async (req, res) => {
     try {

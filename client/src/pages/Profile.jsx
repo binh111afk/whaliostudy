@@ -1160,11 +1160,13 @@ const PrivacyVaultTab = ({ currentUser }) => {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
   const [copiedState, setCopiedState] = useState({});
   const [activeRowId, setActiveRowId] = useState(null);
   const [isListHovered, setIsListHovered] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [unlockPassword, setUnlockPassword] = useState("");
 
   const syncAccounts = (nextAccounts = []) => {
     const sorted = [...nextAccounts].sort((a, b) => {
@@ -1180,6 +1182,14 @@ const PrivacyVaultTab = ({ currentUser }) => {
 
     const loadPrivacyAccounts = async () => {
       if (!currentUser?.username) {
+        if (isMounted) {
+          setLoading(false);
+          setAccounts([]);
+        }
+        return;
+      }
+
+      if (!isUnlocked) {
         if (isMounted) {
           setLoading(false);
           setAccounts([]);
@@ -1207,7 +1217,7 @@ const PrivacyVaultTab = ({ currentUser }) => {
     return () => {
       isMounted = false;
     };
-  }, [currentUser?.username]);
+  }, [currentUser?.username, isUnlocked]);
 
   const filteredAccounts = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -1284,6 +1294,26 @@ const PrivacyVaultTab = ({ currentUser }) => {
     );
   };
 
+  const handleUnlockVault = async () => {
+    if (!unlockPassword.trim()) {
+      toast.error("Nhập mật khẩu tài khoản để mở kho lưu trữ.");
+      return;
+    }
+
+    setIsUnlocking(true);
+    const result = await userService.unlockPrivacyVault(unlockPassword);
+    setIsUnlocking(false);
+
+    if (!result.success) {
+      toast.error(result.message || "Không thể xác thực kho lưu trữ.");
+      return;
+    }
+
+    setUnlockPassword("");
+    setIsUnlocked(true);
+    toast.success("Kho lưu trữ đã được mở.");
+  };
+
   const containerVariants = {
     hidden: {},
     show: {
@@ -1352,7 +1382,7 @@ const PrivacyVaultTab = ({ currentUser }) => {
         </div>
 
         <div
-          className="relative overflow-hidden rounded-[1.75rem] border border-slate-100 bg-white/70 shadow-[0_18px_50px_-36px_rgba(99,102,241,0.4)]"
+          className="relative min-h-[260px] overflow-hidden rounded-[1.75rem] border border-slate-100 bg-white/70 shadow-[0_18px_50px_-36px_rgba(99,102,241,0.4)]"
           onMouseLeave={() => {
             setActiveRowId(null);
             setIsListHovered(false);
@@ -1368,7 +1398,7 @@ const PrivacyVaultTab = ({ currentUser }) => {
               variants={containerVariants}
               initial="hidden"
               animate={isUnlocked ? "show" : "hidden"}
-              className={`${isUnlocked ? "" : "select-none"}`}
+              className={`${isUnlocked ? "" : "select-none"} ${filteredAccounts.length === 0 ? "min-h-[260px]" : ""}`}
             >
               {filteredAccounts.map((account) => {
                 const meta = resolveStoredPrivacyPlatform(account);
@@ -1528,7 +1558,7 @@ const PrivacyVaultTab = ({ currentUser }) => {
             </motion.div>
           )}
 
-          {!loading && filteredAccounts.length === 0 && (
+          {!loading && isUnlocked && filteredAccounts.length === 0 && (
             <div className="px-6 py-12 text-center text-sm tracking-tight text-slate-400">
               Không tìm thấy tài khoản nào khớp với từ khóa của bạn.
             </div>
@@ -1540,13 +1570,13 @@ const PrivacyVaultTab = ({ currentUser }) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute inset-0 z-10 flex items-center justify-center bg-white/35 backdrop-blur-md"
+                className="absolute inset-0 z-10 flex items-center justify-center bg-white/45 p-4 backdrop-blur-md"
               >
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="mx-4 rounded-[1.5rem] border border-white/60 bg-white/70 px-6 py-5 text-center shadow-sm backdrop-blur-md"
+                  className="w-full max-w-md rounded-[1.5rem] border border-white/70 bg-white/85 px-6 py-6 text-center shadow-sm backdrop-blur-md"
                 >
                   <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-500">
                     <Lock size={18} />
@@ -1554,12 +1584,30 @@ const PrivacyVaultTab = ({ currentUser }) => {
                   <p className="text-sm font-semibold tracking-tight text-slate-800">
                     Xác thực để truy cập kho lưu trữ
                   </p>
-                  <button
-                    onClick={() => setIsUnlocked(true)}
-                    className="mt-4 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium tracking-tight text-white transition hover:bg-slate-800"
-                  >
-                    Tiếp tục
-                  </button>
+                  <p className="mt-1 text-sm tracking-tight text-slate-500">
+                    Nhập mật khẩu tài khoản Whalio của bạn để mở Privacy Vault.
+                  </p>
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                    <input
+                      type="password"
+                      value={unlockPassword}
+                      onChange={(e) => setUnlockPassword(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleUnlockVault();
+                        }
+                      }}
+                      placeholder="Mật khẩu chính"
+                      className="flex-1 rounded-full border border-slate-200 bg-white/90 px-4 py-2.5 text-sm tracking-tight text-slate-700 outline-none transition focus:border-indigo-300"
+                    />
+                    <button
+                      onClick={handleUnlockVault}
+                      disabled={isUnlocking}
+                      className="rounded-full bg-slate-900 px-4 py-2.5 text-sm font-medium tracking-tight text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isUnlocking ? "Đang xác thực..." : "Mở kho"}
+                    </button>
+                  </div>
                 </motion.div>
               </motion.div>
             )}
