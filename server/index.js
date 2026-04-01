@@ -54,6 +54,9 @@ const { body, param, query, validationResult } = require('express-validator'); /
 const BCRYPT_SALT_ROUNDS = 12;
 const JWT_SECRET = process.env.JWT_SECRET || 'whalio_super_secret_key_change_in_production_2024';
 const JWT_EXPIRES_IN = '7d'; // Token hết hạn sau 7 ngày
+const PRIVACY_VAULT_SECRET = String(
+    process.env.PRIVACY_VAULT_SECRET || JWT_SECRET || 'whalio_privacy_vault_secret_change_me'
+).trim();
 
 // ==================== AI SERVICE ====================
 const { generateAIResponse } = require('./aiService'); // Bỏ cái /js/ đi là xong
@@ -1768,6 +1771,18 @@ async function seedExamsFromJSON(forceReseed = false) {
 
 // ==================== MONGOOSE SCHEMAS & MODELS ====================
 
+const privacyAccountSchema = new mongoose.Schema({
+    platform: { type: String, required: true, trim: true, maxlength: 100 },
+    normalizedPlatform: { type: String, required: true, trim: true, maxlength: 120 },
+    username: { type: String, required: true, trim: true, maxlength: 200 },
+    password: { type: String, required: true, maxlength: 500 },
+    iconSlug: { type: String, default: '', trim: true, maxlength: 120 },
+    iconHex: { type: String, default: '', trim: true, maxlength: 12 },
+    iconTitle: { type: String, default: '', trim: true, maxlength: 120 },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+}, { _id: true });
+
 // User Schema
 const userSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true, index: true },
@@ -1790,6 +1805,7 @@ const userSchema = new mongoose.Schema({
     lastLogin: { type: Date, default: null },
     totalStudyMinutes: { type: Number, default: 0 },
     totalTargetCredits: { type: Number, default: 150, min: 1 },
+    privacyAccounts: { type: [privacyAccountSchema], default: [] },
     
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
@@ -3934,6 +3950,121 @@ app.get('/auth/user', (req, res) => {
     });
 });
 
+function normalizePrivacyPlatformName(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '');
+}
+
+function derivePrivacyVaultKey() {
+    return crypto.createHash('sha256').update(PRIVACY_VAULT_SECRET).digest();
+}
+
+function isEncryptedPrivacyVaultValue(value) {
+    return typeof value === 'string' && value.startsWith('enc:v1:');
+}
+
+function encryptPrivacyVaultValue(value) {
+    const plainText = String(value || '');
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', derivePrivacyVaultKey(), iv);
+    const encrypted = Buffer.concat([
+        cipher.update(plainText, 'utf8'),
+        cipher.final()
+    ]);
+    const authTag = cipher.getAuthTag();
+
+    return `enc:v1:${iv.toString('base64')}:${authTag.toString('base64')}:${encrypted.toString('base64')}`;
+}
+
+function decryptPrivacyVaultValue(value) {
+    const normalizedValue = String(value || '');
+    if (!isEncryptedPrivacyVaultValue(normalizedValue)) {
+        return normalizedValue;
+    }
+
+    const parts = normalizedValue.split(':');
+    if (parts.length !== 5) {
+        throw new Error('Malformed privacy vault payload.');
+    }
+
+    const iv = Buffer.from(parts[2], 'base64');
+    const authTag = Buffer.from(parts[3], 'base64');
+    const encrypted = Buffer.from(parts[4], 'base64');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', derivePrivacyVaultKey(), iv);
+    decipher.setAuthTag(authTag);
+
+    const decrypted = Buffer.concat([
+        decipher.update(encrypted),
+        decipher.final()
+    ]);
+
+    return decrypted.toString('utf8');
+}
+
+function mapPrivacyAccountForClient(account) {
+    if (!account) return account;
+
+    const normalizedAccount = typeof account.toObject === 'function'
+        ? account.toObject()
+        : { ...account };
+
+    return {
+        ...normalizedAccount,
+        password: decryptPrivacyVaultValue(normalizedAccount.password)
+    };
+}
+
+async function migrateLegacyPrivacyPasswords(user) {
+    if (!user || !Array.isArray(user.privacyAccounts)) {
+        return false;
+    }
+
+    let hasChanges = false;
+
+    user.privacyAccounts.forEach((account) => {
+        const currentPassword = String(account?.password || '');
+        if (!currentPassword || isEncryptedPrivacyVaultValue(currentPassword)) {
+            return;
+        }
+
+        account.password = encryptPrivacyVaultValue(currentPassword);
+        account.updatedAt = new Date();
+        hasChanges = true;
+    });
+
+    if (hasChanges) {
+        user.updatedAt = new Date();
+        await user.save();
+    }
+
+    return hasChanges;
+}
+
+function sanitizePrivacyAccountPayload(payload = {}) {
+    const platform = String(payload.platform || '').trim();
+    const username = String(payload.username || '').trim();
+    const password = String(payload.password || '');
+    const normalizedPlatform =
+        String(payload.normalizedPlatform || '').trim() || normalizePrivacyPlatformName(platform);
+    const iconSlug = String(payload.iconSlug || '').trim();
+    const iconHex = String(payload.iconHex || '').trim().replace('#', '').slice(0, 12);
+    const iconTitle = String(payload.iconTitle || '').trim();
+
+    return {
+        platform,
+        normalizedPlatform,
+        username,
+        password,
+        iconSlug,
+        iconHex,
+        iconTitle
+    };
+}
+
 app.options('/api/admin/impersonate/:userId', cors(corsOptions), (req, res) => {
     return res.sendStatus(200);
 });
@@ -4406,6 +4537,135 @@ app.post('/api/update-profile', verifyToken, async (req, res) => {
     } catch (err) {
         console.error('Update profile error:', err);
         res.status(500).json({ success: false, message: "Lỗi server" });
+    }
+});
+
+app.get('/api/privacy-accounts', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findOne({ username: req.user.username })
+            .select('privacyAccounts');
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy user'
+            });
+        }
+
+        await migrateLegacyPrivacyPasswords(user);
+
+        return res.json({
+            success: true,
+            accounts: Array.isArray(user.privacyAccounts)
+                ? user.privacyAccounts.map(mapPrivacyAccountForClient)
+                : []
+        });
+    } catch (error) {
+        console.error('Get privacy accounts error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Lỗi server'
+        });
+    }
+});
+
+app.post('/api/privacy-accounts', verifyToken, async (req, res) => {
+    try {
+        const accountData = sanitizePrivacyAccountPayload(req.body);
+        if (!accountData.platform || !accountData.username || !accountData.password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng nhập đầy đủ nền tảng, tài khoản và mật khẩu.'
+            });
+        }
+
+        const user = await User.findOne({ username: req.user.username });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy user'
+            });
+        }
+
+        user.privacyAccounts.push({
+            ...accountData,
+            password: encryptPrivacyVaultValue(accountData.password),
+            createdAt: new Date(),
+            updatedAt: new Date()
+        });
+        user.updatedAt = new Date();
+        await user.save();
+
+        return res.json({
+            success: true,
+            message: 'Đã thêm tài khoản riêng tư.',
+            accounts: user.privacyAccounts.map(mapPrivacyAccountForClient)
+        });
+    } catch (error) {
+        console.error('Create privacy account error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Lỗi server'
+        });
+    }
+});
+
+app.put('/api/privacy-accounts/:accountId', verifyToken, async (req, res) => {
+    try {
+        const accountId = String(req.params.accountId || '').trim();
+        if (!mongoose.Types.ObjectId.isValid(accountId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'accountId không hợp lệ.'
+            });
+        }
+
+        const accountData = sanitizePrivacyAccountPayload(req.body);
+        if (!accountData.platform || !accountData.username || !accountData.password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng nhập đầy đủ nền tảng, tài khoản và mật khẩu.'
+            });
+        }
+
+        const user = await User.findOne({ username: req.user.username });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy user'
+            });
+        }
+
+        const existing = user.privacyAccounts.id(accountId);
+        if (!existing) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy tài khoản riêng tư.'
+            });
+        }
+
+        existing.platform = accountData.platform;
+        existing.normalizedPlatform = accountData.normalizedPlatform;
+        existing.username = accountData.username;
+        existing.password = encryptPrivacyVaultValue(accountData.password);
+        existing.iconSlug = accountData.iconSlug;
+        existing.iconHex = accountData.iconHex;
+        existing.iconTitle = accountData.iconTitle;
+        existing.updatedAt = new Date();
+        user.updatedAt = new Date();
+        await user.save();
+
+        return res.json({
+            success: true,
+            message: 'Đã cập nhật tài khoản riêng tư.',
+            accounts: user.privacyAccounts.map(mapPrivacyAccountForClient)
+        });
+    } catch (error) {
+        console.error('Update privacy account error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Lỗi server'
+        });
     }
 });
 

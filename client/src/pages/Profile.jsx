@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "sonner";
 import AvatarWithFrame from "../components/AvatarWithFrame";
 import EditProfileModal from "../components/EditProfileModal";
 import ChangePasswordModal from "../components/ChangePasswordModal";
@@ -28,7 +29,26 @@ import {
   PieChart as PieChartIcon,
   RefreshCw,
   AlertCircle,
+  Search,
+  Plus,
+  Copy,
+  EyeOff,
+  ShieldEllipsis,
+  Vault,
 } from "lucide-react";
+import {
+  siApple,
+  siDiscord,
+  siFacebook,
+  siGithub,
+  siGmail,
+  siGoogle,
+  siInstagram,
+  siTelegram,
+  siTiktok,
+  siX,
+  siYoutube,
+} from "simple-icons/icons";
 import {
   LineChart,
   Line,
@@ -44,6 +64,118 @@ import {
 } from "recharts";
 
 // ==================== HELPER COMPONENTS ====================
+const PRIVACY_SUGGESTIONS = ["Facebook", "Instagram", "Gmail", "TikTok"];
+
+const normalizePlatformName = (value = "") =>
+  value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+
+const PRIVACY_ICON_CATALOG = [
+  { icon: siFacebook, aliases: ["facebook", "fb", "meta"] },
+  { icon: siInstagram, aliases: ["instagram", "insta", "ig"] },
+  { icon: siGmail, aliases: ["gmail", "googlemail"] },
+  { icon: siGoogle, aliases: ["google", "googleaccount"] },
+  { icon: siTiktok, aliases: ["tiktok", "tik tok", "tt"] },
+  { icon: siDiscord, aliases: ["discord"] },
+  { icon: siGithub, aliases: ["github", "git hub"] },
+  { icon: siTelegram, aliases: ["telegram", "tele"] },
+  { icon: siApple, aliases: ["apple", "icloud", "appleid"] },
+  { icon: siX, aliases: ["x", "twitter", "xcom"] },
+  { icon: siYoutube, aliases: ["youtube", "yt"] },
+];
+
+const PRIVACY_ICON_MAP = new Map(
+  PRIVACY_ICON_CATALOG.map((item) => [item.icon.slug, item])
+);
+
+const resolvePrivacyPlatform = (platformName = "") => {
+  const normalized = normalizePlatformName(platformName);
+  const matched = PRIVACY_ICON_CATALOG.find((item) =>
+    item.aliases.some((alias) => normalized.includes(normalizePlatformName(alias)))
+  );
+
+  if (!matched) {
+    return {
+      label: platformName.trim() || "Tài khoản",
+      normalizedPlatform: normalized,
+      iconSlug: "",
+      iconHex: "",
+      iconTitle: "",
+      simpleIcon: null,
+      tintClass: "bg-slate-100",
+      ringClass: "ring-slate-200/80",
+    };
+  }
+
+  return {
+    label: platformName.trim() || matched.icon.title,
+    normalizedPlatform: normalized,
+    iconSlug: matched.icon.slug,
+    iconHex: matched.icon.hex,
+    iconTitle: matched.icon.title,
+    simpleIcon: matched.icon,
+    tintClass: "bg-slate-100",
+    ringClass: "ring-slate-200/80",
+  };
+};
+
+const resolveStoredPrivacyPlatform = (account = {}) => {
+  const storedEntry = account.iconSlug ? PRIVACY_ICON_MAP.get(account.iconSlug) : null;
+  const stored = storedEntry
+    ? {
+        label: account.platform?.trim() || storedEntry.icon.title,
+        normalizedPlatform:
+          account.normalizedPlatform ||
+          normalizePlatformName(account.platform || storedEntry.icon.title),
+        iconSlug: storedEntry.icon.slug,
+        iconHex: storedEntry.icon.hex,
+        iconTitle: storedEntry.icon.title,
+        simpleIcon: storedEntry.icon,
+        tintClass: "bg-slate-100",
+        ringClass: "ring-slate-200/80",
+      }
+    : resolvePrivacyPlatform(account.platform);
+
+  return {
+    label: account.platform?.trim() || stored.label || "Tài khoản",
+    normalizedPlatform:
+      account.normalizedPlatform ||
+      normalizePlatformName(account.platform || stored.label),
+    iconSlug: account.iconSlug || stored.iconSlug || "",
+    iconHex: account.iconHex || stored.iconHex || "",
+    iconTitle: account.iconTitle || stored.iconTitle || "",
+    simpleIcon: stored.simpleIcon || null,
+    tintClass: "bg-slate-100",
+    ringClass: "ring-slate-200/80",
+  };
+};
+
+const PlatformLogo = ({ account, className = "" }) => {
+  const meta = resolveStoredPrivacyPlatform(account);
+
+  if (meta.simpleIcon) {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        className={className}
+        fill={`#${meta.iconHex || meta.simpleIcon.hex || "64748B"}`}
+      >
+        <path d={meta.simpleIcon.path} />
+      </svg>
+    );
+  }
+
+  return <ShieldEllipsis className={className} />;
+};
+
+const maskPassword = (password = "") =>
+  "•".repeat(Math.max(8, Math.min(password.length || 8, 16)));
+
 const DisplayRow = ({ label, value, isLink }) => (
   <div className="flex items-center py-4 border-b border-gray-50 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50 px-2 transition-colors -mx-2 rounded-lg">
     <span className="w-1/3 text-gray-500 dark:text-gray-400 font-medium text-sm">
@@ -99,6 +231,129 @@ const StatBox = ({ icon: Icon, label, value, color, bgColor }) => (
     </div>
   </div>
 );
+
+const PrivacyAccountModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  initialData,
+  isSubmitting,
+}) => {
+  const [platform, setPlatform] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setPlatform(initialData?.platform || "");
+    setUsername(initialData?.username || "");
+    setPassword(initialData?.password || "");
+  }, [initialData, isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = () => {
+    if (!platform.trim() || !username.trim() || !password.trim()) {
+      toast.error("Vui lòng nhập đủ nền tảng, tài khoản và mật khẩu.");
+      return;
+    }
+    onSubmit({
+      platform: platform.trim(),
+      username: username.trim(),
+      password,
+    });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 18, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 18, scale: 0.98 }}
+        transition={{ duration: 0.22, ease: "easeOut" }}
+        className="w-full max-w-md rounded-[2rem] border border-white/50 bg-white/90 p-5 shadow-[0_30px_80px_-30px_rgba(15,23,42,0.35)] backdrop-blur-xl dark:border-emerald-500/20 dark:bg-slate-900/90"
+        style={{ fontFamily: "'Google Sans', 'Plus Jakarta Sans', sans-serif" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-500">
+            Privacy Vault
+          </p>
+          <h3
+            className="mt-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
+          >
+            Thêm tài khoản mới
+          </h3>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Lưu lại tài khoản cá nhân trong kho riêng tư của bạn.
+          </p>
+        </div>
+
+        <div className="mb-4 flex flex-wrap gap-2">
+          {PRIVACY_SUGGESTIONS.map((item) => (
+            <button
+              key={item}
+              onClick={() => setPlatform(item)}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                platform === item
+                  ? "border-emerald-400 bg-emerald-500 text-white"
+                  : "border-slate-200 bg-white/70 text-slate-600 hover:border-emerald-300 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-300"
+              }`}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+
+        <div className="space-y-3">
+          <input
+            value={platform}
+            onChange={(e) => setPlatform(e.target.value)}
+            placeholder="Tên nền tảng"
+            className="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:focus:border-emerald-500"
+          />
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Tài khoản"
+            className="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:focus:border-emerald-500"
+          />
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Mật khẩu"
+            type="password"
+            className="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:focus:border-emerald-500"
+          />
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            Hủy
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+          >
+            {isSubmitting
+              ? "Đang lưu..."
+              : initialData
+                ? "Lưu thay đổi"
+                : "Lưu tài khoản"}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 // ==================== TAB COMPONENTS ====================
 
@@ -883,6 +1138,364 @@ const StatisticsTab = ({ currentUser }) => {
   );
 };
 
+const PrivacyVaultTab = ({ currentUser }) => {
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [search, setSearch] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState({});
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingAccount, setEditingAccount] = useState(null);
+
+  const syncAccounts = (nextAccounts = []) => {
+    const sorted = [...nextAccounts].sort((a, b) => {
+      const left = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      const right = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      return left - right;
+    });
+    setAccounts(sorted);
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPrivacyAccounts = async () => {
+      if (!currentUser?.username) {
+        if (isMounted) {
+          setLoading(false);
+          setAccounts([]);
+        }
+        return;
+      }
+
+      setLoading(true);
+      const result = await userService.getPrivacyAccounts();
+
+      if (!isMounted) return;
+
+      if (!result.success) {
+        toast.error(result.message || "Không tải được kho lưu trữ.");
+        setAccounts([]);
+        setLoading(false);
+        return;
+      }
+
+      syncAccounts(result.accounts || []);
+      setLoading(false);
+    };
+
+    loadPrivacyAccounts();
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser?.username]);
+
+  const filteredAccounts = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return accounts;
+    return accounts.filter((account) =>
+      [account.platform, account.username, account.iconTitle].some((value) =>
+        String(value || "").toLowerCase().includes(query)
+      )
+    );
+  }, [accounts, search]);
+
+  const copyText = async (value, label) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`Đã sao chép ${label}.`);
+    } catch (error) {
+      console.error("Copy failed:", error);
+      toast.error("Không thể sao chép lúc này.");
+    }
+  };
+
+  const togglePassword = (id) => {
+    setVisiblePasswords((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
+  const openCreateModal = () => {
+    setEditingAccount(null);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (account) => {
+    setEditingAccount(account);
+    setIsModalOpen(true);
+  };
+
+  const handleSubmitAccount = async (payload) => {
+    const detectedPlatform = resolvePrivacyPlatform(payload.platform);
+    const requestBody = {
+      ...payload,
+      normalizedPlatform: detectedPlatform.normalizedPlatform,
+      iconSlug: detectedPlatform.iconSlug,
+      iconHex: detectedPlatform.iconHex,
+      iconTitle: detectedPlatform.iconTitle,
+    };
+
+    setIsSaving(true);
+    const result = editingAccount?._id
+      ? await userService.updatePrivacyAccount(editingAccount._id, requestBody)
+      : await userService.createPrivacyAccount(requestBody);
+    setIsSaving(false);
+
+    if (!result.success) {
+      toast.error(
+        result.message ||
+          (editingAccount ? "Không cập nhật được tài khoản." : "Không thêm được tài khoản.")
+      );
+      return;
+    }
+
+    syncAccounts(result.accounts || []);
+    setIsModalOpen(false);
+    setEditingAccount(null);
+    toast.success(
+      editingAccount ? "Đã cập nhật tài khoản riêng tư." : "Đã thêm tài khoản vào Privacy Vault."
+    );
+  };
+
+  const containerVariants = {
+    hidden: {},
+    show: {
+      transition: {
+        staggerChildren: 0.09,
+      },
+    },
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 24, scale: 0.97 },
+    show: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: { duration: 0.38, ease: "easeOut" },
+    },
+  };
+
+  return (
+    <>
+      <div
+        className="relative overflow-hidden rounded-[2rem] border border-white/40 bg-white/80 p-5 shadow-sm backdrop-blur-md md:p-6"
+        style={{ fontFamily: "'Google Sans', 'Plus Jakarta Sans', sans-serif" }}
+      >
+        <div className="pointer-events-none absolute inset-y-6 right-10 w-40 rounded-full bg-indigo-200/45 blur-3xl" />
+
+        <div className="relative mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-indigo-500">
+              <Vault size={17} />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-xl font-bold tracking-tight text-slate-900">
+                Riêng tư
+              </h3>
+              <p className="text-sm tracking-tight text-slate-500">
+                Kho lưu trữ tài khoản cá nhân.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label className="flex min-w-[220px] items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3.5 py-2.5 text-sm text-slate-400 shadow-sm transition focus-within:border-indigo-300 sm:min-w-[280px]">
+              <Search size={14} />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Tìm kiếm tài khoản"
+                className="w-full bg-transparent text-sm tracking-tight text-slate-700 outline-none placeholder:text-slate-400"
+              />
+            </label>
+            <button
+              onClick={openCreateModal}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-white shadow-sm transition hover:bg-blue-600"
+              aria-label="Thêm tài khoản"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div className="relative overflow-hidden rounded-[1.75rem] border border-slate-100 bg-white/70 shadow-[0_18px_50px_-36px_rgba(99,102,241,0.4)]">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 px-6 py-16 text-sm tracking-tight text-slate-500">
+              <RefreshCw size={16} className="animate-spin" />
+              Đang tải kho lưu trữ...
+            </div>
+          ) : (
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate={isUnlocked ? "show" : "hidden"}
+              className={`${isUnlocked ? "" : "select-none"} divide-y divide-slate-50`}
+            >
+              {filteredAccounts.map((account) => {
+                const meta = resolveStoredPrivacyPlatform(account);
+                const accountId = account._id || account.id;
+                const isVisible = Boolean(visiblePasswords[accountId]);
+
+                return (
+                  <motion.div
+                    key={accountId}
+                    variants={cardVariants}
+                    className={`group flex flex-col gap-3 px-4 py-4 transition sm:flex-row sm:items-center sm:gap-4 ${
+                      isUnlocked ? "hover:bg-slate-50/80" : "blur-[3px] opacity-55"
+                    }`}
+                  >
+                    <div className="flex min-w-0 items-center gap-3 sm:w-[28%]">
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${meta.tintClass} ring-1 ${meta.ringClass}`}
+                      >
+                        <PlatformLogo
+                          account={account}
+                          className="h-[15px] w-[15px] text-slate-500"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold tracking-tight text-slate-800">
+                          {meta.label}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="min-w-0 sm:w-[30%]">
+                      <p className="text-[11px] font-medium tracking-tight text-slate-400">
+                        Tên đăng nhập
+                      </p>
+                      <p className="truncate text-sm font-medium tracking-tight text-slate-700">
+                        {account.username}
+                      </p>
+                    </div>
+
+                    <div className="min-w-0 sm:w-[26%]">
+                      <p className="text-[11px] font-medium tracking-tight text-slate-400">
+                        Mật khẩu
+                      </p>
+                      <div className="truncate">
+                        <AnimatePresence mode="wait" initial={false}>
+                          <motion.span
+                            key={isVisible ? "visible" : "hidden"}
+                            initial={{ opacity: 0, y: 3, filter: "blur(4px)" }}
+                            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                            exit={{ opacity: 0, y: -3, filter: "blur(4px)" }}
+                            transition={{ duration: 0.18, ease: "easeOut" }}
+                            className={`inline-block tracking-tight ${
+                              isVisible
+                                ? "text-sm font-medium text-slate-700"
+                                : "text-[8px] text-slate-500"
+                            }`}
+                          >
+                            {isVisible
+                              ? account.password
+                              : maskPassword(account.password)}
+                          </motion.span>
+                        </AnimatePresence>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 sm:ml-auto">
+                      <button
+                        onClick={() => togglePassword(accountId)}
+                        className="rounded-full p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
+                        aria-label={isVisible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                      >
+                        {isVisible ? (
+                          <EyeOff size={15} strokeWidth={1.8} />
+                        ) : (
+                          <Eye size={15} strokeWidth={1.8} />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => copyText(account.password, "mật khẩu")}
+                        className="rounded-full p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
+                        aria-label="Sao chép mật khẩu"
+                      >
+                        <Copy size={15} strokeWidth={1.8} />
+                      </button>
+                      <button
+                        onClick={() => copyText(account.username, "tài khoản")}
+                        className="rounded-full p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
+                        aria-label="Sao chép tài khoản"
+                      >
+                        <Copy size={15} strokeWidth={1.8} />
+                      </button>
+                      <button
+                        onClick={() => openEditModal(account)}
+                        className="rounded-full p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
+                        aria-label="Chỉnh sửa tài khoản"
+                      >
+                        <Edit2 size={15} strokeWidth={1.8} />
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          )}
+
+          {!loading && filteredAccounts.length === 0 && (
+            <div className="px-6 py-12 text-center text-sm tracking-tight text-slate-400">
+              Không tìm thấy tài khoản nào khớp với từ khóa của bạn.
+            </div>
+          )}
+
+          <AnimatePresence>
+            {!isUnlocked && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 z-10 flex items-center justify-center bg-white/35 backdrop-blur-md"
+              >
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="mx-4 rounded-[1.5rem] border border-white/60 bg-white/70 px-6 py-5 text-center shadow-sm backdrop-blur-md"
+                >
+                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-500">
+                    <Lock size={18} />
+                  </div>
+                  <p className="text-sm font-semibold tracking-tight text-slate-800">
+                    Xác thực để truy cập kho lưu trữ
+                  </p>
+                  <button
+                    onClick={() => setIsUnlocked(true)}
+                    className="mt-4 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium tracking-tight text-white transition hover:bg-slate-800"
+                  >
+                    Tiếp tục
+                  </button>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {isModalOpen && (
+          <PrivacyAccountModal
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              setEditingAccount(null);
+            }}
+            onSubmit={handleSubmitAccount}
+            initialData={editingAccount}
+            isSubmitting={isSaving}
+          />
+        )}
+      </AnimatePresence>
+    </>
+  );
+};
+
 // ==================== MAIN COMPONENT ====================
 const Profile = ({ user, onUpdateUser }) => {
   const [activeTab, setActiveTab] = useState("info");
@@ -905,6 +1518,13 @@ const Profile = ({ user, onUpdateUser }) => {
       icon: FileText,
       iconClass:
         "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400",
+    },
+    {
+      id: "privacy",
+      label: "Riêng tư",
+      icon: Vault,
+      iconClass:
+        "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
     },
     {
       id: "stats",
@@ -1064,6 +1684,8 @@ const Profile = ({ user, onUpdateUser }) => {
           )}
 
           {activeTab === "docs" && <MyDocumentsTab currentUser={user} />}
+
+          {activeTab === "privacy" && <PrivacyVaultTab currentUser={user} />}
 
           {activeTab === "stats" && <StatisticsTab currentUser={user} />}
 

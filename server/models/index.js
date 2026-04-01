@@ -1,6 +1,18 @@
 const mongoose = require('mongoose');
 
 // ==================== User Schema ====================
+const privacyAccountSchema = new mongoose.Schema({
+    platform: { type: String, required: true, trim: true, maxlength: 100 },
+    normalizedPlatform: { type: String, required: true, trim: true, maxlength: 120 },
+    username: { type: String, required: true, trim: true, maxlength: 200 },
+    password: { type: String, required: true, maxlength: 500 },
+    iconSlug: { type: String, default: '', trim: true, maxlength: 120 },
+    iconHex: { type: String, default: '', trim: true, maxlength: 12 },
+    iconTitle: { type: String, default: '', trim: true, maxlength: 120 },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+}, { _id: true });
+
 const userSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true, index: true },
     password: { type: String, required: true },
@@ -22,6 +34,7 @@ const userSchema = new mongoose.Schema({
     lastLogin: { type: Date, default: null },
     totalStudyMinutes: { type: Number, default: 0 },
     totalTargetCredits: { type: Number, default: 150, min: 1 },
+    privacyAccounts: { type: [privacyAccountSchema], default: [] },
     
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
