@@ -1403,10 +1403,13 @@ const PrivacyVaultTab = ({ currentUser }) => {
               {filteredAccounts.map((account) => {
                 const meta = resolveStoredPrivacyPlatform(account);
                 const accountId = account._id || account.id;
-                const isVisible = Boolean(visiblePasswords[accountId]);
                 const usernameCopyKey = `${accountId}-username`;
                 const passwordCopyKey = `${accountId}-password`;
-                const shouldBlurSensitive = isUnlocked && (!isListHovered || activeRowId !== accountId);
+                const isPasswordPinnedVisible = Boolean(visiblePasswords[accountId]);
+                const shouldBlurSensitive =
+                  isUnlocked &&
+                  !isPasswordPinnedVisible &&
+                  (!isListHovered || activeRowId !== accountId);
 
                 return (
                   <motion.div
@@ -1485,7 +1488,7 @@ const PrivacyVaultTab = ({ currentUser }) => {
                           <div className="min-w-0 flex-1 truncate">
                             <AnimatePresence mode="wait" initial={false}>
                               <motion.span
-                                key={isVisible ? "visible" : "hidden"}
+                                key="visible"
                                 initial={{ opacity: 0, y: 3, filter: "blur(4px)" }}
                                 animate={{
                                   opacity: 1,
@@ -1494,24 +1497,18 @@ const PrivacyVaultTab = ({ currentUser }) => {
                                 }}
                                 exit={{ opacity: 0, y: -3, filter: "blur(4px)" }}
                                 transition={{ duration: 0.18, ease: "easeOut" }}
-                                className={`inline-block tracking-tight transition ${
-                                  isVisible
-                                    ? "text-sm font-medium text-slate-700"
-                                    : "text-[8px] text-slate-500"
-                                }`}
+                                className="inline-block text-sm font-medium tracking-tight text-slate-700 transition"
                               >
-                                {isVisible
-                                  ? account.password
-                                  : maskPassword(account.password)}
+                                {account.password}
                               </motion.span>
                             </AnimatePresence>
                           </div>
                           <button
                             onClick={() => togglePassword(accountId)}
                             className="rounded-full p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
-                            aria-label={isVisible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                            aria-label={isPasswordPinnedVisible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                           >
-                            {isVisible ? (
+                            {isPasswordPinnedVisible ? (
                               <EyeOff size={15} strokeWidth={1.8} />
                             ) : (
                               <Eye size={15} strokeWidth={1.8} />
