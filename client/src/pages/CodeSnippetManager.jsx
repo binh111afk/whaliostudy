@@ -154,10 +154,10 @@ const getLanguageMeta = (language) => {
 
 const MAIN_PAGE_SIZE = 9;
 const POPUP_PAGE_SIZE = 6;
-const SEARCH_FILTER_OPTIONS = [
-  { value: 'cardTitle', label: 'Tìm tên card' },
-  { value: 'subjectName', label: 'Tìm tên môn học' },
-  { value: 'language', label: 'Tìm ngôn ngữ' },
+const SNIPPET_FILTER_FIELDS = [
+  { key: 'cardTitle', label: 'Tên card', allLabel: 'Tất cả' },
+  { key: 'subjectName', label: 'Tên môn học', allLabel: 'Tất cả' },
+  { key: 'language', label: 'Ngôn ngữ', allLabel: 'Tất cả' },
 ];
 const CODE_DRAFT_STORAGE_PREFIX = 'whalio.code-vault.draft';
 const LOCAL_DRAFT_AUTOSAVE_INTERVAL_MS = 5000;
@@ -1943,9 +1943,12 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   const location = useLocation();
   const [snippets, setSnippets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchFilter, setSearchFilter] = useState('cardTitle');
-  const [isSearchFilterOpen, setIsSearchFilterOpen] = useState(false);
+  const [snippetFilters, setSnippetFilters] = useState({
+    cardTitle: '',
+    subjectName: '',
+    language: '',
+  });
+  const [openSnippetFilter, setOpenSnippetFilter] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState(INITIAL_FORM);
   const [editingSnippet, setEditingSnippet] = useState(null);
@@ -1987,10 +1990,6 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   });
 
   const username = useMemo(() => resolveUsername(user), [user]);
-  const activeSearchFilterLabel = useMemo(() => (
-    SEARCH_FILTER_OPTIONS.find((option) => option.value === searchFilter)?.label ||
-    SEARCH_FILTER_OPTIONS[0].label
-  ), [searchFilter]);
   const totalJudgeScore = useMemo(() => {
     const detectedTotal = roundJudgeScore(
       snippetTestCases.reduce((sum, testCase) => sum + Number(testCase?.score || 0), 0)
@@ -2006,7 +2005,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   const terminalOutputRef = useRef(null);
   const latestLocalDraftSignatureRef = useRef('');
   const latestFreeDraftSignatureRef = useRef('');
-  const searchFilterDropdownRef = useRef(null);
+  const snippetFiltersRef = useRef(null);
   const languageDropdownRef = useRef(null);
   const themeDropdownRef = useRef(null);
 
@@ -2067,10 +2066,10 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   useEffect(() => {
     const handleOutsideClick = (event) => {
       if (
-        searchFilterDropdownRef.current &&
-        !searchFilterDropdownRef.current.contains(event.target)
+        snippetFiltersRef.current &&
+        !snippetFiltersRef.current.contains(event.target)
       ) {
-        setIsSearchFilterOpen(false);
+        setOpenSnippetFilter('');
       }
 
       if (
@@ -3055,28 +3054,56 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
     return () => window.removeEventListener('keydown', handleEditorShortcuts);
   }, [handleJudge, handleRunCode, runningCode, selectedSnippet]);
 
+  const snippetFilterOptions = useMemo(() => {
+    const cardTitleOptions = new Map();
+    const subjectNameOptions = new Map();
+    const languageOptions = new Map();
+
+    snippets.forEach((snippet) => {
+      const cardTitle = String(snippet.cardTitle || snippet.title || '').trim();
+      const subjectName = String(snippet.subjectName || '').trim();
+      const languageMeta = getLanguageMeta(
+        snippet?.language || inferLanguageFromSubject(snippet?.subjectName || '')
+      );
+
+      if (cardTitle) cardTitleOptions.set(cardTitle, { value: cardTitle, label: cardTitle });
+      if (subjectName) subjectNameOptions.set(subjectName, { value: subjectName, label: subjectName });
+      if (languageMeta.key) languageOptions.set(languageMeta.key, { value: languageMeta.key, label: languageMeta.label });
+    });
+
+    const sortByLabel = (items) =>
+      Array.from(items.values()).sort((a, b) =>
+        a.label.localeCompare(b.label, 'vi', { sensitivity: 'base' })
+      );
+
+    return {
+      cardTitle: sortByLabel(cardTitleOptions),
+      subjectName: sortByLabel(subjectNameOptions),
+      language: sortByLabel(languageOptions),
+    };
+  }, [snippets]);
+
   const filteredSnippets = useMemo(() => {
-    const keyword = String(searchQuery || '').trim().toLowerCase();
-    if (!keyword) return snippets;
+    const selectedCardTitle = String(snippetFilters.cardTitle || '').trim();
+    const selectedSubjectName = String(snippetFilters.subjectName || '').trim();
+    const selectedLanguage = String(snippetFilters.language || '').trim();
+
+    if (!selectedCardTitle && !selectedSubjectName && !selectedLanguage) return snippets;
 
     return snippets.filter((snippet) => {
-      const cardTitle = String(snippet.cardTitle || snippet.title || '').toLowerCase();
-      const subjectName = String(snippet.subjectName || '').toLowerCase();
-      const assignmentName = String(snippet.assignmentName || snippet.exerciseName || '').toLowerCase();
-      const languageMeta = getLanguageMeta(snippet?.language || inferLanguageFromSubject(snippet?.subjectName || ''));
-      const language = [
-        snippet?.language,
-        languageMeta.key,
-        languageMeta.label,
-      ].map((value) => String(value || '').toLowerCase()).join(' ');
+      const cardTitle = String(snippet.cardTitle || snippet.title || '').trim();
+      const subjectName = String(snippet.subjectName || '').trim();
+      const languageMeta = getLanguageMeta(
+        snippet?.language || inferLanguageFromSubject(snippet?.subjectName || '')
+      );
 
-      if (searchFilter === 'cardTitle') return cardTitle.includes(keyword);
-      if (searchFilter === 'subjectName') return subjectName.includes(keyword);
-      if (searchFilter === 'language') return language.includes(keyword);
-
-      return cardTitle.includes(keyword) || assignmentName.includes(keyword);
+      return (
+        (!selectedCardTitle || cardTitle === selectedCardTitle) &&
+        (!selectedSubjectName || subjectName === selectedSubjectName) &&
+        (!selectedLanguage || languageMeta.key === selectedLanguage)
+      );
     });
-  }, [snippets, searchFilter, searchQuery]);
+  }, [snippetFilters, snippets]);
 
   const popupFilteredSnippets = useMemo(() => {
     const keyword = String(popupSearchQuery || '').trim().toLowerCase();
@@ -3159,6 +3186,15 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
     }
   }, [isExercisePopupOpen]);
 
+  const handleSnippetFilterChange = useCallback((key, value) => {
+    setSnippetFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+    setOpenSnippetFilter('');
+    goToMainPage(1, { scroll: false });
+  }, [goToMainPage]);
+
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4">
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -3203,74 +3239,81 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
 
       {!loading && username && !isDetailView && (
         <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
-            <div ref={searchFilterDropdownRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setIsSearchFilterOpen((prev) => !prev)}
-                className={`flex h-full w-full items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2.5 text-left text-sm font-semibold outline-none transition dark:bg-gray-700 ${
-                  isSearchFilterOpen
-                    ? 'border-blue-500 text-blue-700 shadow-[0_0_0_3px_rgba(59,130,246,0.14)] dark:text-blue-300'
-                    : 'border-gray-200 text-gray-700 hover:border-blue-300 dark:border-gray-600 dark:text-white dark:hover:border-blue-500'
-                }`}
-                aria-expanded={isSearchFilterOpen}
-                aria-haspopup="listbox"
-              >
-                <span className="truncate">{activeSearchFilterLabel}</span>
-                <ChevronDown
-                  size={16}
-                  className={`shrink-0 text-gray-400 transition-transform ${isSearchFilterOpen ? 'rotate-180 text-blue-500' : ''}`}
-                />
-              </button>
+          <div ref={snippetFiltersRef} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {SNIPPET_FILTER_FIELDS.map((field) => {
+              const isOpen = openSnippetFilter === field.key;
+              const options = snippetFilterOptions[field.key] || [];
+              const selectedValue = snippetFilters[field.key] || '';
+              const selectedOption = options.find((option) => option.value === selectedValue);
 
-              {isSearchFilterOpen && (
-                <div
-                  className="absolute left-0 top-full z-30 mt-2 w-full overflow-hidden rounded-xl border border-blue-100 bg-white p-1 shadow-xl shadow-blue-900/10 dark:border-gray-600 dark:bg-gray-800 dark:shadow-black/30"
-                  role="listbox"
-                >
-                  {SEARCH_FILTER_OPTIONS.map((option) => {
-                    const isActive = searchFilter === option.value;
-                    return (
+              return (
+                <div key={field.key} className="relative">
+                  <label className="mb-1 block text-sm font-bold text-gray-800 dark:text-gray-100">
+                    {field.label}:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setOpenSnippetFilter((prev) => (prev === field.key ? '' : field.key))}
+                    className={`flex w-full items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2.5 text-left text-sm font-semibold outline-none transition dark:bg-gray-700 ${
+                      isOpen
+                        ? 'border-blue-500 text-blue-700 shadow-[0_0_0_3px_rgba(59,130,246,0.14)] dark:text-blue-300'
+                        : 'border-gray-200 text-gray-700 hover:border-blue-300 dark:border-gray-600 dark:text-white dark:hover:border-blue-500'
+                    }`}
+                    aria-expanded={isOpen}
+                    aria-haspopup="listbox"
+                  >
+                    <span className="truncate">{selectedOption?.label || field.allLabel}</span>
+                    <ChevronDown
+                      size={16}
+                      className={`shrink-0 text-gray-400 transition-transform ${isOpen ? 'rotate-180 text-blue-500' : ''}`}
+                    />
+                  </button>
+
+                  {isOpen && (
+                    <div
+                      className="absolute left-0 top-full z-30 mt-2 max-h-72 w-full overflow-y-auto rounded-xl border border-blue-100 bg-white p-1 shadow-xl shadow-blue-900/10 dark:border-gray-600 dark:bg-gray-800 dark:shadow-black/30"
+                      role="listbox"
+                    >
                       <button
-                        key={option.value}
                         type="button"
-                        onClick={() => {
-                          setSearchFilter(option.value);
-                          setIsSearchFilterOpen(false);
-                          goToMainPage(1, { scroll: false });
-                        }}
+                        onClick={() => handleSnippetFilterChange(field.key, '')}
                         className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold transition ${
-                          isActive
+                          !selectedValue
                             ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
                             : 'text-gray-600 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700'
                         }`}
                         role="option"
-                        aria-selected={isActive}
+                        aria-selected={!selectedValue}
                       >
-                        <span>{option.label}</span>
-                        {isActive && <span className="h-2 w-2 rounded-full bg-blue-500" />}
+                        <span>{field.allLabel}</span>
+                        {!selectedValue && <span className="h-2 w-2 rounded-full bg-blue-500" />}
                       </button>
-                    );
-                  })}
+
+                      {options.map((option) => {
+                        const isActive = selectedValue === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => handleSnippetFilterChange(field.key, option.value)}
+                            className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold transition ${
+                              isActive
+                                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                : 'text-gray-600 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700'
+                            }`}
+                            role="option"
+                            aria-selected={isActive}
+                          >
+                            <span className="truncate">{option.label}</span>
+                            {isActive && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <div className="relative">
-              <Search
-                size={16}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(event) => {
-                  setSearchQuery(event.target.value);
-                  goToMainPage(1, { scroll: false });
-                }}
-                placeholder={`${activeSearchFilterLabel}...`}
-                className="w-full rounded-xl border border-gray-200 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -3283,7 +3326,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
 
       {!loading && username && !isDetailView && snippets.length > 0 && filteredSnippets.length === 0 && (
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-800">
-          Không tìm thấy card phù hợp với từ khóa "{searchQuery}".
+          Không tìm thấy card phù hợp với bộ lọc đang chọn.
         </div>
       )}
 
