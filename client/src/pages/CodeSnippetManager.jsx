@@ -155,10 +155,9 @@ const getLanguageMeta = (language) => {
 const MAIN_PAGE_SIZE = 9;
 const POPUP_PAGE_SIZE = 6;
 const SEARCH_FILTER_OPTIONS = [
-  { value: 'all', label: 'Tất cả' },
-  { value: 'cardTitle', label: 'Tên card' },
-  { value: 'subjectName', label: 'Tên môn học' },
-  { value: 'language', label: 'Ngôn ngữ' },
+  { value: 'cardTitle', label: 'Tìm tên card' },
+  { value: 'subjectName', label: 'Tìm tên môn học' },
+  { value: 'language', label: 'Tìm ngôn ngữ' },
 ];
 const CODE_DRAFT_STORAGE_PREFIX = 'whalio.code-vault.draft';
 const LOCAL_DRAFT_AUTOSAVE_INTERVAL_MS = 5000;
@@ -1945,7 +1944,8 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   const [snippets, setSnippets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchFilter, setSearchFilter] = useState('all');
+  const [searchFilter, setSearchFilter] = useState('cardTitle');
+  const [isSearchFilterOpen, setIsSearchFilterOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState(INITIAL_FORM);
   const [editingSnippet, setEditingSnippet] = useState(null);
@@ -1987,6 +1987,10 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   });
 
   const username = useMemo(() => resolveUsername(user), [user]);
+  const activeSearchFilterLabel = useMemo(() => (
+    SEARCH_FILTER_OPTIONS.find((option) => option.value === searchFilter)?.label ||
+    SEARCH_FILTER_OPTIONS[0].label
+  ), [searchFilter]);
   const totalJudgeScore = useMemo(() => {
     const detectedTotal = roundJudgeScore(
       snippetTestCases.reduce((sum, testCase) => sum + Number(testCase?.score || 0), 0)
@@ -2002,6 +2006,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   const terminalOutputRef = useRef(null);
   const latestLocalDraftSignatureRef = useRef('');
   const latestFreeDraftSignatureRef = useRef('');
+  const searchFilterDropdownRef = useRef(null);
   const languageDropdownRef = useRef(null);
   const themeDropdownRef = useRef(null);
 
@@ -2061,6 +2066,13 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
+      if (
+        searchFilterDropdownRef.current &&
+        !searchFilterDropdownRef.current.contains(event.target)
+      ) {
+        setIsSearchFilterOpen(false);
+      }
+
       if (
         languageDropdownRef.current &&
         !languageDropdownRef.current.contains(event.target)
@@ -3062,12 +3074,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
       if (searchFilter === 'subjectName') return subjectName.includes(keyword);
       if (searchFilter === 'language') return language.includes(keyword);
 
-      return (
-        cardTitle.includes(keyword) ||
-        subjectName.includes(keyword) ||
-        assignmentName.includes(keyword) ||
-        language.includes(keyword)
-      );
+      return cardTitle.includes(keyword) || assignmentName.includes(keyword);
     });
   }, [snippets, searchFilter, searchQuery]);
 
@@ -3197,26 +3204,56 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
       {!loading && username && !isDetailView && (
         <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
-            <div className="relative">
-              <select
-                value={searchFilter}
-                onChange={(event) => {
-                  setSearchFilter(event.target.value);
-                  goToMainPage(1, { scroll: false });
-                }}
-                className="h-full w-full appearance-none rounded-xl border border-gray-200 bg-white py-2.5 pl-3 pr-9 text-sm font-semibold text-gray-700 outline-none transition focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                aria-label="Chọn phạm vi tìm kiếm"
+            <div ref={searchFilterDropdownRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setIsSearchFilterOpen((prev) => !prev)}
+                className={`flex h-full w-full items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2.5 text-left text-sm font-semibold outline-none transition dark:bg-gray-700 ${
+                  isSearchFilterOpen
+                    ? 'border-blue-500 text-blue-700 shadow-[0_0_0_3px_rgba(59,130,246,0.14)] dark:text-blue-300'
+                    : 'border-gray-200 text-gray-700 hover:border-blue-300 dark:border-gray-600 dark:text-white dark:hover:border-blue-500'
+                }`}
+                aria-expanded={isSearchFilterOpen}
+                aria-haspopup="listbox"
               >
-                {SEARCH_FILTER_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                size={16}
-                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-              />
+                <span className="truncate">{activeSearchFilterLabel}</span>
+                <ChevronDown
+                  size={16}
+                  className={`shrink-0 text-gray-400 transition-transform ${isSearchFilterOpen ? 'rotate-180 text-blue-500' : ''}`}
+                />
+              </button>
+
+              {isSearchFilterOpen && (
+                <div
+                  className="absolute left-0 top-full z-30 mt-2 w-full overflow-hidden rounded-xl border border-blue-100 bg-white p-1 shadow-xl shadow-blue-900/10 dark:border-gray-600 dark:bg-gray-800 dark:shadow-black/30"
+                  role="listbox"
+                >
+                  {SEARCH_FILTER_OPTIONS.map((option) => {
+                    const isActive = searchFilter === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => {
+                          setSearchFilter(option.value);
+                          setIsSearchFilterOpen(false);
+                          goToMainPage(1, { scroll: false });
+                        }}
+                        className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold transition ${
+                          isActive
+                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                            : 'text-gray-600 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                        role="option"
+                        aria-selected={isActive}
+                      >
+                        <span>{option.label}</span>
+                        {isActive && <span className="h-2 w-2 rounded-full bg-blue-500" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             <div className="relative">
               <Search
@@ -3230,7 +3267,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
                   setSearchQuery(event.target.value);
                   goToMainPage(1, { scroll: false });
                 }}
-                placeholder="Tìm theo tên card, môn học, tên bài tập hoặc ngôn ngữ..."
+                placeholder={`${activeSearchFilterLabel}...`}
                 className="w-full rounded-xl border border-gray-200 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               />
             </div>
