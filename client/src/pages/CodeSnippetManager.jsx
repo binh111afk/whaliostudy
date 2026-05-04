@@ -154,6 +154,12 @@ const getLanguageMeta = (language) => {
 
 const MAIN_PAGE_SIZE = 9;
 const POPUP_PAGE_SIZE = 6;
+const SEARCH_FILTER_OPTIONS = [
+  { value: 'all', label: 'Tất cả' },
+  { value: 'cardTitle', label: 'Tên card' },
+  { value: 'subjectName', label: 'Tên môn học' },
+  { value: 'language', label: 'Ngôn ngữ' },
+];
 const CODE_DRAFT_STORAGE_PREFIX = 'whalio.code-vault.draft';
 const LOCAL_DRAFT_AUTOSAVE_INTERVAL_MS = 5000;
 const FREE_SESSION_STORAGE_PREFIX = 'whalio.code-vault.free-session';
@@ -1939,6 +1945,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   const [snippets, setSnippets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchFilter, setSearchFilter] = useState('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState(INITIAL_FORM);
   const [editingSnippet, setEditingSnippet] = useState(null);
@@ -3044,14 +3051,25 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
       const cardTitle = String(snippet.cardTitle || snippet.title || '').toLowerCase();
       const subjectName = String(snippet.subjectName || '').toLowerCase();
       const assignmentName = String(snippet.assignmentName || snippet.exerciseName || '').toLowerCase();
+      const languageMeta = getLanguageMeta(snippet?.language || inferLanguageFromSubject(snippet?.subjectName || ''));
+      const language = [
+        snippet?.language,
+        languageMeta.key,
+        languageMeta.label,
+      ].map((value) => String(value || '').toLowerCase()).join(' ');
+
+      if (searchFilter === 'cardTitle') return cardTitle.includes(keyword);
+      if (searchFilter === 'subjectName') return subjectName.includes(keyword);
+      if (searchFilter === 'language') return language.includes(keyword);
 
       return (
         cardTitle.includes(keyword) ||
         subjectName.includes(keyword) ||
-        assignmentName.includes(keyword)
+        assignmentName.includes(keyword) ||
+        language.includes(keyword)
       );
     });
-  }, [snippets, searchQuery]);
+  }, [snippets, searchFilter, searchQuery]);
 
   const popupFilteredSnippets = useMemo(() => {
     const keyword = String(popupSearchQuery || '').trim().toLowerCase();
@@ -3178,21 +3196,44 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
 
       {!loading && username && !isDetailView && (
         <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <div className="relative">
-            <Search
-              size={16}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(event) => {
-                setSearchQuery(event.target.value);
-                goToMainPage(1, { scroll: false });
-              }}
-              placeholder="Tìm theo tên card, môn học hoặc tên bài tập..."
-              className="w-full rounded-xl border border-gray-200 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            />
+          <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
+            <div className="relative">
+              <select
+                value={searchFilter}
+                onChange={(event) => {
+                  setSearchFilter(event.target.value);
+                  goToMainPage(1, { scroll: false });
+                }}
+                className="h-full w-full appearance-none rounded-xl border border-gray-200 bg-white py-2.5 pl-3 pr-9 text-sm font-semibold text-gray-700 outline-none transition focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                aria-label="Chọn phạm vi tìm kiếm"
+              >
+                {SEARCH_FILTER_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+            </div>
+            <div className="relative">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  goToMainPage(1, { scroll: false });
+                }}
+                placeholder="Tìm theo tên card, môn học, tên bài tập hoặc ngôn ngữ..."
+                className="w-full rounded-xl border border-gray-200 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
           </div>
         </div>
       )}
