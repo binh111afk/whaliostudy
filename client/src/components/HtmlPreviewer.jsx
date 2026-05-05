@@ -54,6 +54,7 @@ function HtmlPreviewer({
   className = '',
   contentClassName = '',
   emptyMessage = DEFAULT_EMPTY_MESSAGE,
+  allowScripts = false,
 }) {
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const deferredRawHtml = useDeferredValue(rawHtml);
@@ -159,13 +160,17 @@ function HtmlPreviewer({
 
       if (isHtmlMode) {
         const { bodyHtml, inlineStyles } = extractHtmlDocumentParts(selectedSource.value);
-        const nextHtml = DOMPurify.sanitize(normalizePreviewHtml(bodyHtml), sanitizeConfig);
-        const nextStyles = inlineStyles
-          ? DOMPurify.sanitize(inlineStyles, {
-              ALLOWED_TAGS: [],
-              ALLOWED_ATTR: [],
-            })
-          : '';
+        const nextHtml = allowScripts
+          ? normalizePreviewHtml(selectedSource.value)
+          : DOMPurify.sanitize(normalizePreviewHtml(bodyHtml), sanitizeConfig);
+        const nextStyles = allowScripts
+          ? inlineStyles
+          : inlineStyles
+            ? DOMPurify.sanitize(inlineStyles, {
+                ALLOWED_TAGS: [],
+                ALLOWED_ATTR: [],
+              })
+            : '';
 
         if (isMounted) {
           setPreviewState({
@@ -193,7 +198,7 @@ function HtmlPreviewer({
       isMounted = false;
       window.cancelAnimationFrame(frameId);
     };
-  }, [isHtmlMode, selectedSource.mode, selectedSource.value]);
+  }, [allowScripts, isHtmlMode, selectedSource.mode, selectedSource.value]);
 
   const sharedContentClassName = [
     'max-w-none break-words text-slate-700',
@@ -225,6 +230,10 @@ function HtmlPreviewer({
   const iframeSrcDoc = useMemo(() => {
     if (previewState.mode !== 'html') return '';
 
+    if (allowScripts && HTML_DOCUMENT_PATTERN.test(previewState.html)) {
+      return previewState.html;
+    }
+
     return `<!doctype html>
 <html lang="vi">
   <head>
@@ -255,7 +264,7 @@ function HtmlPreviewer({
     <div class="${HTML_PREVIEW_SCOPE_CLASS}">${previewState.html}</div>
   </body>
 </html>`;
-  }, [previewState.html, previewState.inlineStyles, previewState.mode]);
+  }, [allowScripts, previewState.html, previewState.inlineStyles, previewState.mode]);
 
   if (previewState.mode === 'empty') {
     return (
@@ -272,7 +281,7 @@ function HtmlPreviewer({
       {previewState.mode === 'html' ? (
         <iframe
           title="HTML assignment preview"
-          sandbox=""
+          sandbox={allowScripts ? 'allow-scripts allow-modals' : ''}
           srcDoc={iframeSrcDoc}
           className="min-h-[420px] w-full rounded-2xl border border-slate-200 bg-white"
         />

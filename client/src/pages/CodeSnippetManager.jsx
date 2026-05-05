@@ -1839,6 +1839,7 @@ const CreateSnippetModal = ({
                 rawHtml={form.assignmentDescription}
                 rawMarkdown={form.formattedDescription}
                 className="max-h-[70vh] overflow-y-auto"
+                allowScripts
                 emptyMessage="Khung preview sẽ hiển thị tại đây khi bạn nhập mô tả hoặc HTML."
               />
             </MotionDiv>
@@ -3698,6 +3699,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
                 <HtmlPreviewer
                   rawHtml={selectedSnippet.assignmentDescription || ''}
                   rawMarkdown={selectedSnippet.formattedDescription || ''}
+                  allowScripts
                   emptyMessage="Chưa có mô tả"
                 />
               </div>
