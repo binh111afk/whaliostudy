@@ -1926,6 +1926,102 @@ const ClearAllCodeModal = ({ isOpen, onClose, onConfirm }) => {
   );
 };
 
+const StyledConfirmModal = ({ config, onCancel, onConfirm }) => {
+  const isOpen = Boolean(config);
+  const variant = config?.variant || 'danger';
+  const Icon = variant === 'restore' ? RotateCcw : Trash2;
+  const iconClassName = variant === 'restore' ? 'text-blue-500' : 'text-red-500';
+  const iconBgClassName = variant === 'restore' ? 'bg-blue-50' : 'bg-red-50';
+  const confirmClassName =
+    variant === 'restore'
+      ? 'from-blue-500 to-cyan-500 shadow-[0_18px_35px_rgba(59,130,246,0.28)] hover:shadow-[0_22px_40px_rgba(59,130,246,0.34)]'
+      : 'from-red-500 to-orange-500 shadow-[0_18px_35px_rgba(239,68,68,0.28)] hover:shadow-[0_22px_40px_rgba(239,68,68,0.34)]';
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        onCancel();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onCancel]);
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <AnimatePresence>
+      {isOpen ? (
+        <motion.div
+          key="styled-confirm-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+          className="fixed inset-0 z-[170] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+          onClick={onCancel}
+        >
+          <motion.div
+            key="styled-confirm-modal"
+            initial={{ opacity: 0, scale: 0.92, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 10 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            className="relative w-full max-w-md rounded-[2rem] border border-white/70 bg-white/90 px-6 pb-6 pt-10 shadow-[0_30px_90px_rgba(15,23,42,0.16)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/90"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={onCancel}
+              className="absolute right-4 top-4 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              aria-label="Đóng xác nhận"
+            >
+              <X size={18} />
+            </button>
+
+            <div className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full ${iconBgClassName} shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:bg-slate-800`}>
+              <Icon size={34} className={iconClassName} strokeWidth={2.1} />
+            </div>
+
+            <div className="mt-6 text-center">
+              <h3
+                className="text-[1.7rem] font-bold tracking-tight text-slate-900 dark:text-white"
+                style={{ fontFamily: "'Plus Jakarta Sans', 'Google Sans', sans-serif" }}
+              >
+                {config?.title || 'Xác nhận thao tác'}
+              </h3>
+              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-500 dark:text-slate-300">
+                {config?.message || 'Bạn có chắc muốn tiếp tục không?'}
+              </p>
+            </div>
+
+            <div className="mt-8 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="inline-flex min-w-[120px] items-center justify-center rounded-full px-5 py-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+              >
+                {config?.cancelLabel || 'Hủy'}
+              </button>
+              <button
+                type="button"
+                onClick={onConfirm}
+                className={`inline-flex min-w-[140px] items-center justify-center rounded-full bg-gradient-to-r px-5 py-3 text-sm font-bold text-white transition hover:scale-[1.01] ${confirmClassName}`}
+              >
+                {config?.confirmLabel || 'Xác nhận'}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>,
+    document.body
+  );
+};
+
 const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMode = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1972,6 +2068,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   const [isExercisePopupOpen, setIsExercisePopupOpen] = useState(false);
   const [pendingFreeSave, setPendingFreeSave] = useState(false);
   const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
+  const [confirmModalConfig, setConfirmModalConfig] = useState(null);
   const { currentPage: mainPage, goToPage: goToMainPage } = usePersistedPagination({
     paramKey: 'page',
   });
@@ -1995,6 +2092,24 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   const snippetFiltersRef = useRef(null);
   const languageDropdownRef = useRef(null);
   const themeDropdownRef = useRef(null);
+  const confirmResolverRef = useRef(null);
+
+  const closeConfirmModal = useCallback((confirmed) => {
+    if (confirmResolverRef.current) {
+      confirmResolverRef.current(Boolean(confirmed));
+      confirmResolverRef.current = null;
+    }
+    setConfirmModalConfig(null);
+  }, []);
+
+  const requestConfirm = useCallback(
+    (config) =>
+      new Promise((resolve) => {
+        confirmResolverRef.current = resolve;
+        setConfirmModalConfig(config || {});
+      }),
+    []
+  );
 
   useEffect(() => {
     usernameRef.current = username;
@@ -2441,8 +2556,13 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
         localDraft &&
         hasDraftChanged(resolvedSnippet, localDraft.code, localDraft.language);
       if (canRestoreDraft) {
-        const restoreMessage = `Phát hiện bản nháp lưu lúc ${formatDateTime(localDraft.updatedAt)}.\n\nBạn có muốn tiếp tục bản nháp gần nhất không?`;
-        const shouldRestore = window.confirm(restoreMessage);
+        const shouldRestore = await requestConfirm({
+          variant: 'restore',
+          title: 'Khôi phục bản nháp?',
+          message: `Phát hiện bản nháp lưu lúc ${formatDateTime(localDraft.updatedAt)}.\n\nBạn có muốn tiếp tục bản nháp gần nhất không?`,
+          confirmLabel: 'Khôi phục',
+          cancelLabel: 'Bỏ bản nháp',
+        });
         if (shouldRestore) {
           nextCode = localDraft.code;
           nextLanguage = localDraft.language;
@@ -2474,7 +2594,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
     setJudgeCompilerError('');
     setRunningAction('');
     setPendingFreeSave(false);
-  }, [hasDraftChanged, username]);
+  }, [hasDraftChanged, requestConfirm, username]);
 
   const handleCloseDetail = async () => {
     const activeSnippet = snippetRef.current;
@@ -2508,7 +2628,13 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
 
   const handleDelete = async (snippetId) => {
     if (!username) return;
-    const confirmed = window.confirm('Bạn có chắc muốn xóa card code này không?');
+    const confirmed = await requestConfirm({
+      variant: 'danger',
+      title: 'Xóa card code?',
+      message: 'Card này sẽ bị xóa khỏi kho code của bạn. Thao tác này không thể hoàn tác.',
+      confirmLabel: 'Xóa card',
+      cancelLabel: 'Giữ lại',
+    });
     if (!confirmed) return;
 
     const result = await codeSnippetService.deleteSnippet(snippetId, username);
@@ -3421,6 +3547,12 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
         isOpen={isClearAllModalOpen}
         onClose={() => setIsClearAllModalOpen(false)}
         onConfirm={confirmClearAllCode}
+      />
+
+      <StyledConfirmModal
+        config={confirmModalConfig}
+        onCancel={() => closeConfirmModal(false)}
+        onConfirm={() => closeConfirmModal(true)}
       />
 
       {selectedSnippet && (
