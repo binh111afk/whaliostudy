@@ -5338,7 +5338,8 @@ app.post('/api/code-snippets', async (req, res) => {
             formattedDescription,
             assignmentDescription,
             code,
-            language
+            language,
+            generateTestCases
         } = req.body || {};
 
         const normalizedUsername = String(username || '').trim();
@@ -5359,12 +5360,20 @@ app.post('/api/code-snippets', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Tên card là bắt buộc' });
         }
 
-        const testCaseResult = await generateCodeSnippetTestCases({
-            cardTitle: normalizedTitle,
-            subjectName: normalizedSubjectName,
-            assignmentName: normalizedExerciseName,
-            assignmentDescription: normalizedFormattedDescription || normalizedAssignmentDescription
-        });
+        const shouldGenerateTestCases = generateTestCases !== false;
+        const testCaseResult = shouldGenerateTestCases
+            ? await generateCodeSnippetTestCases({
+                cardTitle: normalizedTitle,
+                subjectName: normalizedSubjectName,
+                assignmentName: normalizedExerciseName,
+                assignmentDescription: normalizedFormattedDescription || normalizedAssignmentDescription
+            })
+            : {
+                success: true,
+                testCases: [],
+                modelUsed: '',
+                generated: false
+            };
         if (!testCaseResult.success) {
             return res.status(502).json({
                 success: false,

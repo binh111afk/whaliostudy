@@ -1546,8 +1546,6 @@ const CreateSnippetModal = ({
   onClose,
   onCreate,
   creating,
-  formattingDescription,
-  onFormatWithAI,
   isPreviewOpen,
   onOpenPreview,
   onClosePreview,
@@ -1747,24 +1745,13 @@ const CreateSnippetModal = ({
               <label className="block text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 Nội dung / Mô tả bài tập
               </label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={onOpenPreview}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
-                >
-                  Preview
-                </button>
-                <button
-                  type="button"
-                  onClick={onFormatWithAI}
-                  disabled={formattingDescription}
-                  className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-70 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40"
-                >
-                  <Sparkles size={12} />
-                  {formattingDescription ? 'Đang format...' : 'Format bằng AI'}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={onOpenPreview}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+              >
+                Preview
+              </button>
             </div>
             <textarea
               value={form.assignmentDescription}
@@ -1790,7 +1777,7 @@ const CreateSnippetModal = ({
           </button>
           <button
             onClick={onCreate}
-            disabled={creating || formattingDescription}
+            disabled={creating}
             className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
           >
             {creating ? 'Đang xử lý...' : isEditMode ? 'Lưu chỉnh sửa' : isFreeSaveMode ? 'Lưu vào kho' : 'Lưu card'}
@@ -1954,7 +1941,6 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
   const [createForm, setCreateForm] = useState(INITIAL_FORM);
   const [editingSnippet, setEditingSnippet] = useState(null);
   const [creating, setCreating] = useState(false);
-  const [formattingDescription, setFormattingDescription] = useState(false);
   const [isHtmlPreviewOpen, setIsHtmlPreviewOpen] = useState(false);
   const [selectedSnippet, setSelectedSnippet] = useState(null);
   const [editorCode, setEditorCode] = useState('');
@@ -2392,6 +2378,7 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
           ...basePayload,
           language: isSaveFromFreeMode ? normalizeLanguageKey(editorLanguage) : selectedLanguage,
           code: isSaveFromFreeMode ? String(editorCode || '') : '',
+          generateTestCases: false,
         };
         const result = await codeSnippetService.createSnippet(payload);
 
@@ -2405,7 +2392,6 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
         } else {
           await loadSnippets();
         }
-        const generatedCaseCount = Number(result?.testCaseGeneration?.count || 0);
         if (isSaveFromFreeMode) {
           removeFreeSessionDraft(usernameRef.current);
           latestFreeDraftSignatureRef.current = '';
@@ -2414,50 +2400,13 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
           navigate('/code-vault');
           return;
         }
-        if (generatedCaseCount > 0) {
-          toast.success(`Đã tạo card và sinh ${generatedCaseCount} test case tự động`);
-        } else {
-          toast.success('Đã tạo card code mới');
-        }
+        toast.success('Đã tạo card code mới');
       }
 
       resetSnippetModalState();
     } finally {
       setCreating(false);
     }
-  };
-
-  const handleFormatAssignmentWithAI = async () => {
-    const rawDescription = String(createForm.assignmentDescription || '').trim();
-    if (!rawDescription) {
-      toast.error('Vui lòng nhập nội dung bài tập trước khi format');
-      return;
-    }
-
-    setFormattingDescription(true);
-    const result = await codeSnippetService.formatAssignmentDescription(rawDescription);
-    setFormattingDescription(false);
-
-    if (!result.success) {
-      toast.error(result.message || 'Không thể format bằng AI');
-      return;
-    }
-
-    const formattedHtml = String(result.formattedHtml || result.formattedText || '').trim();
-    const formattedMarkdown = String(
-      result.formattedMarkdown || result.formattedText || formattedHtml
-    ).trim();
-    if (!formattedHtml && !formattedMarkdown) {
-      toast.error('AI không trả về nội dung hợp lệ');
-      return;
-    }
-
-    setCreateForm((prev) => ({
-      ...prev,
-      assignmentDescription: formattedHtml || formattedMarkdown,
-      formattedDescription: formattedMarkdown || formattedHtml,
-    }));
-    toast.success('Đã format nội dung bằng AI');
   };
 
   const handleOpenDetail = useCallback(async (snippet) => {
@@ -3444,8 +3393,6 @@ const CodeSnippetManager = ({ user, onFullscreenChange = () => {}, initialFreeMo
         form={createForm}
         onChange={handleCreateFormChange}
         mode={editingSnippet ? 'edit' : pendingFreeSave ? 'free-save' : 'create'}
-        formattingDescription={formattingDescription}
-        onFormatWithAI={handleFormatAssignmentWithAI}
         isPreviewOpen={isHtmlPreviewOpen}
         onOpenPreview={() => setIsHtmlPreviewOpen(true)}
         onClosePreview={() => setIsHtmlPreviewOpen(false)}
