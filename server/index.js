@@ -6475,9 +6475,11 @@ app.post('/api/upload-document', (req, res, next) => {
         next();
     });
 }, async (req, res) => {
+    let tempFilePath = '';
     try {
         const { name, type, uploader, course, username, visibility } = req.body;
         const file = req.file;
+        tempFilePath = file?.path || '';
 
         // CRITICAL: Check if file exists immediately
         if (!file) {
@@ -9499,6 +9501,10 @@ app.use((err, req, res, next) => {
     console.error(`Error Message: ${err.message}`);
     console.error(`Stack Trace: ${err.stack}`);
     console.error('='.repeat(60));
+
+    if (res.headersSent) {
+        return next(err);
+    }
 
     // 🌐 CRITICAL: Re-apply CORS headers on error responses so browser
     // can read the JSON body instead of showing a generic CORS block.
