@@ -474,14 +474,19 @@ const DocumentViewer = () => {
   };
 
   // Hàm xử lý upload thành công
-  const handleUploadSuccess = async (formData) => {
+  const handleUploadSuccess = async (formData, options = {}) => {
     const res = await documentService.uploadDocument(formData);
     if (res.success) {
-      alert("Tải lên thành công! Cảm ơn đóng góp của ông.");
-      setUploadModalOpen(false);
+      if (!options.silent) {
+        alert("Tải lên thành công! Cảm ơn đóng góp của ông.");
+        setUploadModalOpen(false);
+      }
     } else {
-      alert("Lỗi: " + res.message);
+      if (!options.silent) {
+        alert("Lỗi: " + res.message);
+      }
     }
+    return res;
   };
 
   // --- RENDER VIEWER ---

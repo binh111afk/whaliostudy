@@ -581,11 +581,12 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
   const MAX_FILE_SIZE_MB = 30;
   const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [name, setName] = useState('');
   const [course, setCourse] = useState('');
   const [visibility, setVisibility] = useState('public');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadItems, setUploadItems] = useState([]);
   const [dragActive, setDragActive] = useState(false);
   const [oversizeMessage, setOversizeMessage] = useState('');
   const [subjectOptions, setSubjectOptions] = useState(() => createFallbackSubjects());
@@ -614,12 +615,16 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
   useEffect(() => {
     if (!isOpen) return;
 
-    setFile(null);
+    setFiles([]);
     setName('');
     setCourse('');
     setVisibility('public');
+    setIsSubmitting(false);
+    setUploadItems([]);
     setDragActive(false);
-    setOversizeMessage('');
+    if (oversizedFiles.length === 0) {
+      setOversizeMessage('');
+    }
   }, [isOpen]);
 
   // Gọi API khi thêm môn mới
@@ -653,23 +658,32 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
     return nextOption;
   };
 
-  const handleFile = (selectedFile) => {
-    if (!selectedFile) return;
+  const handleFiles = (selectedFiles) => {
+    const incomingFiles = Array.from(selectedFiles || []);
+    if (!incomingFiles.length) return;
 
-    if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
+    const oversizedFiles = incomingFiles.filter((selectedFile) => selectedFile.size > MAX_FILE_SIZE_BYTES);
+    if (oversizedFiles.length > 0) {
       setOversizeMessage(
-        `File vượt quá ${MAX_FILE_SIZE_MB}MB. Vui lòng chọn file nhỏ hơn hoặc bằng ${MAX_FILE_SIZE_MB}MB.`
+        `${oversizedFiles.length} file vượt quá ${MAX_FILE_SIZE_MB}MB. Vui lòng chọn file nhỏ hơn hoặc bằng ${MAX_FILE_SIZE_MB}MB.`
       );
-      return;
     }
 
+    const validFiles = incomingFiles.filter((selectedFile) => selectedFile.size <= MAX_FILE_SIZE_BYTES);
+    if (!validFiles.length) return;
+
     setOversizeMessage('');
-    setFile(selectedFile);
-    setName(selectedFile.name.split('.').slice(0, -1).join('.'));
+    setFiles((prev) => [...prev, ...validFiles]);
+    if (validFiles.length === 1 && files.length === 0) {
+      setName(validFiles[0].name.split('.').slice(0, -1).join('.'));
+    } else {
+      setName('');
+    }
   };
 
   const handleFileChange = (event) => {
-    handleFile(event.target.files?.[0]);
+    handleFiles(event.target.files);
+    event.target.value = '';
   };
 
   const handleDrag = (event) => {
@@ -691,17 +705,51 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
     event.stopPropagation();
     setDragActive(false);
 
-    if (event.dataTransfer.files && event.dataTransfer.files[0]) {
-      handleFile(event.dataTransfer.files[0]);
+    if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+      handleFiles(event.dataTransfer.files);
     }
   };
 
+  const removeSelectedFile = (fileIndex) => {
+    setFiles((prev) => {
+      const nextFiles = prev.filter((_, index) => index !== fileIndex);
+      if (nextFiles.length !== 1) {
+        setName('');
+      } else {
+        setName(nextFiles[0].name.split('.').slice(0, -1).join('.'));
+      }
+      return nextFiles;
+    });
+  };
+
+  const getDocumentTypeFromFile = (selectedFile) => {
+    const ext = selectedFile.name.split('.').pop().toLowerCase();
+    if (['pdf'].includes(ext)) return 'pdf';
+    if (['doc', 'docx'].includes(ext)) return 'word';
+    if (['xls', 'xlsx'].includes(ext)) return 'excel';
+    if (['ppt', 'pptx'].includes(ext)) return 'ppt';
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) return 'image';
+    return 'other';
+  };
+
+  const buildUploadFormData = (selectedFile, docName) => {
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('name', docName);
+    formData.append('course', String(course).trim());
+    formData.append('visibility', visibility);
+    formData.append('username', currentUser.username);
+    formData.append('uploader', currentUser.fullName);
+    formData.append('type', getDocumentTypeFromFile(selectedFile));
+    return formData;
+  };
+
   const handleSubmit = async () => {
-    if (!file) {
+    if (files.length === 0) {
       toast.error('Vui lòng chọn file!', { duration: 3000, position: 'top-right' });
       return;
     }
-    if (!name.trim()) {
+    if (files.length === 1 && !name.trim()) {
       toast.error('Vui lòng nhập tên tài liệu!', { duration: 3000, position: 'top-right' });
       return;
     }
@@ -711,35 +759,79 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
     }
 
     setIsSubmitting(true);
+    const initialItems = files.map((selectedFile, index) => ({
+      id: `${selectedFile.name}-${selectedFile.size}-${selectedFile.lastModified}-${index}`,
+      fileName: selectedFile.name,
+      status: 'pending',
+      message: 'Đang chờ'
+    }));
+    setUploadItems(initialItems);
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('name', name.trim());
-    formData.append('course', String(course).trim());
-    formData.append('visibility', visibility);
-    formData.append('username', currentUser.username);
-    formData.append('uploader', currentUser.fullName);
+    let successCount = 0;
+    let failedCount = 0;
 
-    const ext = file.name.split('.').pop().toLowerCase();
-    let type = 'other';
+    for (let index = 0; index < files.length; index += 1) {
+      const selectedFile = files[index];
+      const itemId = initialItems[index].id;
+      const fallbackName = selectedFile.name.split('.').slice(0, -1).join('.') || selectedFile.name;
+      const docName = files.length === 1 ? name.trim() : fallbackName;
 
-    if (['pdf'].includes(ext)) type = 'pdf';
-    else if (['doc', 'docx'].includes(ext)) type = 'word';
-    else if (['xls', 'xlsx'].includes(ext)) type = 'excel';
-    else if (['ppt', 'pptx'].includes(ext)) type = 'ppt';
-    else if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) type = 'image';
+      setUploadItems((prev) =>
+        prev.map((item) =>
+          item.id === itemId ? { ...item, status: 'uploading', message: 'Đang tải lên' } : item
+        )
+      );
 
-    formData.append('type', type);
+      const result = await onSuccess(buildUploadFormData(selectedFile, docName), {
+        silent: true,
+        batch: files.length,
+        index
+      });
 
-    await onSuccess(formData);
+      if (result?.success) {
+        successCount += 1;
+        setUploadItems((prev) =>
+          prev.map((item) =>
+            item.id === itemId ? { ...item, status: 'done', message: 'Hoàn tất' } : item
+          )
+        );
+      } else {
+        failedCount += 1;
+        setUploadItems((prev) =>
+          prev.map((item) =>
+            item.id === itemId
+              ? { ...item, status: 'error', message: result?.message || 'Tải lên thất bại' }
+              : item
+          )
+        );
+      }
+    }
+
     setIsSubmitting(false);
-    onClose();
+
+    if (successCount > 0 && failedCount === 0) {
+      toast.success(`Đã tải lên ${successCount} tài liệu theo thứ tự.`, {
+        duration: 3000,
+        position: 'top-right'
+      });
+      onClose();
+      return;
+    }
+
+    if (successCount > 0) {
+      toast.warning(`Đã tải lên ${successCount} tài liệu, ${failedCount} tài liệu lỗi.`, {
+        duration: 4000,
+        position: 'top-right'
+      });
+      return;
+    }
+
+    toast.error('Chưa tải lên được tài liệu nào.', { duration: 4000, position: 'top-right' });
   };
 
   if (!isOpen) return null;
 
-  const fileIconProps = file ? getFileIconProps(file.name) : null;
-  const PreviewIcon = fileIconProps?.icon || FileText;
+  const hasFiles = files.length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in">
@@ -759,14 +851,15 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
+            disabled={isSubmitting}
+            className="rounded-full p-2 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-700"
           >
             <X className="text-slate-500 dark:text-slate-300" size={20} />
           </button>
         </div>
 
         <div className="space-y-5 p-6">
-          {!file ? (
+          {!hasFiles ? (
             <div
               className={`relative cursor-pointer rounded-[24px] border-2 border-dashed p-8 text-center transition-all group ${
                 dragActive
@@ -782,6 +875,7 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
               <input
                 ref={fileInputRef}
                 type="file"
+                multiple
                 onChange={handleFileChange}
                 className="hidden"
               />
@@ -789,52 +883,104 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
                 <CloudUpload size={32} />
               </div>
               <p className="font-bold text-slate-700 dark:text-slate-100">
-                Nhấn để chọn hoặc kéo thả file vào đây
+                Nhấn để chọn hoặc kéo thả nhiều file vào đây
               </p>
               <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
                 Hỗ trợ PDF, Word, Excel, PowerPoint, Ảnh · Tối đa 30MB
               </p>
             </div>
           ) : (
-            <div className="animate-fade-in-up relative flex items-center gap-4 rounded-2xl border border-sky-100 bg-sky-50 p-4 dark:border-sky-500/20 dark:bg-sky-500/10">
-              <div
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${fileIconProps?.bg || 'bg-white'} shadow-sm`}
-              >
-                <PreviewIcon size={24} className={fileIconProps?.color || 'text-slate-500'} />
+            <div className="animate-fade-in-up space-y-3 rounded-2xl border border-sky-100 bg-sky-50 p-4 dark:border-sky-500/20 dark:bg-sky-500/10">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                    {files.length} file đã chọn
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Hệ thống sẽ tải tuần tự từng tài liệu.
+                  </p>
+                </div>
+                <Tooltip text="Chọn thêm file">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isSubmitting}
+                    className="rounded-xl border border-slate-100 bg-white p-2 text-sky-600 shadow-sm transition-colors hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-sky-500/10"
+                  >
+                    <Plus size={18} />
+                  </button>
+                </Tooltip>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">
-                  {file.name}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {(file.size / 1024 / 1024).toFixed(2)} MB · Sẵn sàng tải lên
-                </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
+                {files.map((selectedFile, index) => {
+                  const fileIconProps = getFileIconProps(selectedFile.name);
+                  const PreviewIcon = fileIconProps.icon;
+                  const status = uploadItems[index]?.status || 'ready';
+                  const message = uploadItems[index]?.message || 'Sẵn sàng tải lên';
+
+                  return (
+                    <div
+                      key={`${selectedFile.name}-${selectedFile.size}-${selectedFile.lastModified}-${index}`}
+                      className="flex items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800/85"
+                    >
+                      <div
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${fileIconProps.bg} shadow-sm`}
+                      >
+                        <PreviewIcon size={20} className={fileIconProps.color} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">
+                          {selectedFile.name}
+                        </p>
+                        <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB · {message}
+                        </p>
+                      </div>
+                      {status === 'uploading' && (
+                        <span className="h-5 w-5 shrink-0 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
+                      )}
+                      {status === 'done' && <Check size={20} className="shrink-0 text-emerald-500" />}
+                      {status === 'error' && <AlertCircle size={20} className="shrink-0 text-red-500" />}
+                      {!isSubmitting && status !== 'done' && (
+                        <Tooltip text="Bỏ file này">
+                          <button
+                            type="button"
+                            onClick={() => removeSelectedFile(index)}
+                            className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </Tooltip>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-              <Tooltip text="Hủy chọn file">
-                <button
-                  type="button"
-                  onClick={() => setFile(null)}
-                  className="rounded-xl border border-slate-100 bg-white p-2 text-red-500 shadow-sm transition-colors hover:bg-red-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-red-500/10"
-                >
-                  <Trash2 size={18} />
-                </button>
-              </Tooltip>
             </div>
           )}
 
-          {file && (
+          {hasFiles && (
             <div className="animate-fade-in-up space-y-4">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Tên hiển thị
-                </label>
-                <input
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="Ví dụ: Đề thi cuối kỳ Giải tích 1..."
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-sky-400 dark:focus:ring-sky-500/20"
-                />
-              </div>
+              {files.length === 1 && (
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Tên hiển thị
+                  </label>
+                  <input
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="Ví dụ: Đề thi cuối kỳ Giải tích 1..."
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-sky-400 dark:focus:ring-sky-500/20"
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <SubjectPicker
@@ -858,6 +1004,7 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
           <button
             type="button"
             onClick={onClose}
+            disabled={isSubmitting}
             className="rounded-xl px-5 py-2.5 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             Hủy bỏ
@@ -865,18 +1012,18 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting || !file}
+            disabled={isSubmitting || !hasFiles}
             className="flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-700"
           >
             {isSubmitting ? (
               <>
                 <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                Đang tải...
+                Đang tải {uploadItems.filter((item) => item.status === 'done').length}/{files.length}
               </>
             ) : (
               <>
                 <Upload size={18} />
-                Tải lên ngay
+                Tải lên {files.length > 1 ? `${files.length} file` : 'ngay'}
               </>
             )}
           </button>

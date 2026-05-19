@@ -835,27 +835,35 @@ const Documents = () => {
   }, [documents, currentUser]);
 
   // --- HANDLERS ---
-  const handleUpload = async (formData) => {
+  const handleUpload = async (formData, options = {}) => {
     try {
       const res = await documentService.uploadDocument(formData);
       if (res.success) {
-        toast.success("Tải lên thành công!", {
-          duration: 3000,
-          position: "top-right",
-        });
+        if (!options.silent) {
+          toast.success("Tải lên thành công!", {
+            duration: 3000,
+            position: "top-right",
+          });
+        }
         loadDocuments();
       } else {
-        toast.error("Lỗi: " + res.message, {
+        if (!options.silent) {
+          toast.error("Lỗi: " + res.message, {
+            duration: 3000,
+            position: "top-right",
+          });
+        }
+      }
+      return res;
+    } catch (error) {
+      console.error("Lỗi tải tài liệu:", error);
+      if (!options.silent) {
+        toast.error("Có lỗi xảy ra khi tải tài liệu lên!", {
           duration: 3000,
           position: "top-right",
         });
       }
-    } catch (error) {
-      console.error("Lỗi tải tài liệu:", error);
-      toast.error("Có lỗi xảy ra khi tải tài liệu lên!", {
-        duration: 3000,
-        position: "top-right",
-      });
+      return { success: false, message: "Có lỗi xảy ra khi tải tài liệu lên!" };
     }
   };
 

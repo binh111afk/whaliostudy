@@ -412,20 +412,28 @@ const MyDocumentsTab = ({ currentUser }) => {
   };
 
   // Handle upload
-  const handleUpload = async (formData) => {
+  const handleUpload = async (formData, options = {}) => {
     try {
       // Force visibility to private for profile uploads
       formData.set("visibility", "private");
       const res = await documentService.uploadDocument(formData);
       if (res.success) {
-        alert("Tải lên thành công!");
+        if (!options.silent) {
+          alert("Tải lên thành công!");
+        }
         loadDocuments();
       } else {
-        alert("Lỗi: " + res.message);
+        if (!options.silent) {
+          alert("Lỗi: " + res.message);
+        }
       }
+      return res;
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Có lỗi xảy ra khi tải lên tài liệu!");
+      if (!options.silent) {
+        alert("Có lỗi xảy ra khi tải lên tài liệu!");
+      }
+      return { success: false, message: "Có lỗi xảy ra khi tải lên tài liệu!" };
     }
   };
 
