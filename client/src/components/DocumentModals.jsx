@@ -622,9 +622,7 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
     setIsSubmitting(false);
     setUploadItems([]);
     setDragActive(false);
-    if (oversizedFiles.length === 0) {
-      setOversizeMessage('');
-    }
+    setOversizeMessage('');
   }, [isOpen]);
 
   // Gọi API khi thêm môn mới
@@ -672,7 +670,9 @@ export const UploadModal = ({ isOpen, onClose, onSuccess, currentUser }) => {
     const validFiles = incomingFiles.filter((selectedFile) => selectedFile.size <= MAX_FILE_SIZE_BYTES);
     if (!validFiles.length) return;
 
-    setOversizeMessage('');
+    if (oversizedFiles.length === 0) {
+      setOversizeMessage('');
+    }
     setFiles((prev) => [...prev, ...validFiles]);
     if (validFiles.length === 1 && files.length === 0) {
       setName(validFiles[0].name.split('.').slice(0, -1).join('.'));
