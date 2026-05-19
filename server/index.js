@@ -2040,7 +2040,7 @@ const quickNoteSchema = new mongoose.Schema({
 quickNoteSchema.index({ username: 1, createdAt: -1 });
 
 // Code Snippet Schema (Kho Code)
-const CODE_SNIPPET_DESCRIPTION_MAX_LENGTH = 20000;
+const CODE_SNIPPET_TESTCASE_DESCRIPTION_CONTEXT_MAX_LENGTH = 20000;
 
 const codeSnippetTestCaseSchema = new mongoose.Schema({
     input: { type: String, default: '' },
@@ -2055,8 +2055,8 @@ const codeSnippetSchema = new mongoose.Schema({
     subjectName: { type: String, default: '', trim: true, maxlength: 120 },
     exerciseName: { type: String, default: '', trim: true, maxlength: 220 },
     assignmentName: { type: String, default: '', trim: true, maxlength: 220 },
-    formattedDescription: { type: String, default: '', trim: true, maxlength: CODE_SNIPPET_DESCRIPTION_MAX_LENGTH },
-    assignmentDescription: { type: String, default: '', trim: true, maxlength: CODE_SNIPPET_DESCRIPTION_MAX_LENGTH },
+    formattedDescription: { type: String, default: '', trim: true },
+    assignmentDescription: { type: String, default: '', trim: true },
     code: { type: String, default: '' },
     language: { type: String, default: 'plaintext', trim: true, maxlength: 60 },
     testCases: { type: [codeSnippetTestCaseSchema], default: [] },
@@ -5231,7 +5231,7 @@ const generateCodeSnippetTestCases = async ({
 }) => {
     const normalizedDescription = sanitizeSnippetTestCaseText(
         assignmentDescription,
-        CODE_SNIPPET_DESCRIPTION_MAX_LENGTH
+        CODE_SNIPPET_TESTCASE_DESCRIPTION_CONTEXT_MAX_LENGTH
     );
     if (!normalizedDescription) {
         return {
