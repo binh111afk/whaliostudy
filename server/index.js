@@ -5429,6 +5429,185 @@ const WANDBOX_LIST_CACHE_MS = parsePositiveInt(process.env.WANDBOX_LIST_CACHE_MS
 
 const sanitizeRunnerText = (value, limit = 20000) => String(value || '').slice(0, limit);
 
+const toCppRawStringLiteral = (value) => {
+    const source = String(value || '');
+    const delimiters = ['WHALIO_STDIN', 'WHALIO_INPUT', 'WHALIO_DATA'];
+    const delimiter = delimiters.find((item) => !source.includes(`)${item}"`));
+    if (!delimiter) return JSON.stringify(source);
+    return `R"${delimiter}(${source})${delimiter}"`;
+};
+
+const normalizeFileModeLiteral = (value) => String(value || '').replace(/^["'\s]+|["'\s]+$/g, '').toLowerCase();
+
+const sandboxCppLikeSource = ({ code, input, language }) => {
+    const source = String(code || '');
+    const stdinLiteral = toCppRawStringLiteral(input);
+    let nextCode = source;
+    let touched = false;
+
+    const markTouched = (replacement) => {
+        touched = true;
+        return replacement;
+    };
+
+    nextCode = nextCode
+        .replace(/^[^\S\r\n]*(?:std::)?freopen\s*\([^;\r\n]*\)\s*;[^\S\r\n]*(?=\r?\n|$)/gm, () =>
+            markTouched('// Whalio sandbox: removed freopen file redirection; stdin/stdout are managed by the runner.')
+        )
+        .replace(/^(\s*)(?:std::)?ifstream\s+([A-Za-z_]\w*)\s*(?:\([^;\r\n]*\)|\{[^;\r\n]*\}|=\s*[^;\r\n]*)\s*;[^\S\r\n]*(?=\r?\n|$)/gm, (_match, indent, name) =>
+            markTouched(`${indent}std::istringstream ${name}(__whalio_stdin_data);`)
+        )
+        .replace(/^(\s*)(?:std::)?ifstream\s+([A-Za-z_]\w*)\s*;[^\S\r\n]*(?=\r?\n|$)/gm, (_match, indent, name) =>
+            markTouched(`${indent}std::istringstream ${name}(__whalio_stdin_data);`)
+        )
+        .replace(/^(\s*)(?:std::)?ofstream\s+([A-Za-z_]\w*)\s*(?:\([^;\r\n]*\)|\{[^;\r\n]*\}|=\s*[^;\r\n]*)?\s*;[^\S\r\n]*(?=\r?\n|$)/gm, (_match, indent, name) =>
+            markTouched(`${indent}std::ostream& ${name} = std::cout;`)
+        )
+        .replace(/^(\s*)([A-Za-z_]\w*)\.open\s*\([^;\r\n]*\)\s*;[^\S\r\n]*(?=\r?\n|$)/gm, (_match, indent, name) =>
+            markTouched(`${indent}// Whalio sandbox: ignored ${name}.open(...); file input is supplied through stdin.`)
+        )
+        .replace(/^(\s*)([A-Za-z_]\w*)\.close\s*\(\s*\)\s*;[^\S\r\n]*(?=\r?\n|$)/gm, (_match, indent, name) =>
+            markTouched(`${indent}// Whalio sandbox: ignored ${name}.close().`)
+        );
+
+    if (language === 'c') {
+        nextCode = nextCode.replace(/\bfopen\s*\(\s*([^,\r\n]+)\s*,\s*("[^"]*"|'[^']*')\s*\)/g, (match, _path, mode) => {
+            const normalizedMode = normalizeFileModeLiteral(mode);
+            if (normalizedMode.startsWith('r')) return markTouched('stdin');
+            if (/^[wax]/.test(normalizedMode)) return markTouched('stdout');
+            return match;
+        });
+    }
+
+    if (!touched) return source;
+
+    const prelude = language === 'c'
+        ? ''
+        : `#include <iostream>\n#include <sstream>\nstatic const char* __whalio_stdin_data = ${stdinLiteral};\n`;
+    return `${prelude}${nextCode}`;
+};
+
+const sandboxPythonSource = ({ code, input }) => {
+    const stdinLiteral = JSON.stringify(String(input || ''));
+    const prelude = [
+        'import io as __whalio_io',
+        'import sys as __whalio_sys',
+        `__whalio_stdin_data = ${stdinLiteral}`,
+        '__whalio_sys.stdin = __whalio_io.StringIO(__whalio_stdin_data)',
+        'class __WhalioStdoutProxy:',
+        '    def write(self, value):',
+        '        return __whalio_sys.stdout.write(str(value))',
+        '    def writelines(self, values):',
+        '        for value in values:',
+        '            self.write(value)',
+        '    def flush(self):',
+        '        return __whalio_sys.stdout.flush()',
+        '    def close(self):',
+        '        return None',
+        '    def __enter__(self):',
+        '        return self',
+        '    def __exit__(self, exc_type, exc, tb):',
+        '        self.flush()',
+        '        return False',
+        'def __whalio_open(file, mode="r", *args, **kwargs):',
+        '    normalized_mode = str(mode or "r").lower()',
+        '    if any(flag in normalized_mode for flag in ("w", "a", "x", "+")):',
+        '        return __WhalioStdoutProxy()',
+        '    return __whalio_io.StringIO(__whalio_stdin_data)',
+        'open = __whalio_open',
+        '',
+    ].join('\n');
+    const source = String(code || '');
+    const lines = source.split(/\r?\n/);
+    let insertAt = 0;
+
+    while (
+        insertAt < lines.length &&
+        (
+            (insertAt === 0 && /^#!/.test(lines[insertAt])) ||
+            /^#.*coding[:=]\s*[-\w.]+/.test(lines[insertAt]) ||
+            /^from\s+__future__\s+import\b/.test(lines[insertAt]) ||
+            !lines[insertAt].trim()
+        )
+    ) {
+        insertAt += 1;
+    }
+
+    return [
+        ...lines.slice(0, insertAt),
+        prelude,
+        ...lines.slice(insertAt),
+    ].join('\n');
+};
+
+const sandboxJavaSource = ({ code, input }) => {
+    const stdinLiteral = JSON.stringify(String(input || ''));
+    return String(code || '')
+        .replace(/\bnew\s+FileInputStream\s*\([^)]*\)/g, `new java.io.ByteArrayInputStream(${stdinLiteral}.getBytes(java.nio.charset.StandardCharsets.UTF_8))`)
+        .replace(/\bnew\s+java\.io\.FileInputStream\s*\([^)]*\)/g, `new java.io.ByteArrayInputStream(${stdinLiteral}.getBytes(java.nio.charset.StandardCharsets.UTF_8))`)
+        .replace(/\bnew\s+Scanner\s*\(\s*new\s+(?:java\.io\.)?File\s*\([^)]*\)\s*\)/g, 'new Scanner(System.in)')
+        .replace(/\bnew\s+BufferedReader\s*\(\s*new\s+(?:java\.io\.)?FileReader\s*\([^)]*\)\s*\)/g, 'new BufferedReader(new java.io.InputStreamReader(System.in))')
+        .replace(/\bnew\s+java\.io\.BufferedReader\s*\(\s*new\s+java\.io\.FileReader\s*\([^)]*\)\s*\)/g, 'new java.io.BufferedReader(new java.io.InputStreamReader(System.in))')
+        .replace(/\bnew\s+(?:java\.io\.)?PrintWriter\s*\(\s*(?:"[^"]*"|'[^']*')\s*\)/g, 'new PrintWriter(System.out)')
+        .replace(/\bnew\s+(?:java\.io\.)?FileWriter\s*\([^)]*\)/g, 'new java.io.OutputStreamWriter(System.out)');
+};
+
+const sandboxCSharpSource = ({ code, input }) => {
+    const stdinLiteral = JSON.stringify(String(input || ''));
+    return String(code || '')
+        .replace(/\bConsole\.SetIn\s*\(\s*new\s+(?:System\.IO\.)?StreamReader\s*\([^;]*\)\s*\)\s*;/g, `Console.SetIn(new System.IO.StringReader(${stdinLiteral}));`)
+        .replace(/\bnew\s+(?:System\.IO\.)?StreamReader\s*\([^)]*\)/g, `new System.IO.StringReader(${stdinLiteral})`)
+        .replace(/\bConsole\.SetOut\s*\(\s*new\s+(?:System\.IO\.)?StreamWriter\s*\([^;]*\)\s*\)\s*;/g, 'Console.SetOut(System.Console.Out);')
+        .replace(/\bnew\s+(?:System\.IO\.)?StreamWriter\s*\([^)]*\)/g, 'System.Console.Out');
+};
+
+const sandboxRubySource = ({ code, input }) => {
+    const stdinLiteral = JSON.stringify(String(input || ''));
+    const prelude = [
+        'require "stringio"',
+        `$stdin = StringIO.new(${stdinLiteral})`,
+        'module WhalioFileSandbox',
+        '  def open(path, mode = "r", *args, &block)',
+        '    target = mode.to_s.match?(/[wax+]/) ? $stdout : StringIO.new($stdin.string)',
+        '    return block.call(target) if block',
+        '    target',
+        '  end',
+        'end',
+        'class << File',
+        '  prepend WhalioFileSandbox',
+        'end',
+        'Object.prepend WhalioFileSandbox',
+        '',
+    ].join('\n');
+    return `${prelude}${String(code || '')}`;
+};
+
+const sandboxGoSource = ({ code }) => String(code || '')
+    .replace(/\bos\.Open\s*\([^)]*\)/g, 'os.Stdin, nil')
+    .replace(/\bos\.Create\s*\([^)]*\)/g, 'os.Stdout, nil')
+    .replace(/\bioutil\.ReadFile\s*\([^)]*\)/g, 'io.ReadAll(os.Stdin)')
+    .replace(/\bos\.ReadFile\s*\([^)]*\)/g, 'io.ReadAll(os.Stdin)');
+
+const sandboxRustSource = ({ code }) => String(code || '')
+    .replace(/\bFile::open\s*\([^)]*\)/g, 'Ok(std::io::stdin())')
+    .replace(/\bstd::fs::read_to_string\s*\([^)]*\)/g, 'std::io::read_to_string(std::io::stdin())')
+    .replace(/\bFile::create\s*\([^)]*\)/g, 'Ok(std::io::stdout())');
+
+const prepareSandboxedSource = ({ language, code, input }) => {
+    const normalizedLanguage = String(language || '').trim().toLowerCase();
+    const payload = { code, input, language: normalizedLanguage };
+
+    if (normalizedLanguage === 'cpp' || normalizedLanguage === 'c') return sandboxCppLikeSource(payload);
+    if (normalizedLanguage === 'python') return sandboxPythonSource(payload);
+    if (normalizedLanguage === 'java') return sandboxJavaSource(payload);
+    if (normalizedLanguage === 'csharp') return sandboxCSharpSource(payload);
+    if (normalizedLanguage === 'ruby') return sandboxRubySource(payload);
+    if (normalizedLanguage === 'go') return sandboxGoSource(payload);
+    if (normalizedLanguage === 'rust') return sandboxRustSource(payload);
+
+    return String(code || '');
+};
+
 const mapToWandboxLanguage = (language) => {
     const normalized = String(language || '').trim().toLowerCase();
     const map = {
@@ -5626,9 +5805,13 @@ const buildWandboxPayload = async ({ language, code, input }) => {
         return selected;
     }
 
-    const source = String(code || '');
     const stdin = String(input || '');
     const normalizedLanguage = selected.language;
+    const source = prepareSandboxedSource({
+        language: normalizedLanguage,
+        code,
+        input
+    });
     let finalCode = source;
     let finalStdin = stdin;
 
